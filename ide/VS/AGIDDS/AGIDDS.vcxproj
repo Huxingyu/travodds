@@ -1,0 +1,289 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\src\AGIDDS_DLL.h" />
+    <ClInclude Include="..\..\..\src\BasicType.h" />
+    <ClInclude Include="..\..\..\src\BuiltinTopicData.h" />
+    <ClInclude Include="..\..\..\src\Condition\Condition.h" />
+    <ClInclude Include="..\..\..\src\Condition\ConditionImpl.h" />
+    <ClInclude Include="..\..\..\src\Condition\GuardCondition.h" />
+    <ClInclude Include="..\..\..\src\Condition\GuardConditionImpl.h" />
+    <ClInclude Include="..\..\..\src\Condition\QueryCondition.h" />
+    <ClInclude Include="..\..\..\src\Condition\QueryConditionImpl.h" />
+    <ClInclude Include="..\..\..\src\Condition\ReadCondition.h" />
+    <ClInclude Include="..\..\..\src\Condition\ReadConditionImpl.h" />
+    <ClInclude Include="..\..\..\src\Condition\StatusCondition.h" />
+    <ClInclude Include="..\..\..\src\Condition\StatusConditionimpl.h" />
+    <ClInclude Include="..\..\..\src\Condition\WaitSet.h" />
+    <ClInclude Include="..\..\..\src\Condition\WaitSetImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\ContentFilteredTopic.h" />
+    <ClInclude Include="..\..\..\src\DDS\ContentFilteredTopicImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\DataReader.h" />
+    <ClInclude Include="..\..\..\src\DDS\DataReaderImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\DataWriter.h" />
+    <ClInclude Include="..\..\..\src\DDS\DataWriterImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainEntity.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainEntityImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainParticipant.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainParticipantFactory.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainParticipantFactoryImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\DomainParticipantImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\Entity.h" />
+    <ClInclude Include="..\..\..\src\DDS\EntityImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\MultiTopic.h" />
+    <ClInclude Include="..\..\..\src\DDS\MultiTopicImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\Publisher.h" />
+    <ClInclude Include="..\..\..\src\DDS\PublisherImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\Subscriber.h" />
+    <ClInclude Include="..\..\..\src\DDS\SubscriberImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\Topic.h" />
+    <ClInclude Include="..\..\..\src\DDS\TopicDescription.h" />
+    <ClInclude Include="..\..\..\src\DDS\TopicDescriptionImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\TopicImpl.h" />
+    <ClInclude Include="..\..\..\src\DDS\TypeSupport.h" />
+    <ClInclude Include="..\..\..\src\Listener\DataReaderListener.h" />
+    <ClInclude Include="..\..\..\src\Listener\DataWriterListener.h" />
+    <ClInclude Include="..\..\..\src\Listener\DomainParticipantListener.h" />
+    <ClInclude Include="..\..\..\src\Listener\Listener.h" />
+    <ClInclude Include="..\..\..\src\Listener\PublisherListener.h" />
+    <ClInclude Include="..\..\..\src\Listener\SubscriberListener.h" />
+    <ClInclude Include="..\..\..\src\Listener\TopicListener.h" />
+    <ClInclude Include="..\..\..\src\Qos.h" />
+    <ClInclude Include="..\..\..\src\QoS\QosPolicyCheck.h" />
+    <ClInclude Include="..\..\..\src\RetCode.h" />
+    <ClInclude Include="..\..\..\src\RTPS\BasicTypeRTPS.h" />
+    <ClInclude Include="..\..\..\src\RTPS\ChangeForReader.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Discovery.h" />
+    <ClInclude Include="..\..\..\src\RTPS\DiscoveryData.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Endpoint.h" />
+    <ClInclude Include="..\..\..\src\RTPS\HistoryCache.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Participant.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Reader.h" />
+    <ClInclude Include="..\..\..\src\RTPS\ReaderLocator.h" />
+    <ClInclude Include="..\..\..\src\RTPS\ReaderProxy.h" />
+    <ClInclude Include="..\..\..\src\RTPS\RTPSEntity.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Sedp.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Spdp.h" />
+    <ClInclude Include="..\..\..\src\RTPS\StatefulReader.h" />
+    <ClInclude Include="..\..\..\src\RTPS\StatefulWriter.h" />
+    <ClInclude Include="..\..\..\src\RTPS\StatelessReader.h" />
+    <ClInclude Include="..\..\..\src\RTPS\StatelessWriter.h" />
+    <ClInclude Include="..\..\..\src\RTPS\Writer.h" />
+    <ClInclude Include="..\..\..\src\RTPS\WriterProxy.h" />
+    <ClInclude Include="..\..\..\src\Sequence\Sequence.h" />
+    <ClInclude Include="..\..\..\src\Sequence\SequenceBase.h" />
+    <ClInclude Include="..\..\..\src\States.h" />
+    <ClInclude Include="..\..\..\src\Status.h" />
+    <ClInclude Include="..\..\..\src\Status\StatusManager.h" />
+    <ClInclude Include="..\..\..\src\System\MemoryPool\MemoryPool.h" />
+    <ClInclude Include="..\..\..\src\System\ThreadPool\ThreadPool.h" />
+    <ClInclude Include="..\..\..\src\System\Timer\DDSTimer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\Condition\ConditionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\GuardCondition.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\GuardConditionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\QueryConditionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\ReadConditionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\StatusConditionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\WaitSet.cpp" />
+    <ClCompile Include="..\..\..\src\Condition\WaitSetImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\ContentFilteredTopicImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\DataReaderImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\DataWriterImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\DomainEntityImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\DomainParticipantFactoryImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\DomainParticipantImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\EntityImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\MultiTopicImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\PublisherImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\SubscriberImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\TopicDescriptionImpl.cpp" />
+    <ClCompile Include="..\..\..\src\DDS\TopicImpl.cpp" />
+    <ClCompile Include="..\..\..\src\Qos.cpp" />
+    <ClCompile Include="..\..\..\src\QoS\QosPolicyCheck.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Discovery.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\HistoryCache.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Participant.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Reader.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\ReaderLocator.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\ReaderProxy.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Sedp.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Spdp.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\StatefulReader.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\StatefulWriter.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\StatelessWriter.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\Writer.cpp" />
+    <ClCompile Include="..\..\..\src\RTPS\WriterProxy.cpp" />
+    <ClCompile Include="..\..\..\src\Sequence\Sequence.cpp" />
+    <ClCompile Include="..\..\..\src\Status\StatusManager.cpp" />
+    <ClCompile Include="..\..\..\src\System\MemoryPool\MemoryPool.cpp" />
+    <ClCompile Include="..\..\..\src\System\ThreadPool\ThreadPool.cpp" />
+    <ClCompile Include="..\..\..\src\System\Timer\DDSTimer.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{7C9420A0-3C97-4F26-8599-8993D29D84D3}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>AGIDDS</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>../../../bin/vs2017$(Platform)$(Configuration)\</OutDir>
+    <IntDir>../../../build/VS2017$(ProjectName)$(Platform)$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>../../../bin/vs2017$(Platform)$(Configuration)\</OutDir>
+    <IntDir>../../../build/VS2017$(ProjectName)$(Platform)$(Configuration)\</IntDir>
+    <TargetExt>.dll</TargetExt>
+    <TargetName>$(ProjectName)d</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>../../../bin/vs2017$(Platform)$(Configuration)\</OutDir>
+    <IntDir>../../../build/VS2017$(ProjectName)$(Platform)$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>../../../bin/vs2017$(Platform)$(Configuration)\</OutDir>
+    <IntDir>../../../build/VS2017$(ProjectName)$(Platform)$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;AGIDDS_EXPORTS;_WINDOWS;_USRDLL;_DDS_DLL_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;AGIDDS_EXPORTS;_WINDOWS;_USRDLL;_DDS_DLL_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4250;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;AGIDDS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;AGIDDS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../../../src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

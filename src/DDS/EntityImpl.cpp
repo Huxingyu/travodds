@@ -1,0 +1,42 @@
+#include "EntityImpl.h"
+
+USING_AGIDDS_NAMESPACE;
+
+EntityImpl::EntityImpl(const StatusMask& mask)
+	: enable_(false),
+	  statusMask_(mask),
+	  statusCondition_(this),
+	  handle_(HANDLE_NIL)
+{
+}
+
+StatusCondition* EntityImpl::get_statuscondition() const
+{
+	return (StatusCondition*)&statusCondition_;
+}
+
+const StatusMask& EntityImpl::get_status_change() const
+{
+	return statusCondition_.get_status();
+}
+
+ReturnCode_t EntityImpl::enable()
+{
+	enable_ = true;
+	return RETCODE_OK;
+}
+
+const InstanceHandle_t& EntityImpl::get_instance_handle() const
+{
+	return handle_;
+}
+
+bool EntityImpl::IsEnable() const
+{
+	return enable_;
+}
+
+const StatusMask& EntityImpl::get_status_mask() const
+{
+	return statusMask_;
+}
