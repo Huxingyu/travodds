@@ -53,7 +53,7 @@ AGIROS开源社区自研DDS，研发开源数据分发通信中间件产品，�
             --transport     传输模块
             --historycache  数据缓存模块
             --messages      报文封装解析模块
-            --qos         qos策略
+        --qos         qos策略
     	--security    安全
     	--xml  	      xml配置解析
         --cdr  	      序列化和反序列化
