@@ -18,7 +18,7 @@ AGIROS开源社区自研DDS，研发开源数据分发通信中间件产品，�
             --publish	     发布模块
    	    --subscribe	     订阅模块
    	    --topic          主题模块
-		--base	          基础设施      
+	    --base	     基础设施      
     		--listener       监听器模块
                 --condition      条件等待集模块
     	--rtps 		rtps层头文件
