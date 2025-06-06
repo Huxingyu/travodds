@@ -1,0 +1,441 @@
+#include "rtps/endpoint/writerproxy.h"
+#include  <algorithm>
+USING_AGIDDS_NAMESPACE;
+
+WriterProxy::WriterProxy(const GUID_t& writerGuid, const GUID_t& groupGuid, 
+	const LocatorSeq& unicastLocatorList, const LocatorSeq& multicastLocatorList)
+	: remoteWriterGuid_(writerGuid),
+      remoteGroupGuid_(groupGuid),
+	  unicastLocatorList_(unicastLocatorList),
+	  multicastLocatorList_(multicastLocatorList),
+	  submitSeq_(SEQUENCENUMBER_ZERO),
+	  insertSeq_(SEQUENCENUMBER_ZERO),
+	  dataMaxSizeSerialized_(0),
+	  hbCount_(0),
+	  hbFragCount_(0),
+	  ackSendCount_(0),
+	  nackSendCount_(0),
+	  changes_from_writer(nullptr)
+{
+}
+
+GUID_t WriterProxy::GetGuid()
+{
+	return remoteWriterGuid_;
+}
+
+void WriterProxy::Init(SequenceNumber_t first, SequenceNumber_t last)
+{
+	//while(first <= last)
+	//{
+	//	ChangeFromWriter changeFromWriter;
+	//	changeFromWriter.sequenceNumber = first;
+	//	changeFromWriter.status = UNKNOWN;
+	//	changesFromWriter_.push_back(changeFromWriter);
+	//	first++;
+	//}
+}
+
+SequenceNumber_t WriterProxy::AvailableChangesMax()
+{
+	SequenceNumber_t seq = SEQUENCENUMBER_ZERO;
+
+	auto change = changesFromWriters_.begin();
+	if (change == changesFromWriters_.end()) {
+		return seq;
+	}
+
+	if (change->second.status == RECEIVED || (change->second.status & NOT_AVAILABLE)) {
+		seq = change->second.sequenceNumber;
+	}
+	return seq;
+}
+
+void WriterProxy::NonAvailableChangeSet(SeqNumberVec seqNumSeq, ChangeCount_t filteredCount)
+{
+	unsigned long changeCount = filteredCount.low + (filteredCount.high < 32);
+	
+	if (seqNumSeq.size() <= 0) {
+		return;
+	}
+	SequenceNumber_t seq = seqNumSeq[seqNumSeq.size() - 1];
+
+	if (insertSeq_ < seq) {
+		for (insertSeq_ = seqNumSeq[0]; insertSeq_ <= seq; insertSeq_++) {
+			ChangeFromWriter changeInfo;
+			changeInfo.status = UNKNOWN;
+			changeInfo.is_relevant = true;
+			changeInfo.sequenceNumber = insertSeq_;
+			changeInfo.cache = nullptr;
+
+			changesFromWriters_[insertSeq_] = changeInfo;
+		}
+		insertSeq_ = insertSeq_ - 1; 
+	}
+
+	for (auto& change : changesFromWriters_)
+	{
+		if(!std::count(seqNumSeq.begin(), seqNumSeq.end(), change.second.sequenceNumber))
+			continue;
+
+		if (seqNumSeq.size() == changeCount) {
+			change.second.status = NA_FILTERED;
+		}
+		else if (0 == changeCount)
+			change.second.status = NA_REMOVED;
+		else
+			change.second.status = NA_UNSPECIFIED;
+	}
+	
+}
+
+void WriterProxy::LostChangesUpdate(SequenceNumber_t firstAvailableSeqNum, bool changesRemoved)
+{
+	for (auto& change : changesFromWriters_)	{
+
+		if ((UNKNOWN == change.second.status || MISSING == change.second.status) && change.second.sequenceNumber < firstAvailableSeqNum) {
+			
+			if (changesRemoved) {
+				change.second.status = NA_REMOVED;
+			}
+			else {
+				change.second.status = NA_UNSPECIFIED;
+			}			
+		}
+	}
+}
+
+SeqNumberVec WriterProxy::MissingChanges()
+{
+	SeqNumberVec missSeqNumbers;
+	for (auto& change : changesFromWriters_) {
+
+		if (MISSING == change.second.status){
+			missSeqNumbers.push_back(change.second.sequenceNumber);
+		}
+	}
+	return missSeqNumbers;
+}
+
+void WriterProxy::MissingChangesUpdate(SequenceNumber_t lastAvailableSeqNum)
+{
+	for (auto change = changesFromWriters_.begin(); change != changesFromWriters_.end(); change++) {
+		if (UNKNOWN == change->second.status && change->second.sequenceNumber <= lastAvailableSeqNum) {
+			change->second.status = MISSING;
+		}
+	}
+}
+
+void WriterProxy::ReceivedChangeSet(SequenceNumber_t seqNum)
+{
+	for (auto &change : changesFromWriters_)	{
+		if (change.second.sequenceNumber == seqNum) {
+			change.second.status = RECEIVED;
+		}	
+	}
+}
+
+
+ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int32_t &lostCount, SequenceNumberSet_t& set)
+{
+	//初始化一下变量
+	lostCount = 0;
+	set.bitmapBase = hbMsg.lastSN + 1;
+
+	if (hbCount_.load() >=  hbMsg.count) {
+		return RETCODE_RECEIVE_DUPLICATE;
+	}
+	hbCount_ = hbMsg.count;
+
+	if (hbMsg.lastSN <= submitSeq_) {
+		// 所有数据正常提交 
+		return RETCODE_OK;
+	}
+	
+	/* 如果插入的ChangeFromWriter的序号 小于 HB的最后一个值，开始发送数据 */
+	if (insertSeq_ < hbMsg.lastSN) {
+		/* 之前没有添加过，循环添加缺失数据 */
+		for (insertSeq_ = hbMsg.firstSN; insertSeq_ <= hbMsg.lastSN; insertSeq_++) {
+			ChangeFromWriter changeInfo;
+			changeInfo.status = UNKNOWN;
+			changeInfo.is_relevant = true;
+			changeInfo.sequenceNumber = insertSeq_;
+			changeInfo.cache = nullptr;
+
+			changesFromWriters_[insertSeq_] = changeInfo;
+		}
+		insertSeq_ = insertSeq_ - 1;
+	}
+
+	if (hbMsg.firstSN > submitSeq_ + 1) {
+
+		if (submitSeq_ != SEQUENCENUMBER_ZERO) {
+			LostChangesUpdate(hbMsg.firstSN, true);
+			lostCount = LostChanges().size();
+		}
+		SequenceNumber_t seq = AvailableChangesMax();
+		submitSeq_ = seq == SEQUENCENUMBER_ZERO ? hbMsg.firstSN : seq;
+		submitSeq_ = submitSeq_ - 1;
+	}
+	if (submitSeq_ < hbMsg.lastSN) {
+		MissingChangesUpdate(hbMsg.lastSN);
+	}
+	GetAckSequenceSet(set);
+
+	return RETCODE_OK;
+}
+ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbFragMsg, FragMentNumberSet_t& set)
+{
+	//TODO 
+	//TODO
+	/*  目前没有使用到DataReader        */
+
+
+	if (hbFragCount_.load() >= hbFragMsg.count) {
+		return RETCODE_RECEIVE_DUPLICATE;
+	}
+	hbCount_ = hbFragMsg.count;
+
+	std::shared_ptr<CacheChange> cache = nullptr;
+	ReturnCode_t ret = RETCODE_OK;
+	auto changeInfo = changesFromWriters_.find(hbFragMsg.writerSN);
+	if (changesFromWriters_.end() == changeInfo) {
+		return ret;
+	}
+
+	cache = changeInfo->second.cache;
+	if (!cache) {
+		return ret;
+	}
+	
+	SerializedBuffer* buffer = cache->serializedBuffer;
+	set.bitmapBase = 0;
+	/* 找到起始丢失序号 */
+	for (uint32_t i = 1; i <= hbFragMsg.lastFragmentNum; i++) {
+		if (nullptr == buffer) {
+			break;
+		}
+		if (!buffer->buffer) {
+			/* 没有收到数据 */  
+			set.bitmapBase = i;
+			break;
+		}
+		buffer = buffer->next;
+	}
+	/* 从起始开始序号，继续遍历 */
+	for (uint32_t i = 1; i <= hbFragMsg.lastFragmentNum - set.bitmapBase; i++) {
+		if (nullptr == buffer) {
+			ret = RETCODE_ERROR;
+			break;
+		}
+		if (i == 256) {	
+			break;
+		}
+		if (!buffer->buffer) {
+			ret = RETCODE_OK;
+			/* 没有收到数据 */
+			//TODO 
+			set.bitmap[i / 32] |= (1 << (i % 32) );
+			set.numBit = i;
+			break;
+		}
+		buffer = buffer->next;
+	}
+	return ret;
+}
+
+
+ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag)
+{
+	if (nullptr == cache) {
+		return RETCODE_ERROR;
+	}
+
+	/* TODO wangyi 接收Liveliness 状态报文时存在changesFromWriters_为空，导致报文被丢弃，数据超时 */
+	/* 如果之前添加的数据，修改之前数据的状态  */
+	if (cache->sequenceNumber <= insertSeq_) {
+		auto changeInfo = changesFromWriters_.find(cache->sequenceNumber);
+		if (changesFromWriters_.end() != changeInfo) {
+			/* 存在数据，先删除在添加 (未提交数据) */
+			//if (changeInfo->second.cache) {
+			//	changeInfo->second.cache.reset();
+			//}
+			changeInfo->second.cache = cache;
+			if (MISSING == changeInfo->second.status || UNKNOWN == changeInfo->second.status) {
+				changeInfo->second.status = RECEIVED;
+			}	
+		} else {
+			//TODO 此处的数据应该是，已经提交过后，或者通过HB报文删除
+			//
+			//cache.reset();
+			//cache = nullptr;
+			return RETCODE_ERROR;
+		}
+	} else {
+		/* 之前没有添加过，循环添加缺失数据 */
+		for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
+			ChangeFromWriter changeInfo;
+			changeInfo.status = UNKNOWN;
+			changeInfo.is_relevant = true;
+			changeInfo.sequenceNumber = insertSeq_;
+			changeInfo.cache = nullptr;
+
+			changesFromWriters_[insertSeq_] = changeInfo;
+		}
+		insertSeq_ = insertSeq_ - 1;
+		changesFromWriters_[insertSeq_].cache = cache;
+		if (notFrag) {
+			changesFromWriters_[insertSeq_].status = RECEIVED;
+		}
+		else {
+			changesFromWriters_[insertSeq_].status = MISSING;
+		}
+	}
+	return RETCODE_OK;
+}
+
+std::shared_ptr<CacheChange> WriterProxy::GetSubmitCache()
+{
+	std::shared_ptr<CacheChange> cache = nullptr;
+	SequenceNumber_t seq = AvailableChangesMax();
+
+	while (seq != SEQUENCENUMBER_ZERO && seq == submitSeq_ + 1) {
+
+		auto changeInfo = changesFromWriters_.find(seq);
+		/* 不是容器中第一个,不进行提交  */
+		if (changeInfo == changesFromWriters_.end()) {
+			break;
+		}
+
+		cache = changeInfo->second.cache;
+		changeInfo->second.cache = nullptr;
+		submitSeq_ = seq;
+	
+		if (changeInfo->second.status == RECEIVED) {
+
+			changesFromWriters_.erase(changeInfo);
+			break;
+		}
+		else {
+			// 为NOT_AVAILABLE的的数据 继续读取下一个数据 
+			changesFromWriters_.erase(changeInfo);
+			seq = AvailableChangesMax();
+		}
+	}
+
+	return cache;
+}
+
+bool WriterProxy::ExistCache(const SequenceNumber_t& seq)
+{
+	bool ret = false;
+	auto change = changesFromWriters_.find(seq);
+	if (changesFromWriters_.end() != change ) {
+		if (change->second.cache) {
+			ret = true;
+		}
+	}
+
+	return ret;
+}
+
+ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t num)
+{
+	std::shared_ptr<CacheChange> cache = nullptr;
+	ReturnCode_t ret = RETCODE_ERROR;
+	auto changeInfo = changesFromWriters_.find(seq);
+	if (changesFromWriters_.end() == changeInfo) {
+		return ret;
+	}
+
+	cache = changeInfo->second.cache;
+	if (!cache) {
+		return ret;
+	}
+
+	/* 判断当前分片数据是否收到，没有收到进行封装  */
+	uint32_t shift = 0;
+	if (0 != cache->fragmentSeq.count(num)) {
+		shift += (num - 1) * cache->fraqmentSize;// dataMsg.dataFrag.fragmentSize;
+		memcpy(cache->serializedBuffer->buffer + shift, data, len);
+		cache->fragmentSeq.erase(num);
+	}
+	else {
+		//TODO  重复接收分片数据
+		printf("recv repeat dataFrg [%s::%d] frag=%d \n", __FUNCTION__, __LINE__, num);
+	}
+
+	if (0 == cache->fragmentSeq.size()) {
+		changeInfo->second.status = RECEIVED;
+	}
+
+	return ret;
+}
+
+void WriterProxy::GetAckSequenceSet(SequenceNumberSet_t& set)
+{
+	SeqNumberVec vec = MissingChanges();
+	if (vec.size() > 0) {
+		set.bitmapBase = vec[0];
+	}
+
+	for (auto seq : vec) {
+		int32_t s = seq - set.bitmapBase;
+		if (s >= 255) {
+			break;
+		}
+		set.numBit = s + 1;
+		set.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+	}
+
+}
+
+LocatorSeq WriterProxy::GetUnicastLocatorList()
+{
+	return unicastLocatorList_;
+}
+
+LocatorSeq WriterProxy::GetMulticastLocatorList()
+{
+	return multicastLocatorList_;
+}
+
+
+SeqNumberVec WriterProxy::LostChanges()
+{
+	SeqNumberVec seqVec;
+
+	for (auto &change : changesFromWriters_) {
+		if (change.second.status & NOT_AVAILABLE) {
+			seqVec.push_back(change.first);
+		}
+	}
+
+	return seqVec;
+}
+
+void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
+{
+	for (auto& change : changesFromWriters_) {
+
+		if (MISSING == change.second.status) {
+			if ((nullptr != change.second.cache) && (0 != change.second.cache->dataSize)) {
+				/* 为分片数据  */
+				NackFragSubMessage_t nackMsg;
+				int32_t s = 0;
+				nackMsg.writerSN = change.second.sequenceNumber;
+				nackMsg.fragmentNumberState.bitmapBase = *change.second.cache->fragmentSeq.begin();
+				for (auto itor : change.second.cache->fragmentSeq) {
+					s = itor - nackMsg.fragmentNumberState.bitmapBase;
+					if (s >= 255) {
+						break;
+					}
+					nackMsg.fragmentNumberState.numBit = s + 1;
+					nackMsg.fragmentNumberState.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+				}
+
+				set.push_back(nackMsg);
+			}
+		}
+	}
+}

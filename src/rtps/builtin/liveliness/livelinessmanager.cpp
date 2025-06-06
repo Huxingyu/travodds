@@ -1,0 +1,475 @@
+#include <rtps/builtin/liveliness/livelinessmanager.h>
+#include <rtps/historycache/historycache.h>
+#include "rtps/discovery/discovery.h"
+#include "common/timeconversion.h"
+#include "dcps/base/statusmanager.h"
+#include "common/time/ddstimer.h"
+#include <algorithm>
+USING_AGIDDS_NAMESPACE
+
+std::mutex writerMutex_;
+
+LivelinessManager::LivelinessManager(Participant* participant):participant_(participant)
+{
+	GUID_t tmpGuid = participant_->GetGuid();
+	unsigned int id = 0;
+	memcpy(&tmpGuid.entityId, &id, 4);
+	autoHandle_ = Conversion::ToInstanceHandle(tmpGuid);
+	manualHandle_ = autoHandle_;
+	autoHandle_.keyHash.value[15] = AUTOMATIC_LIVELINESS_QOS + 0x01;
+	manualHandle_.keyHash.value[15] = MANUAL_BY_PARTICIPANT_LIVELINESS_QOS + 0x01;
+
+	/* 发布者Liveliness管理 */
+	localWriterLivelinessManager_ = std::make_shared<LivelinessAssert>(this, true);
+	/* 订阅者Liveliness管理 */
+	remoteWriterLivelinessManager_ = std::make_shared<LivelinessAssert>(this,false);
+}
+
+LivelinessManager::~LivelinessManager()
+{
+	if (ParticipantMessageDataWriter_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageDataWriter_->GetGuid());
+		participant_->DeleteWriter(handle);
+	}
+	if (ParticipantMessageDataReader_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageDataReader_->GetGuid());
+		participant_->DeleteReader(handle);
+	}
+}
+
+void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipantData & data)
+{
+	DiscoveredWriterData writerData;
+	memcpy(writerData.remoteWriterGuid.prefix.value, data.ddsParticipantData.key.value, 16);
+	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
+	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
+
+	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
+	writerData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	participant_->AddRemoteWriter(writerData);
+
+	DiscoveredReaderData readerData;
+	memcpy(readerData.remoteReaderGuid.prefix.value, data.ddsParticipantData.key.value, 16);
+	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
+	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
+
+	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER;
+	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	participant_->AddRemoteReader(readerData);
+}
+
+void LivelinessManager::RemoveParticipantMessageProxy(GUID_t guid)
+{
+	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER;
+	participant_->RemoveRemoteReader(guid);
+
+	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
+	participant_->RemoveRemoteWriter(guid);
+}
+
+
+/* wnagyi LivelinessQos */
+bool LivelinessManager::AddLivelinessWriter(std::shared_ptr<Writer> writerPtr, const LivelinessQosPolicy & qos)
+{
+	std::unique_lock<std::mutex> lock(writerMutex_);
+
+	if (qos.kind == AUTOMATIC_LIVELINESS_QOS) {
+
+		automaticWriters_.emplace(writerPtr->GetGuid(), writerPtr);
+
+		SetTimer(qos);
+
+	}
+	else if (qos.kind == MANUAL_BY_PARTICIPANT_LIVELINESS_QOS) {
+
+		manualByParticipantWriters_.emplace(writerPtr->GetGuid(),writerPtr);
+
+		SetTimer(qos);
+
+		if (!localWriterLivelinessManager_->AddWriter(LivelinesStatus(writerPtr->GetGuid(),qos))) {
+			/* TODO 日志 */
+		}
+	}
+	else if (qos.kind == MANUAL_BY_TOPIC_LIVELINESS_QOS) {
+
+		manualByTopicWriters_.emplace(writerPtr->GetGuid(),writerPtr);
+
+		if (!localWriterLivelinessManager_->AddWriter(LivelinesStatus(writerPtr->GetGuid(),qos))) {
+			/* TODO 日志 */
+		}
+	}
+
+	return true;
+}
+
+bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPtr)
+{
+	std::unique_lock<std::mutex> lock(writerMutex_);
+	/* TODO 日志 */
+
+	if (writerPtr->GetQos().liveliness.kind == AUTOMATIC_LIVELINESS_QOS) {
+
+		if (!RemoveWriterMap(writerPtr->GetGuid(), automaticWriters_)) {
+			/* TODO 日志 */
+			return false;
+		}
+
+		return UpdateTimer(AUTOMATIC_LIVELINESS_QOS);
+	}
+	else if (writerPtr->GetQos().liveliness.kind == MANUAL_BY_PARTICIPANT_LIVELINESS_QOS) {
+
+		if (!RemoveWriterMap(writerPtr->GetGuid(), manualByParticipantWriters_)) {
+			/* TODO 日志 */
+			return false;
+		}
+
+		if (!localWriterLivelinessManager_->RemoveWriter(writerPtr->GetGuid())) {
+			/* TODO 日志 */
+		}
+
+		return UpdateTimer(MANUAL_BY_PARTICIPANT_LIVELINESS_QOS);
+	}
+	else if (writerPtr->GetQos().liveliness.kind == MANUAL_BY_TOPIC_LIVELINESS_QOS) {
+
+		if (!RemoveWriterMap(writerPtr->GetGuid(), manualByTopicWriters_)){
+			/* TODO 日志 */
+			return false;
+		}
+
+		if (!localWriterLivelinessManager_->RemoveWriter(writerPtr->GetGuid())) {
+			/* TODO 日志 */
+		}
+		return true;
+	}
+
+	/* TODO 日志 */
+	return false;
+}
+
+void LivelinessManager::SetTimer(const LivelinessQosPolicy & qos)
+{
+	Duration_t ret = TIME_ZERO;
+	/* 自动发送和检测时间获取 */
+	double milliSec(Conversion::ToMilliSecondsDouble(qos.lease_duration) * 0.5);
+	Time_t periodTime = Conversion::MilliSecondsToTime(milliSec);
+	Duration_t periodDuration = Conversion::TimeToDuration(periodTime);
+
+
+	std::shared_ptr<Timer> timer;
+	std::map<GUID_t, std::shared_ptr<Writer>> writers;
+
+	if (AUTOMATIC_LIVELINESS_QOS == qos.kind && nullptr == autoTimer_) {
+		autoTimer_ = TimerManager::CreateTimer(periodTime, [&]() -> bool {AutoLivelinessChecker(); return true; }, "autoLiveliness");
+	}
+	else if (MANUAL_BY_PARTICIPANT_LIVELINESS_QOS == qos.kind && nullptr == manualTimer_) {
+
+		manualTimer_ = TimerManager::CreateTimer(periodTime, [&]() -> bool {ParticipantLivelinessChecker(); return true; }, "manuLiveliness");
+	}
+	else
+	{
+		UpdateTimer(qos.kind);
+	}
+
+}
+
+bool LivelinessManager::RemoveWriterMap(GUID_t guid, std::map<GUID_t, std::shared_ptr<Writer>>& writers)
+{
+	auto it = writers.find(guid);
+
+	if (it == writers.end()) {
+		return false;
+	}
+
+	writers.erase(it);
+	return true;
+}
+
+bool LivelinessManager::UpdateTimer(LivelinessQosPolicyKind kind)
+{
+	std::shared_ptr<Timer> timer;
+	std::map<GUID_t, std::shared_ptr<Writer>> writers;
+
+	if (AUTOMATIC_LIVELINESS_QOS == kind) {
+		timer = autoTimer_;
+		writers = automaticWriters_;
+	}
+	else if (MANUAL_BY_PARTICIPANT_LIVELINESS_QOS == kind)
+	{
+		timer = manualTimer_;
+		writers = manualByParticipantWriters_;
+	}
+
+	Duration_t duration = TIME_INFINITE;
+
+	if (writers.size() == 0) {
+		timer->Stop();
+		return true;
+	}
+	// 重新获取最小发送报文时间间隔
+	for (auto it = writers.begin(); it != writers.end(); it++) {
+		auto period = it->second->GetQos().liveliness.lease_duration;
+		if (duration > period) {
+			duration = period;
+		}
+	}
+
+	timer->UpdatePeriod(Conversion::ToMilliSecondsDouble(duration) * 0.5);
+
+	return true;
+}
+
+bool LivelinessManager::AddLivelinessReader(std::shared_ptr<Reader> readerPtr, const LivelinessQosPolicy & qos)
+{
+	std::unique_lock<std::mutex> lock(writerMutex_);
+
+	if (qos.kind == AUTOMATIC_LIVELINESS_QOS) {
+		automaticReaders_ = true;
+	}
+
+	readers_.emplace(readerPtr->GetGuid(),(readerPtr));
+
+	return true;
+}
+
+bool LivelinessManager::RemoveLivelinessReader(std::shared_ptr<Reader> readerPtr)
+{
+	auto it = readers_.find(readerPtr->GetGuid());
+	if (it != readers_.end()) {
+		readers_.erase(it);
+		return true;
+	}
+
+	/* TODO 日志 */
+	return false;
+}
+
+
+bool LivelinessManager::AutoLivelinessChecker()
+{
+	std::unique_lock<std::mutex> lock(writerMutex_);
+
+	if (0 < automaticWriters_.size()) {
+
+		return SendLivelinessMessage(autoHandle_);
+	}
+
+	return true;
+}
+
+
+bool LivelinessManager::ParticipantLivelinessChecker()
+{
+	std::unique_lock<std::mutex> lock(writerMutex_);
+
+	if (0 < manualByParticipantWriters_.size()) {
+
+		if (localWriterLivelinessManager_->HasAliveWriters(MANUAL_BY_PARTICIPANT_LIVELINESS_QOS)) {
+
+ 			return SendLivelinessMessage(manualHandle_);
+		}
+	}
+
+	return false;
+}
+
+bool LivelinessManager::SendLivelinessMessage(const InstanceHandle_t& instance)
+{
+	SerializedBuffer *buffer = new SerializedBuffer;
+	octet data[28] = { 0 };
+	unsigned short size = 0;
+	Time_t time;
+	DomainParticipantImpl::get_current_time(time);
+
+	/* 序列化 */
+	if (TypeSupport::IsLittleEndian) {
+		/* 小端 */
+		data[0] = PL_CDR_LE.value[0];
+		data[1] = PL_CDR_LE.value[1];
+	}
+	else {
+		/* 大端 */
+		data[0] = PL_CDR_BE.value[0];
+		data[1] = PL_CDR_BE.value[1];
+	}
+	data[2] = 0;
+	data[3] = 0;
+	size += 4;
+	memcpy(data + size, instance.keyHash.value, 16);
+	size += 16;
+	//memcpy(data + size, &instance.keyHash.length, 4);
+	size += 4;
+	//memcpy(data + size, &instance.isValid, 4);
+	size += 4;
+
+	buffer->buffer_size = size;
+	
+	int ret = MemoryPool::GetInstance()->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->buffer);
+	buffer->buffer = buffer->buffer + BUFF_SHIFT;
+	memcpy(buffer->buffer, data, 28);
+	
+	std::shared_ptr<CacheChange> cacheChange = ParticipantMessageDataWriter_->NewChange(ChangeKind_t::ALIVE, buffer, instance, time);
+	if (nullptr == cacheChange) {
+		return false;
+	}
+
+	ParticipantMessageDataWriter_->AddNewCachce(cacheChange);
+	return true;
+}
+
+void LivelinessManager::SetParticipantMessageDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
+{
+	DataWriterQos writerQos;
+	dataWriter->get_qos(writerQos);
+	std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER, true);
+	ParticipantMessageDataWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
+}
+
+void LivelinessManager::SetParticipantMessageDataReader(std::shared_ptr<DataReaderImpl> dataReader)
+{
+	DataReaderQos readerQos;
+	dataReader->get_qos(readerQos);
+	std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), readerQos, ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER, true);
+	ParticipantMessageDataReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
+
+	reader->SetReaderListener(this);
+}
+
+bool LivelinessManager::AssertLiveliness(GUID_t guid, bool localWriter, LivelinessQosPolicyKind kind)
+{
+	if(true == localWriter)
+		return localWriterLivelinessManager_->AssertLiveliness(guid, kind);
+	else
+		return remoteWriterLivelinessManager_->AssertLiveliness(guid, kind);
+}
+
+//bool LivelinessManager::AssertLivelinessManualByParticipant()
+//{
+//	if (manualByParticipantWriters_.size() > 0) {
+//		return localWriterLivelinessManager_->AssertLiveliness(MANUAL_BY_PARTICIPANT_LIVELINESS_QOS, participant_->GetGuid());
+//	}
+//	return false;
+//}
+
+void LivelinessManager::LiveLinessStatusChanged(const GUID_t& writerGuid, bool localWriter,const LivelinessQosPolicy& livelinessQos, WriterStatus status)
+{
+	if (localWriter) {
+		LocalStatusChanged(writerGuid, livelinessQos, status);
+	}
+	else
+	{
+		RemoteStatusChanged(writerGuid, livelinessQos, status);
+	}
+
+}
+
+void LivelinessManager::LocalStatusChanged(const GUID_t & writer, const LivelinessQosPolicy & livelinessQos, WriterStatus status)
+{
+	if (NOTALIVE == status)
+		return;
+
+	if (livelinessQos.kind == AUTOMATIC_LIVELINESS_QOS) {
+		UpdateLivelinessLostStatus(writer, automaticWriters_);
+	}
+	else if (livelinessQos.kind == MANUAL_BY_PARTICIPANT_LIVELINESS_QOS) {
+		UpdateLivelinessLostStatus(writer, manualByParticipantWriters_);
+	}
+	else if (livelinessQos.kind == MANUAL_BY_TOPIC_LIVELINESS_QOS) {
+		UpdateLivelinessLostStatus(writer, manualByTopicWriters_);
+	}
+}
+
+void LivelinessManager::UpdateLivelinessLostStatus(const GUID_t& writerGuid, std::map<GUID_t, std::shared_ptr<Writer>> writers)
+{
+	auto writer = writers.find(writerGuid);
+	if (writer != writers.end()) {
+		writer->second->GetRelatedDataWriter()->UpdateLivelinessLostStatus();
+	}
+}
+
+void LivelinessManager::RemoteStatusChanged(const GUID_t& writerGuid, const LivelinessQosPolicy& livelinessQos, WriterStatus status)
+{
+
+	bool alive, ensure;
+
+	if (status == WriterStatus::LIVELINESSALIVE){
+		alive = false;
+		ensure = false;
+	}
+	else if (status == WriterStatus::NOTALIVE) {
+		alive = true;
+		ensure = false;
+	}
+	else if (status == WriterStatus::NOTASSERTED) {
+		alive = true;
+		ensure = true;
+	}
+
+	for (auto it = readers_.begin(); it != readers_.end(); it++) {
+		if (it->second->MatchedWriterIsMatched(writerGuid)) {
+
+			it->second->GetRelatedDataReader()->UpdateLivelinessChangedStatus(Conversion::ToInstanceHandle(writerGuid), alive, ensure);
+		}
+	}
+}
+
+std::shared_ptr<LivelinessAssert> LivelinessManager::GetLocalWriterLivelinessManager()
+{
+	return localWriterLivelinessManager_;
+}
+
+std::shared_ptr<LivelinessAssert> LivelinessManager::GetRemoteWriterLivelinessManager()
+{
+	return remoteWriterLivelinessManager_;
+}
+
+std::shared_ptr<StatefulReader> LivelinessManager::GetParticipantDataReader()
+{
+	return ParticipantMessageDataReader_;
+}
+
+void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
+{
+	if (change->serializedBuffer) {
+
+		GUID_t guid;
+		LivelinessQosPolicyKind livelinessKind;
+
+		memcpy(change->instanceHandle.keyHash.value, change->serializedBuffer->buffer + 4, 16);
+
+		if (change->serializedBuffer->buffer_size > 0)
+		{
+			for (size_t i = 0; i < 12; ++i)
+			{
+				guid.prefix.value[i] = change->serializedBuffer->buffer[i + 4];
+			}
+			livelinessKind = (LivelinessQosPolicyKind)(change->serializedBuffer->buffer[19] - 0x01);
+		}
+		else
+		{
+			for (uint8_t i = 0; i < 12; ++i)
+			{
+				guid.prefix.value[i] = change->instanceHandle.keyHash.value[i];
+			}
+			livelinessKind = (LivelinessQosPolicyKind)change->instanceHandle.keyHash.value[15];
+		}
+
+		if (CompareGuidPrefix(guid.prefix, ParticipantMessageDataReader_->GetGuid().prefix)) {
+			/* TODO 日志 */
+			return;
+		}
+
+		if (automaticReaders_)
+		{
+			AssertLiveliness(guid,false,AUTOMATIC_LIVELINESS_QOS);
+		}
+
+		if (livelinessKind == MANUAL_BY_PARTICIPANT_LIVELINESS_QOS)
+		{
+			AssertLiveliness(guid, false,MANUAL_BY_PARTICIPANT_LIVELINESS_QOS);
+		}
+	}
+	return;
+}
+
+
+
