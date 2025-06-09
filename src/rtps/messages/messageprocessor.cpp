@@ -8,6 +8,7 @@
 #include "rtps/endpoint/readerproxy.h"
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/parameter.h"
+#include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
 USING_AGIDDS_NAMESPACE;
@@ -39,7 +40,7 @@ ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageB
 
 	if (inlineQosFlag) {
 		//TODO  在封装的时候将PID_SENTINEL 插入inlineQos的链表中，还是在这边封装一个PID_SENTINEL
-		//jdxcz 20250418 选择在封装inlineQOS封装后，封装PID_SENTINEL
+		//jdxcz 20250418 选择在封装inlineQOS封装后，封装PID_SENTINEL //
 
 		Parameter_t param;
 		param.parameterId = PID_SENTINEL;
@@ -465,7 +466,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 {
 	if (message[0] != 'R' || message[1] != 'T' ||
 		message[2] != 'P' || message[3] != 'S') {
-		std::cout << "Msg received with no RTPS in header, ignoring..." << std::endl;
+		AGILOG(AGILOG_ERROR, "Msg received with no RTPS in header, ignoring...");
 		return RETCODE_ERROR;
 	}
 
@@ -488,10 +489,15 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 {
 	ReturnCode_t ret = RETCODE_OK;
 
+	if (messageLen < sizeof(MessageHeader_t)) {
+		return ret;
+	}
+
 	Receive_t messageReceiver;
 
 	ret = InterpretMessageHeader(message, messageReceiver);
 	if (ret != RETCODE_OK) {
+		AGILOG(AGILOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
 	messageLen -= sizeof(MessageHeader_t);
@@ -566,7 +572,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 {
 	uint32_t messageShift = 0;
 	uint32_t serializedPayloadLen = 0;
-	//解析 flags 每一位
+	/* 解析 flags 每一位 */
 	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
 	bool inlineQosFlag = (submessageHeader.flags & BIT(1)) != 0;
 	bool dataFlag = (submessageHeader.flags & BIT(2)) != 0;
@@ -574,7 +580,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	bool nonStandardPayloadFlag = (submessageHeader.flags & BIT(4)) != 0;
 
 	if (keyFlag && dataFlag) {
-		std::cout << "Message received with Data and Key Flag set, ignoring"<<std::endl;
+		AGILOG(AGILOG_ERROR, "Message received with Data and Key Flag set, ignoring");
 		return RETCODE_ERROR;
 	}
 
@@ -604,7 +610,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	}
 	//TODO 
 	if (dataSubMessage.writerSN <= SequenceNumber_t()) {
-		std::cout<<"Invalid message received, bad sequence Number"<<std::endl;
+		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
@@ -816,7 +822,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	}
 
 	if (dataFragSubMessage.writerSN <= SequenceNumber_t()) {
-		std::cout << "Invalid message received, bad sequence Number" << std::endl;
+		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 

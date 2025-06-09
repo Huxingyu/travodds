@@ -1,10 +1,11 @@
 #include "rtps/messages/parameter.h"
-
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(DEFAULT_ENDIAN)
 {
 	if (length < 4) {
+		AGILOG(AGILOG_ERROR, "length[%d] < 4", length);
 		return;
 	}
 	msgEndian_ = static_cast<EncapsulationKind>(*(msg + 1));
@@ -476,7 +477,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 		case ParameterId::PID_USER_DATA: {
 			UserDataQosPolicy data;
 			uint32_t size = 0;
-			ReadUInt32(msg + offset,size);
+			ReadUInt32(msg + offset, size);
 			if (size != 0) {
 				data.value.resize(size);
 				std::copy(msg + offset + 4, msg + offset + 4 + size, data.value.begin());
@@ -662,7 +663,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			break;
 		}
 		case ParameterId::PID_VENDORID: {
-			VendorId_t id = {*(msg + offset),*(msg + offset+1)};
+			VendorId_t id = { *(msg + offset),*(msg + offset + 1) };
 			AddParameter(ParameterId::PID_VENDORID, id);
 			break;
 		}
@@ -839,9 +840,9 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 		case ParameterId::PID_ORIGINAL_WRITER_INFO: {
 			OriginalWriterInfo_t data;
 			memcpy(&data.originalWriterGUID, msg + offset, 16);
-			ReadInt32(msg + offset +16, data.originalWriterSN.high);
+			ReadInt32(msg + offset + 16, data.originalWriterSN.high);
 			ReadUInt32(msg + offset + 20, data.originalWriterSN.low);
-			uint32_t inLen = len -24;
+			uint32_t inLen = len - 24;
 			uint32_t inOffset = offset + 24;
 			ParameterId inId;
 			ReadUInt16(msg + inOffset, (uint16_t&)inId);
@@ -899,15 +900,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			break;
 		}
 
-		default:
-			Parameter_t data;
-			data.parameterId = pid;
-			data.length = len;
-			if (len != 0) {
-				data.value.resize(len);
-				std::copy(msg + offset, msg + offset + len, data.value.begin());
-			}
-			AddParameter(pid, data);
+		default: 
 			break;
 		}
 		offset += len;

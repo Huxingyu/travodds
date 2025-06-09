@@ -61,7 +61,7 @@ public:
 	 */
 	ReturnCode_t get_conditions(ConditionSeq& attached_conditions) const;
 private:
-	WaitSetImpl* impl_;
+	std::unique_ptr <WaitSetImpl> impl_;
 };
 
 AGIDDS_NAMESPACE_END

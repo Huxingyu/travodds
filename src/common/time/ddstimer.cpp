@@ -92,7 +92,7 @@ void  Timer::Exit()
 		thread_->join();
 	}
 	while (runs_) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
 
@@ -177,15 +177,15 @@ bool Timer::UpdatePeriod(
 
 	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
 
-	if (ms > period_)
+	//if (ms > period_)
 		ReStart();
 
 	return true;
 }
 
-bool Timer::UpdatePeriod(uint64_t period)
+bool Timer::UpdatePeriod(int64_t period)
 {
-	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
+	//std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
 
 	period_ = std::chrono::milliseconds(period);
 	//if (ms > period_) {

@@ -88,8 +88,8 @@ public:
 	/* 更新定时器时间间隔 */
 	bool UpdatePeriod(const Duration_t & period);
 
-	/* 更新定时器时间间隔 */
-	bool UpdatePeriod(uint64_t period);
+	/* 更新定时器时间间隔,间隔可负，运行超时触发 */
+	bool UpdatePeriod(int64_t period);
 private:
 	std::string name_;
 

@@ -12,6 +12,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include "common/log/logger.h"
+
 USING_AGIDDS_NAMESPACE
 
 bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
@@ -30,6 +32,7 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
         nullptr, adapters.get(), &size);
 
     if (ERROR_SUCCESS != ret) {
+		AGILOG(AGILOG_ERROR, "GetAdaptersAddresses Err[%d]", GetLastError());
         return false;
     }
 
@@ -104,6 +107,7 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
 #else
     struct ifaddrs* ifaddr = nullptr;
     if (getifaddrs(&ifaddr) == -1) {
+		AGILOG(AGILOG_ERROR, "getifaddrs Err[%d]", errno);
         return false;
     }
 

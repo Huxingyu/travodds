@@ -6,6 +6,7 @@
 #include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
@@ -110,6 +111,7 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
 		}
 	}
 
@@ -152,10 +154,12 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
+		AGILOG(AGILOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
+		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -194,10 +198,12 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
+		AGILOG(AGILOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
+		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -268,12 +274,19 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 			MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
 			
+			LocatorVec dstLocators;
+			for (auto& reader : readerProxys) {
 
-			for (auto reader : readerProxys) {
+				LocatorSeq& locators = reader->GetUnicastLocatorList();
 
-				LocatorVec dstLocators = reader->GetUnicastLocatorList();
-				messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
 			}
+
+			std::sort(dstLocators.begin(), dstLocators.end());
+			dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
+
+			messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+
 			buffer = buffer->next;
 		} while (buffer);
 
@@ -312,11 +325,24 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 		MessageProcessor::EncapsulateMessageHeader(*change->serializedBuffer, shift, guid_.prefix);
 
-		for (auto reader : readerProxys) {
+		//for (auto reader : readerProxys) {
 
-			LocatorVec dstLocators = reader->GetUnicastLocatorList();
-			messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+		//	LocatorVec dstLocators = reader->GetUnicastLocatorList();
+		//	messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+		//}
+
+		LocatorVec dstLocators;
+		for (auto& reader : readerProxys) {
+
+			LocatorSeq& locators = reader->GetUnicastLocatorList();
+
+			dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
 		}
+
+		std::sort(dstLocators.begin(), dstLocators.end());
+		dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
+		messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+
 	}
 
 	return RETCODE_OK;
@@ -352,6 +378,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 	if (!readerProxy) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "readerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -382,6 +409,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 	if (!messageTransmitter) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
 		return RETCODE_ERROR;
 	}
 	char data[1224] = { 0 };
@@ -446,6 +474,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy)
 {
 	//TODO 
+	AGILOG(AGILOG_ERROR, " not support interface");
 	return RETCODE_UNSUPPORTED;
 }
 
@@ -474,6 +503,8 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 	}
 
 	SendGap(gapVec, readerProxy);
+
+	WriteHeartbeat(readerProxy);
 
 	return RETCODE_OK;
 }

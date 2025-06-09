@@ -27,8 +27,8 @@ endif()
 ###############################################################################
 # 项 目
 ###############################################################################
-project(agidds VERSION "1.1.0" LANGUAGES C CXX)
-set(PROJECT_NAME_LARGE "AGIDDS")
+project(travodds VERSION "1.0.0" LANGUAGES C CXX)
+set(PROJECT_NAME_LARGE "TRAVODDS")
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_NAME_UPPER)
 message(STATUS "Version: ${PROJECT_VERSION}")
@@ -70,7 +70,7 @@ endif()
 ###############################################################################
 # 安装路径
 ###############################################################################
-option(APPEND_PROJECT_NAME_TO_INCLUDEDIR
+option(APPEND_PROJECT_NAME_TO_INSTALL
   "When ON headers are installed to a path ending with a folder called \
   ${PROJECT_NAME}. This avoids include directory search order issues when \
   overriding this package from a merged catkin, ament, or colcon workspace."
@@ -78,12 +78,13 @@ option(APPEND_PROJECT_NAME_TO_INCLUDEDIR
 
 set(BIN_INSTALL_DIR bin/ CACHE PATH "Installation directory for binaries")
 set(_include_dir "include/")
-if(APPEND_PROJECT_NAME_TO_INCLUDEDIR)
-  string(APPEND _include_dir "${PROJECT_NAME}/")
-endif()
 set(INCLUDE_INSTALL_DIR "${_include_dir}" CACHE PATH "Installation directory for C++ headers")
 unset(_include_dir)
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}/ CACHE PATH "Installation directory for libraries")
+if(APPEND_PROJECT_NAME_TO_INSTALL)
+  string(APPEND INCLUDE_INSTALL_DIR "/${PROJECT_NAME}/")
+  string(APPEND LIB_INSTALL_DIR "/${PROJECT_NAME}/")
+endif()
 set(DATA_INSTALL_DIR share/ CACHE PATH "Installation directory for data")
 if(WIN32)
     set(DOC_DIR "doc")

@@ -1,4 +1,5 @@
 #include "qos/qospolicycheck.h"
+#include "common/log/logger.h" 
 USING_AGIDDS_NAMESPACE
 ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantFactoryQos& qos)
 {
@@ -42,6 +43,7 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 	/* HISTORY, RESOURCE_LIMITS */
 	ret = CheckHistoryAndResourcueLimits(qos.history, qos.resource_limits);
 	if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "CheckQos History and ResourceLimits Err");
 		return ret;
 	}
 
@@ -54,11 +56,13 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataReaderQos& qos)
 	/* HISTORY, RESOURCE_LIMITS */
 	ret = CheckHistoryAndResourcueLimits(qos.history,qos.resource_limits);
 	if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "CheckQos History and ResourceLimits Err");
 		return ret;
 	}
 	/* DEADLINE, TIME_BASED_FILTER */
 	ret = CheckDeadlineAndTimeBasedFilter(qos.deadline,qos.time_based_filter);
 	if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "CheckQos DeadLine and TimeBased Err");
 		return ret;
 	}
 	return RETCODE_OK;
@@ -67,17 +71,22 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataReaderQos& qos)
 ReturnCode_t QosPolicyCheck::CheckHistoryAndResourcueLimits(const HistoryQosPolicy& historyQos, const ResourceLimitsQosPolicy& resourceLimitsQos)
 {
 	if (historyQos.kind == KEEP_LAST_HISTORY_QOS && historyQos.depth <= 0) {
+		AGILOG(AGILOG_ERROR, "Error historyQos.kind == KEEP_LAST_HISTORY_QOS && historyQos.depth <= 0");
 		return RETCODE_INCONSISTENT_POLICY;
 	}
 	/* history.kind == KEEP_LAST_HISTORY_QOS && history.depth > 0 */
 	if (historyQos.kind == KEEP_LAST_HISTORY_QOS && 
 	    historyQos.depth > resourceLimitsQos.max_samples_per_instance && 
 		resourceLimitsQos.max_samples_per_instance != static_cast<int32_t>(LENGTH_UNLIMITED)) {
+		AGILOG(AGILOG_ERROR, "historyQos.depth[%d] > resourceLimitsQos.max_samples_per_instance[%d] && resourceLimitsQos.max_samples_per_instance[%d] != static_cast<int32_t>(LENGTH_UNLIMITED)", historyQos.depth, resourceLimitsQos.max_samples_per_instance, resourceLimitsQos.max_samples_per_instance);
 		return RETCODE_INCONSISTENT_POLICY;
 	}
 	if (resourceLimitsQos.max_samples > 0 &&
 		((resourceLimitsQos.max_instances <= 0 || resourceLimitsQos.max_samples_per_instance <= 0) ||
 		(resourceLimitsQos.max_samples < (resourceLimitsQos.max_instances * resourceLimitsQos.max_samples_per_instance)))) {
+		AGILOG(AGILOG_ERROR, "resourceLimitsQos.max_samples[%d] > 0 && \
+			((resourceLimitsQos.max_instances[%d] <= 0 || resourceLimitsQos.max_samples_per_instance[%d] <= 0) || \
+			(resourceLimitsQos.max_samples[%d] < (resourceLimitsQos.max_instances[%d] * resourceLimitsQos.max_samples_per_instance[%d]))", resourceLimitsQos.max_samples, resourceLimitsQos.max_instances, resourceLimitsQos.max_samples_per_instance, resourceLimitsQos.max_samples,resourceLimitsQos.max_instances, resourceLimitsQos.max_samples_per_instance);
 		return RETCODE_INCONSISTENT_POLICY;
 	}
 	return RETCODE_OK;
@@ -87,6 +96,7 @@ ReturnCode_t QosPolicyCheck::CheckDeadlineAndTimeBasedFilter(const DeadlineQosPo
 {
 	/* 设置必须是“deadline period > = minimum_separation” */
 	if (deadline.period < timeBasedFilter.minimum_separation) {
+		AGILOG(AGILOG_ERROR, "Error deadline.period[%d.%d] < timeBasedFilter.minimum_separation[%d.%d]", deadline.period.sec, deadline.period.nanosec, timeBasedFilter.minimum_separation.sec, timeBasedFilter.minimum_separation.nanosec);
 		return RETCODE_INCONSISTENT_POLICY;
 	}
 	return RETCODE_OK;

@@ -133,35 +133,75 @@ enum ParameterId : uint16_t {
 	//PID_PARTICIPANT_ENTITYID                = 0x0051,
 };
 
+/**
+ * @brief ParameterHeader类，RTPS报文参数标题类 。
+ */
 class ParameterHeader {
 public:
 	ParameterId pid_;
 	uint16_t length_;
 
+	/**
+	 * @brief 构造函数。
+	 */
 	ParameterHeader()
 		: pid_(ParameterId::PID_PAD),
 		  length_(0)
 	{
 	}
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] pid 参数类型。
+	 * @param [in] uint16_t 参数长度。
+	 */
 	ParameterHeader(ParameterId pid, uint16_t length)
 		: pid_(pid),
 		  length_(length)
 	{
 	}
+	/**
+	 * @brief 析构函数。
+	 */
 	virtual ~ParameterHeader() {};
-	/* allowLength  传入指针当前允许写入的字节长度,结果返回剩余可写入的长度 */
+	/**
+	 * @brief 添加参数到报文中。
+	 * allowLength  传入指针当前允许写入的字节长度,结果返回剩余可写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in,out] allowLength 报文指针偏移量。
+	 *
+	 * @return 添加成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	virtual bool AddToMessage(octet* msg, uint16_t& allowLength) = 0;
-	/* 返回的不一定是 length_的值，除非length_的值是4的整数倍值 ,否则是length_的下一个4的整数倍值 */
+	/**
+	 * @brief 获取参数长度。
+	 * 返回的不一定是 length_的值，除非length_的值是4的整数倍值 ,否则是length_的下一个4的整数倍值。
+	 *
+	 * @return 参数长度值。
+	 */
 	virtual uint16_t MessageSize() const {
 		return (length_ + 3u) & ~3u;
 	};
 
 };
 
+/**
+ * @brief Parameter模板类，RTPS报文参数类。
+ * 实现对报文已知类型参数的封装。
+ */
 template<typename T>
 class Parameter : public ParameterHeader {
 public:
-	/* note:若是没有对应的映射T，传入T = std::string 即可 */
+	/**
+	 * @brief 构造函数。
+	 *  note:若是没有对应的映射T，传入T = std::string 即可
+	 *
+	 * @param [in] pid 参数类型。
+	 * @param [in] parameter 参数值。
+	 * @param [in] length 参数长度（默认值：0 ）。
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	Parameter(const ParameterId& pid, const T& parameter, const uint16_t& length = 0,const EncapsulationKind& endian = DEFAULT_ENDIAN)
 		: ParameterHeader(pid, length),
 		  parameter_(parameter),
@@ -170,16 +210,36 @@ public:
 		length_ = size();
 	}
 
+	/**
+	 * @brief 析构函数。
+	 */
 	virtual  ~Parameter() {
 	}
+
+	/**
+	 * @brief 获取参数对象。
+	 *
+	 * @param [out] parameter 参数对象。
+	 */
 	void GetParameter(T& parameter) {
 		parameter = parameter_;
 	};
 
+	/**
+	 * @brief 获取参数对象。
+	 *
+	 * @return 参数对象变量parameter_值。
+	 */
 	T& GetParameter() {
 	   return parameter_;
 	};
 
+	/**
+	 * @brief 将参数头封装到报文中。
+	 *
+	 * @param [in] msg 报文指针。
+	 * @param [in,out] allowLength 报文指针偏移量。
+	 */
 	bool AddToMessage(octet* msg, uint16_t& allowLength) {
 		uint16_t len = MessageSize();
 
@@ -195,25 +255,105 @@ public:
 		allowLength -= 4 + len;
 		return true;
 	}
+	/**
+	 * @brief 获取参数长度。
+	 * 返回的不一定是 length_的值，除非length_的值是4的整数倍值 ,否则是length_的下一个4的整数倍值。
+	 *
+	 * @return 参数长度。
+	 */
 	virtual uint16_t MessageSize() const {
 		return (length_ + 3u) & ~3u;
 	};
 public:
+	/**
+	 * @brief 将参数封装到报文中。
+	 *
+	 * @param [in,out] msg 报文指针。
+	 */
 	void writerMsg(octet* msg) {
 		return;
 	}
+	/**
+	 * @brief 获取参数长度。
+	 * 返回的不一定是 length_的值，除非length_的值是4的整数倍值 ,否则是length_的下一个4的整数倍值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint16_t size() {
 		return  length_;
 	}
 
 protected:
-	/* 返回的是写入的长度 */
+	/**
+	 * @brief int16_t类型参数值封装函数。
+	 * 返回的是写入的长度
+	 * 
+	 * @param [out] msg 报文指针。
+	 * @param [in] i16 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterInt16(octet* msg, const int16_t& i16);
+	/**
+	 * @brief uint16_t类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] ui16 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterUInt16(octet* msg, const uint16_t& ui16);
+	/**
+	 * @brief int32_t类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] i32 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterInt32(octet* msg, const int32_t& i32);
+	/**
+	 * @brief uint32_t类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] ui32 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterUInt32(octet* msg, const uint32_t& ui32);
+	/**
+	 * @brief octet*类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] src 参数值。
+	 * @param [in] len 参数长度。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterInt(octet* msg, const octet* src, const octet& len);
+	/**
+	 * @brief string类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] str 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterString(octet* msg, const std::string& str);
+	/**
+	 * @brief Locator_t类型参数值封装函数。
+	 * 返回的是写入的长度
+	 *
+	 * @param [out] msg 报文指针。
+	 * @param [in] loc 参数值。
+	 *
+	 * @return 参数长度值。
+	 */
 	uint32_t WriterLocator(octet* msg, const Locator_t& loc);
 private:
 	T parameter_;
@@ -792,11 +932,21 @@ inline void Parameter<ProtocolVersion_t>::writerMsg(octet* msg)
 	memcpy(msg, &parameter_, 2);
 }
 
+/**
+ * @brief ParameterList类，RTPS报文参数Parameter集合管理类。
+ *  rtps v2.5 Table 9.19
+ */
 class ParameterList {
 public:
-	/* rtps v2.5 Table 9.19 */
+	/**
+	 * @brief 默认构造函数。
+	 *  
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	ParameterList(const EncapsulationKind& endian = DEFAULT_ENDIAN) : msgEndian_(endian) {};
-	/* msg 包括cdr大小端信息
+	/**
+	 * @brief ParameterList类通用构造函数。
+	 *  msg 包括cdr大小端信息时报文结构。
      * 0.......... 8........... 16........ 24.......... 32
 	 * +-+-+-+-+-+-+-+-+-+-+--+-+-+-+-+-+-+-+-+-+-+-+-+ + 
      *| 0x00        PL_CDR_LE  | 0x00         0x00      |  cdr大小端信息
@@ -811,31 +961,114 @@ public:
 	 * +---------- + --------- + ------ --- + --------- +
 	 * PID_SENTINEL（终止符）   |                        |
 	 * +---------- + --------- + ------ --- + --------- +
+	 * 
+	 * @param [in] msg 上述Parameter结构报文。
+	 * @param [in] length 报文长度。
+	 * 
      */
 	ParameterList(const octet* msg, const uint32_t& length);
+	/**
+	 * @brief SPDPdiscoveredParticipantData结构对应构造函数。
+	 *
+	 * @param [in] data SPDPdiscoveredParticipantData结构对象。
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	ParameterList(const SPDPdiscoveredParticipantData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	/**
+	 * @brief DiscoveredWriterData结构对应构造函数。
+	 *
+	 * @param [in] data DiscoveredWriterData结构对象。
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	ParameterList(const DiscoveredWriterData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	/**
+	 * @brief DiscoveredReaderData结构对应构造函数。
+	 *
+	 * @param [in] data DiscoveredReaderData结构对象。
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	ParameterList(const DiscoveredReaderData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	/**
+	 * @brief DiscoveredTopicData结构对应构造函数。
+	 *
+	 * @param [in] data DiscoveredTopicData结构对象。
+	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+	 */
 	ParameterList(const DiscoveredTopicData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
 
+	/**
+	 * @brief 将Parameter集合数据转换为SPDPdiscoveredParticipantData结构数据。
+	 *
+	 * @param [out] data SPDPdiscoveredParticipantData结构对象。
+	 */
 	void GetDiscoveredData(SPDPdiscoveredParticipantData& data);
+	/**
+	 * @brief 将Parameter集合数据转换为DiscoveredWriterData结构数据。
+	 *
+	 * @param [out] data DiscoveredWriterData结构对象。
+	 */
 	void GetDiscoveredData(DiscoveredWriterData& data);
+	/**
+	 * @brief 将Parameter集合数据转换为DiscoveredReaderData结构数据。
+	 *
+	 * @param [out] data DiscoveredReaderData结构对象。
+	 */
 	void GetDiscoveredData(DiscoveredReaderData& data);
+	/**
+	 * @brief 将Parameter集合数据转换为DiscoveredTopicData结构数据。
+	 *
+	 * @param [out] data DiscoveredTopicData结构对象。
+	 */
 	void GetDiscoveredData(DiscoveredTopicData& data);
 
+	/**
+	 * @brief 获取参数集合总长度
+	 * 
+	 * @return 参数总长度。
+	 */
 	uint32_t GetMessageSize();
-	/* msg 包括cdr大小端信息 */
+	/**
+	 * @brief 序列化封装ParameterList中包含的Parameter结构参数到msg报文内存中。
+	 *  msg 包括cdr大小端信息
+	 *
+	 * @param [out] msg 报文内存指针。
+	 * @param [out] allowLength 偏移量。
+	 * 
+	 * @return 封装成功返回true,否则返回false。
+	 */
 	bool WriterToMessage(octet* msg, uint16_t& allowLength);
 
-	/* msg 不包括cdr大小端信息 */
+	/**
+	 * @brief 反序列化解析msg报文为Parameter参数并存储到ParameterList容器中。
+	 *  msg 不包括cdr大小端信息
+	 *
+	 * @param [in] msg 报文内存指针。
+	 * @param [in] allowLength 偏移量。
+	 *
+	 * @return 解析成功返回true,否则返回false。
+	 */
 	void LoadMessage(const octet* msg, const uint32_t& length);
 	
-	//任意类型都支持以Parameter_t结构存储,在容器内映射真实的结构
+	/**
+	 * @brief 将Parameter参数存储到ParameterList容器中。
+	 *  任意类型都支持以Parameter_t结构存储,在容器内映射真实的结构。
+	 *
+	 * @param [in] pid Parameter参数类型。
+	 * @param [in] parameter Parameter参数值。
+	 * @param [in] length 参数长度。
+	 */
 	template <typename T>
 	void AddParameter(const ParameterId& pid, const T& parameter, uint16_t length = 0) {
 		parameterList_.insert({ pid,std::make_unique<Parameter<T>>(pid, parameter, length, msgEndian_) });
 	}
-	//任意类型都支持以Parameter_t结构读取
+
+	/**
+	 * @brief 根据Parameter参数类型从ParameterList容器中获取对应的Parameter参数值。
+	 *  任意类型都支持以Parameter_t结构读取。
+	 *
+	 * @param [in] pid Parameter参数类型。
+	 * @param [out] parameter Parameter参数值。
+	 */
 	template <typename T>
 	bool GetParameter(const ParameterId& pid, T& parameter) const {
 		auto it = parameterList_.find(pid);
@@ -849,16 +1082,78 @@ public:
 		return false;
 	}
 
+	/**
+	 * @brief 深拷贝parameterList_到一个新的ParameterList_t容器中。
+	 *
+	 * @param [out] list ParameterList_t类型容器。
+	 * 
+	 * @return list存储的Parameter参数个数。
+	 */
 	uint32_t GetParameterList(ParameterList_t& list);
 protected:
-	/* 返回的是读取的长度 */
+	/**
+	 * @brief 从msg报文中获取int16_t格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] i16 Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReadInt16(const octet* msg, int16_t& i16);
+	/**
+	 * @brief 从msg报文中获取int16_t格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] i16 Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReadUInt16(const octet* msg, uint16_t& ui16);
+	/**
+	 * @brief 从msg报文中获取int16_t格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] i16 Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReadInt32(const octet* msg, int32_t& i32);
+	/**
+	 * @brief 从msg报文中获取uint32_t格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] ui32 Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReadUInt32(const octet* msg, uint32_t& ui32);
+	/**
+	 * @brief 从msg报文中获取octet*格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] dest Parameter参数值。
+	 * @param [in] len Parameter参数值长度。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReadInt(const octet* msg, octet* dest, const octet len);
-
+	/**
+	 * @brief 从msg报文中获取string格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] str Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReaderString(const octet* msg, std::string& str);
+	/**
+	 * @brief 从msg报文中获取Locator_t格式的Parameter参数。
+	 *
+	 * @param [in] msg 类型容器。
+	 * @param [out] loc Parameter参数值。
+	 *
+	 * @return 读取的长度。
+	 */
 	uint32_t ReaderLocator(const octet* msg, Locator_t& loc);
 
 private:

@@ -24,7 +24,7 @@ public:
     //
     // ReturnCode_t get_qos(QosPolicy& qos) ;
 
-    virtual StatusCondition* get_statuscondition() const;
+    virtual StatusCondition& get_statuscondition();
 
     virtual const StatusMask& get_status_change() const;
 

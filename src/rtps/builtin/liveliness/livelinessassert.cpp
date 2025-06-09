@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include "common/timeconversion.h"
+#include "common/log/logger.h"
 #include <iomanip>
 
 USING_AGIDDS_NAMESPACE;
@@ -46,7 +47,7 @@ IntervalCalculator intervalCalculator_;
 LivelinessAssert::LivelinessAssert(LivelinessManager* livelinessManager, bool localWriter)
 :livelinessManager_(livelinessManager), writers_(), mutex_(), checkedWrtier_(nullptr), localWriter_(localWriter)
 {
-    Time_t time = { 900000000,900000000 };
+    Time_t time = { 999999999,999999999 };
     timer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "LivelinessAssert");
 }
 
@@ -80,6 +81,7 @@ bool LivelinessAssert::RemoveWriter(GUID_t guid)
 
     auto writer = writers_.find(guid);
     if (writer == writers_.end()) {
+		AGILOG(AGILOG_ERROR, "guid is not exit");
         return false;
     }
 
@@ -117,6 +119,7 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
 		auto itStatus = writers_.find(guid);
 
 		if (itStatus == writers_.end()) {
+			AGILOG(AGILOG_ERROR, "guid is not exit");
 			return false;
 		}
 
@@ -126,22 +129,8 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
 	//更新相同guidprefix writer的存活状态
 	for (auto writerIt = writers_.begin(); writerIt != writers_.end(); writerIt++)
 	{
-		if (writerIt->second.livelinessQos_.kind == kind && CompareGuidPrefix(guid.prefix, writerIt->first.prefix))
-		{
+		if (writerIt->second.livelinessQos_.kind == kind && CompareGuidPrefix(guid.prefix, writerIt->first.prefix)) {
 			AssertWriterLiveliness(writerIt->second);
-
-			/* wangyi test */
-            // 获取时间间隔
-            double interval = intervalCalculator_.get_interval();
-
-            // 输出带单位的格式化时间
-            //std::cout << std::fixed << std::setprecision(2);
-            //if (interval < 1000) {
-            //    std::cout << "间隔: " << interval << " ms" << std::endl;
-            //}
-            //else {
-            //    std::cout << "间隔: " << interval / 1000 << " s" << std::endl;
-            //}
 		}
 	}
 
@@ -155,6 +144,7 @@ bool LivelinessAssert::GetWriterLiveLinessKind(GUID_t guid, LivelinessQosPolicyK
 	std::unique_lock<std::mutex> lock(mutex_);
 
 	if (0 == writers_.count(guid)) {
+		AGILOG(AGILOG_ERROR, "guid is not exit");
 		return false;
 	}
 
@@ -186,7 +176,7 @@ bool LivelinessAssert::UpDateCheckedWriter()
 	if(ret && checkedWrtier_ != nullptr) {
 		auto period = checkedWrtier_->time_ - now;
         
-		timer_->UpdatePeriod((double)duration_cast<milliseconds>(period).count());
+		timer_->UpdatePeriod(duration_cast<milliseconds>(period).count());
 	}
 
     return ret;
@@ -198,6 +188,7 @@ bool LivelinessAssert::TimerExpired()
 
     if (checkedWrtier_ == nullptr) {
 		/* TODO: 日志 */
+		AGILOG(AGILOG_ERROR, "checkedWrtier_ is nullptr");
         return false;
     }
 
@@ -225,6 +216,7 @@ bool LivelinessAssert::HasAliveWriters(LivelinessQosPolicyKind kind)
             return true;
         }
     }
+	AGILOG(AGILOG_ERROR, "not has alive writers");
     return false;
 }
 

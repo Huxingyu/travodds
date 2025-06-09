@@ -4,6 +4,7 @@
 #include "rtps/transport/messagetransmitter.h"
 #include "common/time/ddstimer.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
+#include "common/log/logger.h"
 
 USING_AGIDDS_NAMESPACE;
 
@@ -69,6 +70,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr")
 		}
 	}
 

@@ -24,16 +24,87 @@ AGIDDS_NAMESPACE_BEGIN
 
 class Writer;
 
+struct SampleCounters
+{
+	// READ_SAMPLE_STATE
+	uint64_t sampleRead = 0;
+	// NOT_READ_SAMPLE_STATE
+	uint64_t sampleNotRead = 0;
+
+	// NEW_VIEW_STATE
+	uint64_t viewNew = 0;
+	// NOT_NEW_VIEW_STATE
+	uint64_t viewNotNew = 0;
+
+	// ALIVE_INSTANCE_STATE
+	uint64_t instanceAlive = 0;
+	// NOT_ALIVE_DISPOSED_INSTANCE_STATE
+	uint64_t instanceDisposed = 0;
+	// NOT_ALIVE_NO_WRITERS_INSTANCE_STATE
+	uint64_t instanceNoWriters = 0;
+	/* 用于查看值是否被更改 */
+	std::atomic_bool change;
+
+	SampleCounters()
+		: change(false) {
+
+	}
+
+	SampleCounters(const SampleCounters& other)
+		: sampleRead(other.sampleRead),
+		sampleNotRead(other.sampleNotRead),
+        viewNew(other.viewNew),
+        viewNotNew(other.viewNotNew),
+        instanceAlive(other.instanceAlive),
+        instanceDisposed(other.instanceDisposed),
+        instanceNoWriters(other.instanceNoWriters),
+        change(other.change.load()) {
+	}
+
+	SampleCounters& operator=(const SampleCounters& other)
+	{
+		if (this != &other) {
+			sampleRead = other.sampleRead;
+			sampleNotRead = other.sampleNotRead;
+			viewNew = other.viewNew;
+			viewNotNew = other.viewNotNew;
+			instanceAlive = other.instanceAlive;
+			instanceDisposed = other.instanceDisposed;
+			instanceNoWriters = other.instanceNoWriters;
+			change.store(other.change.load());
+		}
+		return *this;
+	}
+};
+
+struct StateSet{
+	ViewStateKind viewState;
+	InstanceStateKind instanceState;
+	StateSet(SampleStateKind sample, ViewStateKind view, InstanceStateKind instance)
+		: viewState(view), instanceState(instance) {
+	}
+	StateSet()
+	: viewState(NEW_VIEW_STATE),
+	  instanceState(ALIVE_INSTANCE_STATE) {
+
+	}
+};
+
+/**
+ * @brief CacheChange 类, 包含有关特定缓存更改的信息。
+ */
 class CacheChange {
 public:
 	ChangeKind_t kind;
 	GUID_t writerGuid;
+	/* 实例 */
 	InstanceHandle_t instanceHandle;
 	SequenceNumber_t sequenceNumber;
 	//TODO 待添加
 	ParameterList_t inlineQos;
 	/* CacheChange的相关状态  */
 	SerializedBuffer* serializedBuffer;
+	/* 此处 view_state,instance_state 字段无效 */
 	SampleInfo sampleInfo;
 	Time_t sourceTimespace;
 
@@ -47,6 +118,9 @@ public:
 	/* 所有的数据分片数据序号，收到一个分片数据，删除分片序号 */
 	std::set<int32_t> fragmentSeq;
 
+	/**
+	 * @brief 构造函数。
+	 */
 	CacheChange() : kind(ALIVE), 
 		sequenceNumber(SEQUENCENUMBER_INVALID), 
 		serializedBuffer(nullptr), 
@@ -59,6 +133,9 @@ public:
 		serializedBuffer = nullptr;
 	}
 
+	/**
+	 * @brief 析构函数。
+	 */
 	~CacheChange() {
 		while(nullptr != serializedBuffer) {
 			SerializedBuffer* del = serializedBuffer;
@@ -75,73 +152,239 @@ private:
 
 class CacheChangeVector {
 public:
+
+	/**
+	 * @brief 构造函数。
+	 */
 	CacheChangeVector(SerializedBuffer* buffer, int32_t maxSize) : keyBuffer(buffer), maxSamples(maxSize){
 	}
 
+	/**
+	 * @brief 构造函数。
+	 */
 	CacheChangeVector() : keyBuffer(nullptr), maxSamples(0) {
 	}
+
+	/**
+	 * @brief 析构函数。
+	 */
 	~CacheChangeVector() {
 	}
 
 	std::vector<std::shared_ptr<CacheChange>> cacheChanges;
 	std::shared_ptr<SerializedBuffer> keyBuffer;
 
-	
-	int32_t maxSamples;
+	/* 实例再创或新创后，未被读过 */
+	ViewStateKind viewState = ViewStateKind::NEW_VIEW_STATE;
+	/* 实例状态，alive表示实例还存在，disposed表示实例被删除，no_writers表示实例没有写入者 */
+	InstanceStateKind instanceState = InstanceStateKind::ALIVE_INSTANCE_STATE;
+	/* us */
+	std::chrono::steady_clock::time_point nextDeadline;
+	/* guid  OwnershipStrength*/
+	std::map<GUID_t, int32_t> aliveWriter;
 
+	StateSet lastState;
+
+	int32_t maxSamples;
 };
 
 class HistoryCache {
 public:
 
+	/**
+	 * @brief 构造函数。
+	 */
 	HistoryCache(const HistoryQosPolicy& historyQos, const ResourceLimitsQosPolicy& resourceLimitsQos, const TopicKind_t& topicKind);
     
+	/**
+	 * @brief 析构函数。
+	 */
 	~HistoryCache();
 
+	/**
+	 * @brief 内存满判定函数。
+	 * 
+	 * @return 获取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	bool IsFull();
 
+	/**
+	 * @brief 添加发送报文请求。
+	 *
+	 * @param [in] change 发送报文请求。
+	 * 
+	 * @return 添加成功则返回true，否则返回false。
+	 */
 	bool AddChange(std::shared_ptr<CacheChange> change);
 
+	/**
+	 * @brief 删除发送报文请求。
+	 *
+	 * @param [in] change 发送报文请求。
+	 *
+	 * @return 删除成功则返回true，否则返回false。
+	 */
 	bool RemoveChange(std::shared_ptr<CacheChange> change);
 
+	/**
+	 * @brief 根据报文发送序号获取报文发送请求。
+	 *
+	 * @param [in] seqNum 报文发送序号。
+	 *
+	 * @return 返回报文发送请求。
+	 */
 	std::shared_ptr<CacheChange> GetChange(const SequenceNumber_t& seqNum);
 
+	/**
+	 * @brief 从保存数据的容器中获取报文序号最小值。
+	 *
+	 * @return 返回报文序号最小值。
+	 */
 	SequenceNumber_t GetSeqNumMin();
 
+	/**
+	 * @brief 从保存数据的容器中获取报文序号最大值。
+	 *
+	 * @return 返回报文序号最大值。
+	 */
 	SequenceNumber_t GetSeqNumMax();
-
+	
+	/**
+	 * @brief 读取所有的实例的数据。
+	 *
+	 * @param [in,out] dataValues     将返回接收到的数据样本的LoanableCollection对象。
+	 * @param [in,out] sampleInfos    将返回接收到的样本信息的SampleInfoSeq对象。
+	 * @param [in]     maxSamples     要返回的最大样本数。如果提供了特殊值LENGTH_UNLIMITED，
+	 *                                 则将返回尽可能多的样本，直到达到上述限制。
+	 * @param [in]     handle         实例句柄。
+	 * @param [in]     sampleStates   只有sampleStates与其中一个匹配的数据样本才会返回。
+	 * @param [in]     viewStates     只有viewStates与其中一个匹配的数据样本才会返回。
+	 * @param [in]     instanceStates 仅返回instanceStates与其中一个匹配的数据样本。
+	 * @param [in]     shouldTake     获取后是否删除数据标志。
+	 *
+	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake = false);
 
-	/* instance */
+	/**
+	 * @brief 判断键值是否已注册。
+	 *
+	 * @param [in] handle 需判定的句柄。
+	 *
+	 * @return 已注册返回true，未注册返回false。
+	 */
 	bool IsKeyRegistered(const InstanceHandle_t& handle);
 
+	/**
+	 * @brief 添加键值及其对应实例到键值管理容器。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 * @param [in] instace 正在注册实例的样本的序列化有效样本。
+	 *
+	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_OUT_OF_RESOURCES
+	 */
 	ReturnCode_t AddKeyHistory(const InstanceHandle_t& handle, SerializedBuffer*& instace);
 
+	/**
+	 * @brief 从键值管理容器中删除对应的键值及其实例。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 */
 	void DeleteKeyHistory(const InstanceHandle_t& handle);
 
+
+	/**
+	 * @brief 从键值管理容器中获取对应键值的实例。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 *
+	 * @return 键值对应的实例样本。
+	 */
 	SerializedBuffer* get_key_value(const InstanceHandle_t& handle);
 
+	/**
+	 * @brief 在键值管理容器中判定对应键值的实例是否存在。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 *
+	 * @return 存在则返回true，不存在则返回false。
+	 */
 	bool IsInstancePresent(const InstanceHandle_t& handle);
 
-	/* 判断对应的instance所保存的数据是否已经保存满 */
+	/**
+	 * @brief 判断对应的instance所保存的数据容器是否已经保存满。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 *
+	 * @return 已满则返回true，否则返回false。
+	 */
 	bool IsFull(const InstanceHandle_t& handle);
 
-	/* 移除对应Instance最旧的数据 */
+	/**
+	 * @brief 移除对应Instance最旧的数据。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 */
 	void RemoveOldestChangeByInstance(const InstanceHandle_t& handle);
 
-	/* 移除对应instance所有数据 */
+	/**
+	 * @brief 移除对应instance所有数据。
+	 *
+	 * @param [in] handle 包含键值的句柄。
+	 */
 	void RemoveChangeByInstance(const InstanceHandle_t& handle);
 
-	/* 等待空间添加数据  */
+	/**
+	 * @brief 等待空间添加数据。
+	 *
+	 * @param [in] time_out       数据等待时间。
+	 * @param [in] pWriter        数据发送者指针。
+	 * @param [in] handle         数据句柄。
+	 * @param [in] transientLocal 数据持久化是否为本地模式标志。
+	 * 
+	 * @return 已满则返回true，否则返回false。
+	 */
 	bool WriterWaitFor(const std::chrono::nanoseconds& time_out, Writer* pWriter, const InstanceHandle_t& handle, bool transientLocal);
 
+	SampleCounters GetSampleCounters();
+
+	bool GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextDeadline);
+
+	void SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout = false);
+
+	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
+
+	void RemoveRemoteWriter(const GUID_t& guid);
+
 private:
+	/**
+	 * @brief 在instanceChanges_中查找键或在未找到时尝试添加键的函数。
+	 *
+	 * @param [in] handle         数据句柄。
+	 * @param [in] instace        正在注册实例的样本的序列化有效样本。
+	 * @param [out] vitOut        指向给定键值的映射迭代器。
+	 * 
+	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_OUT_OF_RESOURCES
+	 */
 	ReturnCode_t FindORAddKey(const InstanceHandle_t& handle, SerializedBuffer*& instace, std::map<InstanceHandle_t, CacheChangeVector>::iterator* vitOut);
 
+	void AddSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
 
+	void RemoveSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
+
+	ReturnCode_t UpdataSampleInstance(const InstanceHandle_t& handle, const ChangeKind_t& changeKind, const GUID_t& writerGuid, const int32_t ownershipStrength, bool shared);
+
+	void UpdateState(const SampleStateKind& state, const std::shared_ptr<CacheChange>& cache);
+
+	void UpdateState(const ViewStateKind& state, CacheChangeVector& cacheChange);
+
+	void UpdateState(const InstanceStateKind& state, CacheChangeVector& cacheChange);
 
 private:
+    
+	SampleCounters counters_;
+
 	//vector<CacheChange*> m_changes;
 	/* 保存数据的容器，键值为数据的序号  */
 	std::map<SequenceNumber_t, std::shared_ptr<CacheChange>> cacheChanges_;

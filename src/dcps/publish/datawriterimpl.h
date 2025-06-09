@@ -107,8 +107,7 @@ public:
 
 	bool MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const;
 	
-	/* 最后写入的样本实例 */
-	const InstanceHandle_t& GetLastinstanceHandle() const;
+	void DeadlineTimeout();
 
 	ReturnCode_t RegistInstance(const void* const instance_data, const Time_t& source_timestamp, InstanceHandle_t& handle);
 

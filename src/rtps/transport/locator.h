@@ -18,14 +18,38 @@ AGIDDS_NAMESPACE_BEGIN
 class UDPv4Locator : public Locator_t
 {
 public:
+
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] loc 地址信息。
+	 */
 	UDPv4Locator(const Locator_t& loc);
 
+	/**
+	 * @brief 析构函数。
+	 */
 	virtual ~UDPv4Locator() {};
 
+	/**
+	 * @brief 将octet数组格式ip地址转换为uint32_t格式。
+	 * 
+	 * @return uint32_t格式ip地址。
+	 */	
 	uint32_t GetUIAddressV4();
 
+	/**
+	 * @brief 将octet数组格式ip地址转换为asio::ip::address_v4格式。
+	 *
+	 * @return asio::ip::address_v4格式ip地址。
+	 */
 	asio::ip::address_v4 GetAddressV4();
 
+	/**
+	 * @brief 获取有效性。
+	 *
+	 * @return 有效则返回true，否则返回false。
+	 */
 	bool Valid();
 private:
 	bool valid_ = true;

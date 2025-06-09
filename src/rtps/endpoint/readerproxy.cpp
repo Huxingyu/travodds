@@ -192,12 +192,12 @@ ReturnCode_t ReaderProxy::RecvNackFrag(const NackFragSubMessage_t& nackMsg)
 	return ret;
 }
 
-LocatorSeq ReaderProxy::GetUnicastLocatorList()
+LocatorSeq& ReaderProxy::GetUnicastLocatorList()
 {
 	return unicastLocatorList_;
 }
 
-LocatorSeq ReaderProxy::GetMulticastLocatorList()
+LocatorSeq& ReaderProxy::GetMulticastLocatorList()
 {
 	return multicastLocatorList_;
 }

@@ -18,12 +18,14 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
-class DataReader;
+class DataReaderImpl;
 class ReadConditionImpl : public virtual ReadCondition, public ConditionImpl {
 public:
-	ReadConditionImpl(SampleStateMask smaple_states, ViewStateMask view_states, InstanceStateMask instance_states, DataReader* dataReader);
+	ReadConditionImpl(SampleStateMask smaple_states, ViewStateMask view_states, InstanceStateMask instance_states, DataReaderImpl* dataReader);
 
     ~ReadConditionImpl();
+
+	virtual bool get_trigger_value() const;
 
 	DataReader* get_datareader() const;
 
@@ -36,9 +38,7 @@ private:
     SampleStateMask sampleStateMask_;
     ViewStateMask viewStateMask_;
     InstanceStateMask instanceStateMask_;
-    DataReader* dataReader_ = nullptr;
-
-
+    DataReaderImpl* dataReader_ = nullptr;
 };
 
 AGIDDS_NAMESPACE_END

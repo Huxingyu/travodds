@@ -1,5 +1,5 @@
 #include "rtps/transport/asiocontext.h"
-
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 AsioContext::AsioContext()
@@ -10,6 +10,7 @@ AsioContext::AsioContext()
 			ioContext_.run();
 		} catch (const std::exception& e) {
 			static_cast<void>(e);
+			AGILOG(AGILOG_ERROR, "ioContext Err e[%s]", e.what());
 		}
 	});
 }

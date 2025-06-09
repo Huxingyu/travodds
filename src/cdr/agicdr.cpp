@@ -1,14 +1,26 @@
-#include "cdr/agicdr.h"
-#include "cdr/md5.h"
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "common/log/logger.h"
-
+#include "cdr/agicdr.h"
+#include "cdr/md5.h"
 
 USING_AGIDDS_NAMESPACE
 
-SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length) {
+SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length) 
+{
     if (length == 0) {
         return this;
     }
@@ -45,7 +57,8 @@ SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length) {
     return curBuffer;
 }
 
-SerializedBuffer* SerializedBuffer::readData(char* data, uint32_t length) {
+SerializedBuffer* SerializedBuffer::readData(char* data, uint32_t length) 
+{
     if (length == 0) {
         return this;
     }
@@ -112,7 +125,8 @@ AGIDDSCdrSerializer::AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEn
     }
 }
 
-bool AGIDDSCdrSerializer::serializeLongDouble(LongDouble value) {
+bool AGIDDSCdrSerializer::serializeLongDouble(LongDouble value) 
+{
     uint32_t ldSize = sizeof(long double);
     static char s_padData[16] = { 0 };
     // 填充0
@@ -133,7 +147,8 @@ bool AGIDDSCdrSerializer::serializeLongDouble(LongDouble value) {
     }
 }
 
-bool AGIDDSCdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint32_t length) {
+bool AGIDDSCdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint32_t length) 
+{
     for (uint32_t i = 0; i < length; ++i) {
         if (!serializeLongDouble(value[i])) {
             return false;
@@ -144,12 +159,10 @@ bool AGIDDSCdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint
 
 bool AGIDDSCdrSerializer::serializeString(const char* value, uint32_t length)
 {
-    if (!serializeBaseType<uint32_t>(length))
-    {
+    if (!serializeBaseType<uint32_t>(length)) {
         return false;
     }
-    if (!serializeBaseTypeArray<char>(value, length))
-    {
+    if (!serializeBaseTypeArray<char>(value, length)) {
         return false;
     }
     return true;
@@ -162,12 +175,10 @@ bool AGIDDSCdrSerializer::serializeString(const std::string& value)
 
 bool AGIDDSCdrSerializer::serializeWString(const wchar_t* value, uint32_t length)
 {
-    if (!serializeBaseType<uint32_t>(length))
-    {
+    if (!serializeBaseType<uint32_t>(length)) {
         return false;
     }
-    if (!serializeBaseTypeArray<wchar_t>(value, length))
-    {
+    if (!serializeBaseTypeArray<wchar_t>(value, length)) {
         return false;
     }
     return true;
@@ -202,8 +213,7 @@ uint32_t AGIDDSCdrSerializer::getBaseTypeSize(uint32_t typeSize, uint32_t curren
 
 uint32_t AGIDDSCdrSerializer::getBaseTypeArraySize(uint32_t typeSize, uint32_t length, uint32_t currentAlignment)
 {
-    if (length == 0)
-    {
+    if (length == 0) {
         return 0;
     }
     uint32_t initialAlignment = currentAlignment;
@@ -234,41 +244,32 @@ char* AGIDDSCdrSerializer::serializeParameterHeader(bool useExtended, bool mustU
     char* lenBlock = nullptr;
     unsigned short tmpShort = 0;
     uint32_t lengthSize = 2;
-    if (useExtended)
-    {
+    if (useExtended) {
         tmpShort |= 0x3f00;
         tmpShort |= 0x4000;
-        if (!serializeBaseType<unsigned short>(tmpShort))
-        {
+        if (!serializeBaseType<unsigned short>(tmpShort)) {
             return nullptr;
         }
         index_ = 2;
         tmpShort = 8;
-        if (!serializeBaseType<unsigned short>(tmpShort))
-        {
+        if (!serializeBaseType<unsigned short>(tmpShort)) {
             return nullptr;
         }
-        if (!serializeBaseType<unsigned short>(memberId))
-        {
+        if (!serializeBaseType<unsigned short>(memberId)) {
             return nullptr;
         }
         lengthSize = 4;
-    }
-    else
-    {
+    } else {
         tmpShort |= memberId;
-        if (!serializeBaseType<unsigned short>(tmpShort))
-        {
+        if (!serializeBaseType<unsigned short>(tmpShort)) {
             return nullptr;
         }
     }
     tmpShort = 0;
-    if (curProcessMsgBlock_->writer_position + lengthSize <= curProcessMsgBlock_->buffer_size)
-    {
+    if (curProcessMsgBlock_->writer_position + lengthSize <= curProcessMsgBlock_->buffer_size) {
         lenBlock = curProcessMsgBlock_->buffer + curProcessMsgBlock_->writer_position;
     }
-    if (!serializeBaseType<unsigned short>(tmpShort))
-    {
+    if (!serializeBaseType<unsigned short>(tmpShort)) {
         return nullptr;
     }
     index_ = 0;
@@ -279,27 +280,21 @@ void AGIDDSCdrSerializer::parameterLenSerialize(char* lenAddr, uint32_t length, 
 {
     uint32_t actualLen = length;
     uint32_t offset = (actualLen & 3) == 0 ? 0 : (4 - (actualLen & 3));
-    if (offset > 0)
-    {
+    if (offset > 0) {
         char alignBuf[3] = { 0 };
-        if (!serializeBaseTypeArray<char>(alignBuf, offset))
-        {
+        if (!serializeBaseTypeArray<char>(alignBuf, offset)) {
             return;
         }
         actualLen += offset;
     }
     unsigned short len16 = actualLen;
-    if (useLittleEndian_ != isLittleEndian())
-    {
+    if (useLittleEndian_ != isLittleEndian()) {
         actualLen = __builtin_bswap32(actualLen);
         len16 = __builtin_bswap16(len16);
     }
-    if (lengthSize == 2)
-    {
+    if (lengthSize == 2) {
         memcpy(lenAddr, &len16, lengthSize);
-    }
-    else
-    {
+    } else {
         memcpy(lenAddr, &actualLen, lengthSize);
     }
 }
@@ -317,8 +312,7 @@ AGIDDSCdrDeserializer::AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool litt
       useLittleEndian_(littleEndian)
 {
     SerializedBuffer* current = buffer;
-    while (current)
-    {
+    while (current) {
         totalRemains_ += current->buffer_size;
         current = current->next;
     }
@@ -338,17 +332,14 @@ bool AGIDDSCdrDeserializer::isLittleEndian() const
 bool AGIDDSCdrDeserializer::deserializeString(char* value, uint32_t length)
 {
     uint32_t strLen = 0;
-    if (!deserializeBaseType<uint32_t>(strLen))
-    {
+    if (!deserializeBaseType<uint32_t>(strLen)) {
         return false;
     }
-    if (strLen > length)
-    {
+    if (strLen > length) {
         return false;
     }
     SerializedBuffer* retBuffer = curProcessMsgBlock_->readData(value, strLen);
-    if (!retBuffer)
-    {
+    if (!retBuffer) {
         return false;
     }
     curProcessMsgBlock_ = retBuffer;

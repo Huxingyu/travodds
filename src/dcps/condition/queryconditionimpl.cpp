@@ -1,6 +1,6 @@
 #include "dcps/condition/queryconditionimpl.h"
 USING_AGIDDS_NAMESPACE;
-QueryConditionImpl::QueryConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, const std::string& queryExpression, StringSeq queryParameters, DataReader* dataReader)
+QueryConditionImpl::QueryConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, const std::string& queryExpression, StringSeq queryParameters, DataReaderImpl* dataReader)
     : ReadConditionImpl(smapleStates, viewStates, instanceStates, dataReader), queryExpression_(queryExpression), queryParameters_(queryParameters)
 {
 }

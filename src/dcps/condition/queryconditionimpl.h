@@ -20,7 +20,7 @@ AGIDDS_NAMESPACE_BEGIN
 
 class QueryConditionImpl : public virtual QueryCondition, public  ReadConditionImpl {
 public:
-	QueryConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, const std::string& queryExpression, StringSeq queryParameters, DataReader* dataReader);
+	QueryConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, const std::string& queryExpression, StringSeq queryParameters, DataReaderImpl* dataReader);
 
 	virtual const std::string& get_query_expression() const;
 

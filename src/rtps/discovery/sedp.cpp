@@ -2,6 +2,7 @@
 #include "rtps/discovery/spdp.h"
 #include "rtps/messages/parameter.h"
 #include "dcps/domain/domainparticipant.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 Sedp::Sedp(Participant* participant,Spdp* spdp)
@@ -38,6 +39,7 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
     std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	publicationsWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
@@ -45,8 +47,9 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,true);
-	if (nullptr == reader) {
+	if (nullptr == reader) {	
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	publicationsReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
@@ -61,6 +64,7 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
     std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	subscriptionsWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
@@ -70,6 +74,7 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	subscriptionsReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
@@ -208,9 +213,9 @@ void Sedp::WritePublicationData(DiscoveredWriterData& data)
 
 	ReturnCode_t ret = publicationsWriter_->AddBuiltinCache(change);
 
-	if(RETCODE_OK != ret)
-	{
+	if(RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "publicationsWriter AddBuiltinCache Err ret = %d", ret);
 	}
 }
 
@@ -236,6 +241,7 @@ void Sedp::WriteSubscriptionData(DiscoveredReaderData& data)
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "subscriptionsWriter_ AddBuiltinCache Err ret = %d", ret);
 	}
 }
 
@@ -272,6 +278,7 @@ void Sedp::RemovePublicationData(GUID_t & guid)
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "publicationsWriter AddBuiltinCache Err ret = %d", ret);
 	}
 	
 
@@ -312,6 +319,7 @@ void Sedp::RemoveSubscriptionData(GUID_t & guid)
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "subscriptionsWriter_ AddBuiltinCache Err ret = %d", ret);
 	}
 	
 	subscriptionsWriter_->RemoveCacheByHandle(instanceHandle);

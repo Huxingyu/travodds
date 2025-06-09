@@ -2,7 +2,7 @@
 #include "dcps/subscribe/datareaderimpl.h"
 #include "rtps/endpoint/participant.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
-
+#include "common/log/logger.h"
 
 USING_AGIDDS_NAMESPACE;
 
@@ -72,12 +72,18 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 		
 	ReturnCode_t ret = AddChanges(cache);
+
+	if (ret == RETCODE_TIME_BASED_FILTER) {
+		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
+		return RETCODE_TIME_BASED_FILTER;
+	}
+
 	if (RETCODE_OK != ret && datareader_) {
 		datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 	}
 
 	if (datareader_) {
-		datareader_->SetLastinstanceHandle(dataHandle);
+		datareader_->SetLastinstanceHandle(cache);
 		datareader_->OnDataAvaible();
 	}
 	
@@ -93,9 +99,6 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	SerializedBuffer* buffer = nullptr;
 	InstanceHandle_t pubHandle;
 	InstanceHandle_t dataHandle = HANDLE_NIL;
-
-	/* wangyi liveliness */
-	AssertWriterLiveliness(guid);
 
 	memcpy(pubHandle.keyHash.value, &guid, 16);
 
@@ -142,7 +145,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	else if (itor->second->sequenceNumber < dataMsg.writerSN) {
 		/* 收到新的分片数据,并且新的数据序号大于之前的数据，BEST_EFFORT 模式下删除旧数据 */
 		//TODO
-		std::cout << "recv error " << __FUNCTION__ << " " << __LINE__ << std::endl;
+	//	std::cout << "recv error " << __FUNCTION__ << " " << __LINE__ << std::endl;
 		dataFragCaches_.erase(itor);
 		/* 重新 申请空间 */
 		buffer = new SerializedBuffer();
@@ -184,6 +187,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		//TODO  
 		/* 重复接收分片数据 */
 		std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
+		AGILOG(AGILOG_ERROR, "recv repeat dataFrg");
 	}
 
 	if (0 == itor->second->fragmentSeq.size()) {
@@ -191,12 +195,18 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		dataFragCaches_.erase(itor);
 
 		ReturnCode_t ret = AddChanges(dataFragCache);
+
+		if (ret == RETCODE_TIME_BASED_FILTER) {
+			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
+			return RETCODE_TIME_BASED_FILTER;
+		}
+
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(dataFragCache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
 
 		if (datareader_) {
-			datareader_->SetLastinstanceHandle(dataHandle);
+			datareader_->SetLastinstanceHandle(dataFragCache);
 			datareader_->OnDataAvaible();
 		}
 	}
@@ -244,6 +254,7 @@ void StatelessReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerData)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 }
@@ -268,6 +279,7 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 	matchWriters_.erase(writerGuid);
@@ -275,8 +287,11 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 
 std::shared_ptr<WriterProxy> StatelessReader::MatchedWriterLookup(GUID_t writerGuid)
 {
-	if (0 == matchWriters_.count(writerGuid))
+	if (0 == matchWriters_.count(writerGuid)) {
+		AGILOG(AGILOG_ERROR, "writerGuid not match");
 		return nullptr;
+	}
+		
 
 	return matchWriters_[writerGuid];
 }
@@ -295,6 +310,7 @@ void StatelessReader::AssertWriterLiveliness(const GUID_t& guid)
 		}
 		else {
 			/* TODO 日志 "Finite liveliness lease duration but LivelinessManager not enabled"); */
+			AGILOG(AGILOG_ERROR, "Finite liveliness lease duration but LivelinessManager not enabled");
 		}
 	}
 }

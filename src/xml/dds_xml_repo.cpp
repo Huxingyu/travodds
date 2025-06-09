@@ -1,4 +1,16 @@
-#include "dds_xml_repo.h"
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
+#include "xml/dds_xml_repo.h"
 #include "common/log/logger.h"
 #include <iostream>
 
@@ -76,37 +88,44 @@ bool DDSXMLRepo::parseQosProfile(XMLElement* profile, const std::string& library
         }
         if (strcmp(nodeName, "domain_participant_factory_qos") == 0) {
             DomainParticipantFactoryQos qos;
+            dpfQosDefault(qos);
             if (!parseDomainParticipantFactoryQosProfile(element, qos, libraryName, profileName))
             {
                 return false;
             }
         } else if (strcmp(nodeName, "domain_participant_qos") == 0) {
             DomainParticipantQos qos;
+            dpQosDefault(qos);
             if (!parseDomainParticipantQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
         } else if (strcmp(nodeName, "publisher_qos") == 0) {
             PublisherQos qos;
+            publisherQosDefault(qos);
             if (!parsePublisherQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
         } else if (strcmp(nodeName, "subscriber_qos") == 0) {
             SubscriberQos qos;
+            subscriberQosDefault(qos);
             if (!parseSubscriberQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
         } else if (strcmp(nodeName, "datawriter_qos") == 0) {
             DataWriterQos qos;
+            datawriterQosDefault(qos);
             if (!parseDataWriterQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
         } else if (strcmp(nodeName, "datareader_qos") == 0) {
             DataReaderQos qos;
+            datareaderQosDefault(qos);
             if (!parseDataReaderQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
         } else if (strcmp(nodeName, "topic_qos") == 0) {
             TopicQos qos;
+            topicQosDefault(qos);
             if (!parseTopicQosProfile(element, qos, libraryName, profileName)) {
                 return false;
             }
@@ -999,7 +1018,28 @@ bool DDSXMLRepo::parseBase64Binary(XMLElement* element, Sequence<octet>& value) 
     const char* text = element->GetText();
     if (text) {
         std::string str(text);
-        // TODO base64解码
+        // 如果以base64:开头，则表示是base64编码的字符串
+        if (str.find("base64:") == 0) {
+            str = str.substr(7); // 去掉base64:
+            // TODO base64解码
+            // 这里需要实现base64解码，将解码后的数据存入value中
+            return true; // 返回true表示解析成功
+        }
+        // 如果以hex:开头，则表示是hex编码的字符串
+        if (str.find("hex:") == 0) {
+            str = str.substr(4); // 去掉hex:
+            for (size_t i = 0; i < str.length(); i += 2) {
+                std::string byteString = str.substr(i, 2);
+                char byte = (char)strtol(byteString.c_str(), nullptr, 16);
+                value.push_back(byte); // 将byte添加到value中
+            }
+            return true;
+        }
+        // 如果不是以base64:或hex:开头，则表示是普通字符串
+        for (size_t i = 0; i < str.length(); ++i) {
+            value.push_back((octet)str[i]); // 将字符转换为octet并添加到value中
+        }
+        return true;
     }
     return false;
 }
@@ -1045,7 +1085,7 @@ bool DDSXMLRepo::parseUserDataQosPolicy(XMLElement* element, UserDataQosPolicy& 
         if (strcmp(nodeName, "value") == 0) {
             const char* value = child->GetText();
             if (value) {
-                if (parseBase64Binary(child, qos.value)) {
+                if (!parseBase64Binary(child, qos.value)) {
                     AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse UserDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
@@ -1249,11 +1289,13 @@ bool DDSXMLRepo::parsePartitionQosPolicy(XMLElement* element, PartitionQosPolicy
     for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "name") == 0) {
-            XMLElement* name = child->FirstChildElement("element");
-            if (name) {
-                for (XMLElement* item = name->FirstChildElement(); item; item = item->NextSiblingElement()) {
-                    qos.name.push_back(std::string(item->GetText()));
+            for (XMLElement* item = child->FirstChildElement(); item; item = item->NextSiblingElement()) {
+                const char *itemName = item->Name();
+                if (strcmp(itemName, "element") != 0) {
+                    AGILOG(AGILOG_ERROR, "Line[%d] Unknown PartitionQosPolicy name element %s\n", item->GetLineNum(), itemName);
+                    return false;
                 }
+                qos.name.push_back(std::string(item->GetText()));
             }
         } else {
             AGILOG(AGILOG_ERROR, "Line[%d] Unknown PartitionQosPolicy element %s\n", child->GetLineNum(), nodeName);
@@ -1462,7 +1504,7 @@ bool DDSXMLRepo::parseTopicDataQosPolicy(XMLElement* element, TopicDataQosPolicy
         if (strcmp(nodeName, "value") == 0) {
             const char* value = child->GetText();
             if (value) {
-                if (parseBase64Binary(child, qos.value)) {
+                if (!parseBase64Binary(child, qos.value)) {
                     AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
@@ -1485,7 +1527,7 @@ bool DDSXMLRepo::parseGroupDataQosPolicy(XMLElement* element, GroupDataQosPolicy
         if (strcmp(nodeName, "value") == 0) {
             const char* value = child->GetText();
             if (value) {
-                if (parseBase64Binary(child, qos.value)) {
+                if (!parseBase64Binary(child, qos.value)) {
                     AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse GroupDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
@@ -1593,4 +1635,5 @@ bool DDSXMLRepo::parseDurabilityServiceQosPolicy(XMLElement* element, Durability
 }
 
 #endif //_XML_INTERFACE_CPP
+
 AGIDDS_NAMESPACE_END
