@@ -1,11 +1,23 @@
-#ifndef dds_xml_loader_h__
-#define dds_xml_loader_h__
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
+#ifndef DDS_XML_LOADER_H
+#define DDS_XML_LOADER_H
 
 #include <string>
 #include <map>
 #include "qos/qos.h"
 #include "dcps/base/retcode.h"
-#include "tinyxml2.h"
+#include "xml/tinyxml2.h"
 
 using namespace tinyxml2;
 
@@ -201,10 +213,112 @@ private:
     static bool parseDuration(XMLElement* element, Duration_t& duration);
     static bool parsePositiveIntegerUnlimited(XMLElement* element, int& value);
     static bool parseBase64Binary(XMLElement* element, Sequence<octet>& value);
+    
+     static void dpfQosDefault(DomainParticipantFactoryQos& qos) {
+         qos.entity_factory.autoenable_created_entities = true;
+     }
+
+     static void dpQosDefault(DomainParticipantQos& qos) {
+         qos.user_data.value.clear();
+         qos.entity_factory.autoenable_created_entities = true;
+     }
+
+     static void publisherQosDefault(PublisherQos& qos) {
+         qos.presentation.access_scope = INSTANCE_PRESENTATION_QOS;
+         qos.presentation.coherent_access = false;
+         qos.presentation.ordered_access = false;
+         qos.partition.name.clear();
+         qos.group_data.value.clear();
+         qos.entity_factory.autoenable_created_entities = true;
+     }
+
+     static void subscriberQosDefault(SubscriberQos& qos) {
+         qos.presentation.access_scope = INSTANCE_PRESENTATION_QOS;
+         qos.presentation.coherent_access = false;
+         qos.presentation.ordered_access = false;
+         qos.partition.name.clear();
+         qos.group_data.value.clear();
+         qos.entity_factory.autoenable_created_entities = true;
+     }
+
+     static void topicQosDefault(TopicQos& qos) {
+         qos.topic_data.value.clear();
+         qos.durability.kind = VOLATILE_DURABILITY_QOS;
+         qos.durability_service.service_cleanup_delay = TIME_ZERO;
+         qos.durability_service.history_kind = KEEP_LAST_HISTORY_QOS;
+         qos.durability_service.history_depth = 1;
+         qos.durability_service.max_samples = LENGTH_UNLIMITED;
+         qos.durability_service.max_instances = LENGTH_UNLIMITED;
+         qos.durability_service.max_samples_per_instance = LENGTH_UNLIMITED;
+         qos.deadline.period = TIME_INFINITE;
+         qos.latency_budget.duration = TIME_ZERO;
+         qos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
+         qos.liveliness.lease_duration = TIME_INFINITE;
+         qos.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
+         qos.reliability.max_blocking_time = {0, 100000000};
+         qos.destination_order.kind = BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS;
+         qos.history.kind = KEEP_LAST_HISTORY_QOS;
+         qos.history.depth = 1;
+         qos.resource_limits.max_samples = LENGTH_UNLIMITED;
+         qos.resource_limits.max_instances = LENGTH_UNLIMITED;
+         qos.resource_limits.max_samples_per_instance = LENGTH_UNLIMITED;
+         qos.transport_priority.value = 0;
+         qos.lifespan.duration = TIME_INFINITE;
+         qos.ownership.kind = SHARED_OWNERSHIP_QOS;
+     }
+
+     static void datawriterQosDefault(DataWriterQos& qos) {
+         qos.durability.kind = VOLATILE_DURABILITY_QOS;
+         qos.durability_service.service_cleanup_delay = TIME_ZERO;
+         qos.durability_service.history_kind = KEEP_LAST_HISTORY_QOS;
+         qos.durability_service.history_depth = 1;
+         qos.durability_service.max_samples = LENGTH_UNLIMITED;
+         qos.durability_service.max_instances = LENGTH_UNLIMITED;
+         qos.durability_service.max_samples_per_instance = LENGTH_UNLIMITED;
+         qos.deadline.period = TIME_INFINITE;
+         qos.latency_budget.duration = TIME_ZERO;
+         qos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
+         qos.liveliness.lease_duration = TIME_INFINITE;
+         qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
+         qos.reliability.max_blocking_time = {0, 100000000};
+         qos.destination_order.kind = BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS;
+         qos.history.kind = KEEP_LAST_HISTORY_QOS;
+         qos.history.depth = 1;
+         qos.resource_limits.max_samples = LENGTH_UNLIMITED;
+         qos.resource_limits.max_instances = LENGTH_UNLIMITED;
+         qos.resource_limits.max_samples_per_instance = LENGTH_UNLIMITED;
+         qos.transport_priority.value = 0;
+         qos.lifespan.duration = TIME_INFINITE;
+         qos.user_data.value.clear();
+         qos.ownership.kind = SHARED_OWNERSHIP_QOS;
+         qos.ownership_strength.value = 0;
+         qos.writer_data_lifecycle.autodispose_unregistered_instances = true;
+     }
+
+     static void datareaderQosDefault(DataReaderQos& qos) {
+         qos.durability.kind = VOLATILE_DURABILITY_QOS;
+         qos.deadline.period = TIME_INFINITE;
+         qos.latency_budget.duration = TIME_ZERO;
+         qos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
+         qos.liveliness.lease_duration = TIME_INFINITE;
+         qos.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
+         qos.reliability.max_blocking_time = {0, 100000000};
+         qos.destination_order.kind = BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS;
+         qos.history.kind = KEEP_LAST_HISTORY_QOS;
+         qos.history.depth = 1;
+         qos.resource_limits.max_samples = 5000;
+         qos.resource_limits.max_instances = 10;
+         qos.resource_limits.max_samples_per_instance = 400;
+         qos.user_data.value.clear();
+         qos.ownership.kind = SHARED_OWNERSHIP_QOS;
+         qos.time_based_filter.minimum_separation = TIME_ZERO;
+         qos.reader_data_lifecycle.autopurge_nowriter_samples_delay = TIME_INFINITE;
+         qos.reader_data_lifecycle.autopurge_disposed_samples_delay = TIME_INFINITE;
+     }
 };
 
 AGIDDS_NAMESPACE_END
 
 #endif //_XML_INTERFACE_CPP
 
-#endif // dds_xml_loader_h__
+#endif // DDS_XML_LOADER_H

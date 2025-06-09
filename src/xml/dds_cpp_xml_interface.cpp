@@ -1,5 +1,17 @@
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
 #include "dcps/domain/domainparticipantfactoryimpl.h"
-#include "dds_xml_repo.h"
+#include "xml/dds_xml_repo.h"
 #include "common/log/logger.h"
 
 AGIDDS_NAMESPACE_BEGIN
@@ -44,13 +56,13 @@ ReturnCode_t DomainParticipantFactoryImpl::set_default_participant_qos_with_prof
     const char* library_name, 
     const char* profile_name, 
     const char* qos_name) {
-    DomainParticipantFactoryQos qos;
-    ReturnCode_t ret = g_xmlRepo.lookup_participant_factory_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
+    DomainParticipantQos qos;
+    ReturnCode_t ret = g_xmlRepo.lookup_participant_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup participant factory qos %s %s %s.\n", library_name, profile_name, qos_name);
+        AGILOG(AGILOG_ERROR, "Failed to lookup participant  qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
-    return set_qos(qos);
+    return set_default_participant_qos(qos);
 }
 
 ReturnCode_t DomainParticipantFactoryImpl::get_participant_qos_from_profile(
@@ -184,8 +196,8 @@ Subscriber* DomainParticipantImpl::create_subscriber_with_qos_profile(
 }
 
 Topic* DomainParticipantImpl::create_topic_with_qos_profile(
-    const std::string& topic_name,
-    const std::string& type_name,
+    const std::string& topic_name, 
+    const std::string& type_name, 
     const char* library_name, 
     const char* profile_name, 
     const char* qos_name, 

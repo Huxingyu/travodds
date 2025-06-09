@@ -20,7 +20,7 @@ AGIDDS_NAMESPACE_BEGIN
 
 class DomainParticipantImpl;
 
-class PublisherImpl : public virtual Publisher,public  DomainEntityImpl {
+class PublisherImpl : public virtual Publisher, public  DomainEntityImpl {
 public:
     PublisherImpl(PublisherQos qos, PublisherListener* listener, StatusMask mask, DomainParticipantImpl* participant);
 

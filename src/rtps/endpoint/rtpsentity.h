@@ -16,8 +16,16 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+/**
+ * @brief RTPSEntity类是RTPS层支持QoS策略、监听器和状态条件的所有对象的抽象基类。
+ */
 class RTPSEntity {
 public:
+	/**
+	 * @brief 获取当前对象的Guid信息。
+	 *
+	 * @return 返回当前对象的Guid信息。
+	 */
 	GUID_t GetGuid() const
 	{
 		return guid_;

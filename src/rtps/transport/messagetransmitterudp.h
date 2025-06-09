@@ -24,19 +24,47 @@ using _SEND_PORT_SOCKET_MAP = std::map<Locator_t, std::shared_ptr<asio::ip::udp:
 
 //接收报文的最大长度 基于UDP
 #define MAXSIZE 65527
+/**
+ * @brief MessageTransmitterUDP类，MessageTransmitter的派生类，RTPS报文使用UDP协议发送管理类。
+ */
 class MessageTransmitterUDP : public MessageTransmitter
 {
 public:
-	//构造函数
+	
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] messageProcessor MessageProcessor指针。
+	 */
 	MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor);
 
-	//析构函数
+	/**
+	 * @brief 析构函数。
+	 */
 	virtual ~MessageTransmitterUDP();
 
-	/* 创建发送socket并绑定发送IP */
+	/**
+	 * @brief RTPS报文发送Socket创建与存储并绑定发送IP。
+	 *
+	 * @param [in] source 源地址。
+	 * @param [in] destination 目的地址。
+	 * @param [in] priority 发送IP的优先级。
+	 *
+	 * @return 封装成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority = -1);
 
-	/* 发送报文，可使用LOCATOR_INVALID不指定网卡，或使用指定IP的网卡进行发送 */
+	/**
+	 * @brief 发送RTPS报文，可使用LOCATOR_INVALID不指定网卡，或使用指定IP的网卡进行发送。
+	 *
+	 * @param [in] source 源地址。
+	 * @param [in] destination 目的地址。
+	 * @param [in] message RTPS报文。
+	 * @param [in] length 报文长度。
+	 * @param [in] priority 发送IP的优先级。
+	 *
+	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t MessageSend(
 		Locator_t source,
 		Locator_t destination,
@@ -44,34 +72,91 @@ public:
 		uint32_t length,
 		uint16_t priority = -1);
 
-	/* 发送多播报文，可使用LOCATOR_INVALID不指定网卡，或使用指定IP的网卡进行发送 UDP发送中其实不区分单播和组播 */
+	/**
+	 * @brief 发送多播报文，可使用LOCATOR_INVALID不指定网卡，
+	 * 或使用指定IP的网卡进行发送 UDP发送中其实不区分单播和组播。
+	 *
+	 * @param [in] source 源地址。
+	 * @param [in] destination 目的地址。
+	 * @param [in] message RTPS报文。
+	 * @param [in] length 报文长度。
+	 *
+	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t SendMultiMessage(
 		Locator_t source,
 		Locator_t destination,
 		char* message,
 		uint32_t length);
 
-	//添加监听地址
+	/**
+	 * @brief 添加RTPS报文监听地址。
+	 *
+	 * @param [in] receiveAddr 监听地址。
+	 *
+	 * @return 监听地址添加成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t ReceiveAddrAdd(Locator_t receiveAddr);
 
-	//删除监听地址
+	/**
+	 * @brief 删除RTPS报文监听地址。
+	 *
+	 * @param [in] receiveAddr 监听地址。
+	 *
+	 * @return 监听地址删除成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t ReceiveAddrRemove(Locator_t receiveAddr);
 
+	/**
+	 * @brief 设置当前发送线程运行状态为停止，即更改runFlag_变量值为false。
+	 */
 	virtual void SetStop() override;
 public:
-	//临时回调
+	/**
+	 * @brief 报文接收后临时回调函数，触发报文解析模块。
+	 *
+	 * @param [in] message RTPS报文。
+	 * @param [in] len 报文长度。
+	 *
+	 * @return 报文解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t InterpretMessage(char* message, uint32_t len);
 
 private:
+	/**
+	 * @brief UDP报文接收函数。
+	 *
+	 * @param [in] socket UDP通信句柄。
+	 */
 	void AsyncReceive(std::shared_ptr<asio::ip::udp::socket>);
 private:
 	asio::io_context& ioContext_;
 
-	/* 创建接收socket */
+	/**
+	 * @brief 创建接收socket。
+	 *
+	 * @param [in] receiveAddr 报文接收地址。
+	 *
+	 * @return 创建成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t AddRecvSocket(Locator_t receiveAddr);
-	/* 加入组播组 */
+
+	/**
+	 * @brief 加入组播组。
+	 *
+	 * @param [in] receiveAddr 组播地址。
+	 *
+	 * @return 加入成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t AddMemberShip(Locator_t receiveAddr);
-	/* 退出组播组 */
+
+	/**
+	 * @brief 退出组播组。
+	 *
+	 * @param [in] receiveAddr 组播地址。
+	 *
+	 * @return 退出成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	ReturnCode_t DropMemberShip(Locator_t receiveAddr);
 
 	/* 发送socket，发送ip为key值 */

@@ -1,5 +1,17 @@
-#ifndef Logger_h__
-#define Logger_h__
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
+#ifndef LOGGER_H
+#define LOGGER_H
 
 #include "agidds_dll.h"
 #include <cstdint>
@@ -68,4 +80,4 @@ void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t 
 
 AGIDDS_NAMESPACE_END
 
-#endif // Logger_h__
+#endif // LOGGER_H

@@ -9,10 +9,6 @@ WaitSet::WaitSet()
 }
 WaitSet::~WaitSet()
 {
-	if (impl_) {
-		delete impl_;
-		impl_ = nullptr;
-	}
 }
 ReturnCode_t WaitSet::attach_condition(const Condition& condition)
 {

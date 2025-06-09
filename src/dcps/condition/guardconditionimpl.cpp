@@ -3,6 +3,6 @@ USING_AGIDDS_NAMESPACE
 
 ReturnCode_t GuardConditionImpl::set_trigger_value(bool value)
 {
-	triggerValue_ = value;
+	triggerValue_ .store(value);
     return RETCODE_OK;
 }

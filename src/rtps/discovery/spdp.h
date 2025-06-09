@@ -31,18 +31,45 @@ struct ParticipantStatus_t
 	double recvTime;
 };
 
+/**
+ * @brief Spdp类，内置发现控制读写者数据收发控制类。
+ *	实现内置发现功能，用户节点发现报文（DATA(p)）收发，节点发现管理功能。
+ */
 class Spdp: public ReaderListener
 {
 public:
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] participant  Participant类指针。
+	 * @param [in] discovery	Discovery类指针。
+	 */
 	Spdp(Participant* participant,Discovery* discovery);
 	
+	/**
+	 * @brief 析构函数。
+	 */
 	~Spdp();
 
+	/**
+	 * @brief 内置DATA(p)报文数据读者回调函数。
+	 *
+	 * @param [in] change DATA(p)报文数据。
+	 */
 	virtual void on_data_available(std::shared_ptr<CacheChange> change);
 
-
+	/**
+	 * @brief DATA(p)报文RTPS层发布者内置Writer创建。
+	 *
+	 * @param [in] dataWriter  DataWriterImpl类指针。
+	 */
 	void SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
 
+	/**
+	 * @brief DATA(p)报文RTPS层订阅者内置Writer创建。
+	 *
+	 * @param [in] dataReader  DataReaderImpl类指针。
+	 */
 	void SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader);
 
 	void RemoveParticipant(GUID_t guid);
@@ -63,6 +90,10 @@ public:
 
 	int GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data);
 
+	void SetIgnoredParticipants(GUID_t guid);
+
+	bool FindIgnoredParticipants(GUID_t guid);
+
 private:
 
 	void TakeSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data, SerializedBuffer* buffer);
@@ -77,6 +108,10 @@ private:
 	SpdpDataMap remoteParticipantData_;
 	std::map<BuiltinTopicKey_t, ParticipantStatus_t> remoteParticipantStatus_;
 	std::mutex mutex_;
+
+	/* 被忽略的参与者 */
+	std::vector<GUID_t> ignoredParticipants_;
+	std::mutex ignoredParticipantsMutex_;
 
 	Discovery* discovery_;
 	

@@ -25,6 +25,9 @@ enum ChangeForReaderStatusKind
 	UNDERWAY
 };
 
+/**
+ * @brief ChangeForReader类。
+ */
 struct ChangeForReader
 {
 // public:
@@ -43,6 +46,9 @@ struct ChangeForReader
 	bool isRelevant;
 	SequenceNumber_t sequenceNumber = {0};
 
+	/**
+	 * @brief 构造函数。
+	 */
 	ChangeForReader()
 	{
 		isRelevant = true;

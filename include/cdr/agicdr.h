@@ -1,5 +1,17 @@
-#ifndef agicdr_h__
-#define agicdr_h__
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+
+#ifndef AGICDR_H
+#define AGICDR_H
 
 #include <string>
 #include <cstring>
@@ -24,10 +36,10 @@ union LongDouble {
 	}
 };
 
-class DDS_DLL SerializedBuffer
-{
+class DDS_DLL SerializedBuffer {
 public:	
-    SerializedBuffer() {
+    SerializedBuffer() 
+    {
         buffer = nullptr;
 		origin_buffer = nullptr;
         buffer_size = 0;
@@ -56,11 +68,13 @@ public:
      */
     SerializedBuffer* readData(char* data, uint32_t length);
 
-    uint32_t bufferSpace() {
+    uint32_t bufferSpace() 
+    {
         return buffer_size - writer_position;
     }
 
-    uint32_t bufferTotalSpace() {
+    uint32_t bufferTotalSpace() 
+    {
         uint32_t totalSpace = 0;
         for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
             totalSpace += buffer->bufferSpace();
@@ -68,11 +82,13 @@ public:
         return totalSpace;
     }
 
-    uint32_t bufferLength() {
+    uint32_t bufferLength() 
+    {
         return writer_position - reader_position;
     }
 
-    uint32_t bufferTotalLength() {
+    uint32_t bufferTotalLength() 
+    {
         uint32_t totalLength = 0;
         for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
             totalLength += buffer->bufferLength();
@@ -123,7 +139,8 @@ public:
      * @return 序列化是否成功。
      */
     template<typename T>
-    bool serializeBaseType(T value) {
+    bool serializeBaseType(T value) 
+    {
         uint32_t typeSize = sizeof(T);
         static char s_alignedData[15] = { 0 };
         uint32_t offset = (~index_ + 1) & (typeSize - 1);
@@ -134,20 +151,16 @@ public:
         curProcessMsgBlock_ = retBuffer;
         index_ += offset;
         totalSpace_ -= offset;
-        if (useLittleEndian_ == isLittleEndian())
-        {
+        if (useLittleEndian_ == isLittleEndian()) {
             // 本机端序与要求编码端序相同，直接拷贝进入缓冲区
             retBuffer = curProcessMsgBlock_->writeData((char*)&value, typeSize);
             if (!retBuffer) {
                 return false;
             }
             curProcessMsgBlock_ = retBuffer;
-        }
-        else
-        {
+        } else {
            T tmpValue = 0;
-           switch (typeSize)
-           {
+           switch (typeSize) {
            case 2:
                tmpValue = __builtin_bswap16(*(uint16_t*)&value);
                break;
@@ -221,18 +234,16 @@ public:
      * @return 序列化是否成功。
      */
     template<typename T>
-    bool serializeBaseTypeArray(const T* value, uint32_t length) {
-        if (length == 0)
-        {
+    bool serializeBaseTypeArray(const T* value, uint32_t length) 
+    {
+        if (length == 0) {
            return true;
         }
         uint32_t typeSize = sizeof(T);
-        if (typeSize == 1)
-        {
+        if (typeSize == 1) {
            // 字节数组时，无需考虑对齐，以及端序
            SerializedBuffer* retBuffer = curProcessMsgBlock_->writeData((char*)value, length);
-           if (!retBuffer)
-           {
+           if (!retBuffer) {
                return false;
            }
            curProcessMsgBlock_ = retBuffer;
@@ -242,34 +253,26 @@ public:
         }
         // 其余数组需要第一个元素需要考虑对齐以及端序
         // 第一个数据考虑对齐
-        if (!serializeBaseType<T>(value[0]))
-        {
+        if (!serializeBaseType<T>(value[0])) {
            return false;
         }
         // 如果只有一个元素，则处理完成
-        if (length <= 1)
-        {
+        if (length <= 1) {
            return true;
         }
         // 剩下的数据
-        if (useLittleEndian_ && isLittleEndian())
-        {
+        if (useLittleEndian_ && isLittleEndian()) {
             // 本机端序与要求编码端序相同，直接拷贝进入缓冲区
             SerializedBuffer* retBuffer = curProcessMsgBlock_->writeData((char*)&value[1], typeSize * (length - 1));
-            if (!retBuffer)
-            {
+            if (!retBuffer) {
                 return false;
             }
             curProcessMsgBlock_ = retBuffer;
             index_ += typeSize * (length - 1);
             totalSpace_ -= typeSize * (length - 1);
-        }
-        else
-        {
-           for (uint32_t i = 1; i < length; ++i)
-           {
-               if (!serializeBaseType<T>(value[i]))
-               {
+        } else {
+           for (uint32_t i = 1; i < length; ++i) {
+               if (!serializeBaseType<T>(value[i])) {
                    return false;
                }
            }
@@ -339,7 +342,6 @@ public:
      *
      * @return  0表示成功，小于0表示失败。
      */
-
     void parameterLenSerialize(
         char *lenAddr,
         uint32_t length,
@@ -401,13 +403,13 @@ private:
 /**
  * @brief 反序列化器。
  */
-class DDS_DLL AGIDDSCdrDeserializer
-{
+class DDS_DLL AGIDDSCdrDeserializer {
 public:
     AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool littleEndian = true);
     ~AGIDDSCdrDeserializer() = default;
 
-    bool deserializeLongDouble(LongDouble& value) {
+    bool deserializeLongDouble(LongDouble& value) 
+    {
         static char s_alignedData[8] = { 0 };
         uint32_t ldSize = sizeof(long double);
         // 先读取补齐的数据
@@ -418,7 +420,8 @@ public:
         return deserializeBaseType(value.ld);
     }
     
-    bool deserializeLongDoubleArray(LongDouble* value, uint32_t length) {
+    bool deserializeLongDoubleArray(LongDouble* value, uint32_t length) 
+    {
         for (uint32_t i = 0; i < length; ++i) {
             if (!deserializeLongDouble(value[i])) {
                 return false;
@@ -426,8 +429,10 @@ public:
         }
         return true;
     }
+
     template<typename T>
-    bool deserializeBaseType(T& value) {
+    bool deserializeBaseType(T& value) 
+    {
         uint32_t typeSize = sizeof(T);
         // 对齐数据
         uint32_t offset = alignSize(typeSize);
@@ -467,7 +472,8 @@ public:
     }
 
     template<typename T>
-    bool deserializeBaseTypeArray(T* value, uint32_t length) {
+    bool deserializeBaseTypeArray(T* value, uint32_t length) 
+    {
         if (length == 0) {
             return true;
         }
@@ -545,7 +551,8 @@ public:
      */
     bool aheadReaderPosition(uint32_t beginIndex, uint32_t length);
 
-    uint32_t alignSize(uint32_t typeSize) {
+    uint32_t alignSize(uint32_t typeSize) 
+    {
         return ((~index_ + 1) & (typeSize - 1));
     }
 private:
@@ -556,4 +563,4 @@ private:
     bool useLittleEndian_;
 };
 
-#endif // agicdr_h__
+#endif // AGICDR_H

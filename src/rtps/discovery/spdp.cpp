@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "rtps/discovery/spdp.h"
 #include "rtps/discovery/discovery.h"
 #include "rtps/messages/parameter.h"
@@ -6,6 +7,8 @@
 #include "dcps/publish/publisher.h"
 #include "common/timeconversion.h"
 #include "common/time/ddstimer.h"
+#include "common/log/logger.h"
+#include "algorithm"
 
 USING_AGIDDS_NAMESPACE;
 
@@ -41,6 +44,7 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
     std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
@@ -72,6 +76,7 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	reader_ = std::dynamic_pointer_cast<StatelessReader>(reader);
@@ -118,11 +123,29 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 int Spdp::GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data)
 {
 	if (0 == remoteParticipantData_.count(key)) {
+		AGILOG(AGILOG_ERROR, "key not exist");
 		return RETCODE_ERROR;
 	}
 
 	data = remoteParticipantData_[key];
 	return RETCODE_OK;
+}
+
+void Spdp::SetIgnoredParticipants(GUID_t guid)
+{
+	ignoredParticipantsMutex_.lock();
+	ignoredParticipants_.push_back(guid);
+	ignoredParticipantsMutex_.unlock();
+}
+
+bool Spdp::FindIgnoredParticipants(GUID_t guid)
+{
+	auto it = std::find(ignoredParticipants_.begin(), ignoredParticipants_.end(), guid);
+	if (it == ignoredParticipants_.end())
+	{
+		return false;
+	}
+	return true;
 }
 
 void Spdp::RemoveParticipant(GUID_t guid)
@@ -152,6 +175,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, buffer, handle, time);
 	if (nullptr == cacheChange) {
+		AGILOG(AGILOG_ERROR, "create newChange Err");
 		return ;
 	}
 
@@ -159,6 +183,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
 }
@@ -253,8 +278,11 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
-	if (0 == remoteParticipantStatus_.count(key))
+	if (0 == remoteParticipantStatus_.count(key)) {
+		AGILOG(AGILOG_ERROR, "guid not exist");
 		return;
+	}
+		
 
 	remoteParticipantStatus_.erase(key);
 	remoteParticipantData_.erase(key);

@@ -19,10 +19,11 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
-class StatusConditionImpl :public virtual StatusCondition, public ConditionImpl {
+class StatusConditionImpl : public virtual StatusCondition, public ConditionImpl {
 public:
-	StatusConditionImpl() {};
 	StatusConditionImpl(Entity* parent);
+
+	bool get_trigger_value() const override;
 
 	ReturnCode_t set_enabled_statuses(const StatusMask& mask);
 
@@ -31,13 +32,41 @@ public:
 	Entity* get_entity() const;
 
 public:
+	/* 获取已触发状态字 */
 	const StatusMask& get_status() const;
 
+	/*    
+	 *  topic 
+	 *  INCONSISTENT_TOPIC
+	 *  
+	 *  subscriber
+	 *  DATA_ON_READERS
+	 * 
+	 *  datareader
+	 *  SAMPLE_REJECTED
+	 *  LIVELINESS_CHANGED
+	 *  REQUESTED_DEADLINE_MISSED
+	 *  REQUESTED_INCOMPATIBLE_QOS
+	 *  DATA_AVAILABLE
+	 *  SAMPLE_LOST
+	 *  SUBSCRIPTION_MATCHED
+	 * 
+	 *  datawriter
+	 *  LIVELINESS_LOST
+	 *  OFFERED_DEADLINE_MISSED
+	 *  OFFERED_INCOMPATIBLE_QOS
+	 *  PUBLICATION_MATCHED
+	 */
+	void set_status(const StatusMask& status, bool addFlag);
 
 protected:
-	Entity* entity_ = nullptr;
+	Entity* entity_;
 private:
-	StatusMask status_ = {};
+	mutable std::mutex mtx_;
+	/* 已触发状态字 */
+	StatusMask status_;
+	/* 启用的状态掩码 */
+	StatusMask enabledMask_;
 };
 
 AGIDDS_NAMESPACE_END

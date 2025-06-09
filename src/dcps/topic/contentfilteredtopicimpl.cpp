@@ -1,6 +1,7 @@
 #include "dcps/topic/contentfilteredtopicimpl.h"
 #include "dcps/topic/topicimpl.h"
 #include "dcps/domain/domainparticipantimpl.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 ContentFilteredTopicImpl::ContentFilteredTopicImpl(const std::string& name, Topic* related_topic, const std::string& filter_expression, const StringSeq& expression_parameters, DomainParticipant* participant)
     : TopicDescriptionImpl(name, related_topic->get_type_name(), dynamic_cast<DomainParticipantImpl*>(participant)), 
@@ -34,5 +35,7 @@ ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq
         expressionParameters_ = expression_parameters;
         return RETCODE_OK;
     }
+
+	AGILOG(AGILOG_ERROR, "SIZE ERR");
     return RETCODE_ERROR;
 }

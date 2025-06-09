@@ -19,12 +19,31 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+/**
+ * AsioContext类，asio功能封装。
+ */
 class AsioContext {
 private:
+	/**
+	 * @brief 构造函数。
+	 */
 	AsioContext();
 public:
+	/**
+	 * @brief 获取AsioContext类单例。
+	 * 
+	 * @return AsioContext类单例。
+	 */
 	static AsioContext& GetInstance();
+	/**
+	 * @brief 获取AsioContext类单例。
+	 *
+	 * @return AsioContext类单例。
+	 */
 	static asio::io_context& GetIOContext();
+	/**
+	 * @brief 析构函数。
+	 */
 	~AsioContext();
 
 	AsioContext(const AsioContext&) = delete;

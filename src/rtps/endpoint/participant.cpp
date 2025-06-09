@@ -10,7 +10,7 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/transport/ipcontainer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
-
+#include "common/log/logger.h"
 #include <random>
 #include <regex>
 #if defined(_WIN32)
@@ -204,6 +204,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		}
 		writers_.erase(itor);
 	} else {
+		AGILOG(AGILOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 
@@ -226,6 +227,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		}
 		readers_.erase(itor);
 	} else {
+		AGILOG(AGILOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 
@@ -235,36 +237,43 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 
 std::shared_ptr<Writer> Participant::GetWriter(const EntityId_t & EntityID)
 {
-	if (0 == writers_.count(EntityID))
+	if (0 == writers_.count(EntityID)) {
+		AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
+	}
+		
 
 	return writers_[EntityID];
 }
 
 std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 {
-	if (0 == readers_.count(EntityID))
+	if (0 == readers_.count(EntityID)) {
+		AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
+	}
 
 	return readers_[EntityID];
 }
 
 ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
 {
+	remoteWriters_.insert({ data.remoteWriterGuid, data });
+
 	for (auto& reader : readers_) {
 		addReaderMatch(reader.second, data);
 	}
-	remoteWriters_.insert({ data.remoteWriterGuid, data });
-
 	return RETCODE_OK;
 }
 
 ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 {
+	remoteReaders_.insert({ data.remoteReaderGuid, data });
+
 	for (auto& writer : writers_) {
 		addWriterMatch(writer.second, data);
 	}	
-	remoteReaders_.insert({ data.remoteReaderGuid, data });
+	
 	return RETCODE_OK;
 }
 
@@ -525,6 +534,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 {
     DataWriterImpl* dw = writer->GetRelatedDataWriter();
     if (nullptr == dw) {
+		AGILOG(AGILOG_ERROR, "datawriter is nullptr");
         return;
     }
     const PublicationBuiltinTopicData& pubData = dw->GetBuiltinTopicData();
@@ -545,8 +555,9 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 
 	if ((0x02 == writer->GetGuid().entityId.entityKind  &&  subData.remoteReaderGuid.entityId.entityKind  != 0x07)
 		|| (0x03 == writer->GetGuid().entityId.entityKind  && subData.remoteReaderGuid.entityId.entityKind != 0x04)) {
-		printf("Loacl dw key = %x ,but remote dr key = %x \n\n", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
+		AGILOG(AGILOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
+
 		return;
 	}
 
@@ -597,8 +608,8 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 
 	if ((0x02 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x07) 
 		|| (0x03 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x04)) {
-		printf("remote dw key = %x ,but local dr key = %x \n\n", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
+		AGILOG(AGILOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
 		return;
 	}
 
@@ -616,7 +627,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (fulReader) {
 			fulReader->MatchedWriterAdd(proxy);
 		} else {
-			printf("%s %d error \n", __FILE__, __LINE__);
+			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 	else {
@@ -628,7 +639,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (lessReader) {
 			lessReader->MatchedWriterAdd(proxy);
 		} else {
-			printf("%s %d error \n", __FILE__, __LINE__);
+			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 
@@ -705,6 +716,7 @@ int32_t Participant::CreateReceiverResources(LocatorVec& locatorList, bool apply
 			locatorList.push_back(itor);
 		} else {
 			/* 异常处理 */
+			AGILOG(AGILOG_ERROR, "CreateReceiverResources Err")
 		}
 	}
 	return static_cast<int32_t>(locatorList.size());
@@ -794,6 +806,7 @@ ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubDat
 
 	auto itor = remoteWriters_.find(guid);
 	if (itor == remoteWriters_.end()) {
+		AGILOG(AGILOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	pubData = itor->second.ddsPublicationData;
@@ -825,6 +838,7 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 
 	auto itor = remoteReaders_.find(guid);
 	if (itor == remoteReaders_.end()) {
+		AGILOG(AGILOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	subData = itor->second.ddsSubscriptionData;
@@ -845,7 +859,7 @@ void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& 
 	return;
 }
 
-/* wangyi 获取WLP */
+/* wangyi 获取LivelinessManager */
 std::shared_ptr<LivelinessManager> Participant::GetLivelinessManager()
 {
 	return livelinessManager_;

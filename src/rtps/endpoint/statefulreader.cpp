@@ -4,12 +4,14 @@
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
+#include "common/log/logger.h"
 
 USING_AGIDDS_NAMESPACE;
 StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, const TopicKind_t& kind)
 	: Reader(qos, kind)
 {
 	guid_ = guid;
+	InitlastNewCacheTimer();
 }
 
 StatefulReader::~StatefulReader()
@@ -35,6 +37,7 @@ void StatefulReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerProxy)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err");
 		}
 	}
 }
@@ -50,6 +53,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "MatchedWriterRemove Err");
 		}
 	}
 	matchedWriters_.erase(writerProxy->GetGuid());
@@ -57,15 +61,18 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 
 std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGuid)
 {
-	if(0 == matchedWriters_.count(writerGuid))
+	if (0 == matchedWriters_.count(writerGuid)) {
+		AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return nullptr;
-
+	}
+		
 	return matchedWriters_[writerGuid];
 }
 
 bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
+		AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return false;
 	}
 	return true;
@@ -99,6 +106,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 		proxy = itor->second;
 	}
 	if (nullptr == proxy) {
+		AGILOG(AGILOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -118,6 +126,12 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 	cache->sequenceNumber = dataMsg.writerSN;
 	cache->inlineQos = dataMsg.inlineQos;
+
+	/* wangyi 记录最新信息 */
+	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
+		lastNewCache = cache;
+		lastNewGuid_ = guid;
+	}
 
 	ReturnCode_t ret = RETCODE_OK;
 
@@ -154,6 +168,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		proxy = itor->second;
 	}
 	if (nullptr == proxy) {
+		AGILOG(AGILOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -165,7 +180,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 	if (kind != ALIVE || (dfFlags.nonStandardPayloadFlag || nullptr == data) ) {
 		//TODO  
 		/**  DataFrag必须存在数据，状态为ALIVE  **/
-		std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
+		AGILOG(AGILOG_ERROR, "DataFrag msg err ");
 		return RETCODE_ERROR;
 	}
 
@@ -192,6 +207,12 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 			dataFragCache->fragmentSeq.insert(i);
 		}
 		proxy->AddReliableDataCache(dataFragCache, false);
+
+		/* wangyi 记录最新信息 */
+		if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
+			lastNewCache = dataFragCache;
+			lastNewGuid_ = guid;
+		}
 	}
 
 	if (1 != dataMsg.dataFrag.fragmentsInSubmessage) {
@@ -217,26 +238,27 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		printf("fun:%s line:%d error\n", __func__, __LINE__);
+		AGILOG(AGILOG_ERROR, "no match writer");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		printf("fun:%s line:%d error\n", __func__, __LINE__);
+		AGILOG(AGILOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
 	}
 
 	/* TODO 调用函数前进行判断，报文的有效性判断 */
 	//SequenceNumber_t SEQUENCENUMBER_ZERO
 	if (heartMsg.firstSN <= SEQUENCENUMBER_ZERO || heartMsg.lastSN < SEQUENCENUMBER_ZERO || heartMsg.lastSN < heartMsg.firstSN - 1) {
-		printf("fun:%s line:%d error\n", __func__, __LINE__);
+		//printf("fun:%s line:%d error\n", __func__, __LINE__);
+		AGILOG(AGILOG_ERROR, "hb data is invalid");
 		return RETCODE_ERROR;
 	}
 	if (flags.groupInfoFlag) {
 		//TODO 相关QoS不进行实现
 		if (heartMsg.currentGSN <= SEQUENCENUMBER_ZERO || heartMsg.firstGSN <= SEQUENCENUMBER_ZERO || heartMsg.lastGSN <= SEQUENCENUMBER_ZERO ||
 			heartMsg.lastGSN < heartMsg.firstGSN - 1 || heartMsg.currentGSN > heartMsg.firstGSN || heartMsg.currentGSN < heartMsg.lastGSN) {
-			printf("groupInfoFlags fun:%s line:%d error\n", __func__, __LINE__);
+			AGILOG(AGILOG_ERROR, "hb groupInfoFlags data is invalid");
 			return RETCODE_ERROR;
 		}
 	}
@@ -301,12 +323,12 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		printf("fun:%s line:%d error", __func__, __LINE__);
+		AGILOG(AGILOG_ERROR, "no match writer exist");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		printf("fun:%s line:%d error", __func__, __LINE__);
+		AGILOG(AGILOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -342,10 +364,12 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	SequenceNumber_t seq = SEQUENCENUMBER_ZERO;
 	if (gapInfo.gapStart <= seq && (0 == gapInfo.gapList.numBit || gapInfo.gapList.numBit > 256)) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "Gap GapData is invalid");
 		return RETCODE_ERROR;
 	}
 	if (groupInfoFlag && (gapInfo.gapStartGSN <= seq || gapInfo.gapEndGSN <= seq || gapInfo.gapEndGSN < gapInfo.gapStart - 1) ) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "Gap GroupInfo is invalid");
 		return RETCODE_ERROR;
 	}
 
@@ -354,11 +378,13 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "no match writer");
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
 	if (nullptr == proxy) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -385,12 +411,20 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 {
 	ReturnCode_t ret = RETCODE_OK;
 	if (!proxy) {
+		AGILOG(AGILOG_ERROR, "proxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
 		ret = AddChanges(cache);
+
+		if (ret == RETCODE_TIME_BASED_FILTER) {
+			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
+			cache = proxy->GetSubmitCache();
+			continue;
+		}
+
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
@@ -422,6 +456,7 @@ ReturnCode_t StatefulReader::AssertWriterLiveliness(const GUID_t& writer)
 		}
 		else {
 			/* TODO 日志 */
+			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 	return RETCODE_OK;
@@ -432,6 +467,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 {
 	if (!writerProxy) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "writerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
 	
@@ -447,6 +483,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 
 	if (!messageTransmitter) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
 		return RETCODE_ERROR;
 	}
 	char data[1224] = { 0 };
@@ -476,6 +513,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 {
 	if (!writerProxy) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "writerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -491,6 +529,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 
 	if (!messageTransmitter) {
 		PRINTF_ERROR();
+		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
 		return RETCODE_ERROR;
 	}
 	char data[1500] = { 0 };
@@ -515,4 +554,50 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	return RETCODE_OK;
 
 
+}
+
+void StatefulReader::InitlastNewCacheTimer()
+{
+	/* wangyi TIME_BASED_FILTER 最后一包数据定时器 */
+	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO) && qos_.reliability.kind == RELIABLE_RELIABILITY_QOS) {
+		Time_t time = { 999999999,999999999 };
+		lastNewCacheTimer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "lastNewCacheTimer");
+	}
+}
+
+void StatefulReader::TimerExpired()
+{
+	std::shared_ptr<WriterProxy> proxy = nullptr;
+	auto itor = matchedWriters_.find(lastNewGuid_);
+	if (itor != matchedWriters_.end()) {
+		proxy = itor->second;
+	}
+	if (nullptr == proxy) {
+		return;
+	}
+
+	ReturnCode_t ret = AddChanges(lastNewCache);
+
+	if (ret == RETCODE_TIME_BASED_FILTER) {
+		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
+		return;
+	}
+
+	if (RETCODE_OK != ret && datareader_) {
+		datareader_->OnSampleRejected(lastNewCache->instanceHandle, (SampleRejectedStatusKind)ret);
+	}
+
+	//TODO 提交数据 
+	if (readerListener_) {
+		readerListener_->on_data_available(lastNewCache);
+	}
+	else if (datareader_) {
+		datareader_->OnDataAvaible();
+	}
+
+	/* 最新数据提交后重置等待时间 */
+	Duration_t time = { 999999999,999999999 };
+	if (lastNewCacheTimer_ != nullptr) {
+		lastNewCacheTimer_->UpdatePeriod(time);
+	}
 }

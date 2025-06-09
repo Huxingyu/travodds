@@ -46,13 +46,42 @@ struct InfoMAC_t {
 
 };
 
+/**
+ * IpContainer 类, 本机IP地址信息获取类。
+ */
 class IpContainer {
 
 public:
+    /**
+     * @brief 获取本机所有IPv4地址信息。
+     *
+     * @param [out] ips 返回的存储IPv4地址容器。
+     * @param [in] containLoopback 是否包含本地回环地址标志。
+     *
+     * @return 获取成功返回true，否则返回false。
+     */
     static bool GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback = false);
 
+    /**
+      * @brief 获取本机所有IPv6地址信息。
+      *
+      * @param [in] name -。
+      *
+      * @return 字符串。
+      * 
+      * @warning 尚不支持。
+      */
     static std::string GetIPv6Address(const std::string& name);
 
+    /**
+      * @brief 获取本机所有MAC地址信息。
+      *
+      * @param [out] macs 返回的存储MAC地址容器。
+      *
+      * @return 获取成功返回true，否则返回false。
+      * 
+      * @warning 尚不支持。
+      */
     static bool GetAllMACAddress(std::vector<InfoMAC_t>* macs);
 private:
 
