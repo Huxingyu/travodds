@@ -151,11 +151,11 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 		octet flag = change->kind;
 
 		// D 已处理
-		if (flag | 0x01) {
+		if (flag | NOT_ALIVE_DISPOSED) {
 
 		}
 		// U 未注册
-		if (flag | 0x02) {
+		if (flag | NOT_ALIVE_UNREGISTERED) {
 			if(change->writerGuid.entityId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER)
 				participant_->RemoveRemoteWriter(guid);
 			if (change->writerGuid.entityId == ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER)
@@ -163,7 +163,7 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 		}
 
 		// F 已过滤
-		if (flag | 0x03) {
+		if (flag | ALIVE_FILTERED) {
 
 		}
 		return;
@@ -207,7 +207,7 @@ void Sedp::WritePublicationData(DiscoveredWriterData& data)
 	DomainParticipant::get_current_time(cur_time);
 
 	InstanceHandle_t handle;
-	memcpy(handle.keyHash.value, data.ddsPublicationData.key.value, 16);
+	memcpy(handle.keyHash.value, data.ddsPublicationData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 	std::shared_ptr<CacheChange> change = publicationsWriter_->NewChange(ALIVE, buffer, handle, cur_time);
 
@@ -234,7 +234,7 @@ void Sedp::WriteSubscriptionData(DiscoveredReaderData& data)
 	Time_t cur_time;
 	DomainParticipant::get_current_time(cur_time);
 	InstanceHandle_t handle;
-	memcpy(handle.keyHash.value, data.ddsSubscriptionData.key.value, 16);
+	memcpy(handle.keyHash.value, data.ddsSubscriptionData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	std::shared_ptr<CacheChange> change = subscriptionsWriter_->NewChange(ALIVE, buffer, handle, cur_time);
 
 	ReturnCode_t ret = subscriptionsWriter_->AddBuiltinCache(change);
@@ -262,14 +262,14 @@ void Sedp::RemovePublicationData(GUID_t & guid)
 
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
-	char status[4] = { 0 };
-	status[3] = 3;
+	StatusInfo_t status = { 0 };
+	status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 	change->inlineQos.push_back(keyParam);
 	change->inlineQos.push_back(statueParam);
@@ -303,14 +303,14 @@ void Sedp::RemoveSubscriptionData(GUID_t & guid)
 	
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
-	char status[4] = { 0 };
-	status[3] = 3;
+	StatusInfo_t status = { 0 };
+	status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 	change->inlineQos.push_back(keyParam);
 	change->inlineQos.push_back(statueParam);
@@ -331,6 +331,14 @@ void Sedp::TakeDiscoveredWriterData(DiscoveredWriterData& data, SerializedBuffer
 	list.GetDiscoveredData(data);
 
 	data.remoteWriterGuid = Conversion::ToGuid(data.ddsPublicationData.key);
+
+	/* wangyi Cyclone DDS适配 participant_key 值为{0,0,0,0}时使用Guid转换  */
+	BuiltinTopicKey_t keyNull;
+	if (data.ddsPublicationData.participant_key == keyNull)
+	{
+		GUID_t participantGuid(data.remoteWriterGuid.prefix, ENTITYID_PARTICIPANT);
+		data.ddsPublicationData.participant_key = Conversion::ToBuiltinTopicKey(participantGuid);
+	}
 }
 
 void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data)
@@ -350,6 +358,15 @@ void Sedp::TakeDiscoveredReaderData(DiscoveredReaderData& data, SerializedBuffer
 	list.GetDiscoveredData(data);
 
 	data.remoteReaderGuid = Conversion::ToGuid(data.ddsSubscriptionData.key);
+
+	/* wangyi Cyclone DDS适配 participant_key 值为{0,0,0,0}时使用Guid转换  */
+	BuiltinTopicKey_t keyNull;
+	if (data.ddsSubscriptionData.participant_key == keyNull)
+	{
+		GUID_t participantGuid(data.remoteReaderGuid.prefix, ENTITYID_PARTICIPANT);
+		data.ddsSubscriptionData.participant_key = Conversion::ToBuiltinTopicKey(participantGuid);
+	}
+
 }
 
 void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data)

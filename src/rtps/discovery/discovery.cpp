@@ -96,7 +96,7 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	data.ddsParticipantData.user_data = dpQos.user_data;
 	data.domainId = domainParticipant_->get_domain_id();
 	data.protocolVersion = PROTOCOLVERSION_2_5;
-	data.vendorId = VENDORID_UNKNOWN;
+	data.vendorId = VENDORID_PROSIMA;
 	data.defaultUnicastLocatorList = participant->GetDefaultUnicastLocators();
 	data.defaultMulticastLocatorList = participant->GetDefaultMulticastLocators();
 	data.metatrafficUnicastLocatorList = participant->GetMetatrafficUnicastLocators();

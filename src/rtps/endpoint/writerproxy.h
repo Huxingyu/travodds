@@ -67,6 +67,9 @@ public:
 
 	SeqNumberVec LostChanges();
 
+	/* wangyi 获取远端remoteWriterGuid_ */
+	GUID_t GetRemoteWriterGuid();
+
 private:
 	GUID_t remoteWriterGuid_;
 	GUID_t remoteGroupGuid_;

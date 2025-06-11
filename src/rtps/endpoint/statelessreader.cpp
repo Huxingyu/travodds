@@ -35,16 +35,16 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 	/* wangyi liveliness */
 	AssertWriterLiveliness(guid);
 
-	memcpy(pubHandle.keyHash.value, &guid, 16);
+	memcpy(pubHandle.keyHash.value, &guid, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	buffer = new SerializedBuffer;
 
 	/* 获取标志 */
 	DataMsgFlag_t dataFlags;
-	dataFlags.endiannessFlag = dataMsg.header.flags & FLAG_BIT_0;
-	dataFlags.inlineQosFlag = dataMsg.header.flags & FLAG_BIT_1;
-	dataFlags.dataFlag = dataMsg.header.flags & FLAG_BIT_2;
-	dataFlags.keyFlag = dataMsg.header.flags & FLAG_BIT_3;
-	dataFlags.nonStandardPayloadFlag = dataMsg.header.flags & FLAG_BIT_4;
+	dataFlags.endiannessFlag = dataMsg.header.flags & SubMessageFlag::ENDIANNESS_FLAG;
+	dataFlags.inlineQosFlag = dataMsg.header.flags & SubMessageFlag::INLINE_QOS_FLAG;
+	dataFlags.dataFlag = dataMsg.header.flags & SubMessageFlag::DATA_FLAG;
+	dataFlags.keyFlag = dataMsg.header.flags & SubMessageFlag::KEY_FLAG;
+	dataFlags.nonStandardPayloadFlag = dataMsg.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG;
 
 
 	if (dataFlags.inlineQosFlag) {
@@ -100,14 +100,14 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	InstanceHandle_t pubHandle;
 	InstanceHandle_t dataHandle = HANDLE_NIL;
 
-	memcpy(pubHandle.keyHash.value, &guid, 16);
+	memcpy(pubHandle.keyHash.value, &guid, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 	/* 获取标志 */
 	DataFragMsgFlag_t dataFragFlags;
-	dataFragFlags.endiannessFlag = dataMsg.header.flags & FLAG_BIT_0;
-	dataFragFlags.inlineQosFlag = dataMsg.header.flags & FLAG_BIT_1;
-	dataFragFlags.keyFlag = dataMsg.header.flags & FLAG_BIT_2;
-	dataFragFlags.nonStandardPayloadFlag = dataMsg.header.flags & FLAG_BIT_3;
+	dataFragFlags.endiannessFlag = dataMsg.header.flags & SubMessageFlag::ENDIANNESS_FLAG;
+	dataFragFlags.inlineQosFlag = dataMsg.header.flags & SubMessageFlag::INLINE_QOS_FLAG;
+	dataFragFlags.keyFlag = dataMsg.header.flags & SubMessageFlag::FRAG_KEY_FLAG;
+	dataFragFlags.nonStandardPayloadFlag = dataMsg.header.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG;
 
 
 	if (dataFragFlags.inlineQosFlag) {
@@ -122,9 +122,9 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		/* 申请空间 */
 		buffer = new SerializedBuffer();
 
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + 4, buffer->origin_buffer);
+		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
 		buffer->buffer = buffer->origin_buffer;
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + 4;
+		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
 
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 
@@ -150,9 +150,9 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		/* 重新 申请空间 */
 		buffer = new SerializedBuffer();
 
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + 4, buffer->origin_buffer);
+		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
 		buffer->buffer = buffer->origin_buffer;
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + 4;
+		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
 
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 

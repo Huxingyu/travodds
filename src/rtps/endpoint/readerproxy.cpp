@@ -91,7 +91,7 @@ void ReaderProxy::RequestedChangesSet(SeqNumberVec requested_changes_set)
 
 bool ReaderProxy::UnackedChanges()
 {
-	SequenceNumber_t highestAvailableSeqNum, highestAckedSeqNum;
+	SequenceNumber_t highestAvailableSeqNum = SEQUENCENUMBER_ZERO, highestAckedSeqNum = ackedSeq_;
 	highestAvailableSeqNum = writerCache_->GetSeqNumMax();
 	if (!acknowledgeChanges_.empty()) {
 		highestAckedSeqNum = *acknowledgeChanges_.rbegin();
@@ -154,8 +154,8 @@ ReturnCode_t ReaderProxy::RecvAcknack(const AcknackSubMessage_t& ackMsg)
 	AckedChangesSet(ackedSeq_);
 	RemoveFragNackCounts(ackedSeq_);
 	SeqNumberVec seqVec;
-	for (uint32_t i = 0; i < seqSet.numBit; i++) {
-		if (seqSet.bitmap[i / 32] & (0x80000000 >> (i % 32))) {
+	for (uint32_t i = 0; i < seqSet.bitmap.size; i++) {
+		if (seqSet.bitmap.IsBitSet(i)) {
 			seq = seqSet.bitmapBase + i;
 			seqVec.push_back(seq);
 			ret = RETCODE_REPEAT_REQUEXT;

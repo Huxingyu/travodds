@@ -89,16 +89,16 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	/* wangyi 更新存活性 */
 	AssertWriterLiveliness(guid);
 
-	memcpy(pubHandle.keyHash.value, &guid, 16);
+	memcpy(pubHandle.keyHash.value, &guid, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 
 	/* 获取标志 */
 	DataMsgFlag_t dataFlags;
-	dataFlags.endiannessFlag = dataMsg.header.flags & FLAG_BIT_0;
-	dataFlags.inlineQosFlag = dataMsg.header.flags & FLAG_BIT_1;
-	dataFlags.dataFlag = dataMsg.header.flags & FLAG_BIT_2;
-	dataFlags.keyFlag = dataMsg.header.flags & FLAG_BIT_3;
-	dataFlags.nonStandardPayloadFlag = dataMsg.header.flags & FLAG_BIT_4;
+	dataFlags.endiannessFlag = dataMsg.header.flags & SubMessageFlag::ENDIANNESS_FLAG;
+	dataFlags.inlineQosFlag = dataMsg.header.flags & SubMessageFlag::INLINE_QOS_FLAG;
+	dataFlags.dataFlag = dataMsg.header.flags & SubMessageFlag::DATA_FLAG;
+	dataFlags.keyFlag = dataMsg.header.flags & SubMessageFlag::KEY_FLAG;
+	dataFlags.nonStandardPayloadFlag = dataMsg.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG;
 
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 	auto itor = matchedWriters_.find(guid);
@@ -155,12 +155,12 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 	AssertWriterLiveliness(guid);
 
 	DataFragMsgFlag_t dfFlags;
-	dfFlags.endiannessFlag = dataMsg.header.flags & FLAG_BIT_0;
-	dfFlags.inlineQosFlag = dataMsg.header.flags & FLAG_BIT_1;
-	dfFlags.keyFlag = dataMsg.header.flags & FLAG_BIT_2;
-	dfFlags.nonStandardPayloadFlag = dataMsg.header.flags & FLAG_BIT_3;
+	dfFlags.endiannessFlag = dataMsg.header.flags & SubMessageFlag::ENDIANNESS_FLAG;
+	dfFlags.inlineQosFlag = dataMsg.header.flags & SubMessageFlag::INLINE_QOS_FLAG;
+	dfFlags.keyFlag = dataMsg.header.flags & SubMessageFlag::FRAG_KEY_FLAG;
+	dfFlags.nonStandardPayloadFlag = dataMsg.header.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG;
 
-	memcpy(pubHandle.keyHash.value, &guid, 16);
+	memcpy(pubHandle.keyHash.value, &guid, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 	auto itor = matchedWriters_.find(guid);
@@ -189,10 +189,10 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 
 		SerializedBuffer *buffer = new SerializedBuffer();
 
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + 4, buffer->origin_buffer);
+		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
 		buffer->buffer = buffer->origin_buffer;
 		/* 4字节为CDR信息 */
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + 4;
+		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
 
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 
@@ -231,10 +231,10 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	GUID_t guid(headerInfo.sourceGuidPrefix, heartMsg.writerId);
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 	HeartbeatMsgFlag_t flags;
-	flags.endiannessFlag = heartMsg.header.flags & FLAG_BIT_0;
-	flags.finalFlag = heartMsg.header.flags & FLAG_BIT_1;
-	flags.livelinessFlag = heartMsg.header.flags & FLAG_BIT_2;
-	flags.groupInfoFlag = heartMsg.header.flags & FLAG_BIT_3;
+	flags.endiannessFlag = heartMsg.header.flags & SubMessageFlag::ENDIANNESS_FLAG;
+	flags.finalFlag = heartMsg.header.flags & SubMessageFlag::FINAL_FLAG;
+	flags.livelinessFlag = heartMsg.header.flags & SubMessageFlag::LIVELINESS_FLAG;
+	flags.groupInfoFlag = heartMsg.header.flags & SubMessageFlag::HB_GROUPINFO_FLAG;
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
@@ -250,7 +250,6 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	/* TODO 调用函数前进行判断，报文的有效性判断 */
 	//SequenceNumber_t SEQUENCENUMBER_ZERO
 	if (heartMsg.firstSN <= SEQUENCENUMBER_ZERO || heartMsg.lastSN < SEQUENCENUMBER_ZERO || heartMsg.lastSN < heartMsg.firstSN - 1) {
-		//printf("fun:%s line:%d error\n", __func__, __LINE__);
 		AGILOG(AGILOG_ERROR, "hb data is invalid");
 		return RETCODE_ERROR;
 	}
@@ -287,7 +286,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	std::vector<NackFragSubMessage_t> nackFragVec;
 	proxy->GetNackSequenceSet(nackFragVec);
 	/*  发送Nack的报文  */
-	if (set.numBit != 0 || flags.finalFlag) {
+	if (set.bitmap.size != 0 || flags.finalFlag) {
 		//TODO 存在丢包，或者强制回复Ack报文。创建Ack报文进行回复 
 		/* 1. 先给分片数据发送NackFrag  */
 		for (int32_t i = 0; i < nackFragVec.size(); i++) {
@@ -299,7 +298,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 		}	
 	}
 
-	if (set.numBit != 0 || flags.finalFlag) {
+	if (set.bitmap.size != 0 || !flags.finalFlag) {
 		//TODO 存在丢包，或者强制回复Ack报文。创建Ack报文进行回复 
 		ackMsg.count = heartMsg.count;
 		ackMsg.readerId = guid_.entityId;
@@ -341,7 +340,7 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 		return RETCODE_OK;
 	}
 
-	if (set.numBit != 0) {
+	if (set.bitmap.size != 0) {
 		//TODO 存在丢包,回复nack报文 
 		
 	}
@@ -357,19 +356,17 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	if (BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
 		return RETCODE_OK;
 	}
-	bool groupInfoFlag = gapInfo.header.flags & 02;
-	bool filteredCountFlag = gapInfo.header.flags & 04;
+	bool groupInfoFlag = (gapInfo.header.flags & SubMessageFlag::GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool filteredCountFlag = (gapInfo.header.flags & SubMessageFlag::FILTERED_COUNT_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	/*  判断报文是否有效  */
 	SequenceNumber_t seq = SEQUENCENUMBER_ZERO;
-	if (gapInfo.gapStart <= seq && (0 == gapInfo.gapList.numBit || gapInfo.gapList.numBit > 256)) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "Gap GapData is invalid");
+	if (gapInfo.gapStart <= seq && (0 == gapInfo.gapList.bitmap.size || gapInfo.gapList.bitmap.size > 256)) {
+		AGILOG(AGILOG_ERROR, "Gap GapData is invalid")
 		return RETCODE_ERROR;
 	}
 	if (groupInfoFlag && (gapInfo.gapStartGSN <= seq || gapInfo.gapEndGSN <= seq || gapInfo.gapEndGSN < gapInfo.gapStart - 1) ) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "Gap GroupInfo is invalid");
+		AGILOG(AGILOG_ERROR, "Gap GroupInfo is invalid")
 		return RETCODE_ERROR;
 	}
 
@@ -377,14 +374,12 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	GUID_t guid(headerInfo.sourceGuidPrefix, gapInfo.writerId);
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "no match writer");
+		AGILOG(AGILOG_ERROR, "no match writer")
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
 	if (nullptr == proxy) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "match writer is nullptr");
+		AGILOG(AGILOG_ERROR, "match writer is nullptr")
 		return RETCODE_ERROR;
 	}
 
@@ -393,8 +388,8 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	for (seq = gapInfo.gapStart; seq < gapInfo.gapList.bitmapBase; seq++) {
 		seqVec.push_back(seq);
 	}
-	for (auto i = 0; i < gapInfo.gapList.numBit; i++) {
-		if (gapInfo.gapList.bitmap[i / 32] & (0x80000000 >> (i % 32) ) ){
+	for (auto i = 0; i < gapInfo.gapList.bitmap.size; i++) {
+		if (gapInfo.gapList.bitmap.IsBitSet(i) ) {
 			seq = gapInfo.gapList.bitmapBase + i;
 			seqVec.push_back(seq);
 		}	
@@ -466,8 +461,7 @@ ReturnCode_t StatefulReader::AssertWriterLiveliness(const GUID_t& writer)
 ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerProxy, AcknackSubMessage_t& ackMsg)
 {
 	if (!writerProxy) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "writerProxy is nullptr");
+		AGILOG(AGILOG_ERROR, "writerProxy is nullptr")
 		return RETCODE_ERROR;
 	}
 	
@@ -482,8 +476,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	if (!messageTransmitter) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
+		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
 		return RETCODE_ERROR;
 	}
 	char data[1224] = { 0 };
@@ -491,14 +484,20 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(AcknackSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + 1024;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
-	ackMsg.header.flags = 0x01;
+	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG) | SubMessageFlag::FINAL_FLAG;
 
 	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg);
 
+	/* wangyi test 添加INFODST */
 	bufffer.buffer_size = shift;
 	shift = 0;
+	InfoDestinationSubMessage_t dstMsg;
+	dstMsg.guidPrefix = writerProxy->GetRemoteWriterGuid().prefix;
+	dstMsg.header.flags = 0x01;
+	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg);
+
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
 	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
@@ -512,8 +511,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg)
 {
 	if (!writerProxy) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "writerProxy is nullptr");
+		AGILOG(AGILOG_ERROR, "writerProxy is nullptr")
 		return RETCODE_ERROR;
 	}
 
@@ -528,8 +526,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	if (!messageTransmitter) {
-		PRINTF_ERROR();
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
+		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
 		return RETCODE_ERROR;
 	}
 	char data[1500] = { 0 };
@@ -537,9 +534,9 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(AcknackSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + 1024;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
-	nackMsg.header.flags = 0x01;
+	nackMsg.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 	MessageProcessor::EncapsulateNackFragMessage(bufffer, shift, nackMsg);
 
@@ -560,7 +557,7 @@ void StatefulReader::InitlastNewCacheTimer()
 {
 	/* wangyi TIME_BASED_FILTER 最后一包数据定时器 */
 	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO) && qos_.reliability.kind == RELIABLE_RELIABILITY_QOS) {
-		Time_t time = { 999999999,999999999 };
+		Time_t time = TIME_INFINITE;
 		lastNewCacheTimer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "lastNewCacheTimer");
 	}
 }
@@ -596,7 +593,7 @@ void StatefulReader::TimerExpired()
 	}
 
 	/* 最新数据提交后重置等待时间 */
-	Duration_t time = { 999999999,999999999 };
+	Duration_t time = TIME_INFINITE;
 	if (lastNewCacheTimer_ != nullptr) {
 		lastNewCacheTimer_->UpdatePeriod(time);
 	}

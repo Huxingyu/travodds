@@ -31,7 +31,7 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 	topic_->Reference();
 
 	InstanceHandle_t handle = pub_->get_participant()->get_instance_handle();
-	memcpy(builtinData_.participant_key.value, &handle.keyHash.value, 16);
+	memcpy(builtinData_.participant_key.value, &handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	builtinData_.topic_name = topic->get_name();
 	builtinData_.type_name = topic->get_type_name();
 	builtinData_.durability = qos.durability;
@@ -212,7 +212,7 @@ ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandl
 		return RETCODE_BAD_PARAMETER;
 	}
 	AGIDDSCdrDeserializer cdr(cacheData);
-	int32_t ret = typeSupport_->deserialize_data(key_holder, &cdr, TypeSupport::IsLittleEndian());
+	int32_t ret = typeSupport_->deserialize_data(key_holder, &cdr, DEFAULT_ENDIAN);
 	if (0 != ret) {
 		AGILOG(AGILOG_ERROR, "deserialize_data Error[%d]", ret);
 		return RETCODE_ERROR; 
@@ -269,8 +269,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		}
 		Parameter_t param;
 		param.parameterId = PID_KEY_HASH;
-		param.length = 16;
-		param.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+		param.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+		param.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 		lineQos.push_back(param);
 	}
 
@@ -285,10 +285,10 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	}
 
 	AGIDDSCdrSerializer cdr(bufferHeader);
-	typeSupport_->serialize_data((void*)instance_data, &cdr, TypeSupport::IsLittleEndian()); 
+	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
-	bufferHeader->buffer -= 4;
-	bufferHeader->buffer_size += 4;
+	bufferHeader->buffer -= CDR_ENDIANNESS_LEN;
+	bufferHeader->buffer_size += CDR_ENDIANNESS_LEN;
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
 	if (nullptr == cacheChange) {
@@ -299,7 +299,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	cacheChange->inlineQos = lineQos;
 	if (size > 0) {
 		cacheChange->fragmentTatolNum = size / DATAMESSAGE_LIMIT;
-		if (0 == size % DATAMESSAGE_LIMIT) {
+		if (0 != size % DATAMESSAGE_LIMIT) {
 			cacheChange->fragmentTatolNum += 1;
 		}
 		cacheChange->fraqmentSize = DATAMESSAGE_LIMIT;
@@ -338,7 +338,7 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 	SerializedBuffer *buffer = nullptr;
 	ChangeKind_t kind = ALIVE;
-	char status[4] = { 0 };
+	StatusInfo_t status = { 0 };
 
 	if (timespace.sec < 0) {
 		AGILOG(AGILOG_ERROR, "timespace.sec[%d] < 0", timespace.sec);
@@ -359,19 +359,19 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 
 	if (dispose) {
 		kind = NOT_ALIVE_DISPOSED;
-		status[3] = 1;
+		status[3] = StatusInfoFlag::DISPOSED_FLAG;
 	} else {
 		kind = NOT_ALIVE_UNREGISTERED;
-		status[3] = 3;
+		status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	}
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 
 	buffer = new SerializedBuffer;
@@ -610,8 +610,8 @@ ReturnCode_t DataWriterImpl::UpdateLivelinessLostStatus()
 ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHeader, uint32_t dataLen)
 {
 	SerializedBuffer* buffer = nullptr;
-	/* 长度 + 4 为 CDR 标识的长度 */
-	dataLen += 4;
+	/* 长度 + CDR_ENDIANNESS_LEN 为 CDR 标识的长度 */
+	dataLen += CDR_ENDIANNESS_LEN;
 	bool first = true;
 	do {
 		SerializedBuffer* nextBuffer = new SerializedBuffer();
@@ -628,20 +628,17 @@ ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHea
 		if (!memoryPool_->getBuffer(nextBuffer->buffer_size + 2 * BUFF_SHIFT, nextBuffer->origin_buffer)) {
 			return RETCODE_APPLY_MEM_ERR;
 		}
-		nextBuffer->buffer = nextBuffer->origin_buffer + 1024;
+		nextBuffer->buffer = nextBuffer->origin_buffer + BUFF_SHIFT;
 
 		if (first) {
 			buffer = nextBuffer;
 			bufferHeader = buffer;
 
-			memset(buffer->buffer, 0, 4);
-			if (TypeSupport::IsLittleEndian())
-				memcpy(buffer->buffer, &CDR_LE, sizeof(Endianness_t));
-			else
-				memcpy(buffer->buffer, &CDR_BE, sizeof(Endianness_t));
+			memset(buffer->buffer, 0, CDR_ENDIANNESS_LEN);
+			buffer->buffer[1] = DEFAULT_ENDIAN;
 
-			buffer->buffer += 4;
-			buffer->buffer_size -= 4;
+			buffer->buffer += CDR_ENDIANNESS_LEN;
+			buffer->buffer_size -= CDR_ENDIANNESS_LEN;
 			first = false;
 		}
 		else {

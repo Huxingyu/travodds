@@ -25,6 +25,7 @@
 #include <chrono>
 #include <thread>
 #include "agidds_dll.h"
+#include "numericconstants.h"
 #include "common/sequence/sequence.h"
 #include "dcps/subscribe/states.h"
 #include "assert.h"
@@ -194,6 +195,15 @@ const InstanceHandle_t HANDLE_NIL;
 
 struct BuiltinTopicKey_t {
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
+
+	/* wangyi Cyclone DDS 适配 添加构造函数初始化  */
+	BuiltinTopicKey_t()
+	{
+		value[0] = 0;
+		value[1] = 0;
+		value[2] = 0;
+		value[3] = 0;
+	}
 
 	bool operator==(const BuiltinTopicKey_t& other) const {
 		for (int32_t i = 0; i < 4; ++i) {

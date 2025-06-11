@@ -501,9 +501,14 @@ struct SequenceNumber_t {
 	 * @param right SequenceNumber_t。
 	 */
 	bool operator < (const SequenceNumber_t& right) const {
-		if (low < right.low) {
+
+		if (high == right.high && low < right.low) {
 			return true;
 		}
+		else if (high < right.high) {
+			return true;
+		}
+		
 		return false;
 	}
 
@@ -513,9 +518,14 @@ struct SequenceNumber_t {
 	 * @param right SequenceNumber_t。
 	 */
 	bool operator <= (const SequenceNumber_t& right) const {
-		if (low <= right.low) {
+		
+		if (high == right.high && low <= right.low) {
 			return true;
 		}
+		else if (high < right.high) {
+			return true;
+		}
+
 		return false;
 	}
 
@@ -525,7 +535,7 @@ struct SequenceNumber_t {
 	 * @param right SequenceNumber_t。
 	 */
 	bool operator == (const SequenceNumber_t& right) const {
-		if (low == right.low) {
+		if (low == right.low && high == right.high) {
 			return true;
 		}
 		return false;
@@ -537,7 +547,10 @@ struct SequenceNumber_t {
 	 * @param right SequenceNumber_t。
 	 */
 	bool operator >= (const SequenceNumber_t& right) const {
-		if (low >= right.low) {
+		if (high == right.high && low >= right.low) {
+			return true;
+		}
+		else if(high > right.high){
 			return true;
 		}
 		return false;
@@ -549,7 +562,10 @@ struct SequenceNumber_t {
 	 * @param right SequenceNumber_t。
 	 */
 	bool operator > (const SequenceNumber_t& right) const {
-		if (low > right.low) {
+		if (high == right.high && low > right.low) {
+			return true;
+		}
+		else if (high > right.high) {
 			return true;
 		}
 		return false;
@@ -632,14 +648,14 @@ struct SequenceNumber_t {
  		return seq.low;
  	}
 };
-//using ChangeCount_t = SequenceNumber_t;
+// using ChangeCount_t = SequenceNumber_t;
 
-//未知序列号
+// 未知序列号
 const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
 const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
 const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
-//#define SEQUENCENUMBER_UNKNOWN {-1,0}
-//#define SEQUENCENUMBER_INVALID {-2,0}
+// #define SEQUENCENUMBER_UNKNOWN {-1,0}
+// #define SEQUENCENUMBER_INVALID {-2,0}
 
 using SeqNumberVec = std::vector<SequenceNumber_t>;
 
@@ -885,6 +901,7 @@ enum ChangeKind_t {
 
 const uint32_t DATAMESSAGE_LIMIT = 62 * 1024;
 const uint32_t BUFF_SHIFT = 1024;
+const uint16_t OCTETS_TO_INLINEQOS_LEN = 16;
 
 //PSM
 struct LocatorUDPv4_t

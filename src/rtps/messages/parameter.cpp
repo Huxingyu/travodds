@@ -2,17 +2,17 @@
 #include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
-	: msgEndian_(DEFAULT_ENDIAN)
+	: msgEndian_(PL_DEFAULT_ENDIAN)
 {
 	if (length < 4) {
 		AGILOG(AGILOG_ERROR, "length[%d] < 4", length);
 		return;
 	}
-	msgEndian_ = static_cast<EncapsulationKind>(*(msg + 1));
+	msgEndian_ = static_cast<EndiannessKind>(*(msg + 1));
 	LoadMessage(msg + 4, length - 4);
 }
 
-ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const EncapsulationKind& endian)
+ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
 {
 	//PID_USER_DATA : UserDataQosPolicy
@@ -50,7 +50,10 @@ ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const En
 		AddParameter(ParameterId::PID_METATRAFFIC_MULTICAST_LOCATOR, data.metatrafficMulticastLocatorList);
 	}
 	//PID_EXPECTS_INLINE_QOS : bool
-	AddParameter(ParameterId::PID_EXPECTS_INLINE_QOS, data.expectsInlineQos);
+	if (data.expectsInlineQos)
+	{
+		AddParameter(ParameterId::PID_EXPECTS_INLINE_QOS, true);
+	}
 	//PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT : Count_t
 	AddParameter(ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT, data.manualLivelinessCount);
 	//PID_BUILTIN_ENDPOINT_SET : BuiltinEndpointSet_t
@@ -63,7 +66,7 @@ ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const En
 	AddParameter(ParameterId::PID_PARTICIPANT_GUID, data.ddsParticipantData.key);
 }
 
-ParameterList::ParameterList(const DiscoveredWriterData& data, const EncapsulationKind& endian)
+ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
 {
 	const PublicationBuiltinTopicData& pubData = data.ddsPublicationData;
@@ -137,7 +140,7 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const Encapsulati
 	AddParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
 }
 
-ParameterList::ParameterList(const DiscoveredReaderData& data, const EncapsulationKind& endian)
+ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
 {
 	const SubscriptionBuiltinTopicData& subData = data.ddsSubscriptionData;
@@ -204,10 +207,13 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const Encapsulati
 	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
 	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
-	AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
+	/* wangyi fastdds   ≈‰ ÃÌº”π˝¬À */
+	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
+		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
+	}
 }
 
-ParameterList::ParameterList(const DiscoveredTopicData& data, const EncapsulationKind& endian)
+ParameterList::ParameterList(const DiscoveredTopicData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
 {
 	const TopicBuiltinTopicData& topicData = data.ddsTopicData;
@@ -445,7 +451,7 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 	}
 	//PID_SENTINEL
 	unsigned char sentinel[2] = { 0x0,0x1 };
-	if (msgEndian_ == EncapsulationKind::PL_CDR_BE) {
+	if (msgEndian_ == EndiannessKind::PL_CDR_BE) {
 		(msg + offset)[0] = sentinel[0];
 		(msg + offset)[1] = sentinel[1];
 	} else {
@@ -924,7 +930,7 @@ uint32_t ParameterList::GetParameterList(ParameterList_t& list)
 uint32_t ParameterList::ReadInt16(const octet* msg, int16_t& i16)
 {
 	octet* dest = (octet*)&i16;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(dest, msg, 2);
 	} else {
 		dest[0] = msg[1];
@@ -935,7 +941,7 @@ uint32_t ParameterList::ReadInt16(const octet* msg, int16_t& i16)
 uint32_t ParameterList::ReadUInt16(const octet* msg, uint16_t& ui16)
 {
 	octet* dest = (octet*)&ui16;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(dest, msg, 2);
 	} else {
 		dest[0] = msg[1];
@@ -947,7 +953,7 @@ uint32_t ParameterList::ReadUInt16(const octet* msg, uint16_t& ui16)
 uint32_t ParameterList::ReadInt32(const octet* msg, int32_t& i32)
 {
 	octet* dest = (octet*)&i32;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(dest, msg, 4);
 	} else {
 		dest[0] = msg[3];
@@ -960,7 +966,7 @@ uint32_t ParameterList::ReadInt32(const octet* msg, int32_t& i32)
 uint32_t ParameterList::ReadUInt32(const octet* msg, uint32_t& ui32)
 {
 	octet* dest = (octet*)&ui32;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(dest, msg, 4);
 	} else {
 		dest[0] = msg[3];
@@ -974,7 +980,7 @@ uint32_t ParameterList::ReadUInt32(const octet* msg, uint32_t& ui32)
 
 uint32_t ParameterList::ReadInt(const octet* msg, octet* dest, const octet len)
 {
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(dest, msg, len);
 	} else {
 		for (int32_t i = 0; i < len; i++) {
@@ -989,6 +995,7 @@ uint32_t ParameterList::ReaderString(const octet* msg, std::string& str)
 	uint32_t size = 0;
 	ReadUInt32(msg, size);
 	if (size != 0) {
+		size -= 1;
 		str.resize(size);
 		std::copy(msg + 4, msg + 4 + size, str.begin());
 	}

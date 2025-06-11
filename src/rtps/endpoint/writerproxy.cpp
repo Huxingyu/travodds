@@ -144,7 +144,7 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 	set.bitmapBase = hbMsg.lastSN + 1;
 
 	if (hbCount_.load() >=  hbMsg.count) {
-		AGILOG(AGILOG_ERROR, "hbCount_[%d] > hbMsg.count", hbCount_.load(), hbMsg.count);
+		AGILOG(AGILOG_ERROR, "hbCount_[%d] > hbMsg.count[%d]", hbCount_.load(), hbMsg.count);
 		return RETCODE_RECEIVE_DUPLICATE;
 	}
 	hbCount_ = hbMsg.count;
@@ -238,8 +238,8 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 			ret = RETCODE_OK;
 			/* 没有收到数据 */
 			//TODO 
-			set.bitmap[i / 32] |= (1 << (i % 32) );
-			set.numBit = i;
+			set.bitmap.SetBit(i);
+			set.bitmap.size = i;
 			break;
 		}
 		buffer = buffer->next;
@@ -369,7 +369,6 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	}
 	else {
 		//TODO  重复接收分片数据
-		printf("recv repeat dataFrg [%s::%d] frag=%d \n", __FUNCTION__, __LINE__, num);
 		AGILOG(AGILOG_ERROR, "recv repeat dataFrg frag=%d ", num );
 	}
 
@@ -387,13 +386,13 @@ void WriterProxy::GetAckSequenceSet(SequenceNumberSet_t& set)
 		set.bitmapBase = vec[0];
 	}
 
-	for (auto seq : vec) {
+	for (auto& seq : vec) {
 		int32_t s = seq - set.bitmapBase;
 		if (s >= 255) {
 			break;
 		}
-		set.numBit = s + 1;
-		set.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+		set.bitmap.size = s + 1;
+		set.bitmap.SetBit(s);
 	}
 
 }
@@ -422,6 +421,11 @@ SeqNumberVec WriterProxy::LostChanges()
 	return seqVec;
 }
 
+GUID_t WriterProxy::GetRemoteWriterGuid()
+{
+	return remoteWriterGuid_;
+}
+
 void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
 {
 	for (auto& change : changesFromWriters_) {
@@ -438,8 +442,8 @@ void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
 					if (s >= 255) {
 						break;
 					}
-					nackMsg.fragmentNumberState.numBit = s + 1;
-					nackMsg.fragmentNumberState.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+					nackMsg.fragmentNumberState.bitmap.size = s + 1;
+					nackMsg.fragmentNumberState.bitmap.SetBit(s);
 				}
 
 				set.push_back(nackMsg);

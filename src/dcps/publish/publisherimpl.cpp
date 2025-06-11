@@ -208,7 +208,20 @@ DomainParticipant* PublisherImpl::get_participant() const
 
 ReturnCode_t PublisherImpl::delete_contained_entities()
 {
-    writerHandles_.clear();
+	
+	std::lock_guard<std::mutex> lock(mtxWriters_);
+
+	for (auto itor = writerHandles_.begin(); itor != writerHandles_.end(); itor++) {
+		DataWriter* datawriter = itor->second.get();
+
+		InstanceHandle_t handle = datawriter->get_instance_handle();
+		participant_->GetRelatedParticipant()->DeleteWriter(handle);
+		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+		discovery->RemovePublicationData(handle);
+	}
+	
+	writerHandles_.clear();
+
     return RETCODE_OK;
 }
 

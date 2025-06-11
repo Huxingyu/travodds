@@ -40,12 +40,12 @@ bool MemoryPool::getBuffer(uint32_t size, char*& buffer)
 	lock.unlock();
 
 	buffer = (char*)node->info().data;
-	//printf("getBuffer (%%p): %p\n", buffer);
+
 	return true;
 }
 bool MemoryPool::releaseBuffer(char*& buffer)
 {
-	//printf("releaseBuffer (%%p): %p\n", buffer);
+
 	if (!buffer) {
 		return false;
 	}

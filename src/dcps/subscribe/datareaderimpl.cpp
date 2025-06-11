@@ -28,9 +28,9 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 	topic_->Reference();
 	if(topic)
 	{
-		memcpy(builtinData_.key.value, &handle_.keyHash.value, 16);
+		memcpy(builtinData_.key.value, &handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 		InstanceHandle_t handle = sub_->get_participant()->get_instance_handle();
-		memcpy(builtinData_.participant_key.value, &handle.keyHash.value, 16);
+		memcpy(builtinData_.participant_key.value, &handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 		builtinData_.topic_name = topic->get_name();
 		builtinData_.type_name = topic->get_type_name();
 		builtinData_.durability = qos.durability;
@@ -592,7 +592,7 @@ ReturnCode_t DataReaderImpl::wait_for_historical_data(const Duration_t &max_wait
 ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopicData &publication_data, const InstanceHandle_t &publication_handle) const
 {
 	GUID_t guid;
-	memcpy(&guid, publication_handle.keyHash.value, 16);
+	memcpy(&guid, publication_handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	if (reader_.get()) {
 		AGILOG(AGILOG_ERROR, "releate datareader is error");
 	}
@@ -725,11 +725,11 @@ const SubscriptionBuiltinTopicData& DataReaderImpl::GetBuiltinTopicData()
 bool DataReaderImpl::GetEndianess(SerializedBuffer* buffer)
 {
 	bool ret = false;
-	ret = buffer->buffer[1] == 0x01;
+	ret = buffer->buffer[1] == uint32_t(1);
 
-	buffer->buffer += 4;
-	buffer->writer_position -= 4;
-	buffer->buffer_size -= 4;
+	buffer->buffer += CDR_ENDIANNESS_LEN;
+	buffer->writer_position -= CDR_ENDIANNESS_LEN;
+	buffer->buffer_size -= CDR_ENDIANNESS_LEN;
 
 	return ret;
 }

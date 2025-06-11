@@ -143,13 +143,12 @@ ReturnCode_t Writer::AddBuiltinCache(std::shared_ptr<CacheChange> cacheChange)
 		SerializedBuffer* buffer = nullptr;
 		ret = writerCache_->AddKeyHistory(cacheChange->instanceHandle, buffer);
 		if (RETCODE_OK != ret) {
-			PRINTF_ERROR();
 			AGILOG(AGILOG_ERROR, "AddKeyHistory Err ret = %d", ret);
 			return ret;
 		}
 	}
 
-	AddNewCachce(cacheChange);
+	ret = AddNewCachce(cacheChange);
 
 	return ret;
 }

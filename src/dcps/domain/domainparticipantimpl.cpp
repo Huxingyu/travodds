@@ -756,7 +756,7 @@ InstanceHandle_t DomainParticipantImpl::GenerateInstanceHandle(const GUID_t& gui
 {
 	InstanceHandle_t handle;
 
-	memcpy(handle.keyHash.value,&guid,16);
+	memcpy(handle.keyHash.value, &guid, sizeof(GUID_t));
 
 	return handle;
 }

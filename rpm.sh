@@ -1,8 +1,8 @@
 #!/bin/bash
 rpmdev-setuptree
 
-tar czvf ~/rpmbuild/SOURCES/agiros-loong-travodds_1.0.0.orig.tar.gz \
-	--transform 's,^,agiros-loong-travodds-1.0.0/,' \
+tar czvf ~/rpmbuild/SOURCES/travodds_1.0.0.orig.tar.gz \
+	--transform 's,^,travodds-1.0.0/,' \
 	cmake include src thirdparty CMakeLists.txt
 
 cp ./rpm/travodds.spec ~/rpmbuild/SPECS/

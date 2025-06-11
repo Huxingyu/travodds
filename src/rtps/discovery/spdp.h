@@ -72,16 +72,46 @@ public:
 	 */
 	void SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader);
 
+	/**
+	 * @brief 删除DDS通信参与者节点信息。
+	 *
+	 * @param [in] guid  通信参与者Guid。
+	 */
 	void RemoveParticipant(GUID_t guid);
 
+	/**
+	 * @brief 构建并发送DDS通信参与者节点发现报文。
+	 *
+	 * @param [in] data  当前节点发现信息。
+	 */
 	void WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 构建并发送DDS通信参与者节点退出报文。
+	 *
+	 * @param [in] guid  当前节点guid。
+	 */
 	void RemoveSpdPdiscoveredParticipantData(GUID_t& guid);
 
+	/**
+	 * @brief 创建新节点时，为内置发现报文主题添加代理。
+	 *
+	 * @param [in] data 新节点信息。
+	 */
 	void AddSpdpProxy(const SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 删除节点时，为内置发现报文主题删除代理。
+	 *
+	 * @param [in] guid 节点Guid。
+	 */
 	void RemoveSpdpProxy(const GUID_t& guid);
 
+	/**
+	 * @brief 删除节点时，为内置发现报文主题删除代理。
+	 *
+	 * @param [in] guid 节点Guid。
+	 */
 	void CheckRemoteParticipantDuration();
 
 	void GetOverdueParticipant(std::vector<BuiltinTopicKey_t>& keys);
