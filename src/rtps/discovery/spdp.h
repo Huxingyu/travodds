@@ -31,30 +31,87 @@ struct ParticipantStatus_t
 	double recvTime;
 };
 
+/**
+ * @brief Spdp类，内置发现控制读写者数据收发控制类。
+ *	实现内置发现功能，用户节点发现报文（DATA(p)）收发，节点发现管理功能。
+ */
 class Spdp: public ReaderListener
 {
 public:
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] participant  Participant类指针。
+	 * @param [in] discovery	Discovery类指针。
+	 */
 	Spdp(Participant* participant,Discovery* discovery);
 	
+	/**
+	 * @brief 析构函数。
+	 */
 	~Spdp();
 
+	/**
+	 * @brief 内置DATA(p)报文数据读者回调函数。
+	 *
+	 * @param [in] change DATA(p)报文数据。
+	 */
 	virtual void on_data_available(std::shared_ptr<CacheChange> change);
 
-
+	/**
+	 * @brief DATA(p)报文RTPS层发布者内置Writer创建。
+	 *
+	 * @param [in] dataWriter  DataWriterImpl类指针。
+	 */
 	void SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
 
+	/**
+	 * @brief DATA(p)报文RTPS层订阅者内置Writer创建。
+	 *
+	 * @param [in] dataReader  DataReaderImpl类指针。
+	 */
 	void SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader);
 
+	/**
+	 * @brief 删除DDS通信参与者节点信息。
+	 *
+	 * @param [in] guid  通信参与者Guid。
+	 */
 	void RemoveParticipant(GUID_t guid);
 
+	/**
+	 * @brief 构建并发送DDS通信参与者节点发现报文。
+	 *
+	 * @param [in] data  当前节点发现信息。
+	 */
 	void WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 构建并发送DDS通信参与者节点退出报文。
+	 *
+	 * @param [in] guid  当前节点guid。
+	 */
 	void RemoveSpdPdiscoveredParticipantData(GUID_t& guid);
 
+	/**
+	 * @brief 创建新节点时，为内置发现报文主题添加代理。
+	 *
+	 * @param [in] data 新节点信息。
+	 */
 	void AddSpdpProxy(const SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 删除节点时，为内置发现报文主题删除代理。
+	 *
+	 * @param [in] guid 节点Guid。
+	 */
 	void RemoveSpdpProxy(const GUID_t& guid);
 
+	/**
+	 * @brief 删除节点时，为内置发现报文主题删除代理。
+	 *
+	 * @param [in] guid 节点Guid。
+	 */
 	void CheckRemoteParticipantDuration();
 
 	void GetOverdueParticipant(std::vector<BuiltinTopicKey_t>& keys);
@@ -62,6 +119,10 @@ public:
 	void GetDiscoveredParticipants(InstanceHandleSeq& participant_handles);
 
 	int GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data);
+
+	void SetIgnoredParticipants(GUID_t guid);
+
+	bool FindIgnoredParticipants(GUID_t guid);
 
 private:
 
@@ -77,6 +138,10 @@ private:
 	SpdpDataMap remoteParticipantData_;
 	std::map<BuiltinTopicKey_t, ParticipantStatus_t> remoteParticipantStatus_;
 	std::mutex mutex_;
+
+	/* 被忽略的参与者 */
+	std::vector<GUID_t> ignoredParticipants_;
+	std::mutex ignoredParticipantsMutex_;
 
 	Discovery* discovery_;
 	

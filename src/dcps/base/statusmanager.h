@@ -26,6 +26,7 @@ class DataReaderImpl;
 class SubscriberImpl;
 class DomainParticipantImpl;
 class TopicImpl;
+class StatusConditionImpl;
 
 class TopicStatusManager{
 public:
@@ -39,6 +40,7 @@ public:
 private:
 	InconsistentTopicStatus status_;
 	TopicImpl* topic_;
+	std::mutex mtx_;
 };
 
 class DataWriterStatusManager {
@@ -53,7 +55,7 @@ public:
 	ReturnCode_t UpdatePublicationMatchedStatus(const InstanceHandle_t& handle, const bool& add);
 
 	/* yuguxu    更新OFFERED_DEADLINE_MISSED通信状态 */
-	ReturnCode_t UpdateOfferedDeadlineMissedStatus();
+	ReturnCode_t UpdateOfferedDeadlineMissedStatus(const InstanceHandle_t& handle);
 
 	/* yuguxu    更新OFFERED_INCOMPATIBLE_QOS通信状态 */
 	ReturnCode_t UpdateOfferedIncompatibleQosStatus(std::set<QosPolicyId_t>& policyId);
@@ -70,18 +72,16 @@ public:
 	/* yuguxu    访问Publication_matched的通信状态 */
 	ReturnCode_t GetPublicationMatchedStatus(PublicationMatchedStatus& status);
 
-	/* yuguxu    设置OFFERED_INCOMPATIBLE_QOS通信状态 */
-	ReturnCode_t SetOfferedIncompatibleQosStatus(const OfferedIncompatibleQosStatus& status);
-
 private:
 	DataWriterImpl* writer_;
 	PublisherImpl* pub_;
 	DomainParticipantImpl* participant_;
+	StatusConditionImpl* condition_;
 
 	OfferedDeadlineMissedStatus offeredDeadlineMissedStatus_;
 	LivelinessLostStatus livelinessLostStatus_;
 	PublicationMatchedStatus publicationMatchedStatus_;
-	OfferedIncompatibleQosStatus offeredIncompatibleQosStatus_ = {0};
+	OfferedIncompatibleQosStatus offeredIncompatibleQosStatus_;
 
 	std::mutex mtx_;
 };
@@ -95,7 +95,7 @@ public:
 	ReturnCode_t UpdateSubscriptionMatchedStatus(const InstanceHandle_t& handle, const bool& add);
 
 	/* yuguxu   更新REQUESTED_DEADLINE_MISSED通信状态 */
-	ReturnCode_t UpdateRequestedDeadlineMissedStatus();
+	ReturnCode_t UpdateRequestedDeadlineMissedStatus(const InstanceHandle_t& handle);
 
 	/* yuguxu   更新LIVELINESS_CHANGED通信状态 
 	 * bool ensure : 明确节点失活（通知了），或者先前明确失活了，现又成功活了为  true，否则 false
@@ -133,6 +133,7 @@ private:
 	DataReaderImpl* reader_;
 	SubscriberImpl* sub_;
 	DomainParticipantImpl* participant_;
+	StatusConditionImpl* condition_;
 
 	RequestedDeadlineMissedStatus reqDeadlineMissedStatus_;
 	RequestedIncompatibleQosStatus reqIncompatibleQosStatus_;

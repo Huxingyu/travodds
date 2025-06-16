@@ -1,5 +1,7 @@
 #include "HelloWorldTypeSupport.h"
 
+USING_AGIDDS_NAMESPACE
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,18 +80,28 @@ int HelloWorldTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, i
     return 0;
 }
 
+int HelloWorldTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+    unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
+    SerializedBuffer buffer;
+    buffer.buffer_size = serializedSize;
+    buffer.buffer = new char[buffer.buffer_size];
+    AGIDDSCdrSerializer cdr(&buffer);
+    ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
+    delete[] buffer.buffer;
+    return ret == RETCODE_OK ? 0 : -1;
+}
+
 ReturnCode_t HelloWorldTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
     }
-    bool ret = serialize_key(data, cdr, forceMd5);
-    if (!ret) {
+    int ret = serialize_key(data, cdr, forceMd5);
+    if (ret != 0) {
         fprintf(stderr, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
-    ret = cdr->getKeyHash((char*)&iHandle, forceMd5);
-    if (!ret) {
+    if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
         fprintf(stderr, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }

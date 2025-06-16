@@ -41,6 +41,8 @@ const ReturnCode_t	RETCODE_REPEAT_REQUEXT = 51;
 const ReturnCode_t  RETCODE_PORT_IN_USE = 101;
 /* 申请空间失败,空间不足 */
 const ReturnCode_t   RETCODE_APPLY_MEM_ERR = 201;
+/* wangyi time_based_filter 过滤判断，未超时 */
+const ReturnCode_t   RETCODE_TIME_BASED_FILTER = 301;
 
 
 AGIDDS_NAMESPACE_END

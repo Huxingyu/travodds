@@ -15,6 +15,7 @@
 #include "dcps/subscribe/datareader.h"
 #include "dcps/domain/domainentityimpl.h"
 #include "rtps/basictypertps.h"
+#include "rtps/historycache/historycache.h"
 
 class SerializedBuffer;
 
@@ -24,10 +25,10 @@ class Reader;
 class SubscriberImpl;
 class TopicDescriptionImpl;
 class TypeSupport;
-class HistoryCache;
 class DataReaderStatusManager;
 class Timer;
-
+class ReadConditionImpl;
+class QueryConditionImpl;
 
 class DataReaderImpl : public virtual DataReader, public DomainEntityImpl {
 public:
@@ -144,19 +145,24 @@ public:
 
 
 	/* 最后接收的样本实例 */
-	const InstanceHandle_t& GetLastinstanceHandle() const;
+	void SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache);
 
-	void SetLastinstanceHandle(const InstanceHandle_t& handle);
+	void DeadlineTimeout();
 
 	/* wangyi   更新LIVELINESS_CHANGED通信状态
 	 * bool ensure : 明确节点失活（通知了），或者先前明确失活了，现又成功活了为  true，否则 false
 	 */
 	ReturnCode_t UpdateLivelinessChangedStatus(const InstanceHandle_t& handle,const bool& alive,const bool& ensure = true);
 
+	void SetStatus(bool add);
+
+	SampleCounters GetSampleCounters();
+
+	void NotifyReadConditions();
 
 private:
-	std::vector<std::shared_ptr<ReadCondition>> readcdts_;
-	std::vector<std::shared_ptr<QueryCondition>> querycdts_;
+	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
+	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
 	TopicDescriptionImpl* topic_ = nullptr;
 	DataReaderQos qos_;
 	DataReaderListener* listener_ = nullptr;
@@ -164,6 +170,7 @@ private:
 	SubscriberImpl* sub_ = nullptr;
 	std::unique_ptr<DataReaderStatusManager> statusMgr_;
 	std::shared_ptr<Timer> deadlineTimer_;
+	/* 当前deadline计时器所属实例 */
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
 	SubscriptionBuiltinTopicData builtinData_;

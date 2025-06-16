@@ -210,6 +210,11 @@ private:
 private:
     DomainParticipantListener* listener_ = nullptr;
 
+    std::shared_ptr<Participant> participant_;
+    std::shared_ptr<Discovery> discovery_;
+    /* 与participant_和discovery_共用一个线程池 */
+    std::shared_ptr<ThreadPool> threadPool_;
+
     std::map<InstanceHandle_t, std::shared_ptr<TopicImpl>> topicHandles_;
     std::map<std::string, std::shared_ptr<MultiTopicImpl>> multiTopics_;
     std::map<std::string, std::shared_ptr<ContentFilteredTopicImpl>> contentFilteredTopics_;
@@ -217,10 +222,7 @@ private:
 
     std::map<InstanceHandle_t, std::unique_ptr<SubscriberImpl>>subHandles_;
     std::map<InstanceHandle_t, std::unique_ptr<PublisherImpl>> pubHandles_;
-    std::shared_ptr<Participant> participant_;
-    std::shared_ptr<Discovery> discovery_;
-    /* 与participant_和discovery_共用一个线程池 */
-    std::shared_ptr<ThreadPool> threadPool_;
+
 };
 AGIDDS_NAMESPACE_END
 #endif

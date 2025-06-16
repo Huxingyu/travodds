@@ -12,6 +12,16 @@
 include(CheckCXXSourceCompiles)
 message(STATUS "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 
+# 优先查找系统安装的 asio
+find_package(asio QUIET)
+if(asio_FOUND)
+    message(STATUS "Found system asio: ${asio_INCLUDE_DIRS}")
+    include_directories(${asio_INCLUDE_DIRS})
+else()
+    message(WARNING "System asio not found, using thirdparty version")
+    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include)
+endif()
+
 # 添加包含目录
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
@@ -42,34 +52,48 @@ set(${PROJECT_NAME}_source_files
 
 # if(WIN32 AND (MSVC OR MSVC_IDE))
 #     list(APPEND ${PROJECT_NAME}_source_files
-#         ${PROJECT_SOURCE_DIR}/src/AGIDDS.rc
+#         ${PROJECT_SOURCE_DIR}/src/TRAVODDS.rc
 #         )
 # endif()
-
-
+if(BUILD_SHARED_LIBS)
+    set(LIB_TARGET_NAME ${PROJECT_NAME})
+else()
+    set(LIB_TARGET_NAME ${PROJECT_NAME}static)
+endif()
 
 #创建库
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_source_files})
-set_target_properties(${PROJECT_NAME} PROPERTIES
+add_library(${LIB_TARGET_NAME} ${${PROJECT_NAME}_source_files})
+
+set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} 
     )
 
 option(INTERNAL_DEBUG "Activate developer debug messages" OFF)
-if(WIN32)
-target_compile_definitions(${PROJECT_NAME}
+if(BUILD_SHARED_LIBS)
+target_compile_definitions(${LIB_TARGET_NAME}
     PRIVATE
     _DDS_DLL_FILE
+    )
+else()
+target_compile_definitions(${LIB_TARGET_NAME}
+    PRIVATE
+    _DDS_STATIC_LIB
+    )
+endif()
+if(WIN32)
+target_compile_definitions(${LIB_TARGET_NAME}
+    PRIVATE
     _WINDOWS
     _USRDLL
     )
 else()
-target_compile_definitions(${PROJECT_NAME}
+target_compile_definitions(${LIB_TARGET_NAME}
     PRIVATE
-    _DDS_DLL_FILE
     _USRDLL
     )
-target_link_libraries(${PROJECT_NAME} 
+target_compile_options(${LIB_TARGET_NAME} PRIVATE -fPIC)
+target_link_libraries(${LIB_TARGET_NAME} 
     PRIVATE
     pthread 
     rt
@@ -80,45 +104,48 @@ endif()
 if(MSVC OR MSVC_IDE)
     add_definitions(-DUNICODE -D_UNICODE)
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES
+    set_target_properties(${LIB_TARGET_NAME} PROPERTIES
         RELEASE_POSTFIX -${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         RELWITHDEBINFO_POSTFIX -${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         DEBUG_POSTFIX d-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         )
 
-    get_target_property(TARGET_TYPE ${PROJECT_NAME} TYPE)
+    get_target_property(TARGET_TYPE ${LIB_TARGET_NAME} TYPE)
     if(TARGET_TYPE STREQUAL "SHARED_LIBRARY")
         # Export symbols in DLL library
-        set_target_properties(${PROJECT_NAME} PROPERTIES
-            PDB_NAME_DEBUG ${PROJECT_NAME}d-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        set_target_properties(${LIB_TARGET_NAME} PROPERTIES
+            PDB_NAME_DEBUG ${LIB_TARGET_NAME}d-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
             PDB_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/symbols"
             )
     else()
         # Rename the library to have a "lib" before.
-        set_target_properties(${PROJECT_NAME} PROPERTIES
-            OUTPUT_NAME lib${PROJECT_NAME}
-            COMPILE_PDB_NAME_DEBUG lib${PROJECT_NAME}d-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        set_target_properties(${LIB_TARGET_NAME} PROPERTIES
+            OUTPUT_NAME ${LIB_TARGET_NAME}
+            COMPILE_PDB_NAME_DEBUG ${LIB_TARGET_NAME}d-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
             COMPILE_PDB_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/symbols"
             )
     endif()
 
     if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
-        set_target_properties(${PROJECT_NAME} PROPERTIES VS_WINRT_COMPONENT "true")
+        set_target_properties(${LIB_TARGET_NAME} PROPERTIES VS_WINRT_COMPONENT "true")
     endif()
-elseif(BUILD_SHARED_LIBS)
-    set(VERSION_SCRIPT_SUPPORT_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libagidds.version)
-    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS} ${VERSION_SCRIPT_SUPPORT_FLAGS})
-    CHECK_CXX_SOURCE_COMPILES("int main(int, char**){return 0;}" HAS_VERSION_SCRIPT_SUPPORT)
-    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    unset(OLD_CMAKE_REQUIRED_FLAGS)
-    if(HAS_VERSION_SCRIPT_SUPPORT)
-        message(STATUS "Using linker version script to select exported symbols")
-        target_link_options(${PROJECT_NAME} PRIVATE ${VERSION_SCRIPT_SUPPORT_FLAGS})
-    endif()
+else()
+    set_target_properties(${LIB_TARGET_NAME} PROPERTIES
+        DEBUG_POSTFIX d
+        )
+    if(BUILD_SHARED_LIBS)
+        set(VERSION_SCRIPT_SUPPORT_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libtravodds.version)
+        set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+        set(CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS} ${VERSION_SCRIPT_SUPPORT_FLAGS})
+        CHECK_CXX_SOURCE_COMPILES("int main(int, char**){return 0;}" HAS_VERSION_SCRIPT_SUPPORT)
+        set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+        unset(OLD_CMAKE_REQUIRED_FLAGS)
+        if(HAS_VERSION_SCRIPT_SUPPORT)
+            message(STATUS "Using linker version script to select exported symbols")
+            target_link_options(${LIB_TARGET_NAME} PRIVATE ${VERSION_SCRIPT_SUPPORT_FLAGS})
+        endif()
+    endif() 
 endif()
-
-
 
 ###############################################################################
 # 打包
@@ -151,7 +178,7 @@ install(FILES  ${PUBLIC_HEADER_FILES}
 
 
 # 安装软件包
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${LIB_TARGET_NAME}
     EXPORT ${PROJECT_NAME}-targets
     COMPONENT libraries
     RUNTIME DESTINATION "${BIN_INSTALL_DIR}${MSVCARCH_DIR_EXTENSION}"
@@ -160,6 +187,13 @@ install(TARGETS ${PROJECT_NAME}
     INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR}
 )
 
+# 安装 CMake 配置文件
+get_target_property(TARGET_TYPE ${LIB_TARGET_NAME} TYPE)
+if(TARGET_TYPE STREQUAL "SHARED_LIBRARY")
+    set(TROVADDS_LINKING shared)
+else()
+    set(TROVADDS_LINKING static)
+endif()
 
 if(INSTALLER_PLATFORM)
     set(INSTALL_DESTINATION_PATH ${DATA_INSTALL_DIR}/${PROJECT_NAME}-${INSTALLER_PLATFORM}/cmake)
@@ -167,10 +201,13 @@ else()
     set(INSTALL_DESTINATION_PATH ${DATA_INSTALL_DIR}/${PROJECT_NAME}/cmake${MSVCARCH_DIR_EXTENSION_EXT})
 endif()
 
+
+
+
 install(EXPORT ${PROJECT_NAME}-targets
     DESTINATION ${INSTALL_DESTINATION_PATH}
-    FILE ${PROJECT_NAME}-targets.cmake
-    NAMESPACE AGIDDS::
+    FILE ${PROJECT_NAME}-${TROVADDS_LINKING}-targets.cmake
+    NAMESPACE TRAVODDS::
     COMPONENT cmake
     )
 
@@ -178,15 +215,15 @@ install(EXPORT ${PROJECT_NAME}-targets
 if(MSVC OR MSVC_IDE)
 
     # first try dll symbols
-    get_target_property(PDB_FILE ${PROJECT_NAME} PDB_NAME_DEBUG)
+    get_target_property(PDB_FILE ${LIB_TARGET_NAME} PDB_NAME_DEBUG)
     if(PDB_FILE)
-        get_target_property(PDB_DIR ${PROJECT_NAME} PDB_OUTPUT_DIRECTORY_DEBUG)
+        get_target_property(PDB_DIR ${LIB_TARGET_NAME} PDB_OUTPUT_DIRECTORY_DEBUG)
         set(PDB_FILE "${PDB_DIR}/${PDB_FILE}.pdb")
     else()
         # fallback to static lib symbols
-        get_target_property(PDB_FILE ${PROJECT_NAME} COMPILE_PDB_NAME_DEBUG)
+        get_target_property(PDB_FILE ${LIB_TARGET_NAME} COMPILE_PDB_NAME_DEBUG)
         if(PDB_FILE)
-            get_target_property(PDB_DIR ${PROJECT_NAME} COMPILE_PDB_OUTPUT_DIRECTORY_DEBUG)
+            get_target_property(PDB_DIR ${LIB_TARGET_NAME} COMPILE_PDB_OUTPUT_DIRECTORY_DEBUG)
             set(PDB_FILE "${PDB_DIR}/${PDB_FILE}.pdb")
         endif()
     endif()

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "rtps/discovery/spdp.h"
 #include "rtps/discovery/discovery.h"
 #include "rtps/messages/parameter.h"
@@ -6,6 +7,8 @@
 #include "dcps/publish/publisher.h"
 #include "common/timeconversion.h"
 #include "common/time/ddstimer.h"
+#include "common/log/logger.h"
+#include "algorithm"
 
 USING_AGIDDS_NAMESPACE;
 
@@ -41,6 +44,7 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
     std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
@@ -72,6 +76,7 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	reader_ = std::dynamic_pointer_cast<StatelessReader>(reader);
@@ -89,17 +94,17 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 		octet flag = change->kind;
 
 		// D 已处理
-		if(flag | 0x01){
+		if(flag | NOT_ALIVE_DISPOSED){
 			
 		}
 		// U 未注册
-		if (flag | 0x02) {
+		if (flag | NOT_ALIVE_UNREGISTERED) {
 
 			discovery_->RemoveProxy(guid);
 		}
 
 		// F 已过滤
-		if (flag | 0x03) {
+		if (flag | ALIVE_FILTERED) {
 
 		}
 		return;
@@ -118,11 +123,29 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 int Spdp::GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data)
 {
 	if (0 == remoteParticipantData_.count(key)) {
+		AGILOG(AGILOG_ERROR, "key not exist");
 		return RETCODE_ERROR;
 	}
 
 	data = remoteParticipantData_[key];
 	return RETCODE_OK;
+}
+
+void Spdp::SetIgnoredParticipants(GUID_t guid)
+{
+	ignoredParticipantsMutex_.lock();
+	ignoredParticipants_.push_back(guid);
+	ignoredParticipantsMutex_.unlock();
+}
+
+bool Spdp::FindIgnoredParticipants(GUID_t guid)
+{
+	auto it = std::find(ignoredParticipants_.begin(), ignoredParticipants_.end(), guid);
+	if (it == ignoredParticipants_.end())
+	{
+		return false;
+	}
+	return true;
 }
 
 void Spdp::RemoveParticipant(GUID_t guid)
@@ -148,10 +171,11 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	list.WriterToMessage((octet*)buffer->buffer, size);
 	InstanceHandle_t handle;
-	memcpy(handle.keyHash.value, data.ddsParticipantData.key.value, 16);
+	memcpy(handle.keyHash.value, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, buffer, handle, time);
 	if (nullptr == cacheChange) {
+		AGILOG(AGILOG_ERROR, "create newChange Err");
 		return ;
 	}
 
@@ -159,6 +183,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
 }
@@ -179,14 +204,14 @@ void Spdp::RemoveSpdPdiscoveredParticipantData(GUID_t & guid)
 	InstanceHandle_t instanceHandle = Conversion::ToInstanceHandle(guid);
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
-	char status[4] = { 0 };
-	status[3] = 3;
+	StatusInfo_t status = { 0 };
+	status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 	change->inlineQos.push_back(keyParam);
 	change->inlineQos.push_back(statueParam);
@@ -213,10 +238,7 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(const SPDPdiscoveredParticipantD
 		Time_t currentTime;
 		DomainParticipantImpl::get_current_time(currentTime);
 		remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
-		// printf("SPDPD : time %f \n", remoteParticipantStatus_[data.ddsParticipantData.key].recvTime);
 	}
-
-	//TODO 已存在节点 在线检测
 }
 
 
@@ -234,12 +256,12 @@ void Spdp::AddSpdpProxy(const SPDPdiscoveredParticipantData& data)
 	remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
 
 
-	printf("SPDP: add remote participant %d ", remoteParticipantData_.size());
-	GUID_t guid = Conversion::ToGuid(data.ddsParticipantData.key);
-	for (int i = 0; i < 16; i++) {
-		printf("%02x ", ((unsigned char*)&guid)[i]);
-	}
-	printf("\n");
+	//printf("SPDP: add remote participant %d ", remoteParticipantData_.size());
+	//GUID_t guid = Conversion::ToGuid(data.ddsParticipantData.key);
+	//for (int i = 0; i < MIG_RTPS_KEY_HASH_MAX_LENGTH; i++) {
+	//	printf("%02x ", ((unsigned char*)&guid)[i]);
+	//}
+	//printf("\n");
 
 	discovery_->GetThreadPool()->submit([=]() {
 		writer_->ResendDataPeriod();
@@ -253,18 +275,21 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
-	if (0 == remoteParticipantStatus_.count(key))
+	if (0 == remoteParticipantStatus_.count(key)) {
+		AGILOG(AGILOG_ERROR, "guid not exist");
 		return;
+	}
+		
 
 	remoteParticipantStatus_.erase(key);
 	remoteParticipantData_.erase(key);
 
-	printf("SPDP: after remove remote participant %zu ", remoteParticipantData_.size());
-	for (int i = 0; i < 16; i++) {
+	//printf("SPDP: after remove remote participant %zu ", remoteParticipantData_.size());
+	//for (int i = 0; i < 16; i++) {
 
-		printf("%02x ", ((unsigned char *)&guid)[i]);
-	}
-	printf("\n");
+	//	printf("%02x ", ((unsigned char *)&guid)[i]);
+	//}
+	//printf("\n");
 
 	participant_->RemoveRemoteParticipantAllWriter(guid);
 	participant_->RemoveRemoteParticipantAllReader(guid);
@@ -296,7 +321,6 @@ void Spdp::GetOverdueParticipant(std::vector<BuiltinTopicKey_t>& keys)
 
 		if (itor.second.recvTime + itor.second.leaseDuration * 3 < time) {
 			keys.push_back(itor.first);
-			// printf("recvTime %f leaseDuration %f time %f \n", itor.second.recvTime, itor.second.leaseDuration, time);
 		}
 	}
 }

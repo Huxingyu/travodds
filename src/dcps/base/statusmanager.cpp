@@ -2,12 +2,15 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "dcps/publish/publisherimpl.h"
 #include "dcps/domain/domainparticipantimpl.h"
+#include "dcps/condition/statusconditionimpl.h"
+
 USING_AGIDDS_NAMESPACE;
 
 DataWriterStatusManager::DataWriterStatusManager(DataWriterImpl* writer)
 	: writer_(writer),
 	  pub_(dynamic_cast<PublisherImpl*>(const_cast<Publisher*>(writer_->get_publisher()))),
-	  participant_(dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(pub_->get_participant())))
+	  participant_(dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(pub_->get_participant()))),
+	  condition_(dynamic_cast<StatusConditionImpl*>(&writer->get_statuscondition()))
 {
 }
 
@@ -19,8 +22,10 @@ ReturnCode_t DataWriterStatusManager::UpdateLivelinessLostStatus()
 {
 	/* 非用户writer 不触发回调 */
 	GUID_t guid = Conversion::ToGuid(writer_->get_instance_handle());
-	if (ENTITYKIND_USER_WRITER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_WRITER_WITH_KEY != guid.entityId.entityKind)
+	if (ENTITYKIND_USER_WRITER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_WRITER_WITH_KEY != guid.entityId.entityKind) {
 		return  RETCODE_OK;
+	}
+		
 
 	std::lock_guard<std::mutex> lock(mtx_);
 
@@ -48,6 +53,7 @@ ReturnCode_t DataWriterStatusManager::UpdateLivelinessLostStatus()
 	if (flag) {
 		livelinessLostStatus_.total_count_change = 0;
 	}
+	condition_->set_status(LIVELINESS_LOST_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -96,10 +102,11 @@ ReturnCode_t DataWriterStatusManager::UpdatePublicationMatchedStatus(const Insta
 		publicationMatchedStatus_.total_count_change = 0;
 		publicationMatchedStatus_.current_count_change = 0;
 	}
+	condition_->set_status(PUBLICATION_MATCHED_STATUS, true);
 	return RETCODE_OK;
 }
 
-ReturnCode_t DataWriterStatusManager::UpdateOfferedDeadlineMissedStatus()
+ReturnCode_t DataWriterStatusManager::UpdateOfferedDeadlineMissedStatus(const InstanceHandle_t& handle)
 {
 	/* 非用户writer 不触发回调 */
 	GUID_t guid = Conversion::ToGuid(writer_->get_instance_handle());
@@ -110,7 +117,7 @@ ReturnCode_t DataWriterStatusManager::UpdateOfferedDeadlineMissedStatus()
 
 	offeredDeadlineMissedStatus_.total_count++;
 	offeredDeadlineMissedStatus_.total_count_change++;
-	offeredDeadlineMissedStatus_.last_instance_handle = writer_->GetLastinstanceHandle();
+	offeredDeadlineMissedStatus_.last_instance_handle = handle;
 
 	bool flag = false;
 	if (OFFERED_DEADLINE_MISSED_STATUS & writer_->get_status_mask()) {
@@ -134,6 +141,7 @@ ReturnCode_t DataWriterStatusManager::UpdateOfferedDeadlineMissedStatus()
 	if (flag) {
 		offeredDeadlineMissedStatus_.total_count_change = 0;
 	}
+	condition_->set_status(OFFERED_DEADLINE_MISSED_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -184,6 +192,7 @@ ReturnCode_t DataWriterStatusManager::UpdateOfferedIncompatibleQosStatus(std::se
 	if (flag) {
 		offeredIncompatibleQosStatus_.total_count_change = 0;
 	}
+	condition_->set_status(OFFERED_INCOMPATIBLE_QOS_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -194,6 +203,7 @@ ReturnCode_t DataWriterStatusManager::GetLivelinessLostStatus(LivelinessLostStat
 
 	status = livelinessLostStatus_;
 	livelinessLostStatus_.total_count_change = 0;
+	condition_->set_status(LIVELINESS_LOST_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -203,6 +213,7 @@ ReturnCode_t DataWriterStatusManager::GetOfferedDeadlineMissedStatus(OfferedDead
 
 	status = offeredDeadlineMissedStatus_;
 	offeredDeadlineMissedStatus_.total_count_change = 0;
+	condition_->set_status(OFFERED_DEADLINE_MISSED_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -212,6 +223,7 @@ ReturnCode_t DataWriterStatusManager::GetOfferedIncompatibleQosStatus(OfferedInc
 
 	status = offeredIncompatibleQosStatus_;
 	offeredIncompatibleQosStatus_.total_count_change = 0;
+	condition_->set_status(OFFERED_INCOMPATIBLE_QOS_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -222,22 +234,15 @@ ReturnCode_t DataWriterStatusManager::GetPublicationMatchedStatus(PublicationMat
 	status = publicationMatchedStatus_;
 	publicationMatchedStatus_.total_count = 0;
 	publicationMatchedStatus_.current_count_change = 0;
+	condition_->set_status(PUBLICATION_MATCHED_STATUS, false);
 	return RETCODE_OK;
 }
-
-ReturnCode_t DataWriterStatusManager::SetOfferedIncompatibleQosStatus(const OfferedIncompatibleQosStatus& status)
-{
-	std::lock_guard<std::mutex> lock(mtx_);
-
-	offeredIncompatibleQosStatus_ = status;
-	return RETCODE_OK;
-}
-
 
 DataReaderStatusManager::DataReaderStatusManager(DataReaderImpl* reader)
 	: reader_(reader),
 	  sub_(dynamic_cast<SubscriberImpl*>(const_cast<Subscriber*>(reader_->get_subscriber()))),
-	  participant_(dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant())))
+	  participant_(dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant()))),
+	  condition_(dynamic_cast<StatusConditionImpl*>(&reader_->get_statuscondition()))
 {
 }
 
@@ -249,8 +254,10 @@ ReturnCode_t DataReaderStatusManager::UpdateSubscriptionMatchedStatus(const Inst
 {
 	/* 非用户reader 不触发回调 */
 	GUID_t guid = Conversion::ToGuid(reader_->get_instance_handle());
-	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind)
+	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind) {
 		return  RETCODE_OK;
+	}
+		
 
 	std::lock_guard<std::mutex> lock(mtx_);
 
@@ -289,6 +296,7 @@ ReturnCode_t DataReaderStatusManager::UpdateSubscriptionMatchedStatus(const Inst
 		subscriptionMatchedStatus_.total_count_change = 0;
 		subscriptionMatchedStatus_.current_count_change = 0;
 	}
+	condition_->set_status(SUBSCRIPTION_MATCHED_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -346,6 +354,7 @@ ReturnCode_t DataReaderStatusManager::UpdateLivelinessChangedStatus(const Instan
 		livelinessChangedStatus.alive_count_change = 0;
 		livelinessChangedStatus.not_alive_count_change = 0;
 	}
+	condition_->set_status(LIVELINESS_CHANGED_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -383,7 +392,7 @@ ReturnCode_t DataReaderStatusManager::UpdateSampleLostStatus(int32_t ilost_count
 	if (flag) {
 		sampleLostStatus_.total_count_change = 0;
 	}
-
+	condition_->set_status(SAMPLE_LOST_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -435,6 +444,7 @@ ReturnCode_t DataReaderStatusManager::UpdateRequestedIncompatibleQosStatus(std::
 	if (flag) {
 		reqIncompatibleQosStatus_.total_count_change = 0;
 	}
+	condition_->set_status(REQUESTED_INCOMPATIBLE_QOS_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -475,10 +485,11 @@ ReturnCode_t DataReaderStatusManager::UpdateSampleRejectedStatus(const InstanceH
 	if (flag) {
 		sampleRejectedStatus_.total_count_change = 0;
 	}
+	condition_->set_status(SAMPLE_REJECTED_STATUS, true);
 	return RETCODE_OK;
 }
 
-ReturnCode_t DataReaderStatusManager::UpdateRequestedDeadlineMissedStatus()
+ReturnCode_t DataReaderStatusManager::UpdateRequestedDeadlineMissedStatus(const InstanceHandle_t& handle)
 {
 	/* 非用户reader 不触发回调 */
 	GUID_t guid = Conversion::ToGuid(reader_->get_instance_handle());
@@ -489,7 +500,7 @@ ReturnCode_t DataReaderStatusManager::UpdateRequestedDeadlineMissedStatus()
 
 	reqDeadlineMissedStatus_.total_count++;
 	reqDeadlineMissedStatus_.total_count_change++;
-	reqDeadlineMissedStatus_.last_instance_handle = reader_->GetLastinstanceHandle();
+	reqDeadlineMissedStatus_.last_instance_handle = handle;
 	bool flag = false;
 	if (REQUESTED_DEADLINE_MISSED_STATUS & reader_->get_status_mask()) {
 		if (nullptr != reader_->get_listener()) {
@@ -512,6 +523,7 @@ ReturnCode_t DataReaderStatusManager::UpdateRequestedDeadlineMissedStatus()
 	if (flag) {
 		reqDeadlineMissedStatus_.total_count_change = 0;
 	}
+	condition_->set_status(REQUESTED_DEADLINE_MISSED_STATUS, true);
 	return RETCODE_OK;
 }
 
@@ -522,6 +534,7 @@ ReturnCode_t DataReaderStatusManager::GetLivelinessChangedStatus(LivelinessChang
 	status = livelinessChangedStatus;
 	livelinessChangedStatus.alive_count_change = 0;
 	livelinessChangedStatus.not_alive_count_change = 0;
+	condition_->set_status(LIVELINESS_CHANGED_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -531,6 +544,7 @@ ReturnCode_t DataReaderStatusManager::GetRequestedDeadlineMissedStatus(Requested
 
 	status = reqDeadlineMissedStatus_;
 	reqDeadlineMissedStatus_.total_count_change = 0;
+	condition_->set_status(REQUESTED_DEADLINE_MISSED_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -540,6 +554,7 @@ ReturnCode_t DataReaderStatusManager::GetRequestedIncompatibleQosStatus(Requeste
 
 	status = reqIncompatibleQosStatus_;
 	reqIncompatibleQosStatus_.total_count_change = 0;
+	condition_->set_status(REQUESTED_INCOMPATIBLE_QOS_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -549,6 +564,7 @@ ReturnCode_t DataReaderStatusManager::GetSampleLostStatus(SampleLostStatus& stat
 
 	status = sampleLostStatus_;
 	sampleLostStatus_.total_count_change = 0;
+	condition_->set_status(SAMPLE_LOST_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -558,6 +574,7 @@ ReturnCode_t DataReaderStatusManager::GetSampleRejectedStatus(SampleRejectedStat
 
 	status = sampleRejectedStatus_;
 	sampleRejectedStatus_.total_count_change = 0;
+	condition_->set_status(SAMPLE_REJECTED_STATUS, false);
 	return RETCODE_OK;
 }
 
@@ -568,22 +585,29 @@ ReturnCode_t DataReaderStatusManager::GetSubscriptionMatchedStatus(SubscriptionM
 	status = subscriptionMatchedStatus_;
 	subscriptionMatchedStatus_.current_count_change = 0;
 	subscriptionMatchedStatus_.total_count_change = 0;
+	condition_->set_status(SUBSCRIPTION_MATCHED_STATUS, false);
 	return RETCODE_OK;
 }
 
-TopicStatusManager::TopicStatusManager(TopicImpl * topic):topic_(topic)
+TopicStatusManager::TopicStatusManager(TopicImpl * topic)
+	: topic_(topic)
 {
 }
 
 ReturnCode_t TopicStatusManager::GetInconsistentTopicStatus(InconsistentTopicStatus & status)
 {
+	std::lock_guard<std::mutex> lock(mtx_);
+
 	status = status_;
 	status_.total_count_change = 0;
+	dynamic_cast<StatusConditionImpl*>(&topic_->get_statuscondition())->set_status(INCONSISTENT_TOPIC_STATUS,false);
 	return RETCODE_OK;
 }
 
 void TopicStatusManager::UpdateInconsistentTopicStatus()
 {
+	std::lock_guard<std::mutex> lock(mtx_);
+
 	status_.total_count++;
 	status_.total_count_change++;
 
@@ -600,4 +624,5 @@ void TopicStatusManager::UpdateInconsistentTopicStatus()
 		const_cast<TopicListener*>(topic_->get_listener())->on_inconsistent_topic(topic_, status);
 		status_.total_count_change = 0;
 	}
+	dynamic_cast<StatusConditionImpl*>(&topic_->get_statuscondition())->set_status(INCONSISTENT_TOPIC_STATUS, true);
 }

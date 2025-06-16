@@ -1,6 +1,7 @@
 #include "rtps/transport/messagetransmitterudp.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/locator.h"
+#include "common/log/logger.h"
 #include <iostream>
 USING_AGIDDS_NAMESPACE;
 
@@ -114,6 +115,7 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 	catch (std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Exception: " << e.what() << std::endl;
+		AGILOG(AGILOG_ERROR, "ioContext Err e[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
@@ -155,12 +157,13 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 	}
 
 	if (NULL == SendSocket.get()) {
+		AGILOG(AGILOG_ERROR, "SendSocket is nullptr");
 		return RETCODE_ERROR;
 	}
 
 	mtxSendSocket_.lock();
 	/* 发送组播数据且未指定发送地址时，每个网卡都需要发送组播数据 */
-	if (0xE0 == (dest.address[12] & 0xE0) && 0 == *(int32_t*)(src.address + 12)) {
+	if (0xE0 == (dest.address[12] & 0xE0) && 0 == src.GetUIAddressV4()) {
 		for (auto& itor : unicastLocatorList_) {
 			try {
 				UDPv4Locator it(itor);
@@ -169,14 +172,12 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 				SendSocket->set_option(option);
 
 				// 发送数据到目标端点
-				//SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);
-				asio::error_code ec;
-				SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint, 0,ec);
-				asio::detail::throw_error(ec, "send_to");
+				SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);
 			}
 			catch (const std::exception& e) {
 				static_cast<void>(e);
 				//std::cerr << "Error: " << e.what() << std::endl;
+				AGILOG(AGILOG_ERROR, "send_to error", e.what());
 				continue;
 			}
 		}
@@ -190,6 +191,7 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 		catch (const std::exception& e) {
 			static_cast<void>(e);
 			mtxSendSocket_.unlock();
+			AGILOG(AGILOG_ERROR, "send_to error", e.what());
 			return RETCODE_ERROR;
 		}
 	}
@@ -209,12 +211,14 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrAdd(Locator_t receiveAddr)
 	/* 创建接收socket */
 	ret = AddRecvSocket(receiveAddr);
 	if (RETCODE_OK != ret) {
+		//AGILOG(AGILOG_ERROR, "AddRecvSocket error, ret = %d", ret);
 		return ret;
 	}
 
 	/* 加入组播组 */
 	ret = AddMemberShip(receiveAddr);
 	if (RETCODE_OK != ret) {
+		//AGILOG(AGILOG_ERROR, "AddMemberShip error, ret = %d", ret);
 		return ret;
 	}
 
@@ -229,6 +233,7 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrRemove(Locator_t receiveAddr)
 	/*  只退组，不删除socket */
 	ret = DropMemberShip(receiveAddr);
 	if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "DropMemberShip error, ret = %d", ret);
 		return ret;
 	}
 
@@ -239,6 +244,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 {
 	UDPv4Locator rAddr(receiveAddr);
 	if (!rAddr.Valid()) {
+		AGILOG(AGILOG_ERROR, "rAddr not valid");
 		return RETCODE_ERROR;
 	}
 
@@ -278,7 +284,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 		}
 
 
-		asio::socket_base::receive_buffer_size option_receive_buffer_size(681574400);
+		asio::socket_base::receive_buffer_size option_receive_buffer_size(RECEIVE_BUFFER_SIZE);
 		newRecvSocket->set_option(option_receive_buffer_size);
 
 		// 设置接收超时
@@ -291,15 +297,17 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
         tv.tv_sec = timeout / 1000;
         tv.tv_usec = (timeout % 1000) * 1000;
         if (setsockopt(newRecvSocket->native_handle(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) <0) {
+			//AGILOG(AGILOG_ERROR, "setsockopt timeout Err[%d]", errno);
             return RETCODE_ERROR;
         }
 #endif
-		newRecvSocket->bind(local_endpoint);
+ 		newRecvSocket->bind(local_endpoint);
 
 		receiveSocketMap_.insert(std::pair<uint16_t, std::shared_ptr<asio::ip::udp::socket>>(rAddr.port, newRecvSocket));
 		return RETCODE_OK;
 	}
 	catch (asio::system_error& e) {
+		//AGILOG(AGILOG_ERROR, "Err[%s] [%d]", e.what(), e.code());
 		if (e.code() == asio::error::address_in_use) {
 			return RETCODE_PORT_IN_USE;
 		}
@@ -334,12 +342,10 @@ ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 		}
 		catch (const std::exception& e) {
 			static_cast<void>(e);
+			AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
 			//std::cerr << "Error: " << e.what() << std::endl;
 			continue;
 		}
-		//printf("netcard ip : %d.%d.%d.%d add membership : %d.%d.%d.%d sucess !\n",
-		//	itor.address[12], itor.address[13], itor.address[14], itor.address[15],
-		//	rAddr.address[12], rAddr.address[13], rAddr.address[14], rAddr.address[15]);
 	}
 
 	return RETCODE_OK;
@@ -363,6 +369,7 @@ ReturnCode_t MessageTransmitterUDP::DropMemberShip(Locator_t receiveAddr)
 	catch (const std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Error: " << e.what() << std::endl;
+		AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
@@ -380,7 +387,7 @@ void MessageTransmitterUDP::SetStop()
 		}
 	}
 	while (flagNum_.load() > 0) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
@@ -392,8 +399,6 @@ ReturnCode_t MessageTransmitterUDP::InterpretMessage(char* message, uint32_t len
 void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> socket)
 {
 	flagNum_.fetch_add(1);
-	//接收的报文长度
-	uint32_t uiRecvLen = 0;
 	char* buffer = nullptr;
 	bool ret = receivePool_->getBuffer(MAXSIZE, buffer);
 
@@ -407,7 +412,7 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 	}
 	std::shared_ptr<asio::ip::udp::endpoint> sender_endpoint = std::make_shared<asio::ip::udp::endpoint>();
 	socket->async_receive_from(asio::buffer(buffer, MAXSIZE), *sender_endpoint,
-		[this, buffer, sender_endpoint, socket](const std::error_code& ec, std::size_t bytes_transferred) {
+		[this, buffer, socket, sender_endpoint](const std::error_code& ec, std::size_t bytes_transferred) {
 			if (!ec) {
 				InterpretMessage(buffer, bytes_transferred);
 			}
@@ -417,5 +422,4 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 				AsyncReceive(socket);
 			}
 		});
-
 }

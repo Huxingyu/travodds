@@ -32,7 +32,7 @@ public:
      *
      * @return 引用StatusCondition对象。
      */
-    virtual StatusCondition* get_statuscondition() const = 0;
+    virtual StatusCondition& get_statuscondition() = 0;
 
     /**
      * @brief 检索实体中触发的状态集

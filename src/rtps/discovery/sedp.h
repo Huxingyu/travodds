@@ -21,38 +21,122 @@
 AGIDDS_NAMESPACE_BEGIN
 
 class Spdp;
+/**
+ * @brief Sedp类，内置匹配控制读写者数据收发控制类。
+ *	实现内置数据读写者匹配，用户节点匹配报文（DATA(w)和DATA(r)）收发，匹配节点管理功能。
+ */
 class Sedp : public ReaderListener {
 
 public:
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] participant  Participant类指针。
+	 * @param [in] spdp			Spdp类指针。
+	 */
 	Sedp(Participant* participant, Spdp* spdp);
 	
+	/**
+	 * @brief 析构函数。
+	 */
 	~Sedp();
 	
+	/**
+	 * @brief RTPS层发布者内置Writer和内置Reader创建。
+	 *  用于收发DATA(w)报文 
+	 * 
+	 * @param [in] dataWriter  DataWriterImpl类指针。
+	 * @param [in] dataReader  DataReaderImpl类指针。
+	 */
 	void SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* dataReader);
 
+	/**
+	 * @brief RTPS层订阅者内置Writer和内置Reader创建。
+	 *  用于收发DATA(r)报文
+	 *
+	 * @param [in] dataWriter  DataWriterImpl类指针。
+	 * @param [in] dataReader  DataReaderImpl类指针。
+	 */
 	void SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* dataReader);
 
+	/**
+	 * @brief 发现新节点时，为内置主题添加代理。
+	 *
+	 * @param [in] data  新节点信息。
+	 */
 	void AddSedpProxy(const SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 已发现节点退出时，为内置主题删除代理。
+	 *
+	 * @param [in] guid 退出节点guid。
+	 */
 	void RemoveSedpProxy(GUID_t guid);
 
+	/**
+	 * @brief 内置DATA(r)/DATA(w)报文数据读者回调函数。
+	 *
+	 * @param [in] change DATA(r)/DATA(w)报文数据。
+	 */
 	virtual void on_data_available(std::shared_ptr<CacheChange> change);
 
+	/**
+	 * @brief 构建并发送DATA(w)报文。
+	 *
+	 * @param [in] data DATA(w)报文参数。
+	 */
 	void WritePublicationData(DiscoveredWriterData& data);
 
+	/**
+	 * @brief 构建并发送DATA(r)报文。
+	 *
+	 * @param [in] data DATA(r)报文参数。
+	 */
 	void WriteSubscriptionData(DiscoveredReaderData& data);
 
+	/**
+	 * @brief 当调用delete_datawriter函数时触发，发送Writer下线报文。
+	 *
+	 * @param [in] guid 下线的Writer Guid。
+	 */
 	void RemovePublicationData(GUID_t& guid);
 
+	/**
+	 * @brief 当调用delete_datareader函数时触发，发送Reader下线报文。
+	 *
+	 * @param [in] guid 下线的Reader Guid。
+	 */
 	void RemoveSubscriptionData(GUID_t& guid);
 
 private:
+	/**
+	 * @brief 解析DATA(w)报文参数并存储到DiscoveredWriterData结构中。
+	 *
+	 * @param [out] data  远端DataWriter配置参数。
+	 * @param [in] buffer DATA(w)报文。
+	 */
 	void TakeDiscoveredWriterData(DiscoveredWriterData& data, SerializedBuffer* buffer);
 
+	/**
+	 * @brief 添加远端DataWriter信息到远端远端DataWriter管理列表中。
+	 *
+	 * @param [in] data 远端DataWriter信息。
+	 */
 	void ReceiveDiscoveredWriterData(DiscoveredWriterData& data);
 
+	/**
+	 * @brief 解析DATA(r)报文参数并存储到DiscoveredReaderData结构中。
+	 *
+	 * @param [in] data 远端DataReader配置参数。
+	 * @param [in] buffer DATA(r)报文。
+	 */
 	void TakeDiscoveredReaderData(DiscoveredReaderData& data, SerializedBuffer* buffer);
 
+	/**
+	 * @brief 添加远端DataReader信息到远端远端DataReader管理列表中。
+	 *
+	 * @param [in] data 远端DataReader信息。
+	 */
 	void ReceiveDiscoveredReaderData(DiscoveredReaderData& data);
 
 private:

@@ -1,5 +1,7 @@
+#include <algorithm>
 #include "rtps/historycache/historycache.h"
 #include "rtps/endpoint/writer.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 HistoryCache::HistoryCache(const HistoryQosPolicy& historyQos, const ResourceLimitsQosPolicy& resourceLimitsQos, const TopicKind_t& topicKind)
@@ -56,9 +58,10 @@ bool HistoryCache::AddChange(std::shared_ptr<CacheChange> change)
 	changeMutex_.lock();
 
 	cacheChanges_[change->sequenceNumber] = change;
-
-	instanceChanges_[change->instanceHandle].cacheChanges.push_back(change);
-
+	auto& ins = instanceChanges_[change->instanceHandle];
+	ins.cacheChanges.push_back(change);
+	//AddSampleCounters(change->sampleInfo.sample_state, 
+	//	ins.viewState, ins.instanceState);
 	changeMutex_.unlock();
 
 	return true;
@@ -77,6 +80,7 @@ bool HistoryCache::RemoveChange(std::shared_ptr<CacheChange> change)
 	if (itor != instanceChanges_.end()) {
 		for (auto cache = itor->second.cacheChanges.begin(); cache != itor->second.cacheChanges.end(); cache++) {
 			if (cache->get() == change.get()) {
+				//RemoveSampleCounters(change->sampleInfo.sample_state, itor->second.viewState, itor->second.instanceState);
 				itor->second.cacheChanges.erase(cache);
 				break;
 			}
@@ -131,30 +135,32 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 {
 	changeMutex_.lock();
 	auto itor = instanceChanges_.find(handle);
-	if (itor != instanceChanges_.end() ) {
-		
+	if (itor != instanceChanges_.end()) {
 		for (auto cache = itor->second.cacheChanges.begin(); cache != itor->second.cacheChanges.end(); ) {
-
-
 			/* 判断状态是否符合,数据状态不符合不条件数据  */
-			if ((0 == (sampleStates & (*cache)->sampleInfo.sample_state)) ||
-				(0 == (viewStates & (*cache)->sampleInfo.view_state)) ||
-				(0 == (instanceStates & (*cache)->sampleInfo.instance_state))) {
+			if (0 == (sampleStates & (*cache)->sampleInfo.sample_state) || 
+				0 == (itor->second.instanceState & instanceStates) ||
+				0 == (itor->second.viewState & viewStates)) {
 				cache++;
 				continue;
 			}
 			/* jdxcz question 给SampleInfo 进行赋值 */
 			SampleInfo sampleInfo;
 			sampleInfo = (*cache)->sampleInfo;
+			sampleInfo.view_state = itor->second.viewState;
+			sampleInfo.instance_state = itor->second.instanceState;
 			if ((*cache)->kind == ALIVE) {
 				sampleInfo.valid_data = true;
 			}
+			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
+
 			dataValues.push_back(*(*cache)->serializedBuffer);
 			sampleInfos.push_back(sampleInfo);
 
 			/* 修改数据的状态  */
-			(*cache)->sampleInfo.sample_state = READ_SAMPLE_STATE;
-			(*cache)->sampleInfo.view_state = NOT_NEW_VIEW_STATE;
+			UpdateState(READ_SAMPLE_STATE, *cache);
+			UpdateState(NOT_NEW_VIEW_STATE, itor->second);
+
 			/* 获取后删除数据 */
 			if (shouleTake) {
 				if ((*cache)->serializedBuffer) {
@@ -175,7 +181,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 
 	changeMutex_.unlock();
 
-	return RETCODE_OK;
+	return dataValues.length() == 0 ? RETCODE_NO_DATA : RETCODE_OK;
 }
 
 
@@ -209,8 +215,119 @@ ReturnCode_t HistoryCache::FindORAddKey(const InstanceHandle_t& handle, Serializ
 		*vitOut = itor;
 		return RETCODE_OK;
 	}
-
+	AGILOG(AGILOG_ERROR, "instanceChanges_.size[%d] >=  resourceLimitesQos_.max_instances[%d]", instanceChanges_.size(), resourceLimitesQos_.max_instances);
 	return RETCODE_OUT_OF_RESOURCES;
+}
+
+void HistoryCache::AddSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState)
+{
+	counters_.sampleRead += (sampleState == READ_SAMPLE_STATE) ? 1 : 0;
+	counters_.sampleNotRead += (sampleState == NOT_READ_SAMPLE_STATE) ? 1 : 0;
+	counters_.viewNew += (viewState == NEW_VIEW_STATE) ? 1 : 0;
+	counters_.viewNotNew += (viewState == NOT_NEW_VIEW_STATE) ? 1 : 0;
+	counters_.instanceAlive += (instanceState == ALIVE_INSTANCE_STATE) ? 1 : 0;
+	counters_.instanceDisposed += (instanceState == NOT_ALIVE_DISPOSED_INSTANCE_STATE) ? 1 : 0;
+	counters_.instanceNoWriters += (instanceState == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE) ? 1 : 0;
+	counters_.change.store(true);
+}
+
+void HistoryCache::RemoveSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState)
+{
+	counters_.sampleRead -= (sampleState == READ_SAMPLE_STATE) ? 1 : 0;
+	counters_.sampleNotRead -= (sampleState == NOT_READ_SAMPLE_STATE) ? 1 : 0;
+	counters_.viewNew -= (viewState == NEW_VIEW_STATE) ? 1 : 0;
+	counters_.viewNotNew -= (viewState == NOT_NEW_VIEW_STATE) ? 1 : 0;
+	counters_.instanceAlive -= (instanceState == ALIVE_INSTANCE_STATE) ? 1 : 0;
+	counters_.instanceDisposed -= (instanceState == NOT_ALIVE_DISPOSED_INSTANCE_STATE) ? 1 : 0;
+	counters_.instanceNoWriters -= (instanceState == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE) ? 1 : 0;
+	counters_.change.store(true);
+}
+
+ReturnCode_t HistoryCache::UpdataSampleInstance(const InstanceHandle_t& handle, const ChangeKind_t& changeKind, const GUID_t& writerGuid, const int32_t ownershipStrength, bool shared)
+{
+	ReturnCode_t ret = RETCODE_OK;
+	auto& insChange = instanceChanges_[handle];
+	
+	if(!shared) {
+		if(insChange.aliveWriter.empty()) {
+			insChange.aliveWriter.insert({ writerGuid,ownershipStrength });
+		} else {
+			if(insChange.aliveWriter.begin()->first != writerGuid && insChange.aliveWriter.begin()->second >= ownershipStrength) {
+				return RETCODE_ERROR;
+			}
+			if (insChange.aliveWriter.begin()->first != writerGuid) {
+				insChange.aliveWriter.erase(insChange.aliveWriter.begin());
+			}
+			insChange.aliveWriter[writerGuid] = ownershipStrength;
+		}
+	}
+
+	switch (changeKind)
+	{
+	case ALIVE:
+		if (insChange.instanceState & (NOT_ALIVE_NO_WRITERS_INSTANCE_STATE | NOT_ALIVE_DISPOSED_INSTANCE_STATE)) {
+			UpdateState(NEW_VIEW_STATE, insChange);
+		}
+		UpdateState(ALIVE_INSTANCE_STATE, insChange);
+		break;
+
+	case NOT_ALIVE_DISPOSED:
+		UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, insChange);
+		break;
+
+	case NOT_ALIVE_DISPOSED_UNREGISTERED:
+	case NOT_ALIVE_UNREGISTERED:
+		insChange.aliveWriter.erase(writerGuid);
+		if(insChange.aliveWriter.empty()) {
+			UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, insChange);
+		} else {
+			UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, insChange);
+		}	
+		break;
+	default:
+		// TODO log error
+		break;
+	}
+	return ret;
+}
+
+void HistoryCache::UpdateState(const SampleStateKind& state, const std::shared_ptr<CacheChange>& cache)
+{
+	if(cache->sampleInfo.sample_state == state) {
+		return;
+	}
+	cache->sampleInfo.sample_state = state;
+	bool isRead = (state & READ_SAMPLE_STATE);
+	counters_.sampleRead += isRead ? 1 : -1;
+	counters_.sampleNotRead += isRead ? -1 : 1;
+	counters_.change.store(true);
+}
+
+void HistoryCache::UpdateState(const ViewStateKind& state, CacheChangeVector& cacheChange)
+{
+	if(cacheChange.viewState == state) {
+		return;
+	}
+	cacheChange.viewState = state;
+	bool isNew = (state & NEW_VIEW_STATE);
+	counters_.viewNew += (isNew ? 1 : -1) * cacheChange.cacheChanges.size();
+	counters_.viewNotNew += (isNew ? -1 : 1) * cacheChange.cacheChanges.size();
+	counters_.change.store(true);
+}
+
+void HistoryCache::UpdateState(const InstanceStateKind& state, CacheChangeVector& cacheChange)
+{
+	if(cacheChange.instanceState == state) {
+		return;
+	}
+	cacheChange.instanceState = state;
+	bool isAlive = state == ALIVE_INSTANCE_STATE;
+	bool isDisposed = state == NOT_ALIVE_DISPOSED_INSTANCE_STATE;
+	bool isNoWriters = state == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
+	counters_.instanceAlive += (isAlive ? 1 : -1) * cacheChange.cacheChanges.size();
+	counters_.instanceDisposed += (isDisposed ? 1 : -1) * cacheChange.cacheChanges.size();
+	counters_.instanceNoWriters += (isNoWriters ? 1 : -1) * cacheChange.cacheChanges.size();
+	counters_.change.store(true);
 }
 
 bool HistoryCache::IsKeyRegistered(const InstanceHandle_t& handle)
@@ -324,4 +441,69 @@ bool HistoryCache::WriterWaitFor(const std::chrono::nanoseconds& time_out, Write
 		});
 	
 
+}
+
+SampleCounters HistoryCache::GetSampleCounters()
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	SampleCounters counters = counters_;
+	counters_.change.store(false);
+	return counters;
+}
+
+bool HistoryCache::GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextDeadline)
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	if (instanceChanges_.empty()) {
+		return false;
+	}
+	std::map<InstanceHandle_t, CacheChangeVector>::iterator itor = 
+		std::min_element(instanceChanges_.begin(), instanceChanges_.end(),
+			[](const std::pair<InstanceHandle_t, CacheChangeVector>& a, const std::pair<InstanceHandle_t, CacheChangeVector>& b) {
+			return a.second.nextDeadline < b.second.nextDeadline;
+			}
+		);
+	handle = itor->first;
+	nextDeadline = itor->second.nextDeadline;
+	return false;
+}
+
+void HistoryCache::SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout)
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	auto& readinstance = instanceChanges_[handle];
+	readinstance.nextDeadline = nextDeadline;
+
+	if (timeout) {
+		//std::map<GUID_t, int32_t>::iterator itor =
+		//	std::min_element(readinstance.aliveWriter.begin(), readinstance.aliveWriter.end(),
+		//		[](const std::pair<GUID_t, int32_t>& a, const std::pair<GUID_t, int32_t>& b) {
+		//			return a.second < b.second;
+		//		}
+		//	);
+		if (readinstance.aliveWriter.empty()) {
+			UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, readinstance);
+		} else {
+			UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, readinstance);
+		}
+	}
+}
+
+void HistoryCache::UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline)
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	for (auto& it : instanceChanges_) {
+		it.second.nextDeadline = nextDeadline;
+	}
+}
+
+void HistoryCache::RemoveRemoteWriter(const GUID_t& guid)
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	for (auto& ins : instanceChanges_) {
+		ins.second.aliveWriter.erase(guid);
+		if (ins.second.aliveWriter.empty()) {
+			ins.second.instanceState = NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
+		}
+	}
 }

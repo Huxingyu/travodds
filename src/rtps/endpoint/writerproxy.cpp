@@ -1,4 +1,5 @@
 #include "rtps/endpoint/writerproxy.h"
+#include "common/log/logger.h"
 #include  <algorithm>
 USING_AGIDDS_NAMESPACE;
 
@@ -143,6 +144,7 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 	set.bitmapBase = hbMsg.lastSN + 1;
 
 	if (hbCount_.load() >=  hbMsg.count) {
+		AGILOG(AGILOG_ERROR, "hbCount_[%d] > hbMsg.count[%d]", hbCount_.load(), hbMsg.count);
 		return RETCODE_RECEIVE_DUPLICATE;
 	}
 	hbCount_ = hbMsg.count;
@@ -154,8 +156,10 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 	
 	/* 如果插入的ChangeFromWriter的序号 小于 HB的最后一个值，开始发送数据 */
 	if (insertSeq_ < hbMsg.lastSN) {
+		/* 如果insertSeq_ <  hbMsg.firstSN,  说明小于 hbMsg.firseSN的数据都被提交 */
+		insertSeq_ = (insertSeq_ < hbMsg.firstSN) ? hbMsg.firstSN : insertSeq_ + 1;
 		/* 之前没有添加过，循环添加缺失数据 */
-		for (insertSeq_ = hbMsg.firstSN; insertSeq_ <= hbMsg.lastSN; insertSeq_++) {
+		for (; insertSeq_ <= hbMsg.lastSN; insertSeq_++) {
 			ChangeFromWriter changeInfo;
 			changeInfo.status = UNKNOWN;
 			changeInfo.is_relevant = true;
@@ -192,6 +196,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 
 
 	if (hbFragCount_.load() >= hbFragMsg.count) {
+		AGILOG(AGILOG_ERROR, "hbFragCount_[%d] > hbFragCount_.count[%d]", hbFragCount_.load(), hbFragMsg.count);
 		return RETCODE_RECEIVE_DUPLICATE;
 	}
 	hbCount_ = hbFragMsg.count;
@@ -235,8 +240,8 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 			ret = RETCODE_OK;
 			/* 没有收到数据 */
 			//TODO 
-			set.bitmap[i / 32] |= (1 << (i % 32) );
-			set.numBit = i;
+			set.bitmap.SetBit(i);
+			set.bitmap.size = i;
 			break;
 		}
 		buffer = buffer->next;
@@ -248,6 +253,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag)
 {
 	if (nullptr == cache) {
+		AGILOG(AGILOG_ERROR, "cache is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -257,21 +263,17 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 		auto changeInfo = changesFromWriters_.find(cache->sequenceNumber);
 		if (changesFromWriters_.end() != changeInfo) {
 			/* 存在数据，先删除在添加 (未提交数据) */
-			//if (changeInfo->second.cache) {
-			//	changeInfo->second.cache.reset();
-			//}
 			changeInfo->second.cache = cache;
-			if (MISSING == changeInfo->second.status || UNKNOWN == changeInfo->second.status) {
+			if ((MISSING == changeInfo->second.status || UNKNOWN == changeInfo->second.status)&& (0 == changeInfo->second.cache->fragmentSeq.size())) {
 				changeInfo->second.status = RECEIVED;
 			}	
-		} else {
-			//TODO 此处的数据应该是，已经提交过后，或者通过HB报文删除
-			//
-			//cache.reset();
-			//cache = nullptr;
+		} 
+		else {
+			//TODO 此处的数据应该是，已经提交过后，或者通过HB报文删除	
 			return RETCODE_ERROR;
 		}
-	} else {
+	} 
+	else {
 		/* 之前没有添加过，循环添加缺失数据 */
 		for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
 			ChangeFromWriter changeInfo;
@@ -312,7 +314,6 @@ std::shared_ptr<CacheChange> WriterProxy::GetSubmitCache()
 		submitSeq_ = seq;
 	
 		if (changeInfo->second.status == RECEIVED) {
-
 			changesFromWriters_.erase(changeInfo);
 			break;
 		}
@@ -345,11 +346,14 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	ReturnCode_t ret = RETCODE_ERROR;
 	auto changeInfo = changesFromWriters_.find(seq);
 	if (changesFromWriters_.end() == changeInfo) {
+		//TODO 
+		//AGILOG(AGILOG_ERROR, "seqdata not exist %d",seq.low);
 		return ret;
 	}
 
 	cache = changeInfo->second.cache;
 	if (!cache) {
+		AGILOG(AGILOG_ERROR, "cache is nullptr", seq.low);
 		return ret;
 	}
 
@@ -362,7 +366,7 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	}
 	else {
 		//TODO  重复接收分片数据
-		printf("recv repeat dataFrg [%s::%d] frag=%d \n", __FUNCTION__, __LINE__, num);
+		//AGILOG(AGILOG_ERROR, "recv repeat dataFrg frag=%d ", num );
 	}
 
 	if (0 == cache->fragmentSeq.size()) {
@@ -379,13 +383,13 @@ void WriterProxy::GetAckSequenceSet(SequenceNumberSet_t& set)
 		set.bitmapBase = vec[0];
 	}
 
-	for (auto seq : vec) {
+	for (auto& seq : vec) {
 		int32_t s = seq - set.bitmapBase;
 		if (s >= 255) {
 			break;
 		}
-		set.numBit = s + 1;
-		set.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+		set.bitmap.size = s + 1;
+		set.bitmap.SetBit(s);
 	}
 
 }
@@ -414,6 +418,11 @@ SeqNumberVec WriterProxy::LostChanges()
 	return seqVec;
 }
 
+GUID_t WriterProxy::GetRemoteWriterGuid()
+{
+	return remoteWriterGuid_;
+}
+
 void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
 {
 	for (auto& change : changesFromWriters_) {
@@ -430,12 +439,17 @@ void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
 					if (s >= 255) {
 						break;
 					}
-					nackMsg.fragmentNumberState.numBit = s + 1;
-					nackMsg.fragmentNumberState.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+					nackMsg.fragmentNumberState.bitmap.size = s + 1;
+					nackMsg.fragmentNumberState.bitmap.SetBit(s);
 				}
 
 				set.push_back(nackMsg);
 			}
 		}
 	}
+}
+
+bool WriterProxy::IsSubmitted(const SequenceNumber_t & seq)
+{
+	return seq <= submitSeq_;
 }

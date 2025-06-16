@@ -1,4 +1,6 @@
 #include "rtps/endpoint/writer.h"
+#include "rtps/endpoint/participant.h"
+#include "common/log/logger.h"
 #include <chrono>
 USING_AGIDDS_NAMESPACE;
 
@@ -77,6 +79,7 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 			bool ret0 = writerCache_->WriterWaitFor(time_out, this, cacheChange->instanceHandle, TRANSIENT_LOCAL_DURABILITY_QOS == qos_.durability.kind);
 
 			if (!ret0) {
+				AGILOG(AGILOG_ERROR, "WriterWaitFor timeout");
 				return RETCODE_TIMEOUT;
 			}
 		}
@@ -141,12 +144,12 @@ ReturnCode_t Writer::AddBuiltinCache(std::shared_ptr<CacheChange> cacheChange)
 		SerializedBuffer* buffer = nullptr;
 		ret = writerCache_->AddKeyHistory(cacheChange->instanceHandle, buffer);
 		if (RETCODE_OK != ret) {
-			PRINTF_ERROR();
+			AGILOG(AGILOG_ERROR, "AddKeyHistory Err ret = %d", ret);
 			return ret;
 		}
 	}
 
-	AddNewCachce(cacheChange);
+	ret = AddNewCachce(cacheChange);
 
 	return ret;
 }
@@ -161,5 +164,8 @@ void Writer::RemoveCacheByHandle(const InstanceHandle_t& handle)
 	writerCache_->RemoveChangeByInstance(handle);
 }
 
-
+void Writer::GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const
+{
+	participant_->GetMatchedEntitys(guid_.entityId, subHandles);
+}
 

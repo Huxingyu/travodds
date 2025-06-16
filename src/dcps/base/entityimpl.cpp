@@ -10,9 +10,9 @@ EntityImpl::EntityImpl(const StatusMask& mask)
 {
 }
 
-StatusCondition* EntityImpl::get_statuscondition() const
+StatusCondition& EntityImpl::get_statuscondition()
 {
-	return (StatusCondition*)&statusCondition_;
+	return statusCondition_;
 }
 
 const StatusMask& EntityImpl::get_status_change() const

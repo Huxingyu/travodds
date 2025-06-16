@@ -2,6 +2,7 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "qos/qospolicycheck.h"
 #include "rtps/endpoint/participant.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 
@@ -34,11 +35,13 @@ ReturnCode_t TopicImpl::set_qos(const TopicQos& qos)
     if (&qos != &TOPIC_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
+			AGILOG(AGILOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
 
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
+		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 
@@ -56,12 +59,14 @@ ReturnCode_t TopicImpl::get_qos(TopicQos& qos) const
 
 ReturnCode_t TopicImpl::set_listener(TopicListener* listener, const StatusMask& mask)
 {
-    if (listener) {
-        listener_ = listener;
-        statusMask_ = mask;
-        return RETCODE_OK;
+	//TODO 线程安全 //
+    if (listener_) {
+		delete listener_;
+		listener_ = nullptr;
     }
-    return RETCODE_BAD_PARAMETER;
+	listener_ = listener;
+	statusMask_ = mask;
+	return RETCODE_OK;
 }
 
 const TopicListener* TopicImpl::get_listener() const
@@ -86,6 +91,7 @@ ReturnCode_t TopicImpl::enable()
 		return RETCODE_OK;
 	}
 	if (!participant_->IsEnable()) {
+		AGILOG(AGILOG_ERROR, "IsEnable Err");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 	enable_ = true;

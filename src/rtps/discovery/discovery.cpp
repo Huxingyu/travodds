@@ -2,6 +2,7 @@
 #include "dcps/domain/domainparticipant.h"
 #include "common/time/ddstimer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 Discovery::Discovery(DomainParticipantImpl* domainParticipant, std::shared_ptr<ThreadPool> threadPool)
@@ -95,7 +96,7 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	data.ddsParticipantData.user_data = dpQos.user_data;
 	data.domainId = domainParticipant_->get_domain_id();
 	data.protocolVersion = PROTOCOLVERSION_2_5;
-	data.vendorId = VENDORID_UNKNOWN;
+	data.vendorId = VENDORID_PROSIMA;
 	data.defaultUnicastLocatorList = participant->GetDefaultUnicastLocators();
 	data.defaultMulticastLocatorList = participant->GetDefaultMulticastLocators();
 	data.metatrafficUnicastLocatorList = participant->GetMetatrafficUnicastLocators();
@@ -166,5 +167,15 @@ int Discovery::GetParticipantData(BuiltinTopicKey_t & key, SPDPdiscoveredPartici
 std::shared_ptr<ThreadPool> Discovery::GetThreadPool() const
 {
 	return threadPool_;
+}
+
+void Discovery::SetIgnoredParticipants(GUID_t guid)
+{
+	spdp_->SetIgnoredParticipants(guid);
+}
+
+bool Discovery::FindIgnoredParticipants(GUID_t guid)
+{
+	return spdp_->FindIgnoredParticipants(guid);
 }
 

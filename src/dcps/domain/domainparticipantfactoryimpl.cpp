@@ -1,6 +1,9 @@
 #include "dcps/domain/domainparticipantfactoryimpl.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "qos/qospolicycheck.h"
+#include "common/log/logger.h"
+#include "rtps/transport/asiocontext.h"
+
 USING_AGIDDS_NAMESPACE
 
 DomainParticipantFactory* DomainParticipantFactory::get_instance()
@@ -22,11 +25,13 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 {
 	const DomainParticipantQos& qosT = (&qos == &PARTICIPANT_QOS_DEFAULT) ? defaultParticipantQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
+		AGILOG(AGILOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
 	DomainParticipant* domainPart = nullptr;
 	std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask);
 	if (!domainParticipant.get()) {
+		AGILOG(AGILOG_ERROR, "Make DP Err");
 		return nullptr;
 	}
     domainPart = domainParticipant.get();
@@ -35,6 +40,7 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 		if (RETCODE_OK != domainPart->enable()) {
 			delete_participant(domainPart);
 			domainPart = nullptr;
+			AGILOG(AGILOG_ERROR, "Enable Err");
 			return nullptr;
 		}
 	}
@@ -53,15 +59,18 @@ DomainParticipantFactoryImpl::~DomainParticipantFactoryImpl()
 ReturnCode_t DomainParticipantFactoryImpl::delete_participant(DomainParticipant*& participant)
 {
     if (!participant) {
+		AGILOG(AGILOG_ERROR, "RETCODE_BAD_PARAMETER");
         return RETCODE_BAD_PARAMETER;
     }
     InstanceHandle_t handle = participant->get_instance_handle();
     std::lock_guard<std::mutex> lock(mtxParticipants_);
     auto it = participants_.find(handle);
     if (it == participants_.end()) {
+		AGILOG(AGILOG_ERROR, "Handle is Err");
         return RETCODE_ERROR;
     }
     if (!it->second->Empty()) {
+		AGILOG(AGILOG_ERROR, "DP is nullptr");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     participants_.erase(it);
@@ -88,6 +97,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_default_participant_qos(const Dom
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "CheckQos Err");
         return ret;
     }
     defaultParticipantQos_ = qos;
@@ -106,9 +116,11 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos(const DomainParticipantFactor
 
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "CheckQos Err");
         return ret;
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qos)) {
+		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 	qos_ = qos;
@@ -124,6 +136,8 @@ ReturnCode_t DomainParticipantFactoryImpl::get_qos(DomainParticipantFactoryQos& 
 
 DomainParticipantFactoryImpl* DomainParticipantFactoryImpl::get_instance()
 {
+    /* 优先获取网络资源，决定网络资源最后释放 */
+    static AsioContext& as = AsioContext::GetInstance();
     static std::shared_ptr<DomainParticipantFactoryImpl> Impl(new DomainParticipantFactoryImpl);
     return Impl.get();
 }

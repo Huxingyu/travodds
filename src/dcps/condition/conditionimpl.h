@@ -12,22 +12,39 @@
 #ifndef AGIDDS_DCPS_CONDITION_CONDITIONIMPL_H
 #define AGIDDS_DCPS_CONDITION_CONDITIONIMPL_H
 
-#include  "agidds_dll.h"
-#include  "type/basictype.h"
-#include  "dcps/condition/condition.h"
-
+#include <atomic>
+#include "agidds_dll.h"
+#include "type/basictype.h"
+#include "dcps/condition/condition.h"
 
 AGIDDS_NAMESPACE_BEGIN
-
+class WaitSetImpl;
 class ConditionImpl : public virtual Condition {
 public:
-	ConditionImpl() : triggerValue_(false) {};
+	ConditionImpl();
+	virtual ~ConditionImpl();
 
-	bool get_trigger_value() const;
+	virtual bool get_trigger_value() const;
+
+public:
+	void Notify();
+
+	bool IsNotify();
+
+private:
+	void JoinWaitSet(WaitSetImpl* waitImpl);
+	void LeaveWaitSet(WaitSetImpl* waitImpl);
+	friend class WaitSetImpl;
 
 protected:
-	bool triggerValue_;
+	std::atomic_bool triggerValue_;
 
+private:
+	/* 标志是否参与了唤醒工作 */
+	std::atomic_bool notify_;
+
+	mutable std::mutex mtx_;
+	std::vector<WaitSetImpl*> waitSets_;
 };
 
 AGIDDS_NAMESPACE_END

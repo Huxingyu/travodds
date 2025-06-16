@@ -45,10 +45,11 @@ public:
 	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys);
 
 	ReturnCode_t WriteHeartbeat();
+
 	/* wangyi 发送 liveliness 心跳 */
 	ReturnCode_t WriteHeartbeat(bool liveliness);
 
-	ReturnCode_t WriteHeartbeat(std::shared_ptr<ReaderProxy> readerProxy, bool liveliness = false);
+	ReturnCode_t WriteHeartbeat(std::shared_ptr<ReaderProxy> readerProxy, bool force, bool liveliness = false);
 
 	ReturnCode_t WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy);
 

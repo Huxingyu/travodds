@@ -25,9 +25,11 @@
 #include <chrono>
 #include <thread>
 #include "agidds_dll.h"
+#include "numericconstants.h"
 #include "common/sequence/sequence.h"
 #include "dcps/subscribe/states.h"
 #include "assert.h"
+
 
 #define PRINTF_ERROR() printf("fun[%s] line[%d]\n",__func__, __LINE__);
 
@@ -194,6 +196,15 @@ const InstanceHandle_t HANDLE_NIL;
 struct BuiltinTopicKey_t {
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
 
+	/* wangyi Cyclone DDS 适配 添加构造函数初始化  */
+	BuiltinTopicKey_t()
+	{
+		value[0] = 0;
+		value[1] = 0;
+		value[2] = 0;
+		value[3] = 0;
+	}
+
 	bool operator==(const BuiltinTopicKey_t& other) const {
 		for (int32_t i = 0; i < 4; ++i) {
 			if (this->value[i] != other.value[i]) {
@@ -221,6 +232,19 @@ struct BuiltinTopicKey_t {
 	}
 
 };
+
+/* 获取当前时间并赋值到Time_t结构数据中 */
+static void CurrentTimeSinceUnixEpoch(
+	int32_t& secs,
+	uint32_t& nanosecs)
+{
+	using namespace std::chrono;
+	auto t_since_epoch = system_clock::now().time_since_epoch();
+	auto secs_t = duration_cast<seconds>(t_since_epoch);
+	t_since_epoch -= secs_t;
+	secs = static_cast<long>(secs_t.count());
+	nanosecs = static_cast<unsigned long>(duration_cast<nanoseconds>(t_since_epoch).count());
+}
 
 struct Duration_t {
 	int32_t sec;
@@ -272,9 +296,29 @@ struct Duration_t {
 		return (this->sec != other.sec) || (this->nanosec != other.nanosec);
 	}
 
-	//int64_t ToMilliseconds() const {
-	//	return static_cast<int64_t>(sec) * 1000 + static_cast<int64_t>(nanosec) / 1000000;
-	//}
+	Duration_t operator - (const Duration_t& other) const {
+		Duration_t result;
+
+		// 计算秒差
+		result.sec = this->sec - other.sec;
+
+		// 处理纳秒差（需借位时）
+		if (this->nanosec >= other.nanosec) {
+			result.nanosec = this->nanosec - other.nanosec;
+		}
+		else {
+			result.sec -= 1;  // 借位：从秒中减1
+			result.nanosec = 1000000000 + this->nanosec - other.nanosec;
+		}
+
+		// 标准化结果（确保纳秒在有效范围内）
+		if (result.nanosec >= 1000000000) {
+			result.sec += static_cast<int32_t>(result.nanosec / 1000000000);
+			result.nanosec %= 1000000000;
+		}
+
+		return result;
+	}
 
 	/* wangyi 时间转换（Duration_t 格式转换为纳秒） */
 	int64_t ToNs() const {
@@ -282,21 +326,12 @@ struct Duration_t {
 		nano += nanosec;
 		return nano;
 	}
+
+	/* wangyi 获取当前时间 */
+	static void now(Duration_t& ret) {
+		CurrentTimeSinceUnixEpoch(ret.sec, ret.nanosec);
+	}
 };
-
-/* 获取当前时间并赋值到Time_t结构数据中 */
-static void CurrentTimeSinceUnixEpoch(
-	int32_t& secs,
-	uint32_t& nanosecs)
-{
-	using namespace std::chrono;
-	auto t_since_epoch = system_clock::now().time_since_epoch();
-	auto secs_t = duration_cast<seconds>(t_since_epoch);
-	t_since_epoch -= secs_t;
-	secs = static_cast<long>(secs_t.count());
-	nanosecs = static_cast<unsigned long>(duration_cast<nanoseconds>(t_since_epoch).count());
-}
-
 
 struct Time_t {
 	int32_t sec;
@@ -395,6 +430,9 @@ struct SampleInfo {
 
 	//TODO 临时添加，数据接收的序列号
 	int32_t reception_sequence_number;
+
+	//TODO jdxcz 20250610 
+	int32_t write_sequence_number;
 
 	SampleInfo()
 		: sample_state(NOT_READ_SAMPLE_STATE),

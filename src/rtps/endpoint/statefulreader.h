@@ -54,6 +54,9 @@ public:
 
 	ReturnCode_t SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg);
 
+private:	
+	void InitlastNewCacheTimer();
+	void TimerExpired();
 private:
 	WriterProxyMap matchedWriters_;
 };

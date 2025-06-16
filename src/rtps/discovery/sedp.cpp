@@ -2,6 +2,7 @@
 #include "rtps/discovery/spdp.h"
 #include "rtps/messages/parameter.h"
 #include "dcps/domain/domainparticipant.h"
+#include "common/log/logger.h"
 USING_AGIDDS_NAMESPACE;
 
 Sedp::Sedp(Participant* participant,Spdp* spdp)
@@ -38,6 +39,7 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
     std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	publicationsWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
@@ -45,8 +47,9 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,true);
-	if (nullptr == reader) {
+	if (nullptr == reader) {	
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	publicationsReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
@@ -61,6 +64,7 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
     std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "writer is nullptr");
 		return;
 	}
 	subscriptionsWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
@@ -70,6 +74,7 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
+		AGILOG(AGILOG_ERROR, "reader is nullptr");
 		return;
 	}
 	subscriptionsReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
@@ -146,11 +151,11 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 		octet flag = change->kind;
 
 		// D 已处理
-		if (flag | 0x01) {
+		if (flag | NOT_ALIVE_DISPOSED) {
 
 		}
 		// U 未注册
-		if (flag | 0x02) {
+		if (flag | NOT_ALIVE_UNREGISTERED) {
 			if(change->writerGuid.entityId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER)
 				participant_->RemoveRemoteWriter(guid);
 			if (change->writerGuid.entityId == ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER)
@@ -158,7 +163,7 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 		}
 
 		// F 已过滤
-		if (flag | 0x03) {
+		if (flag | ALIVE_FILTERED) {
 
 		}
 		return;
@@ -202,15 +207,15 @@ void Sedp::WritePublicationData(DiscoveredWriterData& data)
 	DomainParticipant::get_current_time(cur_time);
 
 	InstanceHandle_t handle;
-	memcpy(handle.keyHash.value, data.ddsPublicationData.key.value, 16);
+	memcpy(handle.keyHash.value, data.ddsPublicationData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 	std::shared_ptr<CacheChange> change = publicationsWriter_->NewChange(ALIVE, buffer, handle, cur_time);
 
 	ReturnCode_t ret = publicationsWriter_->AddBuiltinCache(change);
 
-	if(RETCODE_OK != ret)
-	{
+	if(RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "publicationsWriter AddBuiltinCache Err ret = %d", ret);
 	}
 }
 
@@ -229,13 +234,14 @@ void Sedp::WriteSubscriptionData(DiscoveredReaderData& data)
 	Time_t cur_time;
 	DomainParticipant::get_current_time(cur_time);
 	InstanceHandle_t handle;
-	memcpy(handle.keyHash.value, data.ddsSubscriptionData.key.value, 16);
+	memcpy(handle.keyHash.value, data.ddsSubscriptionData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	std::shared_ptr<CacheChange> change = subscriptionsWriter_->NewChange(ALIVE, buffer, handle, cur_time);
 
 	ReturnCode_t ret = subscriptionsWriter_->AddBuiltinCache(change);
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "subscriptionsWriter_ AddBuiltinCache Err ret = %d", ret);
 	}
 }
 
@@ -256,14 +262,14 @@ void Sedp::RemovePublicationData(GUID_t & guid)
 
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
-	char status[4] = { 0 };
-	status[3] = 3;
+	StatusInfo_t status = { 0 };
+	status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 	change->inlineQos.push_back(keyParam);
 	change->inlineQos.push_back(statueParam);
@@ -272,6 +278,7 @@ void Sedp::RemovePublicationData(GUID_t & guid)
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "publicationsWriter AddBuiltinCache Err ret = %d", ret);
 	}
 	
 
@@ -296,14 +303,14 @@ void Sedp::RemoveSubscriptionData(GUID_t & guid)
 	
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
-	keyParam.length = 16;
-	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + 16);
+	keyParam.length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
+	keyParam.value.assign(instanceHandle.keyHash.value, instanceHandle.keyHash.value + MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
-	char status[4] = { 0 };
-	status[3] = 3;
+	StatusInfo_t status = { 0 };
+	status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
 	statueParam.parameterId = PID_STATUS_INFO;
-	statueParam.length = 4;
-	statueParam.value.assign(status, status + 4);
+	statueParam.length = sizeof(StatusInfo_t);
+	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 	change->inlineQos.push_back(keyParam);
 	change->inlineQos.push_back(statueParam);
@@ -312,6 +319,7 @@ void Sedp::RemoveSubscriptionData(GUID_t & guid)
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
+		AGILOG(AGILOG_ERROR, "subscriptionsWriter_ AddBuiltinCache Err ret = %d", ret);
 	}
 	
 	subscriptionsWriter_->RemoveCacheByHandle(instanceHandle);
@@ -323,6 +331,14 @@ void Sedp::TakeDiscoveredWriterData(DiscoveredWriterData& data, SerializedBuffer
 	list.GetDiscoveredData(data);
 
 	data.remoteWriterGuid = Conversion::ToGuid(data.ddsPublicationData.key);
+
+	/* wangyi Cyclone DDS适配 participant_key 值为{0,0,0,0}时使用Guid转换  */
+	BuiltinTopicKey_t keyNull;
+	if (data.ddsPublicationData.participant_key == keyNull)
+	{
+		GUID_t participantGuid(data.remoteWriterGuid.prefix, ENTITYID_PARTICIPANT);
+		data.ddsPublicationData.participant_key = Conversion::ToBuiltinTopicKey(participantGuid);
+	}
 }
 
 void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data)
@@ -342,6 +358,15 @@ void Sedp::TakeDiscoveredReaderData(DiscoveredReaderData& data, SerializedBuffer
 	list.GetDiscoveredData(data);
 
 	data.remoteReaderGuid = Conversion::ToGuid(data.ddsSubscriptionData.key);
+
+	/* wangyi Cyclone DDS适配 participant_key 值为{0,0,0,0}时使用Guid转换  */
+	BuiltinTopicKey_t keyNull;
+	if (data.ddsSubscriptionData.participant_key == keyNull)
+	{
+		GUID_t participantGuid(data.remoteReaderGuid.prefix, ENTITYID_PARTICIPANT);
+		data.ddsSubscriptionData.participant_key = Conversion::ToBuiltinTopicKey(participantGuid);
+	}
+
 }
 
 void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data)

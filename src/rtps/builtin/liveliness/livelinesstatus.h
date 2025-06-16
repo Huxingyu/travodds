@@ -17,12 +17,22 @@ enum WriterStatus
     NOTALIVE = 2
 };
 
+/**
+ * @brief 保存writer相关存活信息的结构
+ */
 struct LivelinesStatus
 {
-
-
+    /**
+     * @brief 构造函数。
+     *
+     * @param [in] guidIn writer guid。
+     * @param [in] livelinessQos liveliness Qos配置信息。
+     */
     LivelinesStatus(GUID_t guidIn, LivelinessQosPolicy livelinessQos): guid_(guidIn), livelinessQos_(livelinessQos), status_(WriterStatus::NOTASSERTED) {}
 
+    /**
+     * @brief 构造函数，生成默认值LivelinesStatus对象。
+     */
     LivelinesStatus(): guid_()
     {
         livelinessQos_.kind = LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS;
@@ -30,6 +40,9 @@ struct LivelinesStatus
         status_ = WriterStatus::NOTASSERTED;
     }
 
+    /**
+     * @brief 析构函数。
+     */
     ~LivelinesStatus()
     {
     }

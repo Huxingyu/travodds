@@ -12,13 +12,15 @@
 #ifndef AGIDDS_DCPS_CONDITION_WAITSETIMPL_H
 #define AGIDDS_DCPS_CONDITION_WAITSETIMPL_H
 
-#include  "dcps/condition/condition.h"
-#include  "dcps/base/retcode.h"
+#include <condition_variable>
+#include "dcps/condition/conditionimpl.h"
+#include "dcps/base/retcode.h"
 
 AGIDDS_NAMESPACE_BEGIN
 class WaitSetImpl
 {
 public:
+	~WaitSetImpl();
 
 	ReturnCode_t attach_condition(const Condition& condition);
 
@@ -27,6 +29,17 @@ public:
 	ReturnCode_t wait(ConditionSeq& active_conditions, const Duration_t& timeout);
 
 	ReturnCode_t get_conditions(ConditionSeq& attached_conditions) const;
+
+public:
+	uint32_t FindTrigger(ConditionSeq& active_conditions);
+
+	void Notify();
+
+private:
+	mutable std::mutex mtx_;
+	mutable std::mutex mtxCv_;
+	std::condition_variable cv_;
+	std::vector<ConditionImpl*> conditions_;
 };
 
 AGIDDS_NAMESPACE_END

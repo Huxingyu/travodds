@@ -46,18 +46,21 @@ public:
 	DataWriterImpl* GetRelatedDataWriter();
 
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData) = 0;
+
 	virtual ReturnCode_t ReceiveAckNackMessage(const Receive_t&  headerMsg, const AcknackSubMessage_t& ackMsg) = 0;
 
 	virtual ReturnCode_t ReceiveNackFragMessage(const Receive_t&  headerMsg, const NackFragSubMessage_t& nackMsg) = 0;
 
 	/* wangyi 获取Qos */
 	DataWriterQos& GetQos();
+
 	ReturnCode_t AddBuiltinCache(std::shared_ptr<CacheChange> cacheChange);
 
 	std::shared_ptr<HistoryCache> GetHistoryCache();
 
 	void RemoveCacheByHandle(const InstanceHandle_t& handle);
 
+	void GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const;
 protected:
 
 	bool pushMode_ = true;
@@ -70,7 +73,6 @@ protected:
 	std::shared_ptr<HistoryCache> writerCache_;
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
-
 };
 
 AGIDDS_NAMESPACE_END

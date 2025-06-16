@@ -8,6 +8,7 @@
 #include "rtps/endpoint/readerproxy.h"
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/parameter.h"
+#include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
 USING_AGIDDS_NAMESPACE;
@@ -29,17 +30,17 @@ ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageB
 											DataSubMessage_t& dataSubMessage)
 {
 	uint32_t bShift = shift;
-	bool endiannessFlag = (dataSubMessage.header.flags & BIT(0)) != 0;
-	bool inlineQosFlag = (dataSubMessage.header.flags & BIT(1)) != 0;
-	bool dataFlag = (dataSubMessage.header.flags & BIT(2)) != 0;
-	bool keyFlag = (dataSubMessage.header.flags & BIT(3)) != 0;
-	bool nonStandardPayloadFlag = (dataSubMessage.header.flags & BIT(4)) != 0;
+	bool endiannessFlag = (dataSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool inlineQosFlag = (dataSubMessage.header.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool dataFlag = (dataSubMessage.header.flags & SubMessageFlag::DATA_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool keyFlag = (dataSubMessage.header.flags & SubMessageFlag::KEY_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool nonStandardPayloadFlag = (dataSubMessage.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	dataSubMessage.header.subMessageId = DATA;
 
 	if (inlineQosFlag) {
 		//TODO  在封装的时候将PID_SENTINEL 插入inlineQos的链表中，还是在这边封装一个PID_SENTINEL
-		//jdxcz 20250418 选择在封装inlineQOS封装后，封装PID_SENTINEL
+		//jdxcz 20250418 选择在封装inlineQOS封装后，封装PID_SENTINEL //
 
 		Parameter_t param;
 		param.parameterId = PID_SENTINEL;
@@ -93,10 +94,10 @@ ReturnCode_t MessageProcessor::EncapsulateDataFragMessage(SerializedBuffer& mess
 												DataFragSubMessage_t& dataFragSubMessage)
 {
 	uint32_t bShift = shift;
-	bool endiannessFlag = (dataFragSubMessage.header.flags & BIT(0)) != 0;
-	bool inlineQosFlag = (dataFragSubMessage.header.flags & BIT(1)) != 0;
-	bool nonStandardPayloadFlag = (dataFragSubMessage.header.flags & BIT(2)) != 0;
-	bool keyFlag = (dataFragSubMessage.header.flags & BIT(3)) != 0;
+	bool endiannessFlag = (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool inlineQosFlag = (dataFragSubMessage.header.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool nonStandardPayloadFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool keyFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_KEY_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	dataFragSubMessage.header.subMessageId = DATA_FRAG;
 
@@ -160,13 +161,15 @@ ReturnCode_t MessageProcessor::EncapsulateHeartBeatMessage(SerializedBuffer& mes
 	heartBeatSubMessage.header.subMessageId = HEARTBEAT;
 	heartBeatSubMessage.header.subMessageLength = sizeof(HeartBeatSubMessage_t) - sizeof(SubMessageHeader_t);
 
-	if (heartBeatSubMessage.header.flags & FLAG_BIT_3) {
+	if (heartBeatSubMessage.header.flags & SubMessageFlag::HB_GROUPINFO_FLAG) {
 		memcpy(messageBuf.buffer + shift, &heartBeatSubMessage, sizeof(HeartBeatSubMessage_t));
 		shift += sizeof(HeartBeatSubMessage_t);
 	} else {
-		heartBeatSubMessage.header.subMessageLength = sizeof(HeartBeatSubMessage_t) - sizeof(SubMessageHeader_t) -32; 
-		memcpy(messageBuf.buffer + shift, &heartBeatSubMessage, sizeof(HeartBeatSubMessage_t) - 32);
-		shift += sizeof(HeartBeatSubMessage_t) - 32;
+		/* 非组多余字段 */
+		uint16_t surplus = sizeof(SequenceNumber_t) * 3 + sizeof(GroupDigest_t) * 2;
+		heartBeatSubMessage.header.subMessageLength = sizeof(HeartBeatSubMessage_t) - sizeof(SubMessageHeader_t) - surplus;
+		memcpy(messageBuf.buffer + shift, &heartBeatSubMessage, sizeof(HeartBeatSubMessage_t) - surplus);
+		shift += sizeof(HeartBeatSubMessage_t) - surplus;
 
 	}
 
@@ -189,12 +192,12 @@ ReturnCode_t MessageProcessor::EncapsulateAckNackMessage(SerializedBuffer& messa
 	shift += sizeof(ackMessage.writerId);
 	memcpy(messageBuf.buffer + shift, &ackMessage.readerSNState.bitmapBase, sizeof(SequenceNumber_t));
 	shift += sizeof(SequenceNumber_t);
-	memcpy(messageBuf.buffer + shift, &ackMessage.readerSNState.numBit, sizeof(uint32_t));
+	memcpy(messageBuf.buffer + shift, &ackMessage.readerSNState.bitmap.size, sizeof(uint32_t));
 	shift += sizeof(uint32_t);
 
-	if (0 != ackMessage.readerSNState.numBit)
+	if (0 != ackMessage.readerSNState.bitmap.size)
 	{
-		uint32_t uilen = (((ackMessage.readerSNState.numBit - 1) >> 5) + 1) * 4;
+		uint32_t uilen = ackMessage.readerSNState.bitmap.GetByteSize();
 		memcpy(messageBuf.buffer + shift, &ackMessage.readerSNState.bitmap, uilen);
 		shift += uilen;
 	}
@@ -243,7 +246,7 @@ ReturnCode_t MessageProcessor::EncapsulateNackFragMessage(SerializedBuffer& mess
 	uint32_t bShift = shift;
 	SubMessageHeader_t header;
 	header.subMessageId = NACK_FRAG;
-	header.flags |= 0x01;
+	header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 	memcpy(messageBuf.buffer + shift, &header, sizeof(header));
 	shift += sizeof(header);
@@ -256,12 +259,12 @@ ReturnCode_t MessageProcessor::EncapsulateNackFragMessage(SerializedBuffer& mess
 	shift += sizeof(SequenceNumber_t);
 	memcpy(messageBuf.buffer + shift, &nackFlagMessage.fragmentNumberState.bitmapBase, sizeof(FragmentNumber_t));
 	shift += sizeof(FragmentNumber_t);
-	memcpy(messageBuf.buffer + shift, &nackFlagMessage.fragmentNumberState.numBit, sizeof(uint32_t));
+	memcpy(messageBuf.buffer + shift, &nackFlagMessage.fragmentNumberState.bitmap.size, sizeof(uint32_t));
 	shift += sizeof(uint32_t);
 
-	if (0 != nackFlagMessage.fragmentNumberState.numBit)
+	if (0 != nackFlagMessage.fragmentNumberState.bitmap.size)
 	{
-		uint32_t uilen = (((nackFlagMessage.fragmentNumberState.numBit - 1) >> 5) + 1) * 4;
+		uint32_t uilen = nackFlagMessage.fragmentNumberState.bitmap.GetByteSize();
 		memcpy(messageBuf.buffer + shift, &nackFlagMessage.fragmentNumberState.bitmap, uilen);
 		shift += uilen;
 	}
@@ -279,7 +282,7 @@ ReturnCode_t MessageProcessor::EncapsulateINFOSRCMessage(SerializedBuffer& messa
 												uint32_t& shift,
 												InfoSource_t infoSRC)
 {
-	uint16_t size = 20;
+	uint16_t size = SUB_MESSAGE_LEN_INFO_SRC;
 	infoSRC.header.subMessageId = INFO_SRC;
 	infoSRC.header.subMessageLength = size;
 
@@ -308,17 +311,17 @@ ReturnCode_t MessageProcessor::EncapsulateGapMessage(SerializedBuffer& messageBu
 	shift += sizeof(SequenceNumber_t);
 	memcpy(messageBuf.buffer + shift, &gapSubMessage.gapList.bitmapBase, sizeof(SequenceNumber_t));
 	shift += sizeof(SequenceNumber_t);
-	memcpy(messageBuf.buffer + shift, &gapSubMessage.gapList.numBit, sizeof(uint32_t));
+	memcpy(messageBuf.buffer + shift, &gapSubMessage.gapList.bitmap.size, sizeof(uint32_t));
 	shift += sizeof(uint32_t);
 
-	if (0 != gapSubMessage.gapList.numBit) {
-		uint32_t uilen = (((gapSubMessage.gapList.numBit - 1) >> 5) + 1) * 4;
+	if (0 != gapSubMessage.gapList.bitmap.size) {
+		uint32_t uilen = gapSubMessage.gapList.bitmap.GetByteSize();
 		memcpy(messageBuf.buffer + shift, &gapSubMessage.gapList.bitmap, uilen);
 		shift += uilen;
 	}
 
-	bool groupInfoFlag = (gapSubMessage.header.flags & BIT(1)) != 0;
-	bool filteredCountFlag = (gapSubMessage.header.flags & BIT(2)) != 0;
+	bool groupInfoFlag = (gapSubMessage.header.flags & SubMessageFlag::GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool filteredCountFlag = (gapSubMessage.header.flags & SubMessageFlag::FILTERED_COUNT_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (groupInfoFlag) {
 		memcpy(messageBuf.buffer + shift, &gapSubMessage.gapStartGSN, sizeof(SequenceNumber_t));
@@ -342,8 +345,8 @@ ReturnCode_t MessageProcessor::EncapsulatePadMessage(SerializedBuffer& messageBu
 {
 	SubMessageHeader_t padSubMessage;
 	padSubMessage.subMessageId = PAD;
-	padSubMessage.flags |= 0x01;
-	padSubMessage.subMessageLength = 0;
+	padSubMessage.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+	padSubMessage.subMessageLength = SUB_MESSAGE_LEN_PAD;
 
 	memcpy(messageBuf.buffer + shift, &padSubMessage, sizeof(padSubMessage));
 	shift += sizeof(padSubMessage);
@@ -354,7 +357,7 @@ ReturnCode_t MessageProcessor::EncapsulateINFOTSMessage(SerializedBuffer& messag
 											   uint32_t & shift,
 											   InfoTimestamp_t infoTS)
 {
-	uint16_t size = 8;
+	uint16_t size = SUB_MESSAGE_LEN_INFO_TS;
 
 	infoTS.header.subMessageId = INFO_TS;
 	infoTS.header.subMessageLength = size;
@@ -372,7 +375,7 @@ ReturnCode_t MessageProcessor::EncapsulateINFOTSMessageNow(SerializedBuffer& mes
 	Time_t timeNow;
 	Time_t::now(timeNow);
 
-	bool invalidateFlag = (infoTS.header.flags & BIT(1)) != 0;
+	bool invalidateFlag = (infoTS.header.flags & SubMessageFlag::INVALIDATE_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (invalidateFlag) {
 		infoTS.timestamp = timeNow;
@@ -385,7 +388,7 @@ ReturnCode_t MessageProcessor::EncapsulateINFODSTMessage(SerializedBuffer& messa
 												uint32_t& shift,
 												InfoDestinationSubMessage_t& infoDST)
 {
-	uint16_t size = 12;
+	uint16_t size = SUB_MESSAGE_LEN_INFO_DST;
 	infoDST.header.subMessageLength = size;
 	infoDST.header.subMessageId = INFO_DST;
 	
@@ -413,7 +416,7 @@ ReturnCode_t MessageProcessor::EncapsulateINFOREPLYMessage(SerializedBuffer& mes
 		shift += sizeof(Locator_t);
 	}
 	
-	bool multicastFlag = (infoReplySubMessage.header.flags & BIT(1)) != 0;
+	bool multicastFlag = (infoReplySubMessage.header.flags & SubMessageFlag::MULTICAST_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (multicastFlag) {
 		iSize = infoReplySubMessage.multicastLocatorList.size();
@@ -465,7 +468,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 {
 	if (message[0] != 'R' || message[1] != 'T' ||
 		message[2] != 'P' || message[3] != 'S') {
-		std::cout << "Msg received with no RTPS in header, ignoring..." << std::endl;
+		AGILOG(AGILOG_ERROR, "Msg received with no RTPS in header, ignoring...");
 		return RETCODE_ERROR;
 	}
 
@@ -488,10 +491,15 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 {
 	ReturnCode_t ret = RETCODE_OK;
 
+	if (messageLen < sizeof(MessageHeader_t)) {
+		return ret;
+	}
+
 	Receive_t messageReceiver;
 
-	ret = InterpretMessageHeader(message, messageReceiver);
+ 	ret = InterpretMessageHeader(message, messageReceiver);
 	if (ret != RETCODE_OK) {
+		AGILOG(AGILOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
 	messageLen -= sizeof(MessageHeader_t);
@@ -503,7 +511,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 		memcpy(&subMessageHeader, message, sizeof(SubMessageHeader_t));
 
 		/* 判断报文字节序 与本地字节序不一致需要进行转换 */
-		if (TypeSupport::IsLittleEndian() != (subMessageHeader.flags & 0x01)){
+		if (DEFAULT_ENDIAN != (subMessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG)){
 			subMessageHeader.subMessageLength = ntohs(subMessageHeader.subMessageLength);
 		}
 			
@@ -566,15 +574,15 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 {
 	uint32_t messageShift = 0;
 	uint32_t serializedPayloadLen = 0;
-	//解析 flags 每一位
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool inlineQosFlag = (submessageHeader.flags & BIT(1)) != 0;
-	bool dataFlag = (submessageHeader.flags & BIT(2)) != 0;
-	bool keyFlag = (submessageHeader.flags & BIT(3)) != 0;
-	bool nonStandardPayloadFlag = (submessageHeader.flags & BIT(4)) != 0;
+	/* 解析 flags 每一位 */
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool inlineQosFlag = (submessageHeader.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool dataFlag = (submessageHeader.flags & SubMessageFlag::DATA_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool keyFlag = (submessageHeader.flags & SubMessageFlag::KEY_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (keyFlag && dataFlag) {
-		std::cout << "Message received with Data and Key Flag set, ignoring"<<std::endl;
+		AGILOG(AGILOG_ERROR, "Message received with Data and Key Flag set, ignoring");
 		return RETCODE_ERROR;
 	}
 
@@ -596,15 +604,15 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	messageShift += sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
-	if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+	if (IS_LITTLE_ENDIAN != endiannessFlag) {
 		dataSubMessage.header.subMessageLength = ntohs(dataSubMessage.header.subMessageLength);
 		dataSubMessage.octetsToInlineQos = ntohs(dataSubMessage.octetsToInlineQos);
 		dataSubMessage.writerSN.high = ntohl(dataSubMessage.writerSN.high);
 		dataSubMessage.writerSN.low = ntohl(dataSubMessage.writerSN.low);
 	}
 	//TODO 
-	if (dataSubMessage.writerSN <= SequenceNumber_t()) {
-		std::cout<<"Invalid message received, bad sequence Number"<<std::endl;
+	if (dataSubMessage.writerSN <= SEQUENCENUMBER_ZERO) {
+		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
@@ -648,10 +656,10 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatMessage(char * message,
 	SubMessageHeader_t& submessageHeader,
 	Receive_t& messageReceiver)
 {
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool finalFlag = (submessageHeader.flags & BIT(1)) != 0;
-	bool livelinessFlag = (submessageHeader.flags & BIT(2)) != 0;
-	bool groupInfoFlag = (submessageHeader.flags & BIT(3)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool livelinessFlag = (submessageHeader.flags & SubMessageFlag::LIVELINESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool groupInfoFlag = (submessageHeader.flags & SubMessageFlag::HB_GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	HeartBeatSubMessage_t heartBeatSubMessage;
 	heartBeatSubMessage.header = submessageHeader;
@@ -667,7 +675,7 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatMessage(char * message,
 	writerGUID.entityId = heartBeatSubMessage.writerId;
 
 	/* 大小端转换-收到的大小端信息和本地不同进行转换 */
-	if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+	if (IS_LITTLE_ENDIAN != endiannessFlag) {
 		heartBeatSubMessage.header.subMessageLength = htons(heartBeatSubMessage.header.subMessageLength);
 		heartBeatSubMessage.count = htonl(heartBeatSubMessage.count);
 		heartBeatSubMessage.firstSN.high = htonl(heartBeatSubMessage.firstSN.high);
@@ -684,10 +692,26 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatMessage(char * message,
 		}
 	}
 
-	std::shared_ptr<Reader> reader = participant_->GetReader(heartBeatSubMessage.readerId);
-	if (reader) {
-		reader->ReceiveHeartbeatMessage(messageReceiver, heartBeatSubMessage);
+	/* wangyi  Cyclone DDS 适配 */
+	std::list<EntityId_t> readerList;
+	if (ENTITYID_UNKNOWN == heartBeatSubMessage.readerId) {
+		//TODO 添加处理
+		GUID_t guid(messageReceiver.sourceGuidPrefix, heartBeatSubMessage.writerId);
+		participant_->GetMacthList(guid, readerList);
 	}
+	else {
+		readerList.push_back(heartBeatSubMessage.readerId);
+	}
+	for (auto entittyId : readerList) {
+		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
+		if (reader) {
+			reader->ReceiveHeartbeatMessage(messageReceiver, heartBeatSubMessage);
+		}
+	}
+	//std::shared_ptr<Reader> reader = participant_->GetReader(heartBeatSubMessage.readerId);
+	//if (reader) {
+	//	reader->ReceiveHeartbeatMessage(messageReceiver, heartBeatSubMessage);
+	//}
 		
 	return RETCODE_OK;
 }
@@ -707,25 +731,42 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatFragMessage(char* message,
 	writerGUID.entityId = heartBeatFragSubMessage.writerId;
 
 	/* JDXCZ 大小端转换-收到的大小端信息和本地不同进行转换 */
-	if (TypeSupport::IsLittleEndian() != (heartBeatFragSubMessage.header.flags & 0x01)) {
+	if (DEFAULT_ENDIAN != (heartBeatFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 		heartBeatFragSubMessage.header.subMessageLength = htons(heartBeatFragSubMessage.header.subMessageLength);
 		heartBeatFragSubMessage.count = htonl(heartBeatFragSubMessage.count);
 		heartBeatFragSubMessage.writerSN.high = htonl(heartBeatFragSubMessage.writerSN.high);
 		heartBeatFragSubMessage.writerSN.low = htonl(heartBeatFragSubMessage.writerSN.low);
 	}
 
-	std::shared_ptr<Reader> reader = participant_->GetReader(heartBeatFragSubMessage.readerId);
-	if (reader) {
-		reader->ReceiveHeartFragMessage(messageReceiver, heartBeatFragSubMessage);
+
+	/* wangyi  Cyclone DDS 适配 */
+	std::list<EntityId_t> readerList;
+	if (ENTITYID_UNKNOWN == heartBeatFragSubMessage.readerId) {
+		//TODO 添加处理
+		GUID_t guid(messageReceiver.sourceGuidPrefix, heartBeatFragSubMessage.writerId);
+		participant_->GetMacthList(guid, readerList);
 	}
+	else {
+		readerList.push_back(heartBeatFragSubMessage.readerId);
+	}
+	for (auto entittyId : readerList) {
+		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
+		if (reader) {
+			reader->ReceiveHeartFragMessage(messageReceiver, heartBeatFragSubMessage);
+		}
+	}
+	//std::shared_ptr<Reader> reader = participant_->GetReader(heartBeatFragSubMessage.readerId);
+	//if (reader) {
+	//	reader->ReceiveHeartFragMessage(messageReceiver, heartBeatFragSubMessage);
+	//}
 
 	return RETCODE_OK;
 }
 
 ReturnCode_t MessageProcessor::InterpretAckNackMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool finalFlag = (submessageHeader.flags & BIT(1)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
 	AcknackSubMessage_t ackMessage{};
 	uint32_t messageShift = 0;
 	memcpy(&ackMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
@@ -737,25 +778,25 @@ ReturnCode_t MessageProcessor::InterpretAckNackMessage(char* message, SubMessage
 
 	memcpy(&ackMessage.readerSNState.bitmapBase, message + messageShift, sizeof(SequenceNumber_t));
 	messageShift += sizeof(SequenceNumber_t);
-	memcpy(&ackMessage.readerSNState.numBit, message + messageShift, sizeof(uint32_t));
+	memcpy(&ackMessage.readerSNState.bitmap.size, message + messageShift, sizeof(uint32_t));
 	messageShift += sizeof(uint32_t);
 
-	if (TypeSupport::IsLittleEndian() != (ackMessage.header.flags & 0x01)) {
+	if (DEFAULT_ENDIAN != (ackMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 		ackMessage.header.subMessageLength = ntohs(ackMessage.header.subMessageLength);
 		ackMessage.count = ntohs(ackMessage.count);
 		ackMessage.readerSNState.bitmapBase.high = ntohl(ackMessage.readerSNState.bitmapBase.high);
 		ackMessage.readerSNState.bitmapBase.low = ntohl(ackMessage.readerSNState.bitmapBase.low);
-		ackMessage.readerSNState.numBit = ntohl(ackMessage.readerSNState.numBit);
+		ackMessage.readerSNState.bitmap.size = ntohl(ackMessage.readerSNState.bitmap.size);
 	}
 
-	if (0 != ackMessage.readerSNState.numBit) {
-		uint32_t uilen = (((ackMessage.readerSNState.numBit - 1) >> 5) + 1) * 4;
-		memcpy(ackMessage.readerSNState.bitmap, message + messageShift, uilen);
+	if (0 != ackMessage.readerSNState.bitmap.size) {
+		uint32_t uilen = ackMessage.readerSNState.bitmap.GetByteSize();
+		memcpy(ackMessage.readerSNState.bitmap.bits, message + messageShift, uilen);
 		messageShift += uilen;
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != (ackMessage.header.flags & 0x01)) {
+		if (DEFAULT_ENDIAN != (ackMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 			for (int32_t i = 0; i < uilen; i++) {
-				ackMessage.readerSNState.bitmap[i] = ntohl(ackMessage.readerSNState.bitmap[i]);
+				ackMessage.readerSNState.bitmap.bits[i] = ntohl(ackMessage.readerSNState.bitmap.bits[i]);
 			}
 		}
 	}
@@ -784,10 +825,10 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 {
 	uint32_t messageShift = 0;
 	uint32_t serializedPayloadLen = 0;
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool inlineQosFlag = (submessageHeader.flags & BIT(1)) != 0;
-	bool nonStandardPayloadFlag = (submessageHeader.flags & BIT(2)) != 0;
-	bool keyFlag = (submessageHeader.flags & BIT(3)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool inlineQosFlag = (submessageHeader.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool keyFlag = (submessageHeader.flags & SubMessageFlag::FRAG_KEY_FLAG) != SubMessageFlag::NONE_FLAG;
 	
 
 	DataFragSubMessage_t dataFragSubMessage;
@@ -808,7 +849,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	messageShift += sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
-	if (TypeSupport::IsLittleEndian() != (dataFragSubMessage.header.flags & 0x01)) {
+	if (DEFAULT_ENDIAN != (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 		dataFragSubMessage.header.subMessageLength = ntohs(dataFragSubMessage.header.subMessageLength);
 		dataFragSubMessage.octetsToInlineQos = ntohs(dataFragSubMessage.octetsToInlineQos);
 		dataFragSubMessage.writerSN.high = ntohl(dataFragSubMessage.writerSN.high);
@@ -816,14 +857,14 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	}
 
 	if (dataFragSubMessage.writerSN <= SequenceNumber_t()) {
-		std::cout << "Invalid message received, bad sequence Number" << std::endl;
+		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
 	memcpy(&dataFragSubMessage.dataFrag, message + messageShift, sizeof(DataFrag_t));
 	messageShift += sizeof(DataFrag_t);
 	/* 大小端转换 */
-	if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+	if (IS_LITTLE_ENDIAN != endiannessFlag) {
 		dataFragSubMessage.dataFrag.fragmentStartingNum		= htonl(dataFragSubMessage.dataFrag.fragmentStartingNum);
 		dataFragSubMessage.dataFrag.sampleSize				= htonl(dataFragSubMessage.dataFrag.sampleSize);
 		dataFragSubMessage.dataFrag.fragmentsInSubmessage	= htons(dataFragSubMessage.dataFrag.fragmentsInSubmessage);
@@ -868,7 +909,7 @@ ReturnCode_t MessageProcessor::InterpretINFOTSMessage(char* message, SubMessageH
 	memcpy(&infoTs, message, sizeof(InfoTimestamp_t));
 	message += sizeof(InfoTimestamp_t);
 
-	bool invalidateFlag = (infoTs.header.flags & BIT(1)) != 0;
+	bool invalidateFlag = (infoTs.header.flags & SubMessageFlag::INVALIDATE_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (invalidateFlag) {
 		messageReceiver.timestamp = infoTs.timestamp;
@@ -917,7 +958,7 @@ ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 
 	do {
 		/* 判断报文字节序 与本地字节序不一致需要进行转换 */
-		if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			parameter.parameterId = ntohs(parameter.parameterId);
 			parameter.length = ntohs(parameter.length);
 		}
@@ -938,8 +979,8 @@ ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 ReturnCode_t MessageProcessor::InterpretNackFragMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
 	NackFragSubMessage_t nackFragMessage{};
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool finalFlag = (submessageHeader.flags & BIT(1)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
 	uint32_t messageShift = 0;
 	memcpy(&nackFragMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
 	messageShift += sizeof(SubMessageHeader_t);
@@ -952,27 +993,27 @@ ReturnCode_t MessageProcessor::InterpretNackFragMessage(char* message, SubMessag
 
 	memcpy(&nackFragMessage.fragmentNumberState.bitmapBase, message + messageShift, sizeof(FragmentNumber_t));
 	messageShift += sizeof(FragmentNumber_t);
-	memcpy(&nackFragMessage.fragmentNumberState.numBit, message + messageShift, sizeof(uint32_t));
+	memcpy(&nackFragMessage.fragmentNumberState.bitmap.size, message + messageShift, sizeof(uint32_t));
 	messageShift += sizeof(uint32_t);
 
 	/* 大小端转换 */
-	if (TypeSupport::IsLittleEndian() != (submessageHeader.flags & 0x01)) {
+	if (DEFAULT_ENDIAN != (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 		nackFragMessage.header.subMessageLength = htons(submessageHeader.subMessageLength);
 		nackFragMessage.count = htonl(nackFragMessage.count);
 		nackFragMessage.writerSN.high = htonl(nackFragMessage.writerSN.high);
 		nackFragMessage.writerSN.low = htonl(nackFragMessage.writerSN.low);
 		nackFragMessage.fragmentNumberState.bitmapBase = htonl(nackFragMessage.fragmentNumberState.bitmapBase);
-		nackFragMessage.fragmentNumberState.numBit = htonl(nackFragMessage.fragmentNumberState.numBit);
+		nackFragMessage.fragmentNumberState.bitmap.size = htonl(nackFragMessage.fragmentNumberState.bitmap.size);
 	}
 
-	if (0 != nackFragMessage.fragmentNumberState.numBit) {
-		uint32_t uilen = (((nackFragMessage.fragmentNumberState.numBit - 1) >> 5) + 1) * 4;
-		memcpy(nackFragMessage.fragmentNumberState.bitmap, message + messageShift, uilen);
+	if (0 != nackFragMessage.fragmentNumberState.bitmap.size) {
+		uint32_t uilen = nackFragMessage.fragmentNumberState.bitmap.GetByteSize();
+		memcpy(nackFragMessage.fragmentNumberState.bitmap.bits, message + messageShift, uilen);
 		messageShift += uilen;
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != (nackFragMessage.header.flags & 0x01)) {
+		if (DEFAULT_ENDIAN != (nackFragMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 			for (int32_t i = 0; i < uilen; i++) {
-				nackFragMessage.fragmentNumberState.bitmap[i] = ntohl(nackFragMessage.fragmentNumberState.bitmap[i]);
+				nackFragMessage.fragmentNumberState.bitmap.bits[i] = ntohl(nackFragMessage.fragmentNumberState.bitmap.bits[i]);
 			}
 		}
 	}
@@ -1004,14 +1045,14 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 	infoReplyMessage.header = submessageHeader;
 	messageLen += sizeof(SubMessageHeader_t);
 
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool multicastFlag = (submessageHeader.flags & BIT(1)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool multicastFlag = (submessageHeader.flags & SubMessageFlag::MULTICAST_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	uint32_t iSize = 0;
 	memcpy(&iSize, message + messageLen, sizeof(uint32_t));
 	messageLen += sizeof(uint32_t);
 	/* 大小端转换 */
-	if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+	if (IS_LITTLE_ENDIAN != endiannessFlag) {
 		iSize = htonl(iSize);
 	}
 	infoReplyMessage.unicastLocatorList.resize(iSize);
@@ -1019,7 +1060,7 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 		memcpy(&infoReplyMessage.unicastLocatorList[i], message + messageLen, sizeof(Locator_t));
 		messageLen += sizeof(Locator_t);
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			infoReplyMessage.unicastLocatorList[i].kind = htonl(infoReplyMessage.unicastLocatorList[i].kind);
 			infoReplyMessage.unicastLocatorList[i].port = htonl(infoReplyMessage.unicastLocatorList[i].port);
 		}
@@ -1029,7 +1070,7 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 		memcpy(&iSize, message + messageLen, sizeof(uint32_t));
 		messageLen += sizeof(uint32_t);
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			iSize = htonl(iSize);
 		}
 		infoReplyMessage.multicastLocatorList.resize(iSize);
@@ -1037,7 +1078,7 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 			memcpy(&infoReplyMessage.multicastLocatorList[i], message + messageLen, sizeof(Locator_t));
 			messageLen += sizeof(Locator_t);
 			/* 大小端转换 */
-			if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+			if (IS_LITTLE_ENDIAN != endiannessFlag) {
 				infoReplyMessage.unicastLocatorList[i].kind = htonl(infoReplyMessage.unicastLocatorList[i].kind);
 				infoReplyMessage.unicastLocatorList[i].port = htonl(infoReplyMessage.unicastLocatorList[i].port);
 			}
@@ -1050,9 +1091,9 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 {
 	GapSubMessage_t gapSubMessage;
 
-	bool endiannessFlag = (submessageHeader.flags & BIT(0)) != 0;
-	bool groupInfoFlag = (submessageHeader.flags & BIT(1)) != 0;
-	bool filteredCountFlag = (submessageHeader.flags & BIT(2)) != 0;
+	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool groupInfoFlag = (submessageHeader.flags & SubMessageFlag::GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
+	bool filteredCountFlag = (submessageHeader.flags & SubMessageFlag::FILTERED_COUNT_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	uint32_t messageShift = 0;
 	memcpy(&gapSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
@@ -1065,11 +1106,11 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 	messageShift += sizeof(SequenceNumber_t);
 	memcpy(&gapSubMessage.gapList.bitmapBase, message + messageShift, sizeof(SequenceNumber_t));
 	messageShift += sizeof(SequenceNumber_t);
-	memcpy(&gapSubMessage.gapList.numBit, message + messageShift, sizeof(uint32_t));
+	memcpy(&gapSubMessage.gapList.bitmap.size, message + messageShift, sizeof(uint32_t));
 	messageShift += sizeof(uint32_t);
 
 	/* 大小端转换 */
-	if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+	if (IS_LITTLE_ENDIAN != endiannessFlag) {
 		gapSubMessage.header.subMessageLength = ntohs(gapSubMessage.header.subMessageLength);
 
 		gapSubMessage.gapStart.low = ntohl(gapSubMessage.gapStart.low);
@@ -1077,14 +1118,14 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 		gapSubMessage.gapList.bitmapBase.low = ntohl(gapSubMessage.gapList.bitmapBase.low);
 		gapSubMessage.gapList.bitmapBase.high = ntohl(gapSubMessage.gapList.bitmapBase.high);
 	}
-	if (0 != gapSubMessage.gapList.numBit) {
-		uint32_t uilen = (((gapSubMessage.gapList.numBit - 1) >> 5) + 1) * 4;
-		memcpy(gapSubMessage.gapList.bitmap, message + messageShift, uilen);
+	if (0 != gapSubMessage.gapList.bitmap.size) {
+		uint32_t uilen = gapSubMessage.gapList.bitmap.GetByteSize();
+		memcpy(gapSubMessage.gapList.bitmap.bits, message + messageShift, uilen);
 		messageShift += uilen;
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != (gapSubMessage.header.flags & 0x01)) {
+		if (DEFAULT_ENDIAN != (gapSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
 			for (int32_t i = 0; i < uilen; i++) {
-				gapSubMessage.gapList.bitmap[i] = ntohl(gapSubMessage.gapList.bitmap[i]);
+				gapSubMessage.gapList.bitmap.bits[i] = ntohl(gapSubMessage.gapList.bitmap.bits[i]);
 			}
 		}
 	}
@@ -1095,7 +1136,7 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 		memcpy(&gapSubMessage.gapEndGSN, message + messageShift, sizeof(SequenceNumber_t));
 		messageShift += sizeof(SequenceNumber_t);
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			gapSubMessage.gapStartGSN.low = ntohl(gapSubMessage.gapStartGSN.low);
 			gapSubMessage.gapStartGSN.high = ntohl(gapSubMessage.gapStartGSN.high);
 			gapSubMessage.gapEndGSN.low = ntohl(gapSubMessage.gapEndGSN.low);
@@ -1108,7 +1149,7 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 		messageShift += sizeof(ChangeCount_t);
 
 		/* 大小端转换 */
-		if (TypeSupport::IsLittleEndian() != endiannessFlag) {
+		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			gapSubMessage.filteredCount.low = ntohl(gapSubMessage.filteredCount.low);
 			gapSubMessage.filteredCount.high = ntohl(gapSubMessage.filteredCount.high);
 		}
