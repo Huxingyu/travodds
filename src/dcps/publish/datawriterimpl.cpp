@@ -467,8 +467,12 @@ ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTo
 
 ReturnCode_t DataWriterImpl::get_matched_subscriptions(InstanceHandleSeq& subscription_handles)
 {
-	AGILOG(AGILOG_ERROR, "datawriter donot support interface");
-	return RETCODE_UNSUPPORTED;
+	if(nullptr == writer_ ) {
+		AGILOG(AGILOG_ERROR, "writer_ is nullptr");
+		return RETCODE_NOT_ENABLED;
+	}
+	writer_->GetMatchedSubscriptions(subscription_handles);
+	return RETCODE_OK;
 }
 
 ReturnCode_t DataWriterImpl::enable()

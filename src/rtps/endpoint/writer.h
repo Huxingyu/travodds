@@ -60,6 +60,7 @@ public:
 
 	void RemoveCacheByHandle(const InstanceHandle_t& handle);
 
+	void GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const;
 protected:
 
 	bool pushMode_ = true;
@@ -72,7 +73,6 @@ protected:
 	std::shared_ptr<HistoryCache> writerCache_;
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
-
 };
 
 AGIDDS_NAMESPACE_END

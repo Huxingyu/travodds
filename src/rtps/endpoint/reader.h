@@ -242,6 +242,8 @@ public:
 	 */
 	virtual bool MatchedWriterIsMatched(GUID_t writerGuid) = 0;
 
+    void GetMatchedPublications(InstanceHandleSeq& publication_handles) const;
+
 	void OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state);
 
 private:
@@ -299,7 +301,7 @@ protected:
 
 	Duration_t lastTime_;
 	/* wangyi 最新的样本 */
-	std::shared_ptr<CacheChange> lastNewCache;
+	std::shared_ptr<CacheChange> lastNewCache_;
 	std::shared_ptr<Timer> lastNewCacheTimer_;
 	GUID_t lastNewGuid_;
 	friend class DataReaderImpl;

@@ -1,4 +1,5 @@
 #include "rtps/endpoint/writer.h"
+#include "rtps/endpoint/participant.h"
 #include "common/log/logger.h"
 #include <chrono>
 USING_AGIDDS_NAMESPACE;
@@ -163,5 +164,8 @@ void Writer::RemoveCacheByHandle(const InstanceHandle_t& handle)
 	writerCache_->RemoveChangeByInstance(handle);
 }
 
-
+void Writer::GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const
+{
+	participant_->GetMatchedEntitys(guid_.entityId, subHandles);
+}
 

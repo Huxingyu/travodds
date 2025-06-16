@@ -315,11 +315,20 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 	std::list<EntityId_t> readersEntityid;
 	{
 		std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
-		readersEntityid = matchEntitys_[guid];
-		matchEntitys_.erase(guid);
+		readersEntityid = matchLocalEntitys_[guid];
+		matchLocalEntitys_.erase(guid);
+		for(auto& readerEntityid : readersEntityid) {
+			auto itor = matchRemoteEntitys_.find(readerEntityid);
+			if (itor != matchRemoteEntitys_.end()) {
+				itor->second.erase(guid);
+				if (itor->second.empty()) {
+					matchRemoteEntitys_.erase(itor);
+				}
+			}
+		}
 	} 
 	
-	for(auto readerEntityid : readersEntityid) {
+	for(auto& readerEntityid : readersEntityid) {
 		std::unique_lock<std::mutex> lock(mtxReaders_);
 		auto writerItor = readers_.find(readerEntityid);
 		if (writerItor == readers_.end()) {
@@ -371,11 +380,20 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 	std::list<EntityId_t> writersEntityid;
 	{
 		std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
-		writersEntityid = matchEntitys_[guid];
-		matchEntitys_.erase(guid);
+		writersEntityid = matchLocalEntitys_[guid];
+		matchLocalEntitys_.erase(guid);
+		for (auto& writerEntityid : writersEntityid) {
+			auto itor = matchRemoteEntitys_.find(writerEntityid);
+			if (itor != matchRemoteEntitys_.end()) {
+				itor->second.erase(guid);
+				if (itor->second.empty()) {
+					matchRemoteEntitys_.erase(itor);
+				}
+			}
+		}
 	}
 	
-	for (auto writerEntityid : writersEntityid) {
+	for (auto& writerEntityid : writersEntityid) {
 
 		std::unique_lock<std::mutex> lock(mtxWriters_);
 		auto writerItor = writers_.find(writerEntityid);
@@ -620,14 +638,21 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 	writer->MatchedReaderAdd(subData);
 
 	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto writers = matchEntitys_.find(subData.remoteReaderGuid);
-	if (matchEntitys_.end() == writers) {
+	auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
+	if (matchLocalEntitys_.end() == writers) {
 		std::list<EntityId_t> writerList;
 		writerList.push_back(writer->GetGuid().entityId);
-		matchEntitys_[subData.remoteReaderGuid] = writerList;
-	}
-	else {
+		matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
+	} else {
 		writers->second.push_back(writer->GetGuid().entityId);
+	}
+	auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
+	if (readers == matchRemoteEntitys_.end()) {
+		std::set<GUID_t> remoteWriters;
+		remoteWriters.insert(subData.remoteReaderGuid);
+		matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
+	} else {
+		readers->second.insert(subData.remoteReaderGuid);
 	}
 	
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(subData.remoteReaderGuid);
@@ -695,14 +720,21 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 
 
 	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto readers = matchEntitys_.find(pubData.remoteWriterGuid);
-	if (matchEntitys_.end() == readers) {
+	auto readers = matchLocalEntitys_.find(pubData.remoteWriterGuid);
+	if (matchLocalEntitys_.end() == readers) {
 		std::list<EntityId_t> readerList;
 		readerList.push_back(reader->GetGuid().entityId);
-		matchEntitys_[pubData.remoteWriterGuid] = readerList;
-	}
-	else {
+		matchLocalEntitys_[pubData.remoteWriterGuid] = readerList;
+	} else {
 		readers->second.push_back(reader->GetGuid().entityId);
+	}
+	auto writers = matchRemoteEntitys_.find(reader->GetGuid().entityId);
+	if (writers == matchRemoteEntitys_.end()) {
+		std::set<GUID_t> remoteReaders;
+		remoteReaders.insert(pubData.remoteWriterGuid);
+		matchRemoteEntitys_[reader->GetGuid().entityId] = remoteReaders;
+	} else {
+		writers->second.insert(pubData.remoteWriterGuid);
 	}
 
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(pubData.remoteWriterGuid);
@@ -780,6 +812,21 @@ void Participant::StopReceiveThread()
 std::shared_ptr<ThreadPool> Participant::GetThreadPool() const
 {
 	return threadPool_;
+}
+
+void Participant::GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& subHandles) const
+{
+	subHandles.clear();
+	std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
+
+	auto itor = matchRemoteEntitys_.find(entity);
+	if (itor == matchRemoteEntitys_.end()) {
+		return;
+	}
+	subHandles.reserve(itor->second.size());
+	for (auto& guid : itor->second) {
+		subHandles.push_back(Conversion::ToInstanceHandle(guid));
+	}
 }
 
 bool Participant::Match(const PublicationBuiltinTopicData& pubData, const SubscriptionBuiltinTopicData& subData, std::set<QosPolicyId_t>& qosSeq)
@@ -898,8 +945,8 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& endpointList)
 {
 	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto listItor = matchEntitys_.find(writerGuid);
-	if (matchEntitys_.end() != listItor) {
+	auto listItor = matchLocalEntitys_.find(writerGuid);
+	if (matchLocalEntitys_.end() != listItor) {
 		endpointList = listItor->second;
 	}
 	else {

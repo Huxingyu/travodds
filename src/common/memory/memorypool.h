@@ -20,6 +20,7 @@ struct NodeInfo
 {
 	uint32_t dataSize = 0;
 	uint32_t dataIndex = 0;
+	bool onUsing = false;
 	octet data[1];
 	bool operator<(const NodeInfo& other) const
 	{
