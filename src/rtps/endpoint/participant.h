@@ -1,4 +1,4 @@
-//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+ //Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
 //
 //You can use this software according to the terms and conditions of
 //the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
@@ -398,6 +398,8 @@ public:
 	 */
 	std::shared_ptr<ThreadPool> GetThreadPool() const;
 
+	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& subHandles) const;
+
 private:
 	LocatorVec defaultUnicastLocatorList_;
 	LocatorVec defaultMulticastLocatorList_;
@@ -428,7 +430,9 @@ private:
 	std::map<EntityId_t, std::shared_ptr<Endpoint>>  endpoints_;
 
 	/* 远端GUID和本地匹配关系的列表  key: 远端GUID， value：本地的 */
-	std::map<GUID_t, std::list<EntityId_t>> matchEntitys_;
+	std::map<GUID_t, std::list<EntityId_t>> matchLocalEntitys_;
+	/* 本地EntityId_t和远端匹配关系的列表  key: 本地的， value：远端GUID */
+	std::map<EntityId_t, std::set<GUID_t>> matchRemoteEntitys_;
 
 	//TODO 网络传输模块对象
 	std::shared_ptr<MessageTransmitter> messageTransmitter_ = nullptr;
@@ -441,16 +445,16 @@ private:
 	std::shared_ptr<ThreadPool> threadPool_;
 
 	/* 互斥访问writers_  */
-	std::mutex mtxWriters_;
+	mutable std::mutex mtxWriters_;
 
 	/* 互斥访问readers_  */
-	std::mutex mtxReaders_;
+	mutable std::mutex mtxReaders_;
 
 	/* 互斥访问endpoints_ */
-	std::mutex mtxEndpoints_;
+	mutable std::mutex mtxEndpoints_;
 
 	/* 互斥访问matchEntitys_ */
-	std::mutex mtxMatchEntitys_;
+	mutable std::mutex mtxMatchEntitys_;
 };
 
 AGIDDS_NAMESPACE_END

@@ -431,6 +431,9 @@ struct SampleInfo {
 	//TODO 临时添加，数据接收的序列号
 	int32_t reception_sequence_number;
 
+	//TODO jdxcz 20250610 
+	int32_t write_sequence_number;
+
 	SampleInfo()
 		: sample_state(NOT_READ_SAMPLE_STATE),
 		  view_state(NEW_VIEW_STATE),

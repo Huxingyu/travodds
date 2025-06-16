@@ -613,8 +613,12 @@ ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopi
 
 ReturnCode_t DataReaderImpl::get_matched_publications(InstanceHandleSeq &publication_handles) const
 {
-	AGILOG(AGILOG_ERROR, "datareader donot support interface");
-    return RETCODE_UNSUPPORTED;
+    if(!reader_) {
+		AGILOG(AGILOG_ERROR, "datareader releated reader is nullptr");
+        return RETCODE_NOT_ENABLED;
+    }
+    reader_->GetMatchedPublications(publication_handles);
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::enable()
@@ -736,14 +740,17 @@ bool DataReaderImpl::GetEndianess(SerializedBuffer* buffer)
 
 bool DataReaderImpl::MakeKey(const void*  data, InstanceHandle_t& handle, bool forceMd5) const
 {
-	SerializedBuffer *buffer = new SerializedBuffer;
-	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
-	MemoryPool::GetInstance()->getBuffer(buffer->buffer_size, buffer->origin_buffer);
-	buffer->buffer = buffer->origin_buffer;
+	SerializedBuffer buffer;
+	buffer.buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
+	MemoryPool::GetInstance()->getBuffer(buffer.buffer_size, buffer.origin_buffer);
+	buffer.buffer = buffer.origin_buffer;
 
-	AGIDDSCdrSerializer cdr(buffer);
+	AGIDDSCdrSerializer cdr(&buffer);
+	
+	bool ret = typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);
+	MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 
-	return typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);;
+	return ret;
 }
 
 void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache)

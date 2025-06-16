@@ -75,7 +75,7 @@ bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 		AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return false;
 	}
-	return true;
+    return true;
 }
 
 ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len)
@@ -129,7 +129,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 
 	/* wangyi 记录最新信息 */
 	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
-		lastNewCache = cache;
+		lastNewCache_ = cache;
 		lastNewGuid_ = guid;
 	}
 
@@ -184,7 +184,12 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		return RETCODE_ERROR;
 	}
 
-
+	/* 重复接收数据, 不进行提交 */
+	if (proxy->IsSubmitted(dataMsg.writerSN)) {
+		return RETCODE_OK;
+	}
+	
+	/* 数据不存在，并且没有被提交过 */
 	if (!proxy->ExistCache(dataMsg.writerSN)) {
 
 		SerializedBuffer *buffer = new SerializedBuffer();
@@ -193,7 +198,6 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		buffer->buffer = buffer->origin_buffer;
 		/* 4字节为CDR信息 */
 		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
-
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 
 		dataFragCache->sequenceNumber = dataMsg.writerSN;
@@ -206,18 +210,18 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
 			dataFragCache->fragmentSeq.insert(i);
 		}
-		proxy->AddReliableDataCache(dataFragCache, false);
+		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, false);
 
 		/* wangyi 记录最新信息 */
 		if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
-			lastNewCache = dataFragCache;
+			lastNewCache_ = dataFragCache;
 			lastNewGuid_ = guid;
 		}
 	}
 
 	if (1 != dataMsg.dataFrag.fragmentsInSubmessage) {
 		//TODO
-		std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
+		//std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
 		return RETCODE_OK;
 	}
 	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum);
@@ -419,7 +423,6 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
-
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
@@ -573,7 +576,7 @@ void StatefulReader::TimerExpired()
 		return;
 	}
 
-	ReturnCode_t ret = AddChanges(lastNewCache);
+	ReturnCode_t ret = AddChanges(lastNewCache_);
 
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -581,12 +584,12 @@ void StatefulReader::TimerExpired()
 	}
 
 	if (RETCODE_OK != ret && datareader_) {
-		datareader_->OnSampleRejected(lastNewCache->instanceHandle, (SampleRejectedStatusKind)ret);
+		datareader_->OnSampleRejected(lastNewCache_->instanceHandle, (SampleRejectedStatusKind)ret);
 	}
 
 	//TODO 提交数据 
 	if (readerListener_) {
-		readerListener_->on_data_available(lastNewCache);
+		readerListener_->on_data_available(lastNewCache_);
 	}
 	else if (datareader_) {
 		datareader_->OnDataAvaible();

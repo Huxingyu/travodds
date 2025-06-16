@@ -70,6 +70,9 @@ public:
 	/* wangyi 获取远端remoteWriterGuid_ */
 	GUID_t GetRemoteWriterGuid();
 
+	/* 判断数据是否提交 */
+	bool IsSubmitted(const SequenceNumber_t & seq);
+
 private:
 	GUID_t remoteWriterGuid_;
 	GUID_t remoteGroupGuid_;

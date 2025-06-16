@@ -38,7 +38,7 @@ bool MemoryPool::getBuffer(uint32_t size, char*& buffer)
 		}
 	}
 	lock.unlock();
-
+	node->info().onUsing = true;
 	buffer = (char*)node->info().data;
 
 	return true;
@@ -46,17 +46,20 @@ bool MemoryPool::getBuffer(uint32_t size, char*& buffer)
 bool MemoryPool::releaseBuffer(char*& buffer)
 {
 
-	if (!buffer) {
+	if (!buffer || false == BufferNode::info((octet*)buffer).onUsing) {
 		return false;
 	}
 	uint32_t index = BufferNode::info((octet*)buffer).dataIndex;
+	//memset(BufferNode::info((octet*)buffer).data, 0, BufferNode::info((octet*)buffer).dataSize);
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
+		//printf("releaseBuffer : %p\n", buffer);
 		if (index >= allocatedBuffers_.size()) {
 			return false;
 		}
 		BufferNode* node = allocatedBuffers_.at(index);
 		freeBuffers_.insert(node->info());
+		node->info().onUsing = false;
 	}
 	buffer = nullptr;
 	return true;

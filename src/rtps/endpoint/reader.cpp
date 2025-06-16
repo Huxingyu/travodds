@@ -1,4 +1,5 @@
 #include "rtps/endpoint/reader.h"
+#include "rtps/endpoint/participant.h"
 #include "common/log/logger.h"
 #include "common/timeconversion.h"
 #include "dcps/subscribe/datareaderimpl.h"
@@ -6,13 +7,13 @@ USING_AGIDDS_NAMESPACE;
 
 Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 	: qos_(qos),
-	heartbeatResponseDelay_(TIME_INVALID),
-	heartbeatSuppressionDuration_(TIME_INVALID),
-	readerCache_(std::make_shared<HistoryCache>(qos.history, qos.resource_limits, kind)),
-	expectsInlineQos_(false),
-	lastSequenceNumber_(SEQUENCENUMBER_ZERO),
-	readerListener_(nullptr),
-	datareader_(nullptr)
+	  heartbeatResponseDelay_(TIME_INVALID),
+	  heartbeatSuppressionDuration_(TIME_INVALID),
+	  readerCache_(std::make_shared<HistoryCache>(qos.history, qos.resource_limits, kind)),
+	  expectsInlineQos_(false),
+	  lastSequenceNumber_(SEQUENCENUMBER_ZERO),
+	  readerListener_(nullptr),
+	  datareader_(nullptr)
 {
 	if (BEST_EFFORT == qos_.reliability.kind) {
 		reliabilityLevel_ = BEST_EFFORT;
@@ -367,6 +368,11 @@ void Reader::SetRelatedDataReader(DataReaderImpl* reader)
 DataReaderQos Reader::GetQos()
 {
 	return qos_;
+}
+
+void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) const
+{
+	participant_->GetMatchedEntitys(guid_.entityId, publication_handles);
 }
 
 void Reader::OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state)

@@ -152,6 +152,8 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 			if ((*cache)->kind == ALIVE) {
 				sampleInfo.valid_data = true;
 			}
+			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
+
 			dataValues.push_back(*(*cache)->serializedBuffer);
 			sampleInfos.push_back(sampleInfo);
 
