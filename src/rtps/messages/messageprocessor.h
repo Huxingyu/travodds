@@ -30,6 +30,7 @@ class Endpoint;
 class MessageProcessor
 {
 public:
+
 	/**
 	 * @brief 构造函数。
 	 *

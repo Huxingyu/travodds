@@ -4,13 +4,11 @@
 #include "dcps/topic/typesupport.h"
 #include "HelloWorld.h"
 
-USING_AGIDDS_NAMESPACE
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-class HelloWorldTypeSupport : public TypeSupport {
+class DDS_TYPE_API HelloWorldTypeSupport : public AGIDDS::TypeSupport {
 public:
     static HelloWorldTypeSupport* get_instance();
 
@@ -28,15 +26,15 @@ public:
 
     virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
 
-    virtual TypeObject* get_typeobject() override;
+    virtual AGIDDS::TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual AGIDDS::ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;
 
-    virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) { return 0; }
+    virtual int MakeKey(const void* data, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
 

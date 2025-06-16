@@ -163,7 +163,7 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 
 	mtxSendSocket_.lock();
 	/* 发送组播数据且未指定发送地址时，每个网卡都需要发送组播数据 */
-	if (0xE0 == (dest.address[12] & 0xE0) && 0 == *(int32_t*)(src.address + 12)) {
+	if (0xE0 == (dest.address[12] & 0xE0) && 0 == src.GetUIAddressV4()) {
 		for (auto& itor : unicastLocatorList_) {
 			try {
 				UDPv4Locator it(itor);
@@ -284,7 +284,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 		}
 
 
-		asio::socket_base::receive_buffer_size option_receive_buffer_size(681574400);
+		asio::socket_base::receive_buffer_size option_receive_buffer_size(RECEIVE_BUFFER_SIZE);
 		newRecvSocket->set_option(option_receive_buffer_size);
 
 		// 设置接收超时
@@ -301,13 +301,13 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
             return RETCODE_ERROR;
         }
 #endif
-		newRecvSocket->bind(local_endpoint);
+ 		newRecvSocket->bind(local_endpoint);
 
 		receiveSocketMap_.insert(std::pair<uint16_t, std::shared_ptr<asio::ip::udp::socket>>(rAddr.port, newRecvSocket));
 		return RETCODE_OK;
 	}
 	catch (asio::system_error& e) {
-		//AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
+		//AGILOG(AGILOG_ERROR, "Err[%s] [%d]", e.what(), e.code());
 		if (e.code() == asio::error::address_in_use) {
 			return RETCODE_PORT_IN_USE;
 		}
@@ -346,9 +346,6 @@ ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 			//std::cerr << "Error: " << e.what() << std::endl;
 			continue;
 		}
-		//printf("netcard ip : %d.%d.%d.%d add membership : %d.%d.%d.%d sucess !\n",
-		//	itor.address[12], itor.address[13], itor.address[14], itor.address[15],
-		//	rAddr.address[12], rAddr.address[13], rAddr.address[14], rAddr.address[15]);
 	}
 
 	return RETCODE_OK;

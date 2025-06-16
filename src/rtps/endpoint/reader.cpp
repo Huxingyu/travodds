@@ -274,10 +274,9 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 		Duration_t::now(ltime);//获取当前时间
 		Duration_t costTime = ltime - lastTime_;
 		if (costTime < qos_.time_based_filter.minimum_separation) {
-			//printf("time = %d.%09d\n", costTime.sec, costTime.nanosec);
 			return RETCODE_TIME_BASED_FILTER;
 		}
-		printf("time = %d.%09d\n", costTime.sec, costTime.nanosec);
+
 		lastTime_ = ltime;
 		/* 更新定时器时间 */
 		if (lastNewCacheTimer_ != nullptr) {
@@ -320,19 +319,28 @@ ReturnCode_t Reader::ProcessInlineQos(ChangeKind_t& kind, InstanceHandle_t& hand
 	for (auto& parameter : inlineQos) {
 		switch (parameter.parameterId) {
 			case PID_KEY_HASH:
-				memcpy(handle.keyHash.value, parameter.value.data(), 16);
+				memcpy(handle.keyHash.value, parameter.value.data(), MIG_RTPS_KEY_HASH_MAX_LENGTH);
 				break;
 			case PID_STATUS_INFO:
 			{
 				if (parameter.length == 4) {
 					//TODO
-					char temp = parameter.value[3];
-					if (temp &  FLAG_BIT_0) {
-						kind = NOT_ALIVE_DISPOSED;
-					} else if (temp & FLAG_BIT_1) {
-						kind = NOT_ALIVE_UNREGISTERED;
-					} else if (temp & FLAG_BIT_2) {
-						kind = NOT_ALIVE_DISPOSED_UNREGISTERED;
+					octet flag = parameter.value[3];
+					switch (flag & (StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG)) {
+					    case StatusInfoFlag::NONE_FLAG:
+							kind = ALIVE;
+						    break;
+					    case StatusInfoFlag::DISPOSED_FLAG:
+							kind = NOT_ALIVE_DISPOSED;
+						    break;
+						case StatusInfoFlag::UNREGISTERED_FLAG:
+							kind = NOT_ALIVE_UNREGISTERED;
+						    break;
+						case (StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG):
+							kind = NOT_ALIVE_DISPOSED_UNREGISTERED;
+						    break;
+						default:
+						break;
 					}
 				}
 			}

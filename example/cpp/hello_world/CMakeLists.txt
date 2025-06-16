@@ -12,8 +12,8 @@
 
 cmake_minimum_required(VERSION 3.10)
 project(hello_world LANGUAGES CXX)
-if(NOT AGIDDS_FOUND)
-    find_package(AGIDDS 1 REQUIRED)
+if(NOT TRAVODDS_FOUND)
+    find_package(TRAVODDS 1 REQUIRED)
 endif()
 
 #检测 C++11
@@ -39,10 +39,14 @@ file(GLOB HELLO_WORLD_HEADERS_CPP "*.h")
 file(GLOB HELLO_WORLD_SOURCES_CPP "*.cpp")
 
 add_executable(${PROJECT_NAME} ${HELLO_WORLD_SOURCES_CPP} ${HELLO_WORLD_HEADERS_CPP})
-target_include_directories(${PROJECT_NAME} PRIVATE ${AGIDDS_INCLUDE_DIRS})
+# target_compile_definitions(${PROJECT_NAME}
+#     PRIVATE
+#     _DDS_STATIC_LIB
+#     )
+target_include_directories(${PROJECT_NAME} PRIVATE ${TRAVODDS_INCLUDE_DIRS})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE AGIDDS::agidds)
-
+#target_link_libraries(${PROJECT_NAME} PRIVATE TRAVODDS::TRAVODDS_STATIC)
+target_link_libraries(${PROJECT_NAME} PRIVATE TRAVODDS::TRAVODDS)
 install(TARGETS ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )

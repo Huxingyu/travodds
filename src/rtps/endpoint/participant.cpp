@@ -138,8 +138,16 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 
     dw->SetRelatedWriter(writerPtr);
 
-    endpoints_[guid.entityId] = endpointPtr;
-	writers_[guid.entityId] = writerPtr;
+	{
+		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		endpoints_[guid.entityId] = endpointPtr;
+	}
+  
+	{
+		std::unique_lock<std::mutex> lock(mtxWriters_);
+		writers_[guid.entityId] = writerPtr;
+	}
+	
 
 	/* wangyi 添加writer */
 	if (writerPtr->GetGuid().entityId != ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER &&
@@ -172,9 +180,15 @@ std::shared_ptr<Reader> Participant::CreateReader(DataReaderImpl* dr, const Data
 	endpointPtr->SetParticipant(this);
 
     dr->SetRelatedReader(readerPtr);
-
-	endpoints_[guid.entityId] = endpointPtr;
-	readers_[guid.entityId] = readerPtr;
+	{
+		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		endpoints_[guid.entityId] = endpointPtr;
+	}
+	{
+		std::unique_lock<std::mutex> lock(mtxReaders_);
+		readers_[guid.entityId] = readerPtr;
+	}
+	
 
 	/* wangyi 添加reader */
 	if (readerPtr->GetGuid().entityId != ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER &&
@@ -193,6 +207,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 
 	GUID_t guid = Conversion::ToGuid(handle);
 
+	std::unique_lock<std::mutex> lock(mtxWriters_);
 	auto itor = writers_.find(guid.entityId);
 	if (itor != writers_.end()) {
 		/* wangyi 删除writer */
@@ -207,8 +222,11 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		AGILOG(AGILOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
-
-	endpoints_.erase(guid.entityId);
+	{
+		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		endpoints_.erase(guid.entityId);
+	}
+	
 
 	return RETCODE_OK;
 }
@@ -216,6 +234,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 {
 	GUID_t guid = Conversion::ToGuid(handle);
 
+	std::unique_lock<std::mutex> lock(mtxReaders_);
 	auto itor = readers_.find(guid.entityId);
 	if (itor != readers_.end()) {
 		/* wangyi 删除reader */
@@ -230,24 +249,29 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		AGILOG(AGILOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
-
-	endpoints_.erase(guid.entityId);
+	{
+		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		endpoints_.erase(guid.entityId);
+	}
+	
 	return RETCODE_OK;
 }
 
 std::shared_ptr<Writer> Participant::GetWriter(const EntityId_t & EntityID)
 {
+	std::unique_lock<std::mutex> lock(mtxWriters_);
+	
 	if (0 == writers_.count(EntityID)) {
 		AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
 	}
 		
-
 	return writers_[EntityID];
 }
 
 std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 {
+	std::unique_lock<std::mutex> lock(mtxReaders_);
 	if (0 == readers_.count(EntityID)) {
 		AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
@@ -260,15 +284,19 @@ ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
 {
 	remoteWriters_.insert({ data.remoteWriterGuid, data });
 
+	std::unique_lock<std::mutex> lock(mtxReaders_);
 	for (auto& reader : readers_) {
 		addReaderMatch(reader.second, data);
 	}
+
 	return RETCODE_OK;
 }
 
 ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 {
 	remoteReaders_.insert({ data.remoteReaderGuid, data });
+
+	std::unique_lock<std::mutex> lock(mtxWriters_);
 
 	for (auto& writer : writers_) {
 		addWriterMatch(writer.second, data);
@@ -284,10 +312,23 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		return RETCODE_OK;
 	}
 
-	std::list<EntityId_t> readersEntityid = matchEntitys_[guid];
-
+	std::list<EntityId_t> readersEntityid;
+	{
+		std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
+		readersEntityid = matchEntitys_[guid];
+		matchEntitys_.erase(guid);
+	} 
+	
 	for(auto readerEntityid : readersEntityid) {
+		std::unique_lock<std::mutex> lock(mtxReaders_);
+		auto writerItor = readers_.find(readerEntityid);
+		if (writerItor == readers_.end()) {
+			continue;
+		}
 		auto reader = readers_[readerEntityid];
+		if (!reader) {
+			continue;
+		}
 
 		std::shared_ptr<StatefulReader> statefulReader = std::dynamic_pointer_cast<StatefulReader>(reader);
 
@@ -314,8 +355,6 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		}
 	}
 
-	matchEntitys_.erase(guid);
-
 	remoteWriters_.erase(itor);
 
 	return RETCODE_OK;
@@ -329,11 +368,24 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 		return RETCODE_OK;
 	}
 
-	std::list<EntityId_t> writersEntityid = matchEntitys_[guid];
-
+	std::list<EntityId_t> writersEntityid;
+	{
+		std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
+		writersEntityid = matchEntitys_[guid];
+		matchEntitys_.erase(guid);
+	}
+	
 	for (auto writerEntityid : writersEntityid) {
 
-		auto writer = writers_[writerEntityid];
+		std::unique_lock<std::mutex> lock(mtxWriters_);
+		auto writerItor = writers_.find(writerEntityid);
+		if (writerItor == writers_.end()) {
+			continue;
+		}
+		auto writer = writerItor->second;
+		if (!writer) {
+			continue;
+		}
 
 		std::shared_ptr<StatefulWriter> statefulWriter = std::dynamic_pointer_cast<StatefulWriter>(writer);
 		if (statefulWriter) {
@@ -362,16 +414,13 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 	remoteReaders_.erase(itor);
 
-	matchEntitys_.erase(guid);
-
 	return RETCODE_OK;
 }
 
 
 void Participant::GetParticipantAllWriter(const GUID_t& remoteParticipantGuid,std::vector<GUID_t>& guids)
 {
-	for(auto writer : remoteWriters_)
-	{
+	for (auto writer : remoteWriters_) {
 		if (CompareGuidPrefix(remoteParticipantGuid.prefix, writer.first.prefix)) {
 			guids.push_back(writer.first);
 		}
@@ -472,7 +521,7 @@ GUID_t Participant::GenerateGuid(const EntityId_t& EntityID, bool key, EntityTyp
 GUID_t Participant::GenerateGuid(const InstanceHandle_t& handle)
 {
 	GUID_t guid;
-	memcpy(&guid, handle.keyHash.value, 16);
+	memcpy(&guid, handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	return guid;
 }
 
@@ -570,6 +619,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 
 	writer->MatchedReaderAdd(subData);
 
+	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
 	auto writers = matchEntitys_.find(subData.remoteReaderGuid);
 	if (matchEntitys_.end() == writers) {
 		std::list<EntityId_t> writerList;
@@ -644,7 +694,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	}
 
 
-
+	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
 	auto readers = matchEntitys_.find(pubData.remoteWriterGuid);
 	if (matchEntitys_.end() == readers) {
 		std::list<EntityId_t> readerList;
@@ -704,10 +754,10 @@ int32_t Participant::CreateReceiverResources(LocatorVec& locatorList, bool apply
 	ReturnCode_t ret;
 	for (auto& itor : inList) {
 		ret = messageTransmitter_->ReceiveAddrAdd(itor);
-		if (RETCODE_PORT_IN_USE == ret && applyMutation) {
+		if (RETCODE_OK != ret && applyMutation) {
 			/* 限制重新尝试次数 */
 			uint32_t tries = 100u;
-			for (uint32_t i = 0; RETCODE_PORT_IN_USE == ret && i < tries; i++) {
+			for (uint32_t i = 0; RETCODE_OK != ret && i < tries; i++) {
 				itor.port += PARTICIPANTID_GAIN;
 				ret = messageTransmitter_->ReceiveAddrAdd(itor);
 			}
@@ -797,7 +847,7 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 		qosSeq.insert(PARTITION_QOS_POLICY_ID);
 	}
 
-	return qosSeq.size() == 0;
+	return qosSeq.empty();
 }
 
 ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubData, const InstanceHandle_t& handle)
@@ -847,6 +897,7 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 
 void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& endpointList)
 {
+	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
 	auto listItor = matchEntitys_.find(writerGuid);
 	if (matchEntitys_.end() != listItor) {
 		endpointList = listItor->second;

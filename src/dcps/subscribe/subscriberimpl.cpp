@@ -150,6 +150,7 @@ ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
 DataReader *SubscriberImpl::lookup_datareader(const std::string& topic_name) const
 {
     DataReader* reader = nullptr;
+
     std::lock_guard<std::mutex> lock(mtxReaders_);
     for (auto& it : readerHandles_) {
         if (it.second->get_topicdescription()->get_name() == topic_name) {
@@ -197,13 +198,23 @@ const DomainParticipant *SubscriberImpl::get_participant() const
 
 ReturnCode_t SubscriberImpl::delete_contained_entities()
 {
-    std::lock_guard<std::mutex> lock(mtxReaders_);
-    for (auto& it : readerHandles_) {
-        if (RETCODE_OK != it.second->delete_contained_entities()) {
+
+	std::lock_guard<std::mutex> lock(mtxReaders_);
+
+	for (auto itor = readerHandles_.begin(); itor != readerHandles_.end(); itor++) {
+		DataReader* datareader = itor->second.get();
+
+		InstanceHandle_t handle = datareader->get_instance_handle();
+		participant_->GetRelatedParticipant()->DeleteReader(handle);
+		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+		discovery->RemoveSubscriptionData(handle);
+
+		if (RETCODE_OK != datareader->delete_contained_entities()) {
 			AGILOG(AGILOG_ERROR, "delete_contained_entities Err")
-            return RETCODE_PRECONDITION_NOT_MET;
-        }
-    }
+			return RETCODE_PRECONDITION_NOT_MET;
+		}
+	}
+
     readerHandles_.clear();
     return RETCODE_OK;
 }

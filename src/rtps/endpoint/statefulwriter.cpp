@@ -181,9 +181,9 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 		ReSendData(proxy);
 	}
 	/* 需要强制回复一个HB报文 */
-	if (ackMsg.header.flags & 0x02) {
+	if (ackMsg.header.flags & !SubMessageFlag::FINAL_FLAG) {
 		//TODO 
-		WriteHeartbeat(proxy);
+		WriteHeartbeat(proxy, true);
 	}
 
 	return RETCODE_OK;
@@ -216,7 +216,7 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 	ReSendDataFrag(proxy, nackMsg);
 
 	//需要强制回复一个HBFrag报文
-	if (nackMsg.header.flags & 0x02) {
+	if (nackMsg.header.flags & SubMessageFlag::FINAL_FLAG) {
 		//TODO 
 	}
 
@@ -243,20 +243,16 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	if (buffer->next) {
 		/* 分片数据处理 */
 		DataFragSubMessage_t dataFragSubMessage;
-		if (0 != change->serializedBuffer->buffer_size) {
-			//TODO jdxcz 需要确认什么时候标志位设置BIT(3)
-			dataFragSubMessage.header.flags |= BIT(2);
-		}
-
 		if (0 != change->inlineQos.size())
 		{
-			dataFragSubMessage.header.flags |= BIT(1);
+			dataFragSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataFragSubMessage.inlineQos = change->inlineQos;
 		}
 
-		dataFragSubMessage.header.flags |= BIT(0);
+		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-		dataFragSubMessage.octetsToInlineQos = 0;
+		/* wangyi fastdds 适配测试默认16 */
+		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = 0;
 		dataFragSubMessage.extraFlags[1] = 0;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
@@ -293,20 +289,20 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	}
 	else {
 		if (0 != change->serializedBuffer->buffer_size) {
-			//TODO jdxcz 需要确认什么时候标志位设置BIT(3)
-			dataSubMessage.header.flags |= BIT(2);
+			dataSubMessage.header.flags |= SubMessageFlag::DATA_FLAG;
 		}
 
 		if (0 != change->inlineQos.size()) {
-			dataSubMessage.header.flags |= BIT(1);
+			dataSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataSubMessage.inlineQos = change->inlineQos;
 		}
 
-		dataSubMessage.header.flags |= TypeSupport::IsLittleEndian();
+		dataSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-		dataSubMessage.octetsToInlineQos = 0;
-		dataSubMessage.extraFlags[0] = 0;
-		dataSubMessage.extraFlags[1] = 0;
+		/* wangyi fastdds 适配测试默认16 */
+		dataSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
+		dataSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataSubMessage.readerId = ENTITYID_UNKNOWN;
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;
@@ -354,7 +350,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat()
 	HeartBeatSubMessage_t hbMsg;
 
 	for (auto& readerProxy : matchedReaders_) {
-		WriteHeartbeat(readerProxy.second);
+		WriteHeartbeat(readerProxy.second, false);
 	}
 	return RETCODE_OK;
 }
@@ -372,12 +368,11 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(bool liveliness)
 	return RETCODE_OK;
 }
 
-ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerProxy, bool liveliness)
+ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerProxy, bool force, bool liveliness)
 {
 	//TODO 此函数可以发送HeartBeat报文,当时后续需要优化改进
 
 	if (!readerProxy) {
-		PRINTF_ERROR();
 		AGILOG(AGILOG_ERROR, "readerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
@@ -393,7 +388,8 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	SequenceNumber_t maxSeq = writerCache_->GetSeqNumMax();
 	SequenceNumber_t relateSeq = readerProxy->GetRelatedSequenceNumber();
 
-	if (SEQUENCENUMBER_ZERO == maxSeq) {
+	/* 在非强制回复HB的情况下，如果所有数据被确认，没有数据需要被确认不发送心跳  */
+	if (!force && (SEQUENCENUMBER_ZERO >= maxSeq || !readerProxy->UnackedChanges())) {
 		return RETCODE_OK;
 	}
 
@@ -408,7 +404,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	if (!messageTransmitter) {
-		PRINTF_ERROR();
 		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
 		return RETCODE_ERROR;
 	}
@@ -417,15 +412,15 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + 1024;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
 /*	HeartbeatMsgFlag_t flag;
 	flag.groupInfoFlag = 1;
 	flag.groupInfoFlag = 1; */
-	hbMsg.header.flags = TypeSupport::IsLittleEndian() |  0x2  ;
+	hbMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG);
 	/* wangyi liveliness  */
 	if (liveliness) {
-		hbMsg.header.flags |= BIT(2);
+		hbMsg.header.flags |= SubMessageFlag::LIVELINESS_FLAG;
 	}
 	hbMsg.readerId = readerProxy->GetGuid().entityId;
 	hbMsg.writerId = guid_.entityId;
@@ -443,17 +438,17 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		/*  minseq 和 relateSeq 之间的序号与对应的代理无关，发送Gap报文 */
 		GapSubMessage_t gapMsg;
 		gapMsg.header.subMessageId = GAP;
-		gapMsg.header.subMessageLength = 10; //TODO
-		gapMsg.header.flags = TypeSupport::IsLittleEndian();
+		gapMsg.header.subMessageLength = SUB_MESSAGE_LEN_GAP; //TODO
+		gapMsg.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 		gapMsg.writerId = guid_.entityId;
 		gapMsg.readerId = readerProxy->GetGuid().entityId;
 		gapMsg.gapStart = minSeq;
 		gapMsg.gapList.bitmapBase = relateSeq;
-		gapMsg.gapList.numBit = 0;
+		gapMsg.gapList.bitmap.size = 0;
 		int size = 0;
 		
 		size = sizeof(gapMsg.header) +  sizeof(gapMsg.writerId) * 2 +  sizeof(gapMsg.gapStart) + sizeof(gapMsg.gapList.bitmapBase)
-			+ sizeof(gapMsg.gapList.numBit);
+			+ sizeof(gapMsg.gapList.bitmap.size);
 		bufffer.buffer = bufffer.buffer - size;
 		
 		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
@@ -504,7 +499,7 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 
 	SendGap(gapVec, readerProxy);
 
-	WriteHeartbeat(readerProxy);
+	WriteHeartbeat(readerProxy, false);
 
 	return RETCODE_OK;
 }
@@ -533,8 +528,8 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	//TODO 
 	GapSubMessage_t gapMsg;
 	gapMsg.header.subMessageId = GAP;
-	gapMsg.header.subMessageLength = 10; //TODO
-	gapMsg.header.flags = TypeSupport::IsLittleEndian();
+	gapMsg.header.subMessageLength = SUB_MESSAGE_LEN_GAP; //TODO
+	gapMsg.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 	gapMsg.writerId = guid_.entityId;
 	gapMsg.readerId = proxy->GetGuid().entityId;
 	gapMsg.gapStart = seqVec[0];
@@ -551,8 +546,8 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 		if (s >= 255) {
 			break;
 		}
-		gapMsg.gapList.numBit = s + 1;
-		gapMsg.gapList.bitmap[s / 32] |= 0x80000000 >> (s % 32);
+		gapMsg.gapList.bitmap.size = s + 1;
+		gapMsg.gapList.bitmap.SetBit(s); 
 	}
 	LocatorVec srcLocators;
 	Locator_t srcLocator;
@@ -569,7 +564,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	char data[1224] = { 0 };
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + 1024;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
 	MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
 	bufffer.buffer_size = shift;
@@ -590,22 +585,19 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 		DataFragSubMessage_t dataFragSubMessage;
-		if (0 != cache->serializedBuffer->buffer_size) {
-			//TODO jdxcz 需要确认什么时候标志位设置BIT(3)
-			dataFragSubMessage.header.flags |= BIT(2);
-		}
 
 		if (0 != cache->inlineQos.size())
 		{
-			dataFragSubMessage.header.flags |= BIT(1);
+			dataFragSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataFragSubMessage.inlineQos = cache->inlineQos;
 		}
 
-		dataFragSubMessage.header.flags |= BIT(0);
+		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-		dataFragSubMessage.octetsToInlineQos = 0;
-		dataFragSubMessage.extraFlags[0] = 0;
-		dataFragSubMessage.extraFlags[1] = 0;
+		/* wangyi fastdds 适配测试默认16 */
+		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
+		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = cache->sequenceNumber;
@@ -619,11 +611,12 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		srcLocators.push_back(srcLocator);
 		LocatorVec dstLocators = readerProxy->GetUnicastLocatorList();
 		int num = 0;
-		for (int32_t i = 1; i <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.numBit; i++, num) {
+		for (int32_t i = 1; i <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; i++, num) {
 
 			if (i == datafrag.fragmentNumberState.bitmapBase + num) {
 
-				if (datafrag.fragmentNumberState.bitmap[num] & 0x80000000 >> (num % 32)) {
+					if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
+
 					uint32_t shift = 0;
 					dataFragSubMessage.dataFrag.fragmentsInSubmessage = 1;
 					dataFragSubMessage.dataFrag.fragmentSize = DATAMESSAGE_LIMIT;

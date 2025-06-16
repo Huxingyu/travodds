@@ -11,12 +11,12 @@ USING_AGIDDS_NAMESPACE
 LivelinessManager::LivelinessManager(Participant* participant):participant_(participant)
 {
 	GUID_t tmpGuid = participant_->GetGuid();
-	unsigned int id = 0;
-	memcpy(&tmpGuid.entityId, &id, 4);
+	uint32_t id = 0;
+	memcpy(&tmpGuid.entityId, &id, sizeof(EntityId_t));
 	autoHandle_ = Conversion::ToInstanceHandle(tmpGuid);
 	manualHandle_ = autoHandle_;
-	autoHandle_.keyHash.value[15] = AUTOMATIC_LIVELINESS_QOS + 0x01;
-	manualHandle_.keyHash.value[15] = MANUAL_BY_PARTICIPANT_LIVELINESS_QOS + 0x01;
+	autoHandle_.keyHash.value[15] = AUTOMATIC_LIVELINESS_QOS + octet(1);
+	manualHandle_.keyHash.value[15] = MANUAL_BY_PARTICIPANT_LIVELINESS_QOS + octet(1);
 
 	/* 发布者Liveliness管理 */
 	localWriterLivelinessManager_ = std::make_shared<LivelinessAssert>(this, true);
@@ -39,7 +39,7 @@ LivelinessManager::~LivelinessManager()
 void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipantData & data)
 {
 	DiscoveredWriterData writerData;
-	memcpy(writerData.remoteWriterGuid.prefix.value, data.ddsParticipantData.key.value, 16);
+	memcpy(&writerData.remoteWriterGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
@@ -48,7 +48,7 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
-	memcpy(readerData.remoteReaderGuid.prefix.value, data.ddsParticipantData.key.value, 16);
+	memcpy(&readerData.remoteReaderGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
@@ -107,7 +107,7 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 {
 	std::unique_lock<std::mutex> lock(writerMutex_);
 	/* TODO 日志 */
-	AGILOG(AGILOG_ERROR, "RemoveLivelinessWriter begin");
+	//AGILOG(AGILOG_ERROR, "RemoveLivelinessWriter begin");
 
 	if (writerPtr->GetQos().liveliness.kind == AUTOMATIC_LIVELINESS_QOS) {
 
@@ -150,7 +150,7 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 	}
 
 	/* TODO 日志 */
-	AGILOG(AGILOG_ERROR, "RemoveLivelinessWriter Err");
+	//AGILOG(AGILOG_ERROR, "RemoveLivelinessWriter Err");
 	return false;
 }
 
@@ -210,7 +210,7 @@ bool LivelinessManager::UpdateTimer(LivelinessQosPolicyKind kind)
 
 	Duration_t duration = TIME_INFINITE;
 
-	if (writers.size() == 0) {
+	if (writers.empty()) {
 		timer->Stop();
 		return true;
 	}
@@ -286,36 +286,20 @@ bool LivelinessManager::SendLivelinessMessage(const InstanceHandle_t& instance)
 {
 	SerializedBuffer *buffer = new SerializedBuffer;
 	octet data[28] = { 0 };
-	unsigned short size = 0;
+	uint16_t size = 0;
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
 
 	/* 序列化 */
-	if (TypeSupport::IsLittleEndian) {
-		/* 小端 */
-		data[0] = PL_CDR_LE.value[0];
-		data[1] = PL_CDR_LE.value[1];
-	}
-	else {
-		/* 大端 */
-		data[0] = PL_CDR_BE.value[0];
-		data[1] = PL_CDR_BE.value[1];
-	}
-	data[2] = 0;
-	data[3] = 0;
-	size += 4;
-	memcpy(data + size, instance.keyHash.value, 16);
-	size += 16;
-	//memcpy(data + size, &instance.keyHash.length, 4);
-	size += 4;
-	//memcpy(data + size, &instance.isValid, 4);
-	size += 4;
-
+	data[1] = PL_DEFAULT_ENDIAN;
+	size += CDR_ENDIANNESS_LEN;
+	memcpy(data + size, instance.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+	size += sizeof(InstanceHandle_t);
 	buffer->buffer_size = size;
 	
 	int ret = MemoryPool::GetInstance()->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->buffer);
 	buffer->buffer = buffer->buffer + BUFF_SHIFT;
-	memcpy(buffer->buffer, data, 28);
+	memcpy(buffer->buffer, data, sizeof(data));
 	
 	std::shared_ptr<CacheChange> cacheChange = ParticipantMessageDataWriter_->NewChange(ChangeKind_t::ALIVE, buffer, instance, time);
 	if (nullptr == cacheChange) {
@@ -448,7 +432,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 		GUID_t guid;
 		LivelinessQosPolicyKind livelinessKind;
 
-		memcpy(change->instanceHandle.keyHash.value, change->serializedBuffer->buffer + 4, 16);
+		memcpy(change->instanceHandle.keyHash.value, change->serializedBuffer->buffer + 4, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
 		if (change->serializedBuffer->buffer_size > 0)
 		{
@@ -456,7 +440,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 			{
 				guid.prefix.value[i] = change->serializedBuffer->buffer[i + 4];
 			}
-			livelinessKind = (LivelinessQosPolicyKind)(change->serializedBuffer->buffer[19] - 0x01);
+			livelinessKind = (LivelinessQosPolicyKind)(change->serializedBuffer->buffer[19] - octet(1));
 		}
 		else
 		{

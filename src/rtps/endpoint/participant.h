@@ -422,7 +422,7 @@ private:
 	// const DomainParticipantImpl* const domainImpl_ ;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
-
+	
 	std::map<EntityId_t, std::shared_ptr<Reader>> readers_;
 
 	std::map<EntityId_t, std::shared_ptr<Endpoint>>  endpoints_;
@@ -439,6 +439,18 @@ private:
 	std::shared_ptr<LivelinessManager> livelinessManager_;
 
 	std::shared_ptr<ThreadPool> threadPool_;
+
+	/* 互斥访问writers_  */
+	std::mutex mtxWriters_;
+
+	/* 互斥访问readers_  */
+	std::mutex mtxReaders_;
+
+	/* 互斥访问endpoints_ */
+	std::mutex mtxEndpoints_;
+
+	/* 互斥访问matchEntitys_ */
+	std::mutex mtxMatchEntitys_;
 };
 
 AGIDDS_NAMESPACE_END

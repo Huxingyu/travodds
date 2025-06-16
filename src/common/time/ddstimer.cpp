@@ -30,6 +30,9 @@ std::shared_ptr<Timer> TimerManager::CreateTimer(const Time_t& time, TimerCallBa
 std::shared_ptr<Timer> TimerManager::PrivateCreateTimer(const Time_t& time, TimerCallBack callback, const std::string& name, TimerType type)
 {
 	std::chrono::milliseconds period = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::nanoseconds(time.nanosec) + std::chrono::seconds(time.sec));
+	if (time == Time_t(TIME_INFINITE)) {
+		period = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(time.sec));
+	}
 
 	std::shared_ptr<Timer> timer = std::make_shared<Timer>(period, callback, type, name);
 

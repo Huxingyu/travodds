@@ -22,21 +22,9 @@ AGIDDS_NAMESPACE_BEGIN
 
 #define RTPSMESSAGE_DEFAULT_SIZE 10500
 
-/* wangyi 2025/3/17 大小端信息定义 */
-struct Endianness_t {
-	octet value[2];
-};
-#define BIGEND 0x1
-#define LITTLEEND 0x0
+// using std::bitset;
 
-const Endianness_t CDR_BE = { 0x00,0x00 };
-const Endianness_t CDR_LE = { 0x00,0x01 };
-const Endianness_t PL_CDR_BE = { 0x00,0x02 };
-const Endianness_t PL_CDR_LE = { 0x00,0x03 };
-
-using std::bitset;
-
-//const uint32_t DATAMESSAGE_LIMIT = 63 * 1024;
+// const uint32_t DATAMESSAGE_LIMIT = 63 * 1024;
 
 /**
 * @ brief 定义子报文元素 SubmessageElement
@@ -54,24 +42,40 @@ struct Receive_t {
 	uint32_t messageLen;
 };
 
+struct Bitmap_t {
+	uint32_t bits[8];
+	uint32_t size;  // 位数
+	Bitmap_t() : bits{0}, size(0){}
+	// 获取占用的字节数
+	uint32_t GetByteSize() const {
+		return (((size - 1u) >> 5u) + 1u) * 4u;
+	}
+	// 设置某一位为1
+	void SetBit(const uint32_t& s) {
+		bits[s / 32] |= (0x80000000 >> (s % 32));
+	}
+	// 检查某一位是否为1
+	bool IsBitSet(const uint32_t& s) const {
+		return (bits[s / 32] & 0x80000000 >> (s % 32)) != 0;
+	}
+};
 
 struct SequenceNumberSet_t {
 	SequenceNumber_t bitmapBase;
-	//numBit表示从BitmapBase-1起的有效位
-	uint32_t numBit;
-	uint32_t bitmap[8];
+	// bitmap.size表示从BitmapBase-1起的有效位
+	Bitmap_t bitmap;
 
-	SequenceNumberSet_t() : numBit(0), bitmap{ 0 } {}
+	SequenceNumberSet_t() 
+		: bitmapBase(SEQUENCENUMBER_ZERO) {
+	}
 };
 
 struct FragMentNumberSet_t {
 	FragmentNumber_t bitmapBase;
-	uint32_t numBit;
-	uint32_t bitmap[8];
+	Bitmap_t bitmap;
 
-	FragMentNumberSet_t() : bitmapBase(0), numBit(0)
-	{
-		memset(bitmap, 0, 32);
+	FragMentNumberSet_t()
+		: bitmapBase(0) {
 	}
 };
 
@@ -122,12 +126,12 @@ struct SubMessageHeader_t {
 	SubMessageKind_t subMessageId;
 	//Flag 第一位始终为 EndiannessFlag 其他各位根据报文类型而定
 	SubMessageFlag_t flags;
-	unsigned short subMessageLength;
+	uint16_t subMessageLength;
 
 	SubMessageHeader_t()
 	{
 		subMessageId = 0;
-		flags = 0;
+		flags = SubMessageFlag::NONE_FLAG;
 		subMessageLength = 0;
 	}
 };
@@ -153,7 +157,7 @@ struct MsgFlag_t {
 };
 
 struct DataMsgFlag_t : MsgFlag_t {
-	//|X|X|X|N|K|D|Q|E|
+	// |X|X|X|N|K|D|Q|E|
 	SubMessageFlag_t inlineQosFlag;
 	SubMessageFlag_t dataFlag;
 	SubMessageFlag_t keyFlag;
@@ -161,20 +165,20 @@ struct DataMsgFlag_t : MsgFlag_t {
 };
 
 struct DataFragMsgFlag_t : MsgFlag_t {
-	//|X|X|X|X|N|K|Q|E|
+	// |X|X|X|X|N|K|Q|E|
 	SubMessageFlag_t inlineQosFlag;
 	SubMessageFlag_t keyFlag;
 	SubMessageFlag_t nonStandardPayloadFlag;
 };
 
 struct HeartbeatMsgFlag_t : MsgFlag_t {
-	//|X|X|X|X|G|L|F|E| 
+	// |X|X|X|X|G|L|F|E| 
 	SubMessageFlag_t finalFlag;
 	SubMessageFlag_t livelinessFlag;
 	SubMessageFlag_t groupInfoFlag;
 };
 struct GapMsgFlag_t : MsgFlag_t {
-	//||X|X|X|X|X|F|G|E|
+	// ||X|X|X|X|X|F|G|E|
 	SubMessageFlag_t groupInfoFlag;
 	SubMessageFlag_t filteredCountFlag;
 };
@@ -332,6 +336,10 @@ struct NackFragSubMessage_t {
 	SequenceNumber_t writerSN;
 	FragMentNumberSet_t fragmentNumberState;
 	Count_t count;
+
+	NackFragSubMessage_t()
+		: writerSN(SEQUENCENUMBER_ZERO), count(0) {
+	}
 };
 
 /**

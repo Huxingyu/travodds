@@ -92,22 +92,19 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 	SerializedBuffer* buffer = change->serializedBuffer;
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;
-		if (0 != change->serializedBuffer->buffer_size) {
-			//TODO jdxcz 需要确认什么时候标志位设置BIT(3)
-			dataFragSubMessage.header.flags |= BIT(2);
-		}
 
 		if (0 != change->inlineQos.size())
 		{
-			dataFragSubMessage.header.flags |= BIT(1);
+			dataFragSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataFragSubMessage.inlineQos = change->inlineQos;
 		}
 
-		dataFragSubMessage.header.flags |= BIT(0);
+		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-		dataFragSubMessage.octetsToInlineQos = 0;
-		dataFragSubMessage.extraFlags[0] = 0;
-		dataFragSubMessage.extraFlags[1] = 0;
+		/* wangyi fastdds 适配测试默认16 */
+		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
+		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = change->sequenceNumber;
@@ -138,21 +135,21 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 
 		DataSubMessage_t dataSubMessage;
 		if (0 != change->serializedBuffer->buffer_size) {
-			//TODO jdxcz 需要确认什么时候标志位设置BIT(3)
-			dataSubMessage.header.flags |= BIT(2);
+			dataSubMessage.header.flags |= SubMessageFlag::DATA_FLAG;
 		}
 
 		if (0 != change->inlineQos.size())
 		{
-			dataSubMessage.header.flags |= BIT(1);
+			dataSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataSubMessage.inlineQos = change->inlineQos;
 		}
 
-		dataSubMessage.header.flags |= BIT(0);
+		dataSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-		dataSubMessage.octetsToInlineQos = 0;
-		dataSubMessage.extraFlags[0] = 0;
-		dataSubMessage.extraFlags[1] = 0;
+		/* wangyi fastdds 适配测试默认16 */
+		dataSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
+		dataSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataSubMessage.readerId = ENTITYID_UNKNOWN;
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;

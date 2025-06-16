@@ -47,7 +47,7 @@ IntervalCalculator intervalCalculator_;
 LivelinessAssert::LivelinessAssert(LivelinessManager* livelinessManager, bool localWriter)
 :livelinessManager_(livelinessManager), writers_(), mutex_(), checkedWrtier_(nullptr), localWriter_(localWriter)
 {
-    Time_t time = { 999999999,999999999 };
+    Time_t time = TIME_INFINITE;
     timer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "LivelinessAssert");
 }
 

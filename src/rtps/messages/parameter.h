@@ -18,48 +18,6 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
-enum class EncapsulationKind : octet {
-	/* 大端 
-	 0.............. 8............... 16............ 24.............. 32
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
-	| 0x00            0x02           | 0x00	          0x00           |   = {PL_CDR_BE, 0}
-	+-------------- + -------------- + ------------ + --------------- +
-	| 0x00	     	  0x00	  	       0x00	     	  0x01           |   = uint32_t (1)
-	+-------------- + -------------- + ------------ + --------------- +
-	| 'a'	     	  'b'	  	       'c'	     	  'd'            |   = char[4] = {'a', 'b', 'c', 'd'}
-	+-------------- + -------------- + ------------ + --------------- +
-    */
-	PL_CDR_BE = 0x02,
-	/* 小端
-	 0.............. 8............... 16............ 24.............. 32
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
-	| 0x00            0x03           | 0x00	          0x00           |  = {PL_CDR_LE, 0}
-	+-------------- + -------------- + ------------ + --------------- +
-	| 0x01	     	  0x00	  	       0x00	     	  0x00           |  = uint32_t (1)
-	+-------------- + -------------- + ------------ + --------------- +
-	| 'a'	     	  'b'	  	       'c'	     	  'd'            |  = char[4] = {'a', 'b', 'c', 'd'}
-	+-------------- + -------------- + ------------ + --------------- +
-    */
-	PL_CDR_LE = 0x03
-};
-
-/* 系统存储 */
-#if defined(_WIN32) || defined(_MSC_VER) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-constexpr EncapsulationKind DEFAULT_ENDIAN = EncapsulationKind::PL_CDR_LE;
-#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-constexpr EncapsulationKind DEFAULT_ENDIAN = EncapsulationKind::PL_CDR_BE;
-#else
-// 其他平台：运行时检测
-inline EncapsulationKind GetDefaultEndian() {
-	const int32_t num = 1;
-	const uint8_t* byte = reinterpret_cast<const uint8_t*>(&num);
-	return (byte[0] == 1) ? EncapsulationKind::PL_CDR_LE
-		: EncapsulationKind::PL_CDR_BE;
-}
-#define DEFAULT_ENDIAN GetDefaultEndian()
-#endif
-
-
 enum ParameterId : uint16_t {
 	/* rtps v2.5 Table 9.18*/
 	PID_PAD                                 = 0x0000,
@@ -202,7 +160,7 @@ public:
 	 * @param [in] length 参数长度（默认值：0 ）。
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	Parameter(const ParameterId& pid, const T& parameter, const uint16_t& length = 0,const EncapsulationKind& endian = DEFAULT_ENDIAN)
+	Parameter(const ParameterId& pid, const T& parameter, const uint16_t& length = 0,const EndiannessKind& endian = PL_DEFAULT_ENDIAN)
 		: ParameterHeader(pid, length),
 		  parameter_(parameter),
 		  msgEndian_(endian)
@@ -357,11 +315,11 @@ protected:
 	uint32_t WriterLocator(octet* msg, const Locator_t& loc);
 private:
 	T parameter_;
-	EncapsulationKind msgEndian_;
+	EndiannessKind msgEndian_;
 };
 //octet[2]
 template <>
-inline Parameter<VendorId_t>::Parameter(const ParameterId& pid,const VendorId_t& parameter, const uint16_t& length, const EncapsulationKind& endian)
+inline Parameter<VendorId_t>::Parameter(const ParameterId& pid,const VendorId_t& parameter, const uint16_t& length, const EndiannessKind& endian)
 	: ParameterHeader(pid, length), msgEndian_(endian)
 {
 	parameter_[0] = parameter[0];
@@ -376,7 +334,7 @@ inline void Parameter<VendorId_t>::GetParameter(VendorId_t& parameter)
 }
 //octet[4]
 template <>
-inline Parameter<StatusInfo_t>::Parameter(const ParameterId& pid, const StatusInfo_t& parameter, const uint16_t& length, const EncapsulationKind& endian)
+inline Parameter<StatusInfo_t>::Parameter(const ParameterId& pid, const StatusInfo_t& parameter, const uint16_t& length, const EndiannessKind& endian)
 	: ParameterHeader(pid, length), msgEndian_(endian)
 {
 	length_ = sizeof(StatusInfo_t);
@@ -389,7 +347,7 @@ inline void Parameter<StatusInfo_t>::GetParameter(StatusInfo_t& parameter)
 }
 //octet[16]
 template <>
-inline Parameter<KeyHash_t>::Parameter(const ParameterId& pid, const KeyHash_t& parameter, const uint16_t& length, const EncapsulationKind& endian)
+inline Parameter<KeyHash_t>::Parameter(const ParameterId& pid, const KeyHash_t& parameter, const uint16_t& length, const EndiannessKind& endian)
 	: ParameterHeader(pid, length), msgEndian_(endian)
 {
 	length_ = sizeof(KeyHash_t);
@@ -405,7 +363,7 @@ template<typename T>
 inline uint32_t Parameter<T>::WriterInt16(octet* msg, const int16_t& i16) 
 {
 	octet* src = (octet*)&i16;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(msg, src, 2);
 	}
 	else {
@@ -419,7 +377,7 @@ template<typename T>
 inline uint32_t Parameter<T>::WriterUInt16(octet* msg, const uint16_t& ui16) 
 {
 	octet* src = (octet*)&ui16;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(msg, src, 2);
 	} else {
 		msg[0] = src[1];
@@ -432,7 +390,7 @@ template<typename T>
 inline uint32_t Parameter<T>::WriterInt32(octet* msg, const int32_t& i32) 
 {
 	octet* src = (octet*)&i32;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(msg, src, 4);
 	} else {
 		msg[0] = src[3];
@@ -447,7 +405,7 @@ template<typename T>
 inline uint32_t Parameter<T>::WriterUInt32(octet* msg, const uint32_t& ui32) 
 {
 	octet* src = (octet*)&ui32;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(msg, src, 4);
 	} else {
 		msg[0] = src[3];
@@ -461,7 +419,7 @@ inline uint32_t Parameter<T>::WriterUInt32(octet* msg, const uint32_t& ui32)
 template<typename T>
 inline uint32_t Parameter<T>::WriterInt(octet* msg, const octet* src, const octet& len) 
 {
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(msg, src, len);
 	} else {
 		for (int32_t i = 0; i < len; i++) {
@@ -471,14 +429,22 @@ inline uint32_t Parameter<T>::WriterInt(octet* msg, const octet* src, const octe
 	return len;
 }
 
+
 template<typename T>
 inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str) 
 {
+	/* wangyi fastdds适配 */
 	uint32_t size = str.size();
-	WriterUInt32(msg, size);
+	
 	if (size != 0) {
-		memcpy(msg + 4, str.data(), size);
+		size += 1;
+		WriterUInt32(msg, size);
+		memcpy(msg + 4, str.data(), size-1);
 	}
+	else {
+		WriterUInt32(msg, size);
+	}
+
 	return 4u + (size + 3u) & ~3u;
 }
 
@@ -502,6 +468,14 @@ inline void Parameter<bool>::writerMsg(octet* msg)
 	*msg = static_cast<octet>(parameter_);
 }
 //std::string
+template <>
+inline Parameter<std::string>::Parameter(const ParameterId& pid, const std::string& parameter, const uint16_t& length, const EndiannessKind& endian)
+	: ParameterHeader(pid, length), msgEndian_(endian)
+{
+	parameter_ = parameter;
+	length_ = static_cast<uint16_t>(parameter_.size());
+	length_ = (length_ / 4 + 1) * 4 + 4;
+}
 template <>
 inline uint16_t Parameter<std::string>::size() 
 {
@@ -886,7 +860,7 @@ inline uint16_t Parameter<OriginalWriterInfo_t>::size()
 template <>
 inline void Parameter<OriginalWriterInfo_t>::writerMsg(octet* msg)
 {
-	memcpy(msg, &parameter_.originalWriterGUID, 16);
+	memcpy(msg, &parameter_.originalWriterGUID, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	WriterInt32(msg + 16, parameter_.originalWriterSN.high);
 	WriterUInt32(msg + 20, parameter_.originalWriterSN.low);
 	uint32_t num = parameter_.originalWriterQos.size();
@@ -900,7 +874,7 @@ inline void Parameter<OriginalWriterInfo_t>::writerMsg(octet* msg)
 	}
 
 	unsigned char sentinel[2] = { 0x0,0x1 };
-	if (msgEndian_ == EncapsulationKind::PL_CDR_BE) {
+	if (msgEndian_ == EndiannessKind::PL_CDR_BE) {
 		(msg + inOffset)[0] = sentinel[0];
 		(msg + inOffset)[1] = sentinel[1];
 	} else {
@@ -943,7 +917,7 @@ public:
 	 *  
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	ParameterList(const EncapsulationKind& endian = DEFAULT_ENDIAN) : msgEndian_(endian) {};
+	ParameterList(const EndiannessKind& endian = PL_DEFAULT_ENDIAN) : msgEndian_(endian) {};
 	/**
 	 * @brief ParameterList类通用构造函数。
 	 *  msg 包括cdr大小端信息时报文结构。
@@ -973,28 +947,28 @@ public:
 	 * @param [in] data SPDPdiscoveredParticipantData结构对象。
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	ParameterList(const SPDPdiscoveredParticipantData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	ParameterList(const SPDPdiscoveredParticipantData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
 	/**
 	 * @brief DiscoveredWriterData结构对应构造函数。
 	 *
 	 * @param [in] data DiscoveredWriterData结构对象。
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	ParameterList(const DiscoveredWriterData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	ParameterList(const DiscoveredWriterData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
 	/**
 	 * @brief DiscoveredReaderData结构对应构造函数。
 	 *
 	 * @param [in] data DiscoveredReaderData结构对象。
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	ParameterList(const DiscoveredReaderData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	ParameterList(const DiscoveredReaderData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
 	/**
 	 * @brief DiscoveredTopicData结构对应构造函数。
 	 *
 	 * @param [in] data DiscoveredTopicData结构对象。
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
-	ParameterList(const DiscoveredTopicData& data, const EncapsulationKind& endian = DEFAULT_ENDIAN);
+	ParameterList(const DiscoveredTopicData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
 
 	/**
 	 * @brief 将Parameter集合数据转换为SPDPdiscoveredParticipantData结构数据。
@@ -1158,7 +1132,7 @@ protected:
 
 private:
 	std::map<ParameterId,std::unique_ptr<ParameterHeader>> parameterList_;
-	EncapsulationKind msgEndian_;
+	EndiannessKind msgEndian_;
 };
 
 template <>
@@ -1180,7 +1154,7 @@ inline void ParameterList::AddParameter<Parameter_t>(const ParameterId& pid, con
 	std::string data;
 	data.resize(4 + parameter.value.size());
 	octet* src = (octet*)&parameter;
-	if (msgEndian_ == DEFAULT_ENDIAN) {
+	if (msgEndian_ == PL_DEFAULT_ENDIAN) {
 		memcpy(&data[0], src, 4);
 	} else {
 		data[0] = src[1];
