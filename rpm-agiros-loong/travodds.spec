@@ -2,10 +2,10 @@
 Name:           agiros-loong-travodds
 Version:        1.0.0
 Release:        1%{?dist}
-Summary:        AGI Data Distribution Service Library
+Summary:        Travo Data Distribution Service Library
 
-License:        BSD
-URL:            https://github.com/your/travodds
+License:        Mulan PSL v2
+URL:            https://gitee.com/agiros/travodds
 Source0:        %{name}_%{version}.orig.tar.gz
 
 # 构建依赖
@@ -24,10 +24,10 @@ Requires:       pkgconfig
 Requires:       cmake
 
 %description
-Contains shared libraries for AGI DDS implementation.
+Contains shared libraries for TravoDDS implementation.
 
 %description devel
-Provides headers and CMake config files for AGI DDS development.
+Provides headers and CMake config files for TravoDDS development.
 
 
 %define Installprefix /opt/agiros/loong
@@ -40,8 +40,7 @@ mkdir -p build
 cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=%{Installprefix} \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DAPPEND_PROJECT_NAME_TO_INSTALL=ON
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 make %{?_smp_mflags}
 
 %install
