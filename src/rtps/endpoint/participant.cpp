@@ -62,71 +62,85 @@ ReturnCode_t Participant::Init()
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
-	messageTransmitter_ = std::make_shared<MessageTransmitterUDP>(messageProcessor_);
-
-	//网络传输模块对象初始化发送地址、接收地址
-	Locator_t unicastAddress;
-
-	unicastAddress.kind = LOCATOR_KIND_UDPv4;
-	messageTransmitter_->SendAddrAdd(unicastAddress, unicastAddress);
+	
+	messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
+	//messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
 
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
-
-	for (auto ip : localIps) {
-		if (ip.type == IPV4) {
-			memcpy(unicastAddress.address, ip.address, 16);
-			break;
-		}
-	}
-
-	// 1. 初始化随机数引擎
-	std::random_device rd;  // 可能生成真随机数（系统依赖）
-	std::mt19937 gen(rd()); // 用random_device的输出来种子化mt19937
-
-	// 2. 定义分布器（例如：生成0到99的均匀整数）
-	std::uniform_int_distribution<> dis(0,80);
-
-	// 3. 生成随机数
 	int32_t participantid = 0;
 
-	unicastAddress.port = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
-	// messageTransmitter_->ReceiveAddrAdd(unicastAddress);
-	defaultUnicastLocatorList_.push_back(unicastAddress);
-	CreateReceiverResources(defaultUnicastLocatorList_, true);
+	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
+	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
+	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
 
-	unicastAddress.port = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
-	// messageTransmitter_->ReceiveAddrAdd(unicastAddress);
-	metatrafficUnicastLocatorList_.push_back(unicastAddress);
-	CreateReceiverResources(metatrafficUnicastLocatorList_, true);
 
-	messageTransmitter_->SetUnicastLocatorList(defaultUnicastLocatorList_);
+	for (auto& ip : localIps) {
+		Locator_t ipLoc;
+		if (ip.type == IPV4) {
+			ipLoc.kind = LOCATOR_KIND_UDPv4;
+		} else if (ip.type == IPV6){
+			ipLoc.kind = LOCATOR_KIND_UDPv6;
+		} else {
+			continue;
+		}
+		memcpy(ipLoc.address, ip.address, sizeof(Locator_t::address));
+		ipLoc.port = userPort;
+		defaultUnicastLocatorList_.push_back(ipLoc);
+		ipLoc.port = spdpPort;
+		metatrafficUnicastLocatorList_.push_back(ipLoc);
+	}
 
-	Locator_t multicastAaddresses;
-	multicastAaddresses.kind = LOCATOR_KIND_UDPv4;
 
-	multicastAaddresses.address[12] = 239;
-	multicastAaddresses.address[13] = 255;
-	multicastAaddresses.address[14] = 0;
-	multicastAaddresses.address[15] = 1;
+	for (auto& messageTransmitter : messageTransmitters_) {
+		Locator_t unicastAddress;
+		//网络传输模块对象初始化发送地址、接收地址
+		unicastAddress.kind = messageTransmitter->GetTransmitterKind();
+		messageTransmitter->SendAddrAdd(unicastAddress, unicastAddress);
 
-	multicastAaddresses.port = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
-	messageTransmitter_->ReceiveAddrAdd(multicastAaddresses);
-	metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
+		CreateReceiverResources(messageTransmitter, defaultUnicastLocatorList_, true);
+		CreateReceiverResources(messageTransmitter, metatrafficUnicastLocatorList_, true);
+		messageTransmitter->SetUnicastLocatorList(defaultUnicastLocatorList_);
+
+		/* UDPv4、UDPv6 组播设置 */
+		Locator_t multicastAaddresses;
+		multicastAaddresses.port = multicPort;
+		if (LOCATOR_KIND_UDPv4 == messageTransmitter->GetTransmitterKind()) {
+			multicastAaddresses.kind = LOCATOR_KIND_UDPv4;
+			multicastAaddresses.address[12] = 239;
+			multicastAaddresses.address[13] = 255;
+			multicastAaddresses.address[14] = 0;
+			multicastAaddresses.address[15] = 1;
+			messageTransmitter->ReceiveAddrAdd(multicastAaddresses);
+			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
+		} else if(LOCATOR_KIND_UDPv6 == messageTransmitter->GetTransmitterKind()) {
+
+			multicastAaddresses.kind = LOCATOR_KIND_UDPv6;
+			multicastAaddresses.address[0] = 0xff;
+			multicastAaddresses.address[1] = 0x1e;
+			//3-9 : 0
+			multicastAaddresses.address[10] = 0xff;
+			multicastAaddresses.address[11] = 0xff;
+			multicastAaddresses.address[12] = 0xef;
+			multicastAaddresses.address[13] = 0xff;
+			multicastAaddresses.address[15] = 0x01;
+			messageTransmitter->ReceiveAddrAdd(multicastAaddresses);
+			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
+		}
+	}
 
 	//Locator_t localAddress;
 	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
 	return RETCODE_OK;
 }
-std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const EntityId_t & EntityID, bool key)
+std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key)
 {
 	std::shared_ptr<Writer> writerPtr;
 	std::shared_ptr<Endpoint> endpointPtr;
-	GUID_t guid;
 	TopicKind_t kind;
 
 	kind.value = key ? WITH_KEY : NO_KEY;
-	guid = GenerateGuid(EntityID, key, ENTITY_WRITER);
+	//guid = GenerateGuid(EntityID, key, ENTITY_WRITER);
 
 	if (dwQos.reliability.kind == BEST_EFFORT_RELIABILITY_QOS) {
 		writerPtr = std::make_shared<StatelessWriter>(dwQos, guid, kind);
@@ -146,6 +160,7 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	{
 		std::unique_lock<std::mutex> lock(mtxWriters_);
 		writers_[guid.entityId] = writerPtr;
+		AddLocalWriter(writerPtr);
 	}
 	
 
@@ -160,16 +175,15 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	return writerPtr;
 }
 
-std::shared_ptr<Reader> Participant::CreateReader(DataReaderImpl* dr, const DataReaderQos & drQos, const EntityId_t & EntityID, bool key)
+std::shared_ptr<Reader> Participant::CreateReader(DataReaderImpl* dr, const DataReaderQos & drQos, const GUID_t& guid, bool key)
 {
 	std::shared_ptr<Reader> readerPtr;
 	std::shared_ptr<Endpoint> endpointPtr;
-	GUID_t guid;
 	TopicKind_t kind;
 
 	kind.value = key ? WITH_KEY : NO_KEY;
 
-	guid = GenerateGuid(EntityID, key, ENTITY_READER);
+	//guid = GenerateGuid(EntityID, key, ENTITY_READER);
 
 	if (drQos.reliability.kind == BEST_EFFORT_RELIABILITY_QOS) {
 		readerPtr = std::make_shared<StatelessReader>(drQos, guid, kind);
@@ -282,26 +296,24 @@ std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 
 ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
 {
-	remoteWriters_.insert({ data.remoteWriterGuid, data });
 
 	std::unique_lock<std::mutex> lock(mtxReaders_);
 	for (auto& reader : readers_) {
 		addReaderMatch(reader.second, data);
 	}
-
+	remoteWriters_.insert({ data.remoteWriterGuid, data });
 	return RETCODE_OK;
 }
 
 ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 {
-	remoteReaders_.insert({ data.remoteReaderGuid, data });
-
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 
 	for (auto& writer : writers_) {
 		addWriterMatch(writer.second, data);
 	}	
-	
+	remoteReaders_.insert({ data.remoteReaderGuid, data });
+
 	return RETCODE_OK;
 }
 
@@ -343,8 +355,9 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 
 		if(statefulReader) {
 			std::shared_ptr<WriterProxy> writerProxy = statefulReader->MatchedWriterLookup(guid);
-			statefulReader->MatchedWriterRemove(writerProxy);
-
+			if (writerProxy) {
+				statefulReader->MatchedWriterRemove(writerProxy);
+			}
 			//TODO 重新检测确认数据
 		}
 
@@ -354,7 +367,9 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 
 			//TODO 补充
 			std::shared_ptr<WriterProxy> writerProxy = statelessReader->MatchedWriterLookup(guid);
-			statelessReader->MatchedWriterRemove(writerProxy->GetGuid());
+			if (writerProxy) {
+				statelessReader->MatchedWriterRemove(writerProxy->GetGuid());
+			}
 		}
 
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteWriterGuid);
@@ -408,7 +423,9 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 		std::shared_ptr<StatefulWriter> statefulWriter = std::dynamic_pointer_cast<StatefulWriter>(writer);
 		if (statefulWriter) {
 			std::shared_ptr<ReaderProxy> readerProxy = statefulWriter->MatchedReaderLookup(guid);
-			statefulWriter->MatchedReaderRemove(readerProxy);
+			if(readerProxy) {
+				statefulWriter->MatchedReaderRemove(readerProxy);
+			}
 
 			//TODO 重新检测确认数据
 		}
@@ -740,9 +757,16 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(pubData.remoteWriterGuid);
 	reader->GetRelatedDataReader()->OnSubscriptionMatched(handle);
 }
-std::shared_ptr<MessageTransmitter> Participant::GetMessageTransmitter()
+
+std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmitters()
 {
-	return messageTransmitter_;
+	return messageTransmitters_;
+}
+void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length)
+{
+	for(auto& transmitter : messageTransmitters_) {
+		transmitter->MessageSend(destinationList,message,length);
+	}	
 }
 LocatorVec Participant::GetDefaultUnicastLocators()
 {
@@ -779,19 +803,23 @@ ReturnCode_t Participant::GetPublications(InstanceHandleSeq& handles, bool inclu
 	return RETCODE_OK;
 }
 
-int32_t Participant::CreateReceiverResources(LocatorVec& locatorList, bool applyMutation)
+int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter> messageTransmitter, LocatorVec& locatorList, bool applyMutation)
 {
 	LocatorVec inList = std::move(locatorList);
 	locatorList.clear();
 	ReturnCode_t ret;
 	for (auto& itor : inList) {
-		ret = messageTransmitter_->ReceiveAddrAdd(itor);
-		if (RETCODE_OK != ret && applyMutation) {
+		if (itor.kind != messageTransmitter->GetTransmitterKind()) {
+			locatorList.push_back(itor);
+			continue;
+		}
+		ret = messageTransmitter->ReceiveAddrAdd(itor);
+		if (RETCODE_PORT_IN_USE == ret && applyMutation) {
 			/* 限制重新尝试次数 */
 			uint32_t tries = 100u;
-			for (uint32_t i = 0; RETCODE_OK != ret && i < tries; i++) {
+			for (uint32_t i = 0; RETCODE_PORT_IN_USE == ret && i < tries; i++) {
 				itor.port += PARTICIPANTID_GAIN;
-				ret = messageTransmitter_->ReceiveAddrAdd(itor);
+				ret = messageTransmitter->ReceiveAddrAdd(itor);
 			}
 		}
 		if (RETCODE_OK == ret) {
@@ -806,7 +834,9 @@ int32_t Participant::CreateReceiverResources(LocatorVec& locatorList, bool apply
 
 void Participant::StopReceiveThread()
 {
-    messageTransmitter_->SetStop();
+	for (auto& messageTransmitter : messageTransmitters_) {
+		messageTransmitter->SetStop();
+	}
 }
 
 std::shared_ptr<ThreadPool> Participant::GetThreadPool() const
@@ -827,6 +857,21 @@ void Participant::GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq&
 	for (auto& guid : itor->second) {
 		subHandles.push_back(Conversion::ToInstanceHandle(guid));
 	}
+}
+
+bool Participant::RemoeEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const
+{
+	GUID_t remoteGuid = Conversion::ToGuid(remotehandle);
+	std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
+	auto itor = matchRemoteEntitys_.find(entity);
+	if (itor == matchRemoteEntitys_.end()) {
+		return false;
+	}
+	auto guidItor = itor->second.find(remoteGuid);
+	if (guidItor == itor->second.end()) {
+		return false;
+	}
+	return true;
 }
 
 bool Participant::Match(const PublicationBuiltinTopicData& pubData, const SubscriptionBuiltinTopicData& subData, std::set<QosPolicyId_t>& qosSeq)

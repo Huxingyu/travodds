@@ -53,6 +53,9 @@ LivelinessAssert::LivelinessAssert(LivelinessManager* livelinessManager, bool lo
 
 LivelinessAssert::~LivelinessAssert()
 {
+	if (timer_) {
+		timer_->Exit();
+	}
 }
 
 bool LivelinessAssert::AddWriter(LivelinesStatus writer)

@@ -15,7 +15,10 @@
 #include "dcps/listener/datawriterlistener.h"
 
 AGIDDS_NAMESPACE_BEGIN
-
+/**
+ * @brief 类PublisherListener，允许最终用户实现由某些事件触发的回调。
+ * 它继承所有DataWriterListener回调。
+ */
 class PublisherListener : public DataWriterListener {
 
 };

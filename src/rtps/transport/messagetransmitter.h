@@ -36,7 +36,7 @@ public:
 	 * @param [in] messageProcessor MessageProcessor指针。
 	 */
 	MessageTransmitter(std::shared_ptr<MessageProcessor> messageProcessor)
-		: messageProcessor_(messageProcessor), receivePool_(new MemoryPool(64)), runFlag_(true), flagNum_(0), kind_(LOCATOR_PORT_INVALID)
+		: messageProcessor_(messageProcessor), receivePool_(new MemoryPool(64)), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
 	{
 	}
 
@@ -80,7 +80,7 @@ public:
 	 * @brief RTPS报文发送函数。
 	 *
 	 * @param [in] source 源地址。
-	 * @param [in] destination 目的地址。
+	 * @param [in] destinationList 目的地址列表。
 	 * @param [in] message RTPS报文。
 	 * @param [in] length 报文长度。
 	 * @param [in] priority 发送IP的优先级。
@@ -89,6 +89,23 @@ public:
 	 */
 	virtual ReturnCode_t MessageSend(
 		LocatorVec& sourceList,
+		LocatorVec& destinationList,
+		char* message,
+		uint32_t length,
+		uint16_t priority = -1
+	);
+
+	/**
+	 * @brief RTPS报文发送函数。
+	 *
+	 * @param [in] destinationList 目的地址列表。
+	 * @param [in] message RTPS报文。
+	 * @param [in] length 报文长度。
+	 * @param [in] priority 发送IP的优先级。
+	 *
+	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	virtual ReturnCode_t MessageSend(
 		LocatorVec& destinationList,
 		char* message,
 		uint32_t length,
@@ -188,7 +205,7 @@ protected:
 	LocatorVec acceptLocators_;
 
 	/* 传输类型 */
-	uint32_t kind_;
+	LocatorKind kind_;
 
 	/* 默认的IP地址，在加组中需要使用 */
 	LocatorVec unicastLocatorList_;

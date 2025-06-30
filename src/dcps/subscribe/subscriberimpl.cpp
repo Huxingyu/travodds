@@ -175,20 +175,33 @@ ReturnCode_t SubscriberImpl::end_access()
 
 ReturnCode_t SubscriberImpl::get_datareaders(DataReaderSeq& readers, const SampleStateMask& sample_states, const ViewStateMask& view_states, const InstanceStateMask& instance_states) const
 {
-	AGILOG(AGILOG_ERROR, "subscriber not spupport interface");
-    return RETCODE_UNSUPPORTED;
+    for (auto& it : readerHandles_) {
+        SampleCounters counters = it.second->GetSampleCounters(false);
+        SampleStateMask smapleStates = (counters.sampleRead ? READ_SAMPLE_STATE : 0) |
+            (counters.sampleNotRead ? NOT_READ_SAMPLE_STATE : 0);
+        ViewStateMask viewStates = (counters.viewNew ? NEW_VIEW_STATE : 0) |
+            (counters.viewNotNew ? NOT_NEW_VIEW_STATE : 0);
+        InstanceStateMask instanceStates = (counters.instanceAlive ? ALIVE_INSTANCE_STATE : 0) |
+            (counters.instanceDisposed ? NOT_ALIVE_DISPOSED_INSTANCE_STATE : 0) |
+            (counters.instanceNoWriters ? NOT_ALIVE_NO_WRITERS_INSTANCE_STATE : 0);
+        if (sample_states & smapleStates &&
+            view_states & viewStates &&
+            instance_states & instanceStates) {
+            readers.push_back(it.second.get());
+		}
+    }
+    return RETCODE_OK;
 }
 
 ReturnCode_t SubscriberImpl::notify_datareaders() const
 {
-	AGILOG(AGILOG_ERROR, "subscriber not spupport interface");
-    return RETCODE_UNSUPPORTED;
-}
-
-ReturnCode_t SubscriberImpl::get_sample_lost_status(SampleLostStatus& status) const
-{
-	AGILOG(AGILOG_ERROR, "subscriber not spupport interface");
-    return RETCODE_UNSUPPORTED;
+    for (auto& it : readerHandles_) {
+        DataReaderListener* listener = const_cast<DataReaderListener*>(it.second->get_listener());
+        if (nullptr != listener) {
+            listener->on_data_available(it.second.get());
+        }
+    }
+    return RETCODE_OK;
 }
 
 const DomainParticipant *SubscriberImpl::get_participant() const

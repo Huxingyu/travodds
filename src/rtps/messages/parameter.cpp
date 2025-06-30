@@ -19,6 +19,10 @@ ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const En
 	if (!data.ddsParticipantData.user_data.value.empty()) {
 		AddParameter(ParameterId::PID_USER_DATA, data.ddsParticipantData.user_data);
 	}
+	//PID_SYSTEM_INFO : SystemInfoQosPolicy
+	if(!data.ddsParticipantData.sys_info.empty()) {
+		AddParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
+	}
 	//PID_DOMAIN_ID : DomainId_t
 	if (data.domainId != DOMAIN_ID_UNKNOWN) {
 		AddParameter(ParameterId::PID_DOMAIN_ID, data.domainId);
@@ -207,7 +211,7 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
 	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
-	/* wangyi fastdds   ≈‰ ÃÌº”π˝¬À */
+	/* wangyi fastdds ÈÄÇÈÖç Ê∑ªÂä†ËøáÊª§ */
 	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
 		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
 	}
@@ -259,6 +263,8 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 {
 	//PID_USER_DATA : UserDataQosPolicy
 	GetParameter(ParameterId::PID_USER_DATA, data.ddsParticipantData.user_data);
+	//PID_PROPERTY_LIST : PropertySeq
+	GetParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
 	//PID_DOMAIN_ID : DomainId_t
 	GetParameter(ParameterId::PID_DOMAIN_ID, data.domainId);
 	//ID_DOMAIN_TAG : string
@@ -995,9 +1001,11 @@ uint32_t ParameterList::ReaderString(const octet* msg, std::string& str)
 	uint32_t size = 0;
 	ReadUInt32(msg, size);
 	if (size != 0) {
-		size -= 1;
 		str.resize(size);
 		std::copy(msg + 4, msg + 4 + size, str.begin());
+		if(str.back() == '\0') {
+			str.pop_back(); 
+		}
 	}
 	return 4u + (size + 3u) & ~3u;
 }

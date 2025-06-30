@@ -144,7 +144,7 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 	set.bitmapBase = hbMsg.lastSN + 1;
 
 	if (hbCount_.load() >=  hbMsg.count) {
-		AGILOG(AGILOG_ERROR, "hbCount_[%d] > hbMsg.count[%d]", hbCount_.load(), hbMsg.count);
+		//AGILOG(AGILOG_ERROR, "hbCount_[%d] > hbMsg.count[%d]", hbCount_.load(), hbMsg.count);
 		return RETCODE_RECEIVE_DUPLICATE;
 	}
 	hbCount_ = hbMsg.count;
@@ -416,11 +416,6 @@ SeqNumberVec WriterProxy::LostChanges()
 	}
 
 	return seqVec;
-}
-
-GUID_t WriterProxy::GetRemoteWriterGuid()
-{
-	return remoteWriterGuid_;
 }
 
 void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)

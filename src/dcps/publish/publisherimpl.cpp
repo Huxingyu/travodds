@@ -86,47 +86,31 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 		return nullptr;
 	}
 	TypeSupport* typeSupport = participant_->find_type(topic->get_type_name());
+	if (nullptr == typeSupport) {
+		AGILOG(AGILOG_ERROR, "typeSupport[%s] is nullptr", topic->get_type_name());
+		return nullptr;
+	}
 	DataWriter* datawriter = nullptr;
 	std::unique_ptr<DataWriterImpl> datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
 	if (!datawriterPtr.get()) {
 		AGILOG(AGILOG_ERROR, "create datawriter Err");
 		return nullptr;
 	}
+	GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_WRITER);
+	datawriterPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
 	datawriter = datawriterPtr.get();
-    bool key = false;
-    if (nullptr != typeSupport && typeSupport->has_key()) {
-        key = true;
-    }
-	std::shared_ptr<Writer>  writerPtr = participant_->GetRelatedParticipant()->CreateWriter(datawriterPtr.get(), qos, ENTITYID_UNKNOWN, key);
-
-	if (!writerPtr.get()) {
-		delete_datawriter(datawriter);
-		datawriter = nullptr;
-		AGILOG(AGILOG_ERROR, "create writer Err");
-		return nullptr;
-	}
-    InstanceHandle_t handle = DomainParticipantImpl::GenerateInstanceHandle(writerPtr->GetGuid());
-	datawriterPtr->SetInstanceHandle(handle);
-
-	DiscoveredWriterData writerData;
-	writerData.ddsPublicationData = datawriterPtr->GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-	discovery->WritePublicationData(writerData);
 
 	std::lock_guard<std::mutex> lock(mtxWriters_);
 	writerHandles_.insert({ datawriterPtr->get_instance_handle(), std::move(datawriterPtr) });
 
 	if (enable_ && qos_.entity_factory.autoenable_created_entities) {
 		if (RETCODE_OK != datawriter->enable()) {
-			participant_->GetRelatedParticipant()->DeleteWriter(handle);
 			delete_datawriter(datawriter);
 			datawriter = nullptr;
 			AGILOG(AGILOG_ERROR, "datawriter->enable Err");
 			return nullptr;
 		}
 	}
-	participant_->GetRelatedParticipant()->AddLocalWriter(writerPtr);
-
 	return datawriter;
 }
 
@@ -197,8 +181,24 @@ ReturnCode_t PublisherImpl::end_coherent_changes()
 
 ReturnCode_t PublisherImpl::wait_for_acknowledgments(const Duration_t& max_wait)
 {
-	AGILOG(AGILOG_ERROR, "Publisher not support interface");
-    return RETCODE_UNSUPPORTED;
+	ReturnCode_t ret;
+	Duration_t begin, end;
+	Duration_t currentWait = max_wait;
+	std::lock_guard<std::mutex> lock(mtxWriters_);
+	for (auto& it : writerHandles_) {
+		DataWriterImpl* datawriter = it.second.get();
+		Duration_t::now(begin);
+		ret = datawriter->wait_for_acknowledgments(currentWait);
+		if (RETCODE_OK != ret) {
+			return ret;
+		}
+		Duration_t::now(end);
+		currentWait = currentWait - (end - begin);
+		if( currentWait < Duration_t(TIME_ZERO)) {
+			return RETCODE_TIMEOUT;
+		}
+	}
+    return RETCODE_OK;
 }
 
 DomainParticipant* PublisherImpl::get_participant() const

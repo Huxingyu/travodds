@@ -33,11 +33,11 @@ const ReturnCode_t	RETCODE_TIMEOUT = 10;
 const ReturnCode_t	RETCODE_NO_DATA = 11;
 const ReturnCode_t	RETCODE_ILLEGAL_OPERATION = 12;
 const ReturnCode_t	RETCODE_SUBMESSAGE_INVALID = 29;
-// NACK/ACK报文接收重复
+/* NACK/ACK报文接收重复 */
 const ReturnCode_t	RETCODE_RECEIVE_DUPLICATE = 50;
-// NACK/ACK报文请求重传
+/* NACK/ACK报文请求重传 */
 const ReturnCode_t	RETCODE_REPEAT_REQUEXT = 51;
-// 自定义端口占用错误码
+/* 自定义端口占用错误码 */
 const ReturnCode_t  RETCODE_PORT_IN_USE = 101;
 /* 申请空间失败,空间不足 */
 const ReturnCode_t   RETCODE_APPLY_MEM_ERR = 201;
