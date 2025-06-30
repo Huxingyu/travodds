@@ -16,10 +16,18 @@
 #include "dcps/base/entityimpl.h"
 
 AGIDDS_NAMESPACE_BEGIN
-
+/**
+ * @brief DomainEntityImpl类是DomainEntity和EntityImpl的一个子类，是为了区分DomainParticits和其他实体而创建的
+ */
 class DomainEntityImpl : public virtual DomainEntity, public EntityImpl {
 public:
+    /**
+     * @brief 构造函数。
+     */
     DomainEntityImpl(const StatusMask& mask);
+    /**
+     * @brief 析构函数。
+     */
     ~DomainEntityImpl();
 };
 

@@ -8,7 +8,6 @@
 #include "common/timeconversion.h"
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
-#include "algorithm"
 
 USING_AGIDDS_NAMESPACE;
 
@@ -25,6 +24,10 @@ Spdp::Spdp(Participant* participant, Discovery* discovery)
 
 Spdp::~Spdp()
 {
+	if (timer_) {
+		timer_->Exit();
+	}
+
 	if (writer_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(writer_->GetGuid());
 		participant_->DeleteWriter(handle);
@@ -41,7 +44,8 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 	dataWriter->get_qos(qos);
 
 	//TODO 补充resendPeriod参数
-    std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true, ENTITY_WRITER);
+    std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, guid, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "writer is nullptr");
@@ -62,6 +66,20 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 
 	writer_->ReaderLocatorAdd(locator);
 
+	Locator_t locatorv6;
+	locatorv6.kind = LOCATOR_KIND_UDPv6;
+	locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+	locatorv6.address[0] = 0xff;
+	locatorv6.address[1] = 0x1e;
+	//3-9 : 0
+	locatorv6.address[10] = 0xff;
+	locatorv6.address[11] = 0xff;
+	locatorv6.address[12] = 0xef;
+	locatorv6.address[13] = 0xff;
+	locatorv6.address[15] = 0x01;
+
+	writer_->ReaderLocatorAdd(locatorv6);
+
 	// DiscoveredReaderData data;
 	// participant_->AddRemoteReader()
 
@@ -73,7 +91,8 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
 	DataReaderQos qos;
 	dataReader->get_qos(qos);
 	qos.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
-    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true, ENTITY_READER);
+    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, guid, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "reader is nullptr");

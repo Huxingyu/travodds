@@ -17,24 +17,62 @@
 #include <atomic>
 AGIDDS_NAMESPACE_BEGIN
 class DomainParticipantImpl;
+/**
+ * @brief TopicDescriptionImplTopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
+ */
 class TopicDescriptionImpl : public virtual TopicDescription {
 public:
+    /**
+     * @brief 构造函数。
+     *
+     * @param [in] name         主题名。
+     * @param [in] type_name    主题通信数据类型名。
+     * @param [in] participant	域参与者DomainParticipant类指针。
+     */
     TopicDescriptionImpl(const std::string& name, const std::string& type_name, DomainParticipantImpl* participant);
 
+    /**
+     * @brief 析构函数。
+     */
     virtual ~TopicDescriptionImpl();
 
+    /**
+     * @brief 获取TopicDescription所属的DomainParticipant。
+     *
+     * @return TopicDescription所属的DomainParticipant。
+     */
     DomainParticipant* get_participant() const;
 
+    /**
+     * @brief 获取关联的数据类型名称。
+     *
+     * @return 数据类型名.
+     */
     const char* get_type_name() const;
 
+    /**
+     * @brief 获取用于创建此TopicDescription的名称。
+     *
+     * @return 用于创建此TopicDescription的名称。
+     */
     const char* get_name() const;
 
 public:
-    /* 引用 */
+    /**
+     * @brief 引用计算增加。
+     */
     void Reference();
-    /* 释放引用 */
+
+    /**
+     * @brief 释放引用，减少引用计数。
+     */
     void Dereference();
-    /* 是否被引用 */
+
+    /**
+     * @brief 是否被引用状态获取函数。
+     *
+     * @return 被引用情况，被应用则返回true，否则返回false。
+     */
     bool IsReferenced();
 protected:
     std::string name_;

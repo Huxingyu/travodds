@@ -242,9 +242,22 @@ public:
 	 */
 	virtual bool MatchedWriterIsMatched(GUID_t writerGuid) = 0;
 
+	/**
+	 * @brief 获取与当前数据写者匹配的发布者实例句柄。
+	 *
+	 * @param [in] publication_handles 发布者实例句柄列表。
+	 */
     void GetMatchedPublications(InstanceHandleSeq& publication_handles) const;
 
-	void OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state);
+	/**
+	 * @brief 根据与当前数据写者匹配的发布者实例句柄获取其配置参数。
+	 *
+	 * @param [in] subscriptionData 发布者实例句柄对应的发布者通信配置参数。
+	 * @param [in] remotehandle     远端发布者实例句柄。
+	 *
+	 * @return 获取成功返回true，否则返回false。
+	 */
+	bool GetMatchedPublicationData(PublicationBuiltinTopicData& publicationData, const InstanceHandle_t& remotehandle) const;
 
 private:
 
@@ -291,7 +304,7 @@ protected:
 	/* 接收到的数据信息的最新的数据序号  */
 	SequenceNumber_t lastSequenceNumber_;
 
-	std::map<InstanceHandle_t, SampleInfo> statusCache_;
+	//std::map<InstanceHandle_t, SampleInfo> statusCache_;
 
 	ReaderListener* readerListener_;
 	

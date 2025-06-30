@@ -19,7 +19,10 @@
 AGIDDS_NAMESPACE_BEGIN
 
 class Entity;
-
+/**
+ * @brief StatusCondition类是与每个实体关联的特定条件。
+ *
+ */
 class DDS_DLL StatusCondition : public virtual Condition {
 public:
 	/**
@@ -28,15 +31,18 @@ public:
 	virtual ~StatusCondition() = default;
 
 	/**
-	 * @brief 设置StatusMask 类型变量。
-	 * @param value 触发器的新数据。
+	 * @brief 设置StatusMask位掩码值。
+	 *
+	 * @param value StatusKind位掩码值。
+	 *
 	 * @return RETCODE_OK
 	 */
 	virtual ReturnCode_t set_enabled_statuses(const StatusMask& mask) = 0;
 
 	/**
-	 * @brief 获取StatusMask 类型变量。
-	 * @return StatusMask 类型变量
+	 * @brief 获取StatusMask位掩码值。
+	 *
+	 * @return  StatusKind位掩码值。
 	 */
 	virtual const StatusMask& get_enabled_statuses() const = 0;
 

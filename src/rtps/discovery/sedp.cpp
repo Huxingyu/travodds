@@ -36,7 +36,8 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
 {
 	DataWriterQos writerQos;
 	dataWriter->get_qos(writerQos);
-    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER, true, ENTITY_WRITER);
+    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, guid, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "writer is nullptr");
@@ -46,7 +47,8 @@ void Sedp::SetPublicationEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* da
 
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
-    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,true);
+	guid = participant_->GenerateGuid(ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER, true, ENTITY_READER);
+    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, guid,true);
 	if (nullptr == reader) {	
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "reader is nullptr");
@@ -61,7 +63,8 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
 {
 	DataWriterQos writerQos;
 	dataWriter->get_qos(writerQos);
-    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER, true, ENTITY_WRITER);
+    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter, writerQos, guid, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "writer is nullptr");
@@ -71,7 +74,8 @@ void Sedp::SetSubscriptionEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* d
 
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
-    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER, true);
+	guid = participant_->GenerateGuid(ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER, true, ENTITY_READER);
+    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader, readerQos, guid, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
 		AGILOG(AGILOG_ERROR, "reader is nullptr");

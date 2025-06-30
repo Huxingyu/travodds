@@ -20,12 +20,38 @@ AGIDDS_NAMESPACE_BEGIN
 
 class QueryConditionImpl : public virtual QueryCondition, public  ReadConditionImpl {
 public:
+	/**
+	 * @brief 构造函数。
+	 *
+	 * @param [in] smapleStates     位掩码SampleStateKind。
+	 * @param [in] viewStates	    位掩码ViewStateMask。
+	 * @param [in] instanceStates	位掩码InstanceStateMask。
+	 * @param [in] queryExpression	查询表达式。	
+	 * @param [in] queryParameters	查询参数。
+	 * @param [in] dataReader   	DataReaderImpl类指针。
+	 */
 	QueryConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, const std::string& queryExpression, StringSeq queryParameters, DataReaderImpl* dataReader);
 
+	/**
+	 * @brief 获取query_expression。
+	 * @return 查询到的数据。
+	 */
 	virtual const std::string& get_query_expression() const;
 
+	/**
+	 * @brief 获取query_parameters。
+	 * @param [in] value 返回查询到的数据。
+	 * @return RETCODE_OK
+	 */
 	virtual ReturnCode_t get_query_parameters(StringSeq& query_parameters) const;
 
+	/**
+	 * @brief 设置query_parameters。
+	 * 
+	 * @param [in] value 要设置的新数据。
+	 * 
+	 * @return RETCODE_OK
+	 */
 	virtual ReturnCode_t set_query_parameters(const StringSeq& query_parameters);
 private:
     std::string queryExpression_;

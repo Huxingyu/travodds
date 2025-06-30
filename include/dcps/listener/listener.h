@@ -16,10 +16,19 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+/**
+ * @brief Listener类为所有回调类的基类, 最终用户应该使用它来实现对某些函数的特定回调。
+ */
 class DDS_DLL Listener {
 public:
+	/**
+	 * @brief 构造函数。
+	 */
 	Listener() = default;
 
+	/**
+	 * @brief 析构函数。
+	 */
     virtual ~Listener() = default;
 };
 

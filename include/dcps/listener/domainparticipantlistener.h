@@ -17,7 +17,10 @@
 #include "dcps/listener/topiclistener.h"
 
 AGIDDS_NAMESPACE_BEGIN
-
+/**
+ * @brief 类DomainParticipantListener重写对某些事件的行为。
+ *
+ */
 class DomainParticipantListener : virtual public PublisherListener, virtual public SubscriberListener, virtual public TopicListener {
 
 };
