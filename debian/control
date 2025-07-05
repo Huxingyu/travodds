@@ -1,4 +1,4 @@
-Source: travodds
+Source: agiros-loong-travodds
 Priority: optional
 Maintainer: [AGIROS][TravoDDS]
 Build-Depends: debhelper-compat (= 12), cmake, libasio-dev
@@ -8,18 +8,17 @@ Homepage: https://gitee.com/agiros/travodds
 Vcs-Browser: https://gitee.com/agiros/travodds
 Vcs-Git: https://gitee.com/agiros/travodds.git
 
-Package: travodds
+Package: agiros-loong-travodds
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: TravoDDS runtime library
  Contains shared libraries for TravoDDS implementation.
 
-Package: travodds-dev
+Package: agiros-loong-travodds-dev
 Architecture: any
 Multi-Arch: same
 Section: libdevel
-Depends: travodds (= ${binary:Version}), ${misc:Depends}
+Depends: agiros-loong-travodds (= ${binary:Version}), ${misc:Depends}
 Description: Development files for TravoDDS
  Provides headers and CMake config files for TravoDDS development.
-
