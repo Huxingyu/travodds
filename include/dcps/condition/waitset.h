@@ -1,0 +1,68 @@
+//Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
+//
+//You can use this software according to the terms and conditions of
+//the Mulan PSL v2.You may obtain a copy of Mulan PSL v2 at :
+//http://license.coscl.org.cn/MulanPSL2
+//
+//THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF
+//ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+//
+//See the Mulan PSL v2 for more details.
+#ifndef AGIDDS_DCPS_CONDITION_WAITSET_H
+#define AGIDDS_DCPS_CONDITION_WAITSET_H
+
+#include  "dcps/condition/condition.h"
+#include  "dcps/base/retcode.h"
+
+AGIDDS_NAMESPACE_BEGIN
+class WaitSetImpl;
+
+class DDS_DLL WaitSet {
+public:
+	/**
+	 * @brief 构造函数。
+	 */
+	WaitSet();
+
+	/**
+	 * @brief 析构函数。
+	 */
+	~WaitSet();
+
+	/**
+	  * @brief 为等待集附加条件。
+	  * @param condition 条件。
+	  * @return RETCODE_OK（如果连接正确），否则为其他错误代码。
+	  */
+	ReturnCode_t attach_condition(const Condition& condition);
+
+	/**
+	 * @brief 从WaitSet中分离条件。
+	 * @param condition 条件。
+	 * @return 如果正确分离，则返回RETCODE_OK；如果未附加条件，则返回PRECONDITION_NOT_MET。
+	 */
+	ReturnCode_t detach_condition(const Condition& condition);
+
+	/**
+	 * @brief 允许应用程序线程等待某些条件的发生。
+	 * 如果附加到WaitSet的条件都没有trigger_value为true，则等待函数将阻止挂起调用线程。
+	 * @param active_conditions 引用trigger_value为真的条件集合。
+	 * @param timeout 最长等待时间。
+	 * @return 如果一切正常，则返回RETCODE_OK，如果WaitSet已经在等待，
+	 * 则返回PRECONDITION_NOT_MET，如果最大值，则返回TIMEOUT时间已过，否则为错误代码
+	 */
+	ReturnCode_t wait(ConditionSeq& active_conditions, const Duration_t& timeout);
+
+	/**
+	 * @brief 检索附加条件列表。
+	 * @param 附加条件参考附加条件的集合。
+	 * @return 如果一切正常则返回RETCODE_OK，否则返回错误代码。
+	 */
+	ReturnCode_t get_conditions(ConditionSeq& attached_conditions) const;
+private:
+	std::unique_ptr <WaitSetImpl> impl_;
+};
+
+AGIDDS_NAMESPACE_END
+#endif // !AGIDDS_DCPS_CONDITION_WAITSET_H
