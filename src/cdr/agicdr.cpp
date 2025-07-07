@@ -110,6 +110,17 @@ bool AGIDDSCdrSerializer::isLittleEndian() const
     return test.c[0] == 1;
 }
 
+uint32_t AGIDDSCdrSerializer::getRemainingSpace() const
+{
+    uint32_t remainingSpace = 0;
+    SerializedBuffer* current = curProcessMsgBlock_;
+    while (current) {
+        remainingSpace += current->bufferSpace();
+        current = current->next;
+    }
+    return remainingSpace;
+}
+
 AGIDDSCdrSerializer::AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEndian)
     : tgaMsgBlock_(buffer),
     curProcessMsgBlock_(buffer), 

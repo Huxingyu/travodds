@@ -76,8 +76,8 @@ public:
     uint32_t bufferTotalSpace() 
     {
         uint32_t totalSpace = 0;
-        for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
-            totalSpace += buffer->bufferSpace();
+        for (SerializedBuffer* curBuffer = this; curBuffer != nullptr; curBuffer = curBuffer->next) {
+            totalSpace += curBuffer->bufferSpace();
         }
         return totalSpace;
     }
@@ -90,8 +90,8 @@ public:
     uint32_t bufferTotalLength() 
     {
         uint32_t totalLength = 0;
-        for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
-            totalLength += buffer->bufferLength();
+        for (SerializedBuffer* curBuffer = this; curBuffer != nullptr; curBuffer = curBuffer->next) {
+            totalLength += curBuffer->bufferLength();
         }
         return totalLength;
     }
