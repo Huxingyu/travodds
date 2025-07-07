@@ -31,24 +31,31 @@ public:
 	~WaitSet();
 
 	/**
-	  * @brief 为等待集附加条件。
-	  * @param condition 条件。
-	  * @return RETCODE_OK（如果连接正确），否则为其他错误代码。
-	  */
+	 * @brief 为等待集附加条件。
+	 * 
+	 * @param [in] condition 条件。
+	 * 
+	 * @return RETCODE_OK（如果连接正确），否则为其他错误代码。
+	 */
 	ReturnCode_t attach_condition(const Condition& condition);
 
 	/**
 	 * @brief 从WaitSet中分离条件。
-	 * @param condition 条件。
+	 * 
+	 * @param [in] condition 条件。
+	 * 
 	 * @return 如果正确分离，则返回RETCODE_OK；如果未附加条件，则返回PRECONDITION_NOT_MET。
 	 */
 	ReturnCode_t detach_condition(const Condition& condition);
 
 	/**
 	 * @brief 允许应用程序线程等待某些条件的发生。
+	 * 
 	 * 如果附加到WaitSet的条件都没有trigger_value为true，则等待函数将阻止挂起调用线程。
-	 * @param active_conditions 引用trigger_value为真的条件集合。
-	 * @param timeout 最长等待时间。
+	 * 
+	 * @param [in] active_conditions 引用trigger_value为真的条件集合。
+	 * @param [in] timeout			 最长等待时间。
+	 * 
 	 * @return 如果一切正常，则返回RETCODE_OK，如果WaitSet已经在等待，
 	 * 则返回PRECONDITION_NOT_MET，如果最大值，则返回TIMEOUT时间已过，否则为错误代码
 	 */
@@ -56,7 +63,9 @@ public:
 
 	/**
 	 * @brief 检索附加条件列表。
-	 * @param 附加条件参考附加条件的集合。
+	 * 
+	 * @param [out] attached_conditions 附加条件参考附加条件的集合。
+	 * 
 	 * @return 如果一切正常则返回RETCODE_OK，否则返回错误代码。
 	 */
 	ReturnCode_t get_conditions(ConditionSeq& attached_conditions) const;

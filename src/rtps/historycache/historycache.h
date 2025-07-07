@@ -347,14 +347,45 @@ public:
 	 */
 	bool WriterWaitFor(const std::chrono::nanoseconds& time_out, Writer* pWriter, const InstanceHandle_t& handle, bool transientLocal);
 
-	SampleCounters GetSampleCounters();
+	/**
+	 * @brief 获取样本计数器。
+	 *
+	 * @param [in] trigger 触发器，用于触发ReadConditionImpl读取标志。
+	 *
+	 * @return 样本计数器对象。
+	 */
+	SampleCounters GetSampleCounters(bool trigger = true);
 
+	/**
+	 * @brief 获取下一个截止时间。
+	 *
+	 * @param [out] handle       通信实例句柄。
+	 * @param [out] nextDeadline 下一个截止时间。
+	 *
+	 * @return 获取成功返回true，获取失败返回false。
+	 */
 	bool GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextDeadline);
 
+	/**
+	 * @brief 重新设置实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] handle       通信实例句柄。
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout = false);
 
+	/**
+	 * @brief 重新设置所有实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
 
+	/**
+	 * @brief 重新设置所有实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void RemoveRemoteWriter(const GUID_t& guid);
 
 private:
@@ -369,16 +400,59 @@ private:
 	 */
 	ReturnCode_t FindORAddKey(const InstanceHandle_t& handle, SerializedBuffer*& instace, std::map<InstanceHandle_t, CacheChangeVector>::iterator* vitOut);
 
+	/**
+	 * @brief 添加样本计数器。
+	 *
+	 * @param [in] sampleState   SampleStateKind位掩码。
+	 * @param [in] viewState     ViewStateKind位掩码。
+	 * @param [in] instanceState 实例句柄。
+	 */
 	void AddSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
 
+	/**
+	 * @brief 删除样本计数器。
+	 *
+	 * @param [in] sampleState   SampleStateKind位掩码。
+	 * @param [in] viewState     ViewStateKind位掩码。
+	 * @param [in] instanceState 实例句柄。
+	 */
 	void RemoveSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
 
+	/**
+	 * @brief 更新样本实例句柄。
+	 *
+	 * @param [in] handle			 实例句柄。
+	 * @param [in] changeKind		 请求状态。
+	 * @param [in] writerGuid		 数据写者GUID。
+	 * @param [in] ownershipStrength 所有权强度。
+	 * @param [in] shared            是否为SHARED模式。
+	 * 
+	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_OUT_OF_RESOURCES
+	 */
 	ReturnCode_t UpdataSampleInstance(const InstanceHandle_t& handle, const ChangeKind_t& changeKind, const GUID_t& writerGuid, const int32_t ownershipStrength, bool shared);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state	新的SampleStateKind样本状态。
+	 * @param [in，out] cache	样本。
+	 */
 	void UpdateState(const SampleStateKind& state, const std::shared_ptr<CacheChange>& cache);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state		新的ViewStateKind样本状态。
+	 * @param [in，out] cacheChange	样本。
+	 */
 	void UpdateState(const ViewStateKind& state, CacheChangeVector& cacheChange);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state		新的InstanceStateKind样本状态。
+	 * @param [in，out] cacheChange	样本。
+	 */
 	void UpdateState(const InstanceStateKind& state, CacheChangeVector& cacheChange);
 
 private:

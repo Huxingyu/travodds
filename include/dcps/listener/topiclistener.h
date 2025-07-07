@@ -18,8 +18,18 @@
 AGIDDS_NAMESPACE_BEGIN
 
 class Topic;
+/**
+ * @brief 类TopicListener，最终用户应该使用它来实现对某些操作的特定回调。
+ *
+ */
 class TopicListener : public Listener {
 public:
+    /**
+     * @brief 由用户实现的虚拟功能，包含当存在具有相同名称但不同配置的另一个主题时要执行的操作。
+     *
+     * @param topic Topic
+     * @param status 主题配置不一致信息。
+     */
     virtual void on_inconsistent_topic(Topic* topic, const InconsistentTopicStatus& status)
     {
 	    

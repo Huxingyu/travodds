@@ -21,9 +21,7 @@ class DataReader;
 class DataWriter;
 
 /**
- * DataReaderListener类, 最终用户应该使用它来实现对某些函数的特定回调。
- *
- * @ingroup AGIDDS_MODULE
+ * @brief DataReaderListener类, 最终用户应该使用它来实现对某些函数的特定回调。
  */
 class DDS_DLL DataReaderListener : public Listener {
 public:

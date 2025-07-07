@@ -18,7 +18,7 @@ AGIDDS_NAMESPACE_BEGIN
 
 class DomainParticipant;
 /**
- * *TopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
+ * @brief TopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
  */
 class DDS_DLL TopicDescription {
 public:
@@ -28,21 +28,21 @@ public:
     virtual ~TopicDescription() = default;
 
     /**
-     * 获取TopicDescription所属的DomainParticipant。
+     * @brief 获取TopicDescription所属的DomainParticipant。
      *
      * @return TopicDescription所属的DomainParticipant。
      */
     virtual DomainParticipant* get_participant() const = 0;
 
     /**
-     * 获取关联的数据类型名称。
+     * @brief 获取关联的数据类型名称。
      *
      * @return 数据类型名.
      */
     virtual const char* get_type_name() const = 0;
 
     /**
-     * 获取用于创建此TopicDescription的名称。
+     * @brief 获取用于创建此TopicDescription的名称。
      *
      * @return 用于创建此TopicDescription的名称。
      */

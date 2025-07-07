@@ -20,9 +20,7 @@ AGIDDS_NAMESPACE_BEGIN
 
 class Publisher;
 /**
- * DataWriter类，包含数据写者功能的实际实现。
- *
- * @ingroup AGIDDS_MODULE
+ * @brief DataWriter类，包含数据写者功能的实际实现。
  */
 class DDS_DLL DataWriter : public virtual DomainEntity {
 public:
@@ -32,9 +30,10 @@ public:
      */
     virtual ~DataWriter() = default;
     /**
-     * 为此DataWriter设置DataWriterQos。
+     * @brief 为此DataWriter设置DataWriterQos。
      *
-     * @param qos 要设置的DataWriterQos
+     * @param [in] qos 要设置的DataWriterQos
+     * 
      * @return RETCODE_IMMUTABLE_POLICY（如果无法更改任何Qos），
      * RETCODE_INCONSISTENT_POLICY（如果Qos不是自一致的），
      * RETCODE_OK（如果Qos更改正确）。
@@ -42,24 +41,26 @@ public:
 	virtual ReturnCode_t set_qos(const DataWriterQos& qos) = 0;
 
     /**
-     * 使用此DataWriter的Qos值给DataWriterQos变量赋值。
+     * @brief 使用此DataWriter的Qos值给DataWriterQos变量赋值。
      *
-     * @param qos 返回qos的DataWriterQos对象。
+     * @param [in] qos 返回qos的DataWriterQos对象。
+     * 
      * @return RETCODE_OK。
      */
 	virtual ReturnCode_t get_qos(DataWriterQos& qos) const = 0;
 
     /**
-     * 修改DataWriterListener。
+     * @brief 修改DataWriterListener。
      *
-     * @param listener DataWriterListener的新值。
-     * @param mask 保存侦听器响应的状态的StatusMask变量。
+     * @param [in] listener DataWriterListener的新值。
+     * @param [in] mask 保存监听器响应的状态的StatusMask位掩码。
+     * 
      * @return RETCODE_OK
      */
 	virtual ReturnCode_t set_listener(DataWriterListener* listener, const StatusMask& mask) = 0;
 
     /**
-     * 检索此DataWriter的侦听器。
+     * @brief 检索此DataWriter的监听器。
      *
      * @return 指向DataWriterListener的指针。
      */
@@ -70,6 +71,7 @@ public:
      * 它为中间件提供了一个预先配置自己以提高性能的机会。
      *
      * @param[in] instance 用于获取实例键值的示例。
+     * 
      * @return 包含实例键的句柄。
      * 该句柄可以用于连续的“写入”或“释放”函数。
      * 如果出现错误，将返回HANDLE_NIL。
@@ -86,23 +88,23 @@ public:
      *
      * 在write函数所述的相同情况下，此函数可能会返回RETCODE_OUT_OF_RESOURCES。
      *
-     * @param instance  用于获取实例键值的数据。
-     * @param timestamp 用于设置源时间戳。
+     * @param [in] instance  用于获取实例键值的数据。
+     * @param [in] timestamp 用于设置源时间戳。
      * @return 包含实例键的句柄。
      */
     virtual InstanceHandle_t register_instance_w_timestamp(const void* const instance, const Time_t& timestamp) = 0;
 
     /**
-      * @brief 此函数为 register_instance 函数的注销函数。
-      * 它应该仅在当前注册的实例上调用。
-      * 通知中间件DataWriter不打算再修改该数据实例。
-      * 还指示中间件可以在本地删除与该实例相关的所有信息。
-      *
-      * @param[in] instance 在`handle`参数的情况下，用于推断实例键的示例是HANDLE_NIL。
-      * @param[in] handle 要注销的实例的键值。
-      * @return 返回函数的执行结果。
-      * 如果函数执行成功完成，则返回RETCODE_OK。
-      */
+     * @brief 此函数为 register_instance 函数的注销函数。
+     * 它应该仅在当前注册的实例上调用。
+     * 通知中间件DataWriter不打算再修改该数据实例。
+     * 还指示中间件可以在本地删除与该实例相关的所有信息。
+     *
+     * @param[in] instance 在`handle`参数的情况下，用于推断实例键的示例是HANDLE_NIL。
+     * @param[in] handle 要注销的实例的键值。
+     * @return 返回函数的执行结果。
+     * 如果函数执行成功完成，则返回RETCODE_OK。
+     */
     virtual ReturnCode_t unregister_instance(const void* const instance, const InstanceHandle_t& handle) = 0;
 
     /**
@@ -115,16 +117,16 @@ public:
      *
      * 在与write函数在相同的情况下，该函数可能会阻塞并返回RETCODE_TIMEOUT
      *
-     * @param instance 在`handle`参数的情况下，用于推断实例键的示例是handle_NIL。
-     * @param handle 要注销的实例的键值。
-     * @param timestamp 用于设置源时间戳。
+     * @param [in] instance 在`handle`参数的情况下，用于推断实例键的示例是handle_NIL。
+     * @param [in] handle 要注销的实例的键值。
+     * @param [in] timestamp 用于设置源时间戳。
      * @return 返回函数的执行结果。
      * 如果函数执行成功完成，则返回RETCODE_OK。
      */
     virtual ReturnCode_t unregister_instance_w_timestamp(const void* const instance, const InstanceHandle_t& handle, const Time_t& timestamp) = 0;
 
     /**
-     * 此函数可用于检索与instance_handle对应的实例密钥。
+     * @brief 此函数可用于检索与instance_handle对应的实例密钥。
      * 该函数将仅填充在key_holder实例内形成键的字段。
      *
      * 如果InstanceHandle_t句柄与DataWriter已知的现有数据对象不对应，
@@ -139,22 +141,22 @@ public:
     virtual ReturnCode_t get_key_value(void* key_holder, const InstanceHandle_t& handle) = 0;
 
     /**
-     * 将实例作为参数，并返回可在接受实例句柄作为参数的后续函数中使用的句柄。
+     * @brief 将实例作为参数，并返回可在接受实例句柄作为参数的后续函数中使用的句柄。
      * 实例参数仅用于检查键值的字段。
      *
-     * @param[in] 实例数据指向示例的指针。
+     * @param [in] instance 实例数据指向示例的指针。
      *
      * @return 实例对应的键值句柄
      */
     virtual InstanceHandle_t lookup_instance(const void* const instance) const = 0;
 
     /**
-     * 使用句柄发送数据。
+     * @brief 使用句柄发送数据。
      *
      * 特殊值HANDLE_NIL可以用于参数句柄。这表示应该依靠键值从instance_data自动推断实例的标识。
      *
-     * @param data 指向数据的指针
-     * @param handle InstanceHandle_t.
+     * @param [in] data 指向数据的指针
+     * @param [in] handle InstanceHandle_t.
      * @return 如果引入的句柄与与数据关联的句柄不匹配返回RETCODE_PRECONDITION_NOT_MET，
      * 如果数据正确发送，则返回RETCODE_OK，否则返回RETCCODE_ERROR。
      */
@@ -167,9 +169,10 @@ public:
      * 在与write 函数相同的情况下，此函数可能会阻止并返回RETCODE_TIMEOUT。
      * 在与write函数描述的相同情况下，此函数可以返回RETCODE_OUT_OF_RESOURCES、RETCOD_EPRECONDITION_NOT_MET或RETCOD_BAD_PARAMETER。
      *
-     * @param data 指向数据的指针
-     * @param handle InstanceHandle_t
-     * @param timestamp 源时间戳。
+     * @param [in] data 指向数据的指针
+     * @param [in] handle InstanceHandle_t
+     * @param [in] timestamp 源时间戳。
+     * 
      * @return 任何标准返回代码。
      */
     virtual ReturnCode_t write_w_timestamp(const void* const data, const InstanceHandle_t& handle, const Time_t& timestamp) = 0;
@@ -181,8 +184,9 @@ public:
      * 使用此函数时，服务将自动提供source_timestamp的值，该值通过SampleInfo中的source_timestamp属性提供给DataReader对象。
      * 句柄参数值的约束和相应的错误行为与为unregister_instance函数指定的约束相同。
      *
-     * @param[in] data 在`handle`参数的情况下，用于推断实例键的示例是否为handle_NIL。
-     * @param[in] handle 数据的InstanceHandle
+     * @param[in] data    在`handle`参数的情况下，用于推断实例键的示例是否为handle_NIL。
+     * @param[in] handle  数据的InstanceHandle
+     * 
      * @return RETCODE_PRECONDITION_NOT_MET，如果引入的句柄与与数据关联的句柄不匹配，
      * 如果数据正确发送，则返回RETCODE_OK，否则返回RETCCODE_ERROR。
      */
@@ -198,17 +202,19 @@ public:
      *
      * 在与write函数所述的相同情况下，此函数可以返回RETCODE_TIMEOUT和RETCODE.OUT_OF_RESOURCES。
      *
-     * @param instance  在`handle`参数的情况下，用于推断实例键的示例是handle_NIL。
-     * @param handle 要释放的实例的键值。
-     * @param timestamp 用于设置源时间戳的Time_t类型值。
+     * @param [in] instance  在`handle`参数的情况下，用于推断实例键的示例是handle_NIL。
+     * @param [in] handle    要释放的实例的键值。
+     * @param [in] timestamp 用于设置源时间戳的Time_t类型值。
+     * 
      * @return 根据执行情况返回任何标准返回代码。
      */
     virtual ReturnCode_t dispose_w_timestamp(const void* const data, const InstanceHandle_t& handle, const Time_t& timestamp) = 0;
 
     /**
-     * 等待当前线程，直到所有写入程序都收到其确认。
+     * @brief 等待当前线程，直到所有写入程序都收到其确认。
      *
-     * @param max_wait 此函数的最大阻塞时间。
+     * @param [in] max_wait 此函数的最大阻塞时间。
+     * 
      * @return 如果DataWriter在时间到期之前收到确认返回RETCODE_OK，否则为RETCODE_ERROR。
      */
     virtual ReturnCode_t wait_for_acknowledgments(const Duration_t& max_wait) = 0;
@@ -216,7 +222,8 @@ public:
     /**
      * @brief 返回Liveliness状态。
      *
-     * @param status 活性丢失状态结构体变量。
+     * @param [in] status 活性丢失状态结构体变量。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_liveliness_lost_status(LivelinessLostStatus& status) = 0;
@@ -224,7 +231,8 @@ public:
     /**
      * @brief 返回提供的错过截止日期状态。
      *
-     * @param[out] status 截止日期未命中状态结构体变量。
+     * @param [out] status 截止日期未命中状态结构体变量。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_offered_deadline_missed_status(OfferedDeadlineMissedStatus& status) = 0;
@@ -232,7 +240,8 @@ public:
     /**
      * @brief 返回提供的不兼容qos状态。
      *
-     * @param[out] status 提供的不兼容qos状态结构体变量。
+     * @param [out] status 提供的不兼容qos状态结构体变量。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_offered_incompatible_qos_status(OfferedIncompatibleQosStatus& status) = 0;
@@ -240,13 +249,14 @@ public:
     /**
      * @brief 返回发布匹配状态。
      *
-     * @param[out] status 发布匹配的状态结构体变量。
+     * @param [out] status 发布匹配的状态结构体变量。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_publication_matched_status(PublicationMatchedStatus& status) = 0;
 
     /**
-     * 获取此DataWriter的主题。
+     * @brief 获取此DataWriter的主题。
      *
      * @return 指向对应主题的指针。
      */
@@ -274,10 +284,9 @@ public:
      * @brief 在与DataWriter关联的订阅者中检索。
      *
      * @param [out] subscription_data 订阅者信息数据结构。
-     * @param subscription_handle 要获取信息的订阅者的InstanceHandle_t。
+     * @param [in]  subscription_handle 要获取信息的订阅者的InstanceHandle_t。
+     * 
      * @return RETCODE_OK。
-     *
-     * @warning Not supported yet. Currently returns RETCODE_UNSUPPORTED
      */
     virtual ReturnCode_t get_matched_subscription_data(SubscriptionBuiltinTopicData& subscription_data, const InstanceHandle_t& subscription_handle)= 0;
 
@@ -285,6 +294,7 @@ public:
      * @brief 获取对应的数据读者的InstanceHandle_t。
      *
      * @param [out] subscription_handles 返回InstanceHandle_t的容器。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_matched_subscriptions(InstanceHandleSeq& subscription_handles) = 0;
@@ -293,11 +303,11 @@ public:
     /**
      * @brief 指定QoS仓库的Qos配置，并设置数据写入器的QoS。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * 
-     * @return 设置成功返回DDS_RETCODE_OK，否则返回DDS_RETCODE_ERROR。
+     * @return 设置成功返回RETCODE_OK，否则返回RETCODE_ERROR。
      */
     virtual ReturnCode_t set_qos_with_profile(
         const char* library_name, 

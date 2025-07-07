@@ -58,6 +58,10 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 
 DataReaderImpl::~DataReaderImpl()
 {
+	if (deadlineTimer_) {
+		deadlineTimer_->Exit();
+	}
+
 	reader_->SetRelatedDataReader(nullptr);
 	topic_->Dereference();
 	readcdts_.clear();
@@ -456,7 +460,7 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 
 ReturnCode_t DataReaderImpl::return_loan(DataSeq& data_values, SampleInfoSeq& sample_infos)
 {
-    return RETCODE_UNSUPPORTED;
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
@@ -591,24 +595,13 @@ ReturnCode_t DataReaderImpl::wait_for_historical_data(const Duration_t &max_wait
 
 ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopicData &publication_data, const InstanceHandle_t &publication_handle) const
 {
-	GUID_t guid;
-	memcpy(&guid, publication_handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-	if (reader_.get()) {
-		AGILOG(AGILOG_ERROR, "releate datareader is error");
+	if (nullptr == reader_) {
+		return RETCODE_NOT_ENABLED;
 	}
-	if (reader_->MatchedWriterIsMatched(guid)) {
-		AGILOG(AGILOG_ERROR, "datareader donot have match datawriter with th handle");
-		return RETCODE_BAD_PARAMETER;
+	if (reader_->GetMatchedPublicationData(publication_data, publication_handle)) {
+		return RETCODE_OK;
 	}
-	const DomainParticipant *domain = sub_->get_participant();
-	const DomainParticipantImpl* domainImpl = dynamic_cast<const DomainParticipantImpl*>(domain);
-	if (domainImpl) {
-		std::shared_ptr<Participant> entity = domainImpl->GetRelatedParticipant();
-		return entity->GetPublicationData(publication_data, publication_handle);
-	}
-	AGILOG(AGILOG_ERROR, "datareader releated domainparticipant is nullptr");
-
-	return RETCODE_ERROR;
+	return RETCODE_BAD_PARAMETER;
 }
 
 ReturnCode_t DataReaderImpl::get_matched_publications(InstanceHandleSeq &publication_handles) const
@@ -637,7 +630,7 @@ ReturnCode_t DataReaderImpl::enable()
 	if (nullptr == domainParticipant) {
 		return RETCODE_ERROR;
 	}
-	std::shared_ptr<Reader> readerPtr = domainParticipant->GetRelatedParticipant()->CreateReader(this, qos_, ENTITYID_UNKNOWN, typeSupport_->has_key());
+	std::shared_ptr<Reader> readerPtr = domainParticipant->GetRelatedParticipant()->CreateReader(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
 	if (!readerPtr.get()) {
 		return RETCODE_ERROR;
 	}
@@ -803,9 +796,9 @@ void DataReaderImpl::SetStatus(bool add)
 	dynamic_cast<StatusConditionImpl*>(&get_statuscondition())->set_status(DATA_AVAILABLE_STATUS, add);
 }
 
-SampleCounters DataReaderImpl::GetSampleCounters()
+SampleCounters DataReaderImpl::GetSampleCounters(bool trigger)
 {
-	return history_->GetSampleCounters();
+	return history_->GetSampleCounters(trigger);
 }
 
 void DataReaderImpl::NotifyReadConditions()

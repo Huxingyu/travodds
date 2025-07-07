@@ -287,13 +287,12 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 
 std::shared_ptr<WriterProxy> StatelessReader::MatchedWriterLookup(GUID_t writerGuid)
 {
-	if (0 == matchWriters_.count(writerGuid)) {
+	auto itor = matchWriters_.find(writerGuid);
+	if (itor == matchWriters_.end()) {
 		AGILOG(AGILOG_ERROR, "writerGuid not match");
 		return nullptr;
 	}
-		
-
-	return matchWriters_[writerGuid];
+	return itor->second;
 }
 
 /* wangyi */

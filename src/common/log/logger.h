@@ -22,7 +22,6 @@ AGIDDS_NAMESPACE_BEGIN
  *
  * @brief   用于表示某一条日志的输出等级，对于不同的等级的用户可以看到不同的日志文件。
  */
-
 typedef enum LogType
 {
     /** @brief  程序出现不可忽略的错误。  */
@@ -43,7 +42,6 @@ typedef enum LogType
  * @param    consoleMask    输出到控制台的日志等级掩码.
  * @param    fileMask       输出到日志文件的日志等级掩码.
  */
-
 int32_t AGILogInitial(uint32_t consoleMask, uint32_t fileMask);
 
 /**
@@ -51,7 +49,6 @@ int32_t AGILogInitial(uint32_t consoleMask, uint32_t fileMask);
  *
  * @brief   回收为日志系统提供资源等。
  */
-
 int32_t AGILogDestroy();
 
 /**
@@ -75,7 +72,6 @@ void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t 
  * @param   format  字符串格式(类printf).
  * @param   ...     变参。
  */
-
 #define AGILOG(type, format, ...) AGILogToConsole(type, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__); \
 
 AGIDDS_NAMESPACE_END

@@ -142,6 +142,12 @@ public:
 		return (length_ + 3u) & ~3u;
 	};
 
+	uint16_t StringSize(const std::string& s ) const {
+		size_t len = s.size();
+		// 检查最后一个字符是否是 '\0'（可选）
+		bool has_null = !s.empty() && s.back() != '\0';
+		return len + (has_null ? 1 : 0);
+	}
 };
 
 /**
@@ -434,17 +440,11 @@ template<typename T>
 inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str) 
 {
 	/* wangyi fastdds适配 */
-	uint32_t size = str.size();
-	
+	uint32_t size = StringSize(str);
+	WriterUInt32(msg, size);
 	if (size != 0) {
-		size += 1;
-		WriterUInt32(msg, size);
-		memcpy(msg + 4, str.data(), size-1);
+		memcpy(msg + 4, str.data(), str.size());
 	}
-	else {
-		WriterUInt32(msg, size);
-	}
-
 	return 4u + (size + 3u) & ~3u;
 }
 
@@ -473,13 +473,7 @@ inline Parameter<std::string>::Parameter(const ParameterId& pid, const std::stri
 	: ParameterHeader(pid, length), msgEndian_(endian)
 {
 	parameter_ = parameter;
-	length_ = static_cast<uint16_t>(parameter_.size());
-	length_ = (length_ / 4 + 1) * 4 + 4;
-}
-template <>
-inline uint16_t Parameter<std::string>::size() 
-{
-	return 4 + static_cast<uint16_t>(parameter_.size());
+	length_ = ((StringSize(parameter_) + 3u) & ~3u) + 4;
 }
 template <>
 inline void Parameter<std::string>::writerMsg(octet* msg) 
@@ -700,7 +694,7 @@ inline uint16_t Parameter<PartitionQosPolicy>::size()
 {
 	uint32_t inSize = 0;
 	for (uint32_t i = 0; i < parameter_.name.size(); i++) {
-		inSize += (4u + (parameter_.name[i].size() + 3u) & ~3u);
+		inSize += (4u + ((StringSize(parameter_.name[i]) + 3u) & ~3u));
 	}
 	return 4 + inSize;
 }
@@ -753,13 +747,13 @@ template <>
 inline uint16_t Parameter<ContentFilterProperty_t>::size()
 {
 	uint32_t inSize = 0;
-	inSize += 4 + (parameter_.contentFilteredTopicName.size() + 3u) & ~3u;
-	inSize += 4 + (parameter_.relatedTopicName.size() + 3u) & ~3u;
-	inSize += 4 + (parameter_.filterClassName.size() + 3u) & ~3u;
-	inSize += 4 + (parameter_.filterExpression.size() + 3u) & ~3u;
+	inSize += 4 + ((StringSize(parameter_.contentFilteredTopicName) + 3u) & ~3u);
+	inSize += 4 + ((StringSize(parameter_.relatedTopicName) + 3u) & ~3u);
+	inSize += 4 + ((StringSize(parameter_.filterClassName) + 3u) & ~3u);
+	inSize += 4 + ((StringSize(parameter_.filterExpression) + 3u) & ~3u);
 
 	for (uint32_t i = 0; i < parameter_.expressionParameters.size(); i++) {
-		inSize += (4u + (parameter_.expressionParameters[i].size() + 3u) & ~3u);
+		inSize += (4u + ((StringSize(parameter_.expressionParameters[i]) + 3u) & ~3u));
 	}
 	return 4 + inSize;
 }
@@ -816,6 +810,28 @@ inline void Parameter<SequenceNumber_t>::writerMsg(octet* msg)
 {
 	WriterInt32(msg, parameter_.high);
 	WriterUInt32(msg + 4, parameter_.low);
+}
+// PropertySeq
+template <>
+inline uint16_t Parameter<PropertySeq>::size()
+{
+	uint32_t inSize = 0;
+	inSize += 4u;
+	for (const auto& prop : parameter_) {
+		inSize += 4u + ((StringSize(prop.name) + 3u) & ~3u);
+		inSize += 4u + ((StringSize(prop.value) + 3u) & ~3u);
+	}
+	return inSize;
+}
+template <>
+inline void Parameter<PropertySeq>::writerMsg(octet* msg)
+{
+	uint32_t inOffset = 0;
+	inOffset += WriterUInt32(msg, parameter_.size());
+	for (const auto& prop : parameter_) {
+		inOffset += WriterString(msg + inOffset, prop.name);
+		inOffset += WriterString(msg + inOffset, prop.value);
+	}
 }
 //ContentFilterInfo_t
 template <>

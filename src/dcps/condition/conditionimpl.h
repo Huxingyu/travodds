@@ -19,20 +19,55 @@
 
 AGIDDS_NAMESPACE_BEGIN
 class WaitSetImpl;
+
+/**
+ * @brief ConditionImpl，Condition类功能的具体实现。
+ */
 class ConditionImpl : public virtual Condition {
 public:
+	/**
+	 * @brief 构造函数。
+	 */
 	ConditionImpl();
+
+	/**
+	 * @brief 析构函数。
+	 */
 	virtual ~ConditionImpl();
 
+	/**
+	 * @brief 检索条件的触发值。
+	 * 
+	 * @return 如果trigger_value设置为“true”，则为true，否则为false。
+	 */
 	virtual bool get_trigger_value() const;
 
 public:
+	/**
+	 * @brief 唤醒附加到此通知程序的所有WaitSet实现。
+	 */
 	void Notify();
 
+	/**
+	 * @brief 判断是否已唤醒附加到此通知程序的所有WaitSet实现。
+	 * 
+	 * @return 以唤醒则返回true，否则返回false。
+	 */
 	bool IsNotify();
 
 private:
+	/**
+	 * @brief 加入等待集。
+	 * 
+	 * @param [in] waitImpl 要加入的条件。
+	 */
 	void JoinWaitSet(WaitSetImpl* waitImpl);
+
+	/**
+	 * @brief 从等待集中删除。
+	 * 
+	 * @param [in] waitImpl 要删除的条件。
+	 */
 	void LeaveWaitSet(WaitSetImpl* waitImpl);
 	friend class WaitSetImpl;
 

@@ -16,8 +16,15 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+/**
+ * @brief Entity类是支持QoS策略、监听器和状态条件的所有对象的抽象基类。
+ */
 class DDS_DLL Entity {
 public:
+
+    /**
+     * @brief 析构函数。
+     */
     virtual ~Entity() = default;
 	// virtual ReturnCode_t set_qos(QosPolicy& qos_list) = 0;
 	//
@@ -44,7 +51,7 @@ public:
      * get_status_changes函数返回的状态列表指实体本身触发的状态
      * 并且不包括适用于所包含实体的状态。
      *
-     * @return 对触发状态设置为1的StatusMask的常量引用。
+     * @return 对触发状态设置为1的StatusMask位掩码引用。
      */
     virtual const StatusMask& get_status_change() const = 0;
 
@@ -63,9 +70,18 @@ public:
     virtual const InstanceHandle_t& get_instance_handle() const = 0;
 
     // add for language wrapper, store user-defined data in the entit)
-
+    /**
+     * @brief 设置objectData_变量值为data。
+     *
+     * @param [in] data  新的language wrapper相关用户数据。
+     */
     virtual void set_object_data(void* data) = 0;
 
+    /**
+     * @brief 获取objectData_变量值。
+     *
+     * @return 新的language wrapper相关用户数据。
+     */
     virtual void* get_object_data() = 0;
 };
 

@@ -100,6 +100,9 @@ public:
 	 */
 	bool IsAcked(SequenceNumber_t number);
 
+	/* 验证是否被全确认 */
+	bool IsAllAcked(const SequenceNumber_t& maxNumber) const;
+
 	/**
 	 * @brief 设置要发送的报文缓冲区。
 	 *

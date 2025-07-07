@@ -401,6 +401,11 @@ using QosPolicyId_t = int32_t;
 using octet = unsigned char;
 using StringSeq = Sequence<std::string>;
 
+struct Property_t {
+	std::string name;
+	std::string value;
+};
+using PropertySeq = Sequence<Property_t>;
 
 struct SampleInfo {
 	/*  （READ或NOT_READ）-代表是否已读取过相应的数据样本  */

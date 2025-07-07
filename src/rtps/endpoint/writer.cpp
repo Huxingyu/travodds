@@ -92,9 +92,9 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 	return RETCODE_OK;
 }
 
-bool Writer::WaitForAcknowledgments(const Duration_t & max_wait)
+ReturnCode_t Writer::WaitForAcknowledgments(const Duration_t & max_wait)
 {
-	return true;
+	return RETCODE_OK;
 }
 
 bool Writer::IsAckedByAll(SequenceNumber_t changeSeqNum)
@@ -167,5 +167,16 @@ void Writer::RemoveCacheByHandle(const InstanceHandle_t& handle)
 void Writer::GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const
 {
 	participant_->GetMatchedEntitys(guid_.entityId, subHandles);
+}
+
+bool Writer::GetMatchedSubscriptionData(SubscriptionBuiltinTopicData& subscriptionData, const InstanceHandle_t& remotehandle) const
+{
+	if (participant_->RemoeEntityIsMatched(guid_.entityId, remotehandle)) {
+		return false;
+	}
+	if( RETCODE_OK ==  participant_->GetSublicationData(subscriptionData, remotehandle)) {
+		return true;
+	}	
+	return false;
 }
 

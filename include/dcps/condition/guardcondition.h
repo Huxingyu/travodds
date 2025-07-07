@@ -18,7 +18,7 @@
 AGIDDS_NAMESPACE_BEGIN
 class GuardConditionImpl;
 /**
- * @brief The GuardCondition类是一个特定的条件，其trigger_value完全受应用程序的控制。
+ * @brief GuardCondition类是一个特定的条件，其trigger_value完全受应用程序的控制。
  *
  * GuardCondition的目的是为应用程序提供手动唤醒WaitSet的方法。
  * 这是通过将GuardCondition附加到WaitSet，
@@ -39,13 +39,16 @@ public:
 
 	/**
 	 * @brief 检索条件的触发值。
+	 * 
 	 * @return 如果trigger_value设置为“true”，则为true，否则为false。
 	 */
 	bool get_trigger_value() const;
 
 	/**
 	 * @brief 设置trigger_value。
-	 * @param value 触发器的新数据。
+	 * 
+	 * @param [in] value 触发器的新数据。
+	 * 
 	 * @return RETCODE_OK
 	 */
 	ReturnCode_t set_trigger_value(bool value);

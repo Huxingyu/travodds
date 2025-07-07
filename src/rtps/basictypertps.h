@@ -669,11 +669,13 @@ using FragmentNumber_t = uint32_t;
 
 #define LOCATOR_ADDRESS_INVALID {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-
-const int32_t LOCATOR_KIND_INVALID = -1;
-const int32_t LOCATOR_KIND_RESERVED = 0;
-const int32_t LOCATOR_KIND_UDPv4 = 1;
-const int32_t LOCATOR_KIND_UDPv6 = 2;
+enum LocatorKind : int32_t
+{
+	LOCATOR_KIND_INVALID = -1,
+	LOCATOR_KIND_RESERVED = 0,
+	LOCATOR_KIND_UDPv4 = 1,
+	LOCATOR_KIND_UDPv6 = 2
+};
 const uint32_t LOCATOR_PORT_INVALID = 0;
 
 struct Locator_t {
@@ -819,12 +821,6 @@ struct ContentFilterInfo_t {
 	FilterResult_t filterResult;
 	FilterSignatureSequence filterSignatures;
 };
-
-struct Property_t {
-	std::string name;
-	std::string value;
-};
-using PropertySeq = Sequence<Property_t>;
 
 using EntityName_t = std::string;
 

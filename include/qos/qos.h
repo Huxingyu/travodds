@@ -131,7 +131,7 @@ struct DeadlineQosPolicy {
 struct LatencyBudgetQosPolicy {
 	Duration_t duration;
 
-	/* wangyi fastdds 适配默认值修改为TIME_ZERO */
+	/* wangyi fastdds 閫傞厤榛樿鍊间慨鏀逛负TIME_ZERO */
 	LatencyBudgetQosPolicy() : duration(TIME_ZERO) {
 
 	}

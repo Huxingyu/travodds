@@ -16,6 +16,10 @@ StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, con
 
 StatefulReader::~StatefulReader()
 {
+	if (lastNewCacheTimer_) {
+		lastNewCacheTimer_->Exit();
+	}
+	
 	WriterProxyMap writerProxys = matchedWriters_;
 
 	for (auto & writerProxy : writerProxys) {
@@ -242,7 +246,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match writer");
+		//AGILOG(AGILOG_ERROR, "no match writer");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
@@ -378,7 +382,7 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	GUID_t guid(headerInfo.sourceGuidPrefix, gapInfo.writerId);
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match writer")
+		//AGILOG(AGILOG_ERROR, "no match writer")
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
@@ -471,17 +475,6 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
-		return RETCODE_ERROR;
-	}
 	char data[1224] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -497,13 +490,13 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	bufffer.buffer_size = shift;
 	shift = 0;
 	InfoDestinationSubMessage_t dstMsg;
-	dstMsg.guidPrefix = writerProxy->GetRemoteWriterGuid().prefix;
+	dstMsg.guidPrefix = writerProxy->GetGuid().prefix;
 	dstMsg.header.flags = 0x01;
 	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg);
 
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -521,17 +514,6 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
-		return RETCODE_ERROR;
-	}
 	char data[1500] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -547,7 +529,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	shift = 0;
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 

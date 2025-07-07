@@ -19,7 +19,7 @@
 AGIDDS_NAMESPACE_BEGIN
 
 namespace SubMessageFlag {
-	constexpr uint8_t NONE_FLAG                      = 0x00; // Œﬁ±Í÷æŒª
+	constexpr uint8_t NONE_FLAG                      = 0x00; // Êó†Ê†áÂøó‰Ωç
 	constexpr uint8_t ENDIANNESS_FLAG                = 0x01; // EndiannessFlag little-endian
 	// HeaderExtension
 	constexpr uint8_t LENGTH_FLAG                    = 0x02; // LengthFlag
@@ -55,7 +55,7 @@ namespace SubMessageFlag {
 }
 
 namespace StatusInfoFlag {
-	constexpr uint8_t NONE_FLAG         = 0x00; // Œﬁ±Í÷æŒª
+	constexpr uint8_t NONE_FLAG         = 0x00; // Êó†Ê†áÂøó‰Ωç
 	constexpr uint8_t DISPOSED_FLAG     = 0x01; // DisposedFlag
 	constexpr uint8_t UNREGISTERED_FLAG = 0x02; // UnregisteredFlag
 	constexpr uint8_t FILTERED_FLAG     = 0x04; // FilteredFlag
@@ -64,7 +64,7 @@ namespace StatusInfoFlag {
 enum EndiannessKind : uint8_t {
 	CDR_BE          = 0x00,
 	CDR_LE          = 0x01,
-	/* ¥Û∂À
+	/* Â§ßÁ´Ø
 	 0.............. 8............... 16............ 24.............. 32
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
 	| 0x00            0x02           | 0x00	          0x00           |   = {PL_CDR_BE, 0}
@@ -75,7 +75,7 @@ enum EndiannessKind : uint8_t {
 	+-------------- + -------------- + ------------ + --------------- +
 	*/
 	PL_CDR_BE       = 0x02,
-	/* –°∂À
+	/* Â∞èÁ´Ø
 	 0.............. 8............... 16............ 24.............. 32
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
 	| 0x00            0x03           | 0x00	          0x00           |  = {PL_CDR_LE, 0}
@@ -95,7 +95,7 @@ enum EndiannessKind : uint8_t {
 	XML             = 0x04
 };
 
-/* œµÕ≥¥Ê¥¢ */
+/* Á≥ªÁªüÂ≠òÂÇ® */
 #if defined(_WIN32) || defined(_MSC_VER) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 constexpr bool IS_LITTLE_ENDIAN = true;
 constexpr EndiannessKind PL_DEFAULT_ENDIAN = EndiannessKind::PL_CDR_LE;
@@ -105,7 +105,7 @@ constexpr bool IS_LITTLE_ENDIAN = false;
 constexpr EndiannessKind PL_DEFAULT_ENDIAN = EndiannessKind::PL_CDR_BE;
 constexpr EndiannessKind DEFAULT_ENDIAN = EndiannessKind::CDR_BE;
 #else
-// ∆‰À˚∆ΩÃ®£∫‘À–– ±ºÏ≤‚
+// ÂÖ∂‰ªñÂπ≥Âè∞ÔºöËøêË°åÊó∂Ê£ÄÊµã
 inline bool IsLittleEndian() {
 	const int32_t num = 1;
 	const uint8_t* byte = reinterpret_cast<const uint8_t*>(&num);
@@ -116,8 +116,8 @@ inline bool IsLittleEndian() {
 #define DEFAULT_ENDIAN IsLittleEndian() ? EndiannessKind::CDR_LE : EndiannessKind::CDR_BE
 #endif
 
-constexpr uint32_t CDR_ENDIANNESS_LEN = 4; // ¥Û–°∂À–≈œ¢µƒø’º‰ B(◊÷Ω⁄)
-//◊”±®ŒƒπÃ∂®≥§∂»
+constexpr uint32_t CDR_ENDIANNESS_LEN = 4; // Â§ßÂ∞èÁ´Ø‰ø°ÊÅØÁöÑÁ©∫Èó¥ B(Â≠óËäÇ)
+//Â≠êÊä•ÊñáÂõ∫ÂÆöÈïøÂ∫¶
 constexpr uint16_t SUB_MESSAGE_LEN_PAD = 0;
 constexpr uint16_t SUB_MESSAGE_LEN_GAP = 10;
 constexpr uint16_t SUB_MESSAGE_LEN_INFO_TS = 8;
@@ -125,6 +125,12 @@ constexpr uint16_t SUB_MESSAGE_LEN_INFO_DST = 12;
 constexpr uint16_t SUB_MESSAGE_LEN_INFO_SRC = 20;
 
 constexpr int32_t RECEIVE_BUFFER_SIZE = 10 * 1024 * 1024;
+
+#ifdef _DEBUG
+constexpr int32_t DATAFRAG_DELAY_NUM = 20;
+#else
+constexpr int32_t DATAFRAG_DELAY_NUM = 100;
+#endif
 
 AGIDDS_NAMESPACE_END
 #endif
