@@ -5,7 +5,7 @@ Release:        1%{?dist}
 Summary:        Travo Data Distribution Service Library
 
 License:        Mulan PSL v2
-URL:            https://gitee.com/agiros/travodds
+URL:            https://gitee.com/AGIROS-CWW/travodds
 Source0:        %{name}_%{version}.orig.tar.gz
 
 # 构建依赖
