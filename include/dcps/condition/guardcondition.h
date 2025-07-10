@@ -17,6 +17,7 @@
 
 AGIDDS_NAMESPACE_BEGIN
 class GuardConditionImpl;
+class WaitSetImpl;
 /**
  * @brief GuardCondition类是一个特定的条件，其trigger_value完全受应用程序的控制。
  *
@@ -55,6 +56,7 @@ public:
 
 private:
 	GuardConditionImpl* impl_;
+	friend class WaitSetImpl;
 };
 
 AGIDDS_NAMESPACE_END
