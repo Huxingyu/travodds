@@ -20,6 +20,7 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId, const DomainPa
 	topicId_ = 0;
 	
 	participant_ = std::make_shared<Participant>(domainId, threadPool_);
+    handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
 	assert(participant_.get());
 
 	discovery_ = std::make_shared<Discovery>(this, threadPool_);
@@ -33,7 +34,7 @@ DomainParticipantImpl::~DomainParticipantImpl()
 	discovery_->RemoveSpdPdiscoveredParticipantData();
     participant_->StopReceiveThread();
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 }
@@ -68,7 +69,7 @@ ReturnCode_t DomainParticipantImpl::get_qos(DomainParticipantQos& qos) const
 ReturnCode_t DomainParticipantImpl::set_listener(DomainParticipantListener* listener, const StatusMask& mask)
 {
     if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
     }
 	listener_ = listener;

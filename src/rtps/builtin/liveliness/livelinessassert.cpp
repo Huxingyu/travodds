@@ -93,7 +93,7 @@ bool LivelinessAssert::RemoveWriter(GUID_t guid)
 
     if (livelinessManager_ != nullptr && writer->second.status_ != WriterStatus::NOTASSERTED) {
 
-        livelinessManager_->LiveLinessStatusChanged(guid, localWriter_, writer->second.livelinessQos_, writer->second.status_);
+       //livelinessManager_->LiveLinessStatusChanged(guid, localWriter_, writer->second.livelinessQos_, writer->second.status_);
     }
 
     writers_.erase(writer);
@@ -178,6 +178,12 @@ bool LivelinessAssert::UpDateCheckedWriter()
         
 		timer_->UpdatePeriod(duration_cast<milliseconds>(period).count());
 	}
+    else         {
+        checkedWrtier_ = nullptr;
+        Time_t time = TIME_INFINITE;
+        auto period = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(time.sec));
+        timer_->UpdatePeriod(duration_cast<milliseconds>(period).count());
+    }
 
     return ret;
 }
@@ -188,7 +194,7 @@ bool LivelinessAssert::TimerExpired()
 
     if (checkedWrtier_ == nullptr) {
 		/* TODO: 日志 */
-		AGILOG(AGILOG_ERROR, "checkedWrtier_ is nullptr");
+		//AGILOG(AGILOG_ERROR, "checkedWrtier_ is nullptr");
         return false;
     }
 
@@ -216,7 +222,7 @@ bool LivelinessAssert::HasAliveWriters(LivelinessQosPolicyKind kind)
             return true;
         }
     }
-	AGILOG(AGILOG_ERROR, "not has alive writers");
+	//AGILOG(AGILOG_ERROR, "not has alive writers");
     return false;
 }
 

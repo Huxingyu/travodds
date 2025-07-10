@@ -437,9 +437,8 @@ inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str)
 	uint32_t size = str.size();
 	
 	if (size != 0) {
-		size += 1;
-		WriterUInt32(msg, size);
-		memcpy(msg + 4, str.data(), size-1);
+		memcpy(msg + 4, str.data(), str.size());
+		memset(msg + 4 + str.size(), 0,1);
 	}
 	else {
 		WriterUInt32(msg, size);

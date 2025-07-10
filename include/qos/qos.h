@@ -191,7 +191,7 @@ struct ReliabilityQosPolicy {
 	ReliabilityQosPolicyKind kind;
 	Duration_t max_blocking_time;
 
-	ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{0, 100000} {
+	ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{0, 100000000} {
 	}
 };
 

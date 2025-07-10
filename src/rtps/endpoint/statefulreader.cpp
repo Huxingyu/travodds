@@ -72,7 +72,7 @@ std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGu
 bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
-		AGILOG(AGILOG_ERROR, "writerGuid not exist");
+		//AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return false;
 	}
     return true;

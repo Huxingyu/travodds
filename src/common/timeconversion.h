@@ -10,11 +10,11 @@ namespace Conversion {
 	*/
 	inline double ToSecondsDouble(const Time_t& t)
 	{
-		return (double)t.sec + (double)(t.nanosec / pow(2.0, 32));
+		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
 	}
 
 	inline double ToSecondsDouble(const Duration_t& t) {
-		return (double)t.sec + (double)(t.nanosec / pow(2.0, 32));
+		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
 	}
 
 	/**
@@ -44,11 +44,11 @@ namespace Conversion {
 	* 将时间转换为毫秒并返回int64
 	*/
 	inline int64_t ToMilliSecondsInt64(const Time_t& t) {
-		return (int64_t)(t.nanosec / pow(2.0, 32)*pow(10.0, 3)) + t.sec*(int64_t)pow(10.0, 3);
+		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
 	}
 
 	inline int64_t ToMilliSecondsInt64(const Duration_t& t) {
-		return (int64_t)(t.nanosec / pow(2.0, 32)*pow(10.0, 3)) + t.sec*(int64_t)pow(10.0, 3);
+		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
 	}
 
 	/**
@@ -70,7 +70,7 @@ namespace Conversion {
 	inline Time_t SecondsToTime(double seconds) {
 		Time_t t;
 		t.sec = ((int32_t)seconds);
-		t.nanosec = ((uint32_t)((seconds - (double)t.sec)*pow(2.0, 32)));
+		t.nanosec = ((uint32_t)((seconds - (double)t.sec) * pow(10.0, 9)));
 		return t;
 	}
 
@@ -81,7 +81,7 @@ namespace Conversion {
 	{
 		Time_t t;
 		t.sec = ((int32_t)(millisec / pow(10.0, 3)));
-		t.nanosec = ((uint32_t)((millisec - (double)t.sec*pow(10.0, 3)) / pow(10.0, 3)*pow(2.0, 32)));
+		t.nanosec = ((uint32_t)((millisec - (double)t.sec*pow(10.0, 3)) * pow(10.0, 6)));
 		return t;
 	}
 
@@ -92,7 +92,7 @@ namespace Conversion {
 	{
 		Time_t t;
 		t.sec = ((int32_t)(microsec / pow(10.0, 6)));
-		t.nanosec = ((uint32_t)((microsec - (double)t.sec*pow(10.0, 6)) / pow(10.0, 6)*pow(2.0, 32)));
+		t.nanosec = ((uint32_t)((microsec - (double)t.sec*pow(10.0, 6)) * pow(10.0, 3)));
 		return t;
 	}
 
@@ -103,7 +103,7 @@ namespace Conversion {
 	{
 		double result = 0;
 		result += (double)abs((t2.sec - t1.sec) * 1000);
-		result += (double)std::abs((t2.nanosec - t1.nanosec) / pow(2.0, 32) * 1000);
+		result += (double)std::abs((t2.nanosec - t1.nanosec) / pow(10.0, 6));
 		return result;
 	}
 

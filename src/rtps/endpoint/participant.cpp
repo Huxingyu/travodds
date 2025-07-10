@@ -37,7 +37,8 @@ Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
 	  vendorId_(VENDORID_PROSIMA),
 	  threadPool_(threadPool)
 {
-
+	GenerateGuidPrefix(domainId_, domainId_);
+	guid_.entityId = ENTITYID_PARTICIPANT;
 }
 
 Participant::~Participant()
@@ -56,8 +57,6 @@ Participant::~Participant()
 
 ReturnCode_t Participant::Init()
 {
-	GenerateGuidPrefix(domainId_, domainId_);
-	guid_.entityId = ENTITYID_PARTICIPANT;
 	/* wangyi */
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
@@ -637,6 +636,8 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 
 	writer->MatchedReaderAdd(subData);
 
+	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
+
 	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
 	auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
 	if (matchLocalEntitys_.end() == writers) {
@@ -718,6 +719,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		}
 	}
 
+	//printf("SEPD: topic %s addd remote writer \n", pubData.ddsPublicationData.topic_name.c_str());
 
 	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
 	auto readers = matchLocalEntitys_.find(pubData.remoteWriterGuid);
@@ -814,19 +816,34 @@ std::shared_ptr<ThreadPool> Participant::GetThreadPool() const
 	return threadPool_;
 }
 
-void Participant::GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& subHandles) const
+void Participant::GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const
 {
-	subHandles.clear();
+	handles.clear();
 	std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
 
 	auto itor = matchRemoteEntitys_.find(entity);
 	if (itor == matchRemoteEntitys_.end()) {
 		return;
 	}
-	subHandles.reserve(itor->second.size());
+	handles.reserve(itor->second.size());
 	for (auto& guid : itor->second) {
-		subHandles.push_back(Conversion::ToInstanceHandle(guid));
+		handles.push_back(Conversion::ToInstanceHandle(guid));
 	}
+}
+
+bool Participant::RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const
+{
+	GUID_t remoteGuid = Conversion::ToGuid(remotehandle);
+	std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
+	auto itor = matchRemoteEntitys_.find(entity);
+	if (itor == matchRemoteEntitys_.end()) {
+		return false;
+	}
+	auto guidItor = itor->second.find(remoteGuid);
+	if (guidItor == itor->second.end()) {
+		return false;
+	}
+	return true;
 }
 
 bool Participant::Match(const PublicationBuiltinTopicData& pubData, const SubscriptionBuiltinTopicData& subData, std::set<QosPolicyId_t>& qosSeq)
@@ -857,7 +874,7 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 	}
 
 	if (subData.durability.kind > pubData.durability.kind) {
-		qosSeq.insert(DURABILITYSERVICE_QOS_POLICY_ID);
+		qosSeq.insert(DURABILITY_QOS_POLICY_ID);
 	}
 
 	if (!((subData.presentation.access_scope <= pubData.presentation.access_scope) &&

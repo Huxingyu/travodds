@@ -363,7 +363,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(bool liveliness)
 	HeartBeatSubMessage_t hbMsg;
 
 	for (auto& writerProxy : matchedReaders_) {
-		WriteHeartbeat(writerProxy.second, liveliness);
+		WriteHeartbeat(writerProxy.second, true,liveliness);
 	}
 	return RETCODE_OK;
 }
