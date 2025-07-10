@@ -458,6 +458,7 @@ namespace Conversion {
 	inline InstanceHandle_t ToInstanceHandle(const BuiltinTopicKey_t& key) {
 		InstanceHandle_t handle;
 		memcpy(handle.keyHash.value, &key, sizeof(GUID_t));
+		handle.isValid = true;
 		return handle;
 	}
 	/**

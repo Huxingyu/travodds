@@ -104,12 +104,14 @@ void Timer::Run()
 	runs_++;
 	std::unique_lock<std::mutex> lock(mutex_);
 
-	cva_.wait_until(lock, nextTime_);
+	if(!restart_.load())
+		cva_.wait_until(lock, nextTime_);
 
 	if (restart_.load()) {
 		restart_.store(false);
 		nextTime_ = std::chrono::steady_clock::now() + period_;
 		runs_--;
+
 		return;
 	}
 
@@ -191,6 +193,7 @@ bool Timer::UpdatePeriod(int64_t period)
 	//std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
 
 	period_ = std::chrono::milliseconds(period);
+	
 	//if (ms > period_) {
 		ReStart();
 	//}
