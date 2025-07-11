@@ -3,7 +3,7 @@
 #include "common/log/logger.h"
 #include "common/timeconversion.h"
 #include "dcps/subscribe/datareaderimpl.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 	: qos_(qos),

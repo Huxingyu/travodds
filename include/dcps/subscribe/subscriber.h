@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBER_H
-#define AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBER_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBER_H
+#define TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBER_H
 
 #include "dcps/subscribe/datareader.h"
 #include "dcps/listener/subscriberlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class DomainParticipant;
 /**
  * Subscriber类，包含允许用户控制消息接收的公共API。
@@ -249,5 +249,5 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBER_H

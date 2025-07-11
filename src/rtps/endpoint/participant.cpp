@@ -19,7 +19,7 @@
 #include <unistd.h>
 #endif // if defined(_WIN32)
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 // Participant::Participant(const DomainParticipantImpl* domainImpl)
 // 	:domainImpl_(domainImpl)

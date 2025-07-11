@@ -1,7 +1,7 @@
 #include "dcps/condition/readconditionimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 ReadConditionImpl::ReadConditionImpl(SampleStateMask smapleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, DataReaderImpl* dataReader)
     : sampleStateMask_(smapleStates), viewStateMask_(viewStates), instanceStateMask_(instanceStates), dataReader_(dataReader)

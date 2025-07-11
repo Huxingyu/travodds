@@ -6,7 +6,7 @@
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
 #include <algorithm>
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 LivelinessManager::LivelinessManager(Participant* participant):participant_(participant)
 {

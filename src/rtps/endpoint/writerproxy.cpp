@@ -1,7 +1,7 @@
 #include "rtps/endpoint/writerproxy.h"
 #include "common/log/logger.h"
 #include  <algorithm>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WriterProxy::WriterProxy(const GUID_t& writerGuid, const GUID_t& groupGuid, 
 	const LocatorSeq& unicastLocatorList, const LocatorSeq& multicastLocatorList)

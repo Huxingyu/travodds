@@ -2,7 +2,7 @@
 #include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
 #include <iostream>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext())

@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_PUBLISH_DATAWRITERIMPL_H
-#define AGIDDS_DCPS_PUBLISH_DATAWRITERIMPL_H
+#ifndef TRAVODDS_DCPS_PUBLISH_DATAWRITERIMPL_H
+#define TRAVODDS_DCPS_PUBLISH_DATAWRITERIMPL_H
 
 #include "dcps/publish/datawriter.h"
 #include "dcps/domain/domainentityimpl.h"
 #include "dcps/topic/typesupport.h"
 #include "rtps/historycache/historycache.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 class TypeSupport;
@@ -467,6 +467,6 @@ protected:
 
 	std::shared_ptr<HistoryCache> history_ = nullptr;
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_PUBLISH_DATAWRITERIMPL_H
+#endif // !TRAVODDS_DCPS_PUBLISH_DATAWRITERIMPL_H

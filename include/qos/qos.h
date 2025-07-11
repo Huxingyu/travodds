@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_QOS_QOS_H
-#define AGIDDS_QOS_QOS_H
+#ifndef TRAVODDS_QOS_QOS_H
+#define TRAVODDS_QOS_QOS_H
 
 #include "agidds_dll.h"
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 const  std::string  USERDATA_QOS_POLICY_NAME              = "UserData";
 const  std::string  DURABILITY_QOS_POLICY_NAME            = "Durability";
@@ -379,6 +379,6 @@ DDS_DLL extern const SubscriberQos SUBSCRIBER_QOS_DEFAULT;
 DDS_DLL extern const DataWriterQos DATAWRITER_QOS_DEFAULT;
 DDS_DLL extern const DataReaderQos DATAREADER_QOS_DEFAULT;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_QOS_QOS_H
+#endif // !TRAVODDS_QOS_QOS_H

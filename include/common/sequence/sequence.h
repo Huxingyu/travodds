@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_COMMON_SEQUENCE_SEQUENCE_H
-#define AGIDDS_COMMON_SEQUENCE_SEQUENCE_H
+#ifndef TRAVODDS_COMMON_SEQUENCE_SEQUENCE_H
+#define TRAVODDS_COMMON_SEQUENCE_SEQUENCE_H
 
 #include "common/sequence/sequencebase.h"
 #include <vector>
@@ -124,7 +124,7 @@ private:
 	std::vector<T*> datas_;
 };
 
-#define AGIDDS_SEQUENCE(FooSeq, Foo) using FooSeq = SequenceData<Foo>;
+#define TRAVODDS_SEQUENCE(FooSeq, Foo) using FooSeq = SequenceData<Foo>;
 
 template<typename T>
 SequenceData<T>::SequenceData(const SequenceData& other)

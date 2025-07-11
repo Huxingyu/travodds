@@ -1,6 +1,6 @@
 #include "rtps/transport/messagetransmitter.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 bool MessageTransmitter::IsRun()
 {

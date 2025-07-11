@@ -1,7 +1,7 @@
 #include  "rtps/endpoint/readerproxy.h"
 #include  "rtps/endpoint/writer.h"
 #include  <algorithm>
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 ReaderProxy::ReaderProxy(const GUID_t& readerGuid, const GUID_t groupGuid,
 	const LocatorSeq& unicastLocatorList, const LocatorSeq& multicastLocatorList, bool active)

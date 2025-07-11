@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_READER_H
-#define AGIDDS_RTPS_ENDPOINT_READER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_READER_H
+#define TRAVODDS_RTPS_ENDPOINT_READER_H
 
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
 #include "common/time/ddstimer.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class ReaderListener {
 public:
@@ -320,6 +320,6 @@ protected:
 	friend class DataReaderImpl;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

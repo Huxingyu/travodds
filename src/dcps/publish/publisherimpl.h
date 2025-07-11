@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_PUBLISH_PUBLISHERIMPL_H
-#define AGIDDS_DCPS_PUBLISH_PUBLISHERIMPL_H
+#ifndef TRAVODDS_DCPS_PUBLISH_PUBLISHERIMPL_H
+#define TRAVODDS_DCPS_PUBLISH_PUBLISHERIMPL_H
 
 #include "dcps/publish/publisher.h"
 #include "dcps/domain/domainentityimpl.h"
 #include "dcps/publish/datawriterimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DomainParticipantImpl;
 /**
@@ -289,6 +289,6 @@ private:
 	DataWriterQos defaultDatawriterQos_;
 
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_PUBLISH_PUBLISHERIMPL_H
+#endif // !TRAVODDS_DCPS_PUBLISH_PUBLISHERIMPL_H

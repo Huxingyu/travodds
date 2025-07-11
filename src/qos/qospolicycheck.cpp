@@ -1,6 +1,6 @@
 #include "qos/qospolicycheck.h"
 #include "common/log/logger.h" 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantFactoryQos& qos)
 {
 	/* yuguxu 所包含QoS无规范限制 */

@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_NUMERIC_CONSTANTS_H
-#define AGIDDS_NUMERIC_CONSTANTS_H
+#ifndef TRAVODDS_NUMERIC_CONSTANTS_H
+#define TRAVODDS_NUMERIC_CONSTANTS_H
 
 #include <cstdint>  
 #include <cstddef>
 #include "agidds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace SubMessageFlag {
 	constexpr uint8_t NONE_FLAG                      = 0x00; // 无标志位
@@ -132,5 +132,5 @@ constexpr int32_t DATAFRAG_DELAY_NUM = 20;
 constexpr int32_t DATAFRAG_DELAY_NUM = 100;
 #endif
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

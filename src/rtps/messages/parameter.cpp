@@ -1,6 +1,6 @@
 #include "rtps/messages/parameter.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(PL_DEFAULT_ENDIAN)
 {
@@ -720,7 +720,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			AddParameter(ParameterId::PID_EXPECTS_INLINE_QOS, data);
 			break;
 		}
-		case AGIDDS::ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT: {
+		case ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT: {
 			Count_t data;
 			ReadInt32(msg + offset, data);
 			AddParameter(ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT, data);

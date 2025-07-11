@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
-#define AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#ifndef TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#define TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
 
 #include "rtps/basictypertps.h"
 #include "rtps/messages/parameter.h"
@@ -20,7 +20,7 @@
 #include "common/memory/memorypool.h"
 #include <atomic>
 #include <condition_variable>
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 
@@ -486,6 +486,6 @@ private:
 	friend class Reader;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#endif // !TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H

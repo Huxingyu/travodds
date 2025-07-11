@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
-#define AGIDDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
+#define TRAVODDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
 
 #include "dcps/subscribe/datareader.h"
 #include "dcps/domain/domainentityimpl.h"
@@ -19,7 +19,7 @@
 
 class SerializedBuffer;
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Reader;
 class SubscriberImpl;
@@ -880,6 +880,6 @@ protected:
     std::shared_ptr<HistoryCache> history_;
 
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // !DATA_READER_IMPL_H

@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <time.h>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 static uint32_t g_consoleMask = 0xffff;
 static uint32_t g_fileMask = 0xffff;
@@ -73,4 +73,4 @@ void AGILogToConsole(LogType type, const char* file, const char* func,
     printf("\n");
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

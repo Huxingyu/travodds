@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_COMMON_THREADS_THREADPOOL_H
-#define AGIDDS_COMMON_THREADS_THREADPOOL_H
+#ifndef TRAVODDS_COMMON_THREADS_THREADPOOL_H
+#define TRAVODDS_COMMON_THREADS_THREADPOOL_H
 
 #include "agidds_dll.h"
 #include <vector>       
@@ -22,7 +22,7 @@
 #include <future>
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /* 使用std::queue的队列的线程安全实现 */ 
 using ThreadPoolTask = std::function<void()>;
 
@@ -150,6 +150,6 @@ private:
 
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

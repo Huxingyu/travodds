@@ -17,7 +17,7 @@
 
 using namespace std::chrono;
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWriterListener* listener, StatusMask mask, PublisherImpl* pub, TypeSupport* typeSupport)
 	: DomainEntityImpl(mask), topic_(dynamic_cast<TopicImpl*>(topic)),

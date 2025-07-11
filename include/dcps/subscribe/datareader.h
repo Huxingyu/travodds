@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
-#define AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H
+#define TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H
 #include "type/builtintopicdata.h"
 #include "dcps/listener/datareaderlistener.h"
 #include "dcps/domain/domainentity.h"
@@ -18,7 +18,7 @@
 #include "dcps/condition/readcondition.h"
 #include "dcps/condition/querycondition.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Subscriber;
 
@@ -696,6 +696,6 @@ public:
 
 using DataReaderSeq = Sequence<DataReader*>;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
+#endif // !TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H

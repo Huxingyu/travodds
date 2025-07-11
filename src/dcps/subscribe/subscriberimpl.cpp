@@ -6,7 +6,7 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/discovery/discovery.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 SubscriberImpl::SubscriberImpl(const SubscriberQos& qos, SubscriberListener* a_listener, StatusMask mask, DomainParticipantImpl* a_participant)
     : DomainEntityImpl(mask), qos_(qos), listener_(a_listener), participant_(a_participant)

@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H
-#define AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H
+#define TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H
 
 #include "dcps/domain/domainentityimpl.h"
 #include "dcps/subscribe/subscriber.h"
 #include "dcps/subscribe/datareaderimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class DomainParticipantImpl;
 /**
  * SubscriberImp类为Subscriber类子类及其功能具体实现，包含允许用户控制消息接收的公共API。
@@ -306,5 +306,5 @@ private:
     DataReaderQos defaultDatareaderQos_;
 
 };
-AGIDDS_NAMESPACE_END
-#endif // ! AGIDDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // ! TRAVODDS_DCPS_SUBSCRIBE_SUBSCRIBERIMPL_H

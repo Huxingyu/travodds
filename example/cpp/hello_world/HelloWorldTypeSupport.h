@@ -8,7 +8,9 @@
 extern "C" {
 #endif
 
-class DDS_TYPE_API HelloWorldTypeSupport : public AGIDDS::TypeSupport {
+USING_TRAVODDS_NAMESPACE
+
+class DDS_TYPE_API HelloWorldTypeSupport : public TypeSupport {
 public:
     static HelloWorldTypeSupport* get_instance();
 
@@ -26,15 +28,15 @@ public:
 
     virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
 
-    virtual AGIDDS::TypeObject* get_typeobject() override;
+    virtual TypeObject* get_typeobject() override;
 
-    virtual AGIDDS::ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;
 
-    virtual int MakeKey(const void* data, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
 

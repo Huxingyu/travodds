@@ -8,7 +8,7 @@
 #include "rtps/discovery/discovery.h"
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 PublisherImpl::PublisherImpl(PublisherQos qos, PublisherListener* listener, StatusMask mask, DomainParticipantImpl* participant)
     : DomainEntityImpl(mask), qos_(qos), listener_(listener), participant_(participant)
 {

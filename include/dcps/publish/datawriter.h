@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_PUBLISH_DATAWRITER_H
-#define AGIDDS_DCPS_PUBLISH_DATAWRITER_H
+#ifndef TRAVODDS_DCPS_PUBLISH_DATAWRITER_H
+#define TRAVODDS_DCPS_PUBLISH_DATAWRITER_H
 
 #include "dcps/topic/topic.h"
 #include "dcps/listener/datawriterlistener.h"
 #include "type/builtintopicdata.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Publisher;
 /**
@@ -317,5 +317,5 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_PUBLISH_DATAWRITER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_PUBLISH_DATAWRITER_H

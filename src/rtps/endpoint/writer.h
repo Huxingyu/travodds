@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_WRITER_H
-#define AGIDDS_RTPS_ENDPOINT_WRITER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_WRITER_H
+#define TRAVODDS_RTPS_ENDPOINT_WRITER_H
 
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DataWriterImpl;
 /**
@@ -238,6 +238,6 @@ protected:
 	DataWriterImpl* datawriter_ = nullptr;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

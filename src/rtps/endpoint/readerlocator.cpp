@@ -1,5 +1,5 @@
 #include "rtps/endpoint/readerlocator.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 ReaderLocator::ReaderLocator(const Locator_t& locator)
 	: locator_(locator),

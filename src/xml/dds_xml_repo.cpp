@@ -14,7 +14,7 @@
 #include "common/log/logger.h"
 #include <iostream>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef _XML_INTERFACE_CPP
 
@@ -1636,4 +1636,4 @@ bool DDSXMLRepo::parseDurabilityServiceQosPolicy(XMLElement* element, Durability
 
 #endif //_XML_INTERFACE_CPP
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

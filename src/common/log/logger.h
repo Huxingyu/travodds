@@ -15,7 +15,7 @@
 
 #include "agidds_dll.h"
 #include <cstdint>
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @enum LogType
@@ -74,6 +74,6 @@ void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t 
  */
 #define AGILOG(type, format, ...) AGILogToConsole(type, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__); \
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // LOGGER_H
