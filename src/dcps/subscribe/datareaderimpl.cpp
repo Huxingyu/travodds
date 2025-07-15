@@ -643,12 +643,6 @@ ReturnCode_t DataReaderImpl::enable()
 	if (!readerPtr.get()) {
 		return RETCODE_ERROR;
 	}
-
-	DiscoveredReaderData readerData;
-	readerData.ddsSubscriptionData = GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WriteSubscriptionData(readerData);
-
 	history_ = readerPtr->readerCache_;
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
@@ -663,6 +657,13 @@ ReturnCode_t DataReaderImpl::enable()
 
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
+
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	DiscoveredReaderData readerData;
+	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+	discovery->WriteSubscriptionData(readerData);
+
 	return RETCODE_OK;
 }
 

@@ -98,7 +98,7 @@ ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) cons
 	std::lock_guard<std::mutex> lock(mtx_);
 	attached_conditions.reserve(conditions_.size());
 	for (auto& it : conditions_) {
-		Condition* guard = IsGuardConditionImpl(nullptr);
+		Condition* guard = IsGuardConditionImpl(it);
 		if (nullptr != guard) {
 			attached_conditions.emplace_back(guard);
 			continue;

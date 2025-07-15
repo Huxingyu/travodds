@@ -2,8 +2,9 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
+#include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/flowcontrol/flowcontroller.h"
 #include "common/time/ddstimer.h"
-#include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
 USING_AGIDDS_NAMESPACE;
@@ -59,7 +60,7 @@ void StatelessWriter::UnsentChangesReset()
 	}
 }
 
-ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change) 
+ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
 {
 	/* wnagyi  */
 	Duration_t duration = TIME_INFINITE;
@@ -118,7 +119,11 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 			for (auto& readerlocator : readerLocators_) {
 				LocatorVec dstLocators;
 				dstLocators.push_back(readerlocator.first);
-				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				if (flowControl) {
+					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				} else {
+					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				}
 			}
 
 			buffer = buffer->next;
@@ -188,7 +193,7 @@ void StatelessWriter::ResendDataPeriod()
 		if (!change) {
 			continue;
 		}
-		DeliveryData(change);
+		DeliveryData(change, true);
 	}
 }
 

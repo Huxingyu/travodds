@@ -14,7 +14,7 @@
 
 #include "rtps/endpoint/rtpsentity.h"
 #include "rtps/endpoint/reader.h"
-
+#include "rtps/flowcontrol/flowcontroltype.h"
 AGIDDS_NAMESPACE_BEGIN
 
 class Writer;
@@ -25,6 +25,8 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class FlowControlManager;
+class FlowRateLimitedManager;
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -75,7 +77,7 @@ public:
 	 *
 	 * @return 创建出的的发布端映射Writer指针。
 	 */
-    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const GUID_t& guid, bool key);
+    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig = FlowControllerConfig());
 
 	/**
 	 * @brief 创建发布端在rtps层映射Reader。
@@ -303,6 +305,8 @@ public:
 
 	void TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length);
 
+	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
+
 	/**
 	 * @brief 获取默认单播定位器。
 	 *
@@ -426,6 +430,9 @@ private:
 
 
 	// const DomainParticipantImpl* const domainImpl_ ;
+    std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
+
+    std::unique_ptr<FlowControlManager> flowControlManager_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	

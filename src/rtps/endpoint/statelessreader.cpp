@@ -118,7 +118,11 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		return RETCODE_ERROR;
 	}
 	auto itor = dataFragCaches_.find(guid);
-	if (itor == dataFragCaches_.end()) {
+	if (itor == dataFragCaches_.end() || itor->second->sequenceNumber < dataMsg.writerSN) {
+		if (itor != dataFragCaches_.end()) {
+			/* 收到新的分片数据,并且新的数据序号大于之前的数据，BEST_EFFORT 模式下删除旧数据 */
+			dataFragCaches_.erase(itor);
+		}
 		/* 申请空间 */
 		buffer = new SerializedBuffer();
 
@@ -140,38 +144,8 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			dataFragCache->fragmentSeq.insert(i);
 		}
 
-		dataFragCaches_.insert(std::make_pair(guid, dataFragCache));
+		dataFragCaches_.emplace(guid, dataFragCache);
 	}
-	else if (itor->second->sequenceNumber < dataMsg.writerSN) {
-		/* 收到新的分片数据,并且新的数据序号大于之前的数据，BEST_EFFORT 模式下删除旧数据 */
-		//TODO
-	//	std::cout << "recv error " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		dataFragCaches_.erase(itor);
-		/* 重新 申请空间 */
-		buffer = new SerializedBuffer();
-
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
-		buffer->buffer = buffer->origin_buffer;
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
-
-		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
-
-		dataFragCache->sequenceNumber = dataMsg.writerSN;
-		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
-		dataFragCache->fraqmentSize = dataMsg.dataFrag.fragmentSize;
-		dataFragCache->fragmentTatolNum = dataMsg.dataFrag.sampleSize / dataMsg.dataFrag.fragmentSize;
-		if (0 != dataMsg.dataFrag.sampleSize % dataMsg.dataFrag.fragmentSize) {
-			dataFragCache->fragmentTatolNum += 1;
-		}
-
-		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
-			dataFragCache->fragmentSeq.insert(i);
-		}
-
-		dataFragCaches_.insert(std::make_pair(guid, dataFragCache));
-	}
-
-	itor = dataFragCaches_.find(guid);
 
 	/* 找到对应的SerializedBuffer */
 	buffer = itor->second->serializedBuffer;

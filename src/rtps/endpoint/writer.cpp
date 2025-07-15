@@ -1,5 +1,6 @@
 #include "rtps/endpoint/writer.h"
 #include "rtps/endpoint/participant.h"
+#include "rtps/flowcontrol/flowcontroller.h"
 #include "common/log/logger.h"
 #include <chrono>
 USING_AGIDDS_NAMESPACE;
@@ -10,7 +11,8 @@ Writer::Writer(const DataWriterQos& qos, const TopicKind_t& kind)
 	  nackSuppressionDuration_(TIME_ZERO),
 	  lastChangeSequenceNumber_(TIME_ZERO),
 	  heartBeatPeriod_(TIME_ZERO),
-	  writerCache_(new HistoryCache(qos.history, qos.resource_limits, kind))
+	  writerCache_(new HistoryCache(qos.history, qos.resource_limits, kind)),
+	  flowController_(nullptr)
 {
 }
 
@@ -87,7 +89,7 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 
 	writerCache_->AddChange(cacheChange);
 
-	ret = DeliveryData(cacheChange);
+	flowController_->AddNewData(this, cacheChange);
 
 	return RETCODE_OK;
 }
@@ -117,7 +119,7 @@ bool Writer::DataFilter(std::shared_ptr<CacheChange> change)
 	return true;
 }
 
-ReturnCode_t Writer::DeliveryData(std::shared_ptr<CacheChange> change)
+ReturnCode_t Writer::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
 {
 	return RETCODE_UNSUPPORTED;
 }
@@ -178,5 +180,15 @@ bool Writer::GetMatchedSubscriptionData(SubscriptionBuiltinTopicData& subscripti
 		return true;
 	}	
 	return false;
+}
+
+void Writer::SetFlowController(FlowController* controller)
+{
+	flowController_ = controller;	
+}
+
+FlowController* Writer::GetFlowController()
+{
+	return flowController_;
 }
 
