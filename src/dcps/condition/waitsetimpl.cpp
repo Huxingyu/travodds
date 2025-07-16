@@ -21,11 +21,7 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 	ConditionImpl* condImpl = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(mtx_);
-		for (const auto& it : conditions_) {
-			if (&condition == it) {
-				return RETCODE_OK;
-			}
-		}
+
 		Condition* cond = const_cast<Condition*>(&condition);
 
 		GuardConditionImpl* guard  = IsGuardCondition(cond);
@@ -36,6 +32,11 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 		} else {
 			AGILOG(AGILOG_ERROR, "Condition type is not supported in WaitSetImpl.");
 			return RETCODE_BAD_PARAMETER;
+		}
+		for (const auto& it : conditions_) {
+			if (condImpl == it) {
+				return RETCODE_OK;
+			}
 		}
 		conditions_.emplace_back(condImpl);
 	}

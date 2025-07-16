@@ -37,6 +37,7 @@ int32_t AGILogDestroy()
 void AGILogToConsole(LogType type, const char* file, const char* func, 
     uint32_t line, const char* format, ...)
 {
+    return;
     if (!(g_consoleMask & type)) {
         return;
     }

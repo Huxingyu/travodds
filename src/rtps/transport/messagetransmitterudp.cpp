@@ -1,7 +1,7 @@
 #include "rtps/transport/messagetransmitterudp.h"
 #include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
-#include <iostream>
+
 USING_AGIDDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
@@ -209,6 +209,7 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrAdd(Locator_t receiveAddr)
 		//AGILOG(AGILOG_ERROR, "AddMemberShip error, ret = %d", ret);
 		return ret;
 	}
+
 	AsyncReceive(receiveSocketMap_[receiveAddr.port]);
 
 	return RETCODE_OK;
@@ -383,12 +384,14 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 		flagNum_.fetch_sub(1);
 		return;
 	}
+
 	std::shared_ptr<asio::ip::udp::endpoint> sender_endpoint = std::make_shared<asio::ip::udp::endpoint>();
 	socket->async_receive_from(asio::buffer(buffer, MAXSIZE), *sender_endpoint,
 		[this, buffer, socket, sender_endpoint](const std::error_code& ec, std::size_t bytes_transferred) {
+			ReturnCode_t ret = RETCODE_OK;
 			if (!ec) {
 				InterpretMessage(buffer, bytes_transferred);
-			}
+			} 
 			receivePool_->releaseBuffer(const_cast<char*&>(buffer));
 			flagNum_.fetch_sub(1);
 			if (IsRun()) {

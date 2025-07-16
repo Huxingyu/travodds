@@ -95,6 +95,8 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	/* wangyi 更新存活性 */
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	AssertWriterLiveliness(guid);
+
+
 	ChangeKind_t kind = ALIVE;
 	SerializedBuffer* buffer = nullptr;
 	InstanceHandle_t pubHandle;
@@ -144,27 +146,24 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			dataFragCache->fragmentSeq.insert(i);
 		}
 
-		dataFragCaches_.emplace(guid, dataFragCache);
+		itor = dataFragCaches_.emplace(guid, dataFragCache).first;
 	}
-
 	/* 找到对应的SerializedBuffer */
 	buffer = itor->second->serializedBuffer;
-	uint32_t shift = 0;
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
-	if (0 != itor->second->fragmentSeq.count(dataMsg.dataFrag.fragmentStartingNum)) {
-		shift += (dataMsg.dataFrag.fragmentStartingNum - 1) * dataMsg.dataFrag.fragmentSize;
+	if (itor->second->fragmentSeq.erase(dataMsg.dataFrag.fragmentStartingNum) > 0) {
+		uint32_t shift = (dataMsg.dataFrag.fragmentStartingNum - 1) * dataMsg.dataFrag.fragmentSize;
 		memcpy(buffer->buffer + shift, data, len);
-		itor->second->fragmentSeq.erase(dataMsg.dataFrag.fragmentStartingNum);
 	}
 	else {
 		//TODO  
 		/* 重复接收分片数据 */
-		std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
+		// std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
 		AGILOG(AGILOG_ERROR, "recv repeat dataFrg");
 	}
 
-	if (0 == itor->second->fragmentSeq.size()) {
+	if (itor->second->fragmentSeq.empty()) {
 		std::shared_ptr<CacheChange> dataFragCache = itor->second;
 		dataFragCaches_.erase(itor);
 

@@ -131,7 +131,7 @@ ReturnCode_t DataWriterImpl::set_listener(DataWriterListener* listener, const St
 	listener_ = listener;
 	statusMask_ = mask;
 
-    return  RETCODE_BAD_PARAMETER;
+    return  RETCODE_OK;
 }
 
 const DataWriterListener* DataWriterImpl::get_listener() const

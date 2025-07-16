@@ -461,7 +461,7 @@ bool HistoryCache::GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady
 	}
 	std::map<InstanceHandle_t, CacheChangeVector>::iterator itor = 
 		std::min_element(instanceChanges_.begin(), instanceChanges_.end(),
-			[](const std::pair<InstanceHandle_t, CacheChangeVector>& a, const std::pair<InstanceHandle_t, CacheChangeVector>& b) {
+			[](const auto& a, const auto& b) {
 			return a.second.nextDeadline < b.second.nextDeadline;
 			}
 		);
