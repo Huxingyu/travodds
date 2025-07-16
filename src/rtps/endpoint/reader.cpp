@@ -377,7 +377,7 @@ void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) cons
 
 bool Reader::GetMatchedPublicationData(PublicationBuiltinTopicData& publicationData, const InstanceHandle_t& remotehandle) const
 {
-	if (participant_->RemoeEntityIsMatched(guid_.entityId, remotehandle)) {
+	if (!participant_->RemoteEntityIsMatched(guid_.entityId, remotehandle)) {
 		return false;
 	}
 	if (RETCODE_OK == participant_->GetPublicationData(publicationData, remotehandle)) {

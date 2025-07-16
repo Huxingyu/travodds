@@ -130,6 +130,10 @@ struct OfferedIncompatibleQosStatus {
 	int32_t					total_count_change;
 	QosPolicyId_t			last_policy_id;
 	QosPolicyCountSeq	policies;
+
+	OfferedIncompatibleQosStatus() :total_count(0), total_count_change(0), last_policy_id(0) {
+
+	}
 };
 
 struct RequestedIncompatibleQosStatus {

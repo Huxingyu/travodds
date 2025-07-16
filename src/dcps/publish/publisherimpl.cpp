@@ -23,7 +23,7 @@ PublisherImpl::~PublisherImpl()
     }
     writerHandles_.clear();
 	if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
 	}
 }
@@ -61,7 +61,7 @@ ReturnCode_t PublisherImpl::get_qos(PublisherQos& qos) const
 ReturnCode_t PublisherImpl::set_listener(PublisherListener* listener, const StatusMask& mask)
 {
     if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
     }
 	listener_ = listener;

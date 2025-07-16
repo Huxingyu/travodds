@@ -22,7 +22,7 @@ SubscriberImpl::~SubscriberImpl()
 	}
     readerHandles_.clear();
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 }
@@ -59,7 +59,7 @@ ReturnCode_t SubscriberImpl::set_listener(SubscriberListener* a_listener, const 
 {
 	//TODO 线程安全
     if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
     }
 	listener_ = a_listener;

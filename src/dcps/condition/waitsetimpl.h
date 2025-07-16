@@ -17,6 +17,9 @@
 #include "dcps/base/retcode.h"
 
 AGIDDS_NAMESPACE_BEGIN
+
+class GuardConditionImpl;
+
 class WaitSetImpl
 {
 public:
@@ -80,7 +83,9 @@ public:
 	 * @brief 唤醒正在等待该条件变量的线程。
 	 */
 	void Notify();
-
+protected:
+	GuardConditionImpl* IsGuardCondition(Condition* cond);
+	Condition* IsGuardConditionImpl(ConditionImpl* cond) const;
 private:
 	mutable std::mutex mtx_;
 	mutable std::mutex mtxCv_;

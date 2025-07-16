@@ -48,17 +48,17 @@ cd build
 make install DESTDIR=%{buildroot}
 
 # 确保目标目录存在
-install -d %{buildroot}%{Installprefix}/lib/travodds
+install -d %{buildroot}%{Installprefix}/lib
 
 # 创建符号链接（开发包使用）
-# ln -sf libtravodds.so.1 %{buildroot}%{installprefix}/lib/travodds/libtravodds.so
+# ln -sf libtravodds.so.1 %{buildroot}%{installprefix}/lib/libtravodds.so
 
 # 主包文件列表（运行时库）
 %files
-%{Installprefix}/lib/travodds/libtravodds.so.*
+%{Installprefix}/lib/libtravodds.so.*
 
 # 开发包文件列表（头文件、符号链接等）
 %files devel
-%{Installprefix}/include/travodds/
-%{Installprefix}/lib/travodds/libtravodds.so
+%{Installprefix}/include/
+%{Installprefix}/lib/libtravodds.so
 %{Installprefix}/share/travodds/cmake/
