@@ -147,5 +147,7 @@ DomainParticipantFactoryImpl* DomainParticipantFactoryImpl::get_instance()
 
 void DomainParticipantFactoryImpl::finalize()
 {
-
+    get_instance()->set_qos(DomainParticipantFactoryQos());
+    DomainParticipantQos qos;
+    get_instance()->set_default_participant_qos(qos);
 }

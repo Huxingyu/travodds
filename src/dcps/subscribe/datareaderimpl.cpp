@@ -643,12 +643,6 @@ ReturnCode_t DataReaderImpl::enable()
 	if (!readerPtr.get()) {
 		return RETCODE_ERROR;
 	}
-
-	DiscoveredReaderData readerData;
-	readerData.ddsSubscriptionData = GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WriteSubscriptionData(readerData);
-
 	history_ = readerPtr->readerCache_;
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
@@ -663,6 +657,13 @@ ReturnCode_t DataReaderImpl::enable()
 
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
+
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	DiscoveredReaderData readerData;
+	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+	discovery->WriteSubscriptionData(readerData);
+
 	return RETCODE_OK;
 }
 
@@ -758,7 +759,7 @@ bool DataReaderImpl::MakeKey(const void*  data, InstanceHandle_t& handle, bool f
 void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache)
 {
 	/*  */
-	cache->kind;
+	// cache->kind;
 	
 
 	/* deadline */
@@ -766,7 +767,7 @@ void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& c
 		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
 		std::chrono::steady_clock::time_point nextTime = 
 			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
-		history_->SetNextDeadline(lastInstance_, nextTime);
+		history_->SetNextDeadline(cache->instanceHandle, nextTime);
 		history_->GetNextDeadline(lastInstance_, nextTime);
 		auto period = nextTime - std::chrono::steady_clock::now();
 		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());

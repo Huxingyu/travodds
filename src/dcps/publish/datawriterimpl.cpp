@@ -131,7 +131,7 @@ ReturnCode_t DataWriterImpl::set_listener(DataWriterListener* listener, const St
 	listener_ = listener;
 	statusMask_ = mask;
 
-    return  RETCODE_BAD_PARAMETER;
+    return  RETCODE_OK;
 }
 
 const DataWriterListener* DataWriterImpl::get_listener() const
@@ -519,15 +519,12 @@ ReturnCode_t DataWriterImpl::enable()
 	if (nullptr == domainParticipant) {
 		return RETCODE_ERROR;
 	}
-	std::shared_ptr<Writer>  writerPtr = domainParticipant->GetRelatedParticipant()->CreateWriter(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
+    FlowControllerConfig flowconfig{FlowControllerKind::ASYNC,SchedulerPolicy::FIFO};
+
+    std::shared_ptr<Writer>  writerPtr = domainParticipant->GetRelatedParticipant()->CreateWriter(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key(), flowconfig);
 	if (!writerPtr.get()) {
 		return RETCODE_ERROR;
 	}
-
-	DiscoveredWriterData writerData;
-	writerData.ddsPublicationData = GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WritePublicationData(writerData);
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
         deadlineTimer_ = TimerManager::CreateTimer(
@@ -540,6 +537,13 @@ ReturnCode_t DataWriterImpl::enable()
 	}
 
 	enable_ = true;
+
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	DiscoveredWriterData writerData;
+	writerData.ddsPublicationData = GetBuiltinTopicData();
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+	discovery->WritePublicationData(writerData);
+
 	return RETCODE_OK;
 }
 void DataWriterImpl::OnOfferedIncompatibleQos(std::set<QosPolicyId_t>& qosSeq)

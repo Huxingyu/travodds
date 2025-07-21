@@ -15,8 +15,10 @@
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
+
 AGIDDS_NAMESPACE_BEGIN
 
+class FlowController;
 class DataWriterImpl;
 /**
  * Writer类,管理向匹配的Reader发送数据。
@@ -124,16 +126,15 @@ public:
 	 * @return true。
 	 */
 	bool DataFilter(std::shared_ptr<CacheChange> change);
-
 	/**
-	 * @brief 数据传输。
-	 *  虚函数，具体功能在子类中根据需要实现。
-	 *
-	 * @param [in] change 数据缓存。
-	 *
-	 * @return RETCODE_UNSUPPORTED。
-	 */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change);
+     * @brief 数据传输。
+     *  虚函数，具体功能在子类中根据需要实现。
+     *
+     * @param [in] change 数据缓存。
+     *
+     * @return RETCODE_UNSUPPORTED。
+     */
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
 
 	/**
 	 * @brief 数据传输。
@@ -224,6 +225,9 @@ public:
 	 * @return 获取成功返回true，否则返回false。
 	 */
 	bool GetMatchedSubscriptionData(SubscriptionBuiltinTopicData& subscriptionData, const InstanceHandle_t& remotehandle) const;
+
+	void SetFlowController(FlowController* controller);
+	FlowController* GetFlowController ();
 protected:
 
 	bool pushMode_ = true;
@@ -236,6 +240,7 @@ protected:
 	std::shared_ptr<HistoryCache> writerCache_;
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
+	FlowController* flowController_;
 };
 
 AGIDDS_NAMESPACE_END

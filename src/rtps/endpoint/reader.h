@@ -175,7 +175,7 @@ public:
 	 *
 	 * @return 生成的CacheChange指针。
 	 */
-	std::shared_ptr<CacheChange> new_change(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,InstanceHandle_t pubHandle,Time_t sourceTimespace);
+	std::shared_ptr<CacheChange> new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t& handle, const InstanceHandle_t& pubHandle, const Time_t& sourceTimespace);
 
 	/**
 	 * @brief 设置Reader监听者。

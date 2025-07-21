@@ -323,7 +323,7 @@ void LivelinessManager::SetParticipantMessageDataWriter(std::shared_ptr<DataWrit
 	DataWriterQos writerQos;
 	dataWriter->get_qos(writerQos);
 	GUID_t guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,true, ENTITY_WRITER);
-	std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, guid, true);
+    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, guid, true);
 	ParticipantMessageDataWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
 }
 

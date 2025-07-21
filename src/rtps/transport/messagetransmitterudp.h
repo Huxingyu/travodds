@@ -181,6 +181,7 @@ private:
 
 	/* 保护socket，防止并发使用 */
 	std::mutex mtxSendSocket_;
+
 	friend MessageTransmitterUDPv4;
 	friend MessageTransmitterUDPv6;
 };

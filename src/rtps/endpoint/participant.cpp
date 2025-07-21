@@ -10,6 +10,8 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/transport/ipcontainer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/flowcontrol/flowcontrolmanager.h"
+#include "rtps/flowcontrol/flowratelimitedmanager.h"
 #include "common/log/logger.h"
 #include <random>
 #include <regex>
@@ -35,7 +37,9 @@ Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
 	: domainId_(id), readerId_(0), writerId_(0), nextId_(0),
 	  protocolVersion_(PROTOCOLVERSION),
 	  vendorId_(VENDORID_PROSIMA),
-	  threadPool_(threadPool)
+	  threadPool_(threadPool),
+	  flowControlManager_(nullptr),
+	  flowRateLimitedManager_(nullptr)
 {
 	GenerateGuidPrefix(domainId_, domainId_);
 	guid_.entityId = ENTITYID_PARTICIPANT;
@@ -127,12 +131,12 @@ ReturnCode_t Participant::Init()
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
 		}
 	}
-
-	//Locator_t localAddress;
-	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
+	FlowParameters flowParameters;
+	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
+	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	return RETCODE_OK;
 }
-std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key)
+std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig)
 {
 	std::shared_ptr<Writer> writerPtr;
 	std::shared_ptr<Endpoint> endpointPtr;
@@ -146,6 +150,10 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	} else {
 		writerPtr = std::make_shared<StatefulWriter>(dwQos, guid, kind);
 	}
+	FlowController* controller = flowControlManager_->GetFlowController(flowConfig);
+	writerPtr->SetFlowController(controller);
+	controller->RegisterWriter(writerPtr);
+
 	endpointPtr = writerPtr;
 	endpointPtr->SetParticipant(this);
 
@@ -230,6 +238,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 			itor->second->GetGuid().entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER) {
 			livelinessManager_->RemoveLivelinessWriter(itor->second);
 		}
+		itor->second->GetFlowController()->UnregisterWriter(itor->second);
 		writers_.erase(itor);
 	} else {
 		AGILOG(AGILOG_ERROR, "handle not exist");
@@ -286,7 +295,7 @@ std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 {
 	std::unique_lock<std::mutex> lock(mtxReaders_);
 	if (0 == readers_.count(EntityID)) {
-		AGILOG(AGILOG_ERROR, "EntityID not exist");
+		//AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
 	}
 
@@ -766,9 +775,15 @@ std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmit
 }
 void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length)
 {
-	for(auto& transmitter : messageTransmitters_) {
-		transmitter->MessageSend(destinationList,message,length);
+	for (auto& transmitter : messageTransmitters_) {
+		transmitter->MessageSend(destinationList, message, length);
 	}	
+}
+void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+{
+	if (flowRateLimitedManager_) {
+		flowRateLimitedManager_->MessageSend(destinationList, message, length);
+	}
 }
 LocatorVec Participant::GetDefaultUnicastLocators()
 {

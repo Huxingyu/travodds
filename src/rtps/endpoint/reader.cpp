@@ -156,7 +156,7 @@ ReturnCode_t Reader::FindNextInstance(const InstanceHandle_t& preHander, Instanc
 }
 
 
-std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,InstanceHandle_t pubHandle, Time_t sourceTimespace)
+std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t& handle, const InstanceHandle_t& pubHandle, const Time_t& sourceTimespace)
 {
 	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
 

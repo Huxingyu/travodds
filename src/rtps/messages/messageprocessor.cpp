@@ -835,18 +835,22 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 
 	//messageReceiver.nonStandardPayloadFlag = nonStandardPayloadFlag;
 
-	memcpy(&dataFragSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
-	messageShift += sizeof(SubMessageHeader_t);
-	memcpy(&dataFragSubMessage.extraFlags, message + messageShift, sizeof(SubMessageFlag_t) * 2);
-	messageShift += sizeof(SubMessageFlag_t) * 2;
-	memcpy(&dataFragSubMessage.octetsToInlineQos, message + messageShift, sizeof(uint16_t));
-	messageShift += sizeof(uint16_t);
-	memcpy(&dataFragSubMessage.readerId, message + messageShift, sizeof(EntityId_t));
-	messageShift += sizeof(EntityId_t);
-	memcpy(&dataFragSubMessage.writerId, message + messageShift, sizeof(EntityId_t));
-	messageShift += sizeof(EntityId_t);
-	memcpy(&dataFragSubMessage.writerSN, message + messageShift, sizeof(SequenceNumber_t));
-	messageShift += sizeof(SequenceNumber_t);
+	//memcpy(&dataFragSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
+	//messageShift += sizeof(SubMessageHeader_t);
+	//memcpy(&dataFragSubMessage.extraFlags, message + messageShift, sizeof(SubMessageFlag_t) * 2);
+	//messageShift += sizeof(SubMessageFlag_t) * 2;
+	//memcpy(&dataFragSubMessage.octetsToInlineQos, message + messageShift, sizeof(uint16_t));
+	//messageShift += sizeof(uint16_t);
+	//memcpy(&dataFragSubMessage.readerId, message + messageShift, sizeof(EntityId_t));
+	//messageShift += sizeof(EntityId_t);
+	//memcpy(&dataFragSubMessage.writerId, message + messageShift, sizeof(EntityId_t));
+	//messageShift += sizeof(EntityId_t);
+	//memcpy(&dataFragSubMessage.writerSN, message + messageShift, sizeof(SequenceNumber_t));
+	//messageShift += sizeof(SequenceNumber_t);
+	
+	// 对于结构字节 4、2、2、4、4、8的顺序，32位或64位系统下，内存对齐无padding直接使用 memcpy
+	memcpy(&dataFragSubMessage, message, sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t));
+	messageShift = sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
 	if (DEFAULT_ENDIAN != (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
@@ -892,7 +896,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	} else {
 		readerList.push_back(dataFragSubMessage.readerId);
 	}
-	for (auto entittyId : readerList) {
+	for (const auto& entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
 			reader->ReceiveDataFragMessage(messageReceiver, dataFragSubMessage, dataFragSubMessage.serializedPayload, serializedPayloadLen);
