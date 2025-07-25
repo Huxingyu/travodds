@@ -14,6 +14,7 @@
 
 #include "common/sequence/sequencebase.h"
 #include <vector>
+#include <stdexcept>
 
 template<typename T>
 class SequenceData : public SequenceBase {
