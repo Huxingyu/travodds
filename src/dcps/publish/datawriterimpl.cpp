@@ -62,7 +62,7 @@ DataWriterImpl::~DataWriterImpl()
 	topic_->Dereference();
 
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 }
@@ -122,7 +122,7 @@ ReturnCode_t DataWriterImpl::get_qos(DataWriterQos& qos) const
 ReturnCode_t DataWriterImpl::set_listener(DataWriterListener* listener, const StatusMask& mask)
 {
 	if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
 	}
 	listener_ = listener;
@@ -163,9 +163,10 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 	buffer->buffer = buffer->origin_buffer;
 	
 	AGIDDSCdrSerializer cdr(buffer);
+	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
 	/* 生成key */
-	typeSupport_->get_instancehandle((void*)instance_data,&cdr, handle,true);
+	MakeKey(instance_data, handle, true);
 
 	if (!history_->IsKeyRegistered(handle)) {
 		if (RETCODE_OK != history_->AddKeyHistory(handle, buffer)) {
@@ -254,14 +255,21 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	{
 		MakeKey(instance_data, instanceHandle, true);
 
+		if (HANDLE_NIL != handle && !history_->IsKeyRegistered(handle)){
+			AGILOG(AGILOG_ERROR, "handle invalid");
+			return RETCODE_BAD_PARAMETER;
+		}
+
 		if (HANDLE_NIL != handle && handle != instanceHandle) {
 			AGILOG(AGILOG_ERROR, "handle not met");
 			return RETCODE_PRECONDITION_NOT_MET;
 		}
-		if (!history_->IsKeyRegistered(instanceHandle)) {
-			//TODO 待优化
-			ret = RegistInstance(instance_data, source_timestamp, instanceHandle);
-			if (RETCODE_OK != ret) {
+
+		if (HANDLE_NIL == handle) {
+	
+			instanceHandle = register_instance_w_timestamp(instance_data, source_timestamp);
+
+			if (HANDLE_NIL == instanceHandle) {
 				/* 注册失败 可能是因为max_instance的值达到 */
 				AGILOG(AGILOG_ERROR, "RegistInstance Err ret= %d", ret);
 				return ret;
@@ -340,21 +348,32 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 	ChangeKind_t kind = ALIVE;
 	StatusInfo_t status = { 0 };
 
+	//InstanceHandle_t instance_handle;
+	if (!typeSupport_->has_key()) {
+		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		return RETCODE_ILLEGAL_OPERATION;
+	}
+	
 	if (timespace.sec < 0) {
 		AGILOG(AGILOG_ERROR, "timespace.sec[%d] < 0", timespace.sec);
 		return RETCODE_BAD_PARAMETER;
 	}
 	ret = MakeKey(data, instanceHandle, true);
-	/*  传入的handle和实际不一致  */
-	if (handle != instanceHandle && handle != HANDLE_NIL) {
-		AGILOG(AGILOG_ERROR, "handle not met");
-		ret = RETCODE_PRECONDITION_NOT_MET;
+	if (RETCODE_OK != ret) {
+		AGILOG(AGILOG_ERROR, "handle bad parameter")
+		return RETCODE_BAD_PARAMETER;
 	}
 
 	/* (生成Key错误 && 不是注册的key && (传入的句柄不是HANDLE_NIL &&  传入的handle和实际不一致 ) */
-	if (RETCODE_OK != ret && (!history_->IsKeyRegistered(instanceHandle))) {\
+	if (handle != HANDLE_NIL && (!history_->IsKeyRegistered(handle))) {
 		AGILOG(AGILOG_ERROR, "handle bad parameter");
 		return RETCODE_BAD_PARAMETER;
+	}
+
+	/*  传入的handle和实际不一致  */
+	if (handle != instanceHandle && handle != HANDLE_NIL) {
+		AGILOG(AGILOG_ERROR, "handle not met");
+		return RETCODE_PRECONDITION_NOT_MET;
 	}
 
 	if (dispose) {
@@ -579,9 +598,10 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 	buffer->buffer = buffer->origin_buffer;
 
 	AGIDDSCdrSerializer cdr(buffer);
+	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
 	/* 生成key */
-	typeSupport_->get_instancehandle((void*)instance_data, &cdr, handle, true);
+	MakeKey(instance_data, handle, true);
 
 	if (!history_->IsKeyRegistered(handle)) {
 		ReturnCode_t ret = history_->AddKeyHistory(handle, buffer);

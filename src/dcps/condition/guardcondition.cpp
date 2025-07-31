@@ -3,7 +3,7 @@
 AGIDDS_NAMESPACE_BEGIN;
 
 GuardCondition::GuardCondition()
-	: impl_(new GuardConditionImpl)
+	: impl_(new GuardConditionImpl(this))
 {
 }
 

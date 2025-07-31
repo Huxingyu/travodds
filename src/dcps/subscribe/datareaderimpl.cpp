@@ -63,7 +63,7 @@ DataReaderImpl::~DataReaderImpl()
 	readcdts_.clear();
 	querycdts_.clear();
     if (listener_) {
-        delete listener_;
+        //delete listener_;
 		listener_ = nullptr;
     }
 }
@@ -120,7 +120,7 @@ ReturnCode_t DataReaderImpl::set_listener(DataReaderListener* listener, const St
 {
 	//TODO JD 需要添加互斥锁  //
 	if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
 	}
 
@@ -140,6 +140,9 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 {
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
+	data_values.unloan();
+	sample_infos.unloan();
+
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
 		if(RETCODE_ERROR == ret) {
@@ -166,6 +169,8 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 {
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
+	data_values.unloan();
+	sample_infos.unloan();
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true);
 	if (RETCODE_OK != ret) {
 		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
@@ -195,6 +200,8 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 {
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
+	data_values.unloan();
+	sample_infos.unloan();
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
 		condition->get_view_state_mask(), condition->get_instance_state_mask());
 	if (RETCODE_OK != ret) {
@@ -220,6 +227,8 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 {
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
+	data_values.unloan();
+	sample_infos.unloan();
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
 		condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
 	if (RETCODE_OK != ret) {

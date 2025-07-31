@@ -377,21 +377,11 @@ void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) cons
 
 void Reader::OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state)
 {
-	//std::map<InstanceHandle_t, CacheChangeVector> instanceChanges;
-	//{
-	//	std::unique_lock<std::mutex> lock(readerCache_.changeMutex_);
-	//	instanceChanges = readerCache_.instanceChanges_;
-	//}
-	//for (auto& itor : instanceChanges) {
-	//	for (auto& itsec : itor.second.cacheChanges) {
-	//		if (itsec->sampleInfo.publication_handle.keyHash != handle.keyHash) {
-	//			continue;
-	//		}
-	//		itsec->sampleInfo.instance_state = state;
-
-	//		readerCache_.UpdateState(itsec->sampleInfo, itsec->lastState);
-	//	}
-
-	//}
-
+	if (!participant_->RemoteEntityIsMatched(guid_.entityId, remotehandle)) {
+		return false;
+	}
+	if (RETCODE_OK == participant_->GetPublicationData(publicationData, remotehandle)) {
+		return true;
+	}
+	return false;
 }

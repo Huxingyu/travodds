@@ -398,8 +398,8 @@ public:
 	 */
 	std::shared_ptr<ThreadPool> GetThreadPool() const;
 
-	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& subHandles) const;
-
+	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const;
+	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
 private:
 	LocatorVec defaultUnicastLocatorList_;
 	LocatorVec defaultMulticastLocatorList_;

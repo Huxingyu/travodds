@@ -160,6 +160,10 @@ void SequenceData<T>::release()
 		delete data;
 	}
 	std::vector<T*>().swap(datas_);
+
+	maximum_ = 0;
+    length_ = 0;
+	elements_ = nullptr;
 }
 
 template<typename T>

@@ -17,6 +17,9 @@
 #include "dcps/base/retcode.h"
 
 AGIDDS_NAMESPACE_BEGIN
+
+class GuardConditionImpl;
+
 class WaitSetImpl
 {
 public:
@@ -34,7 +37,9 @@ public:
 	uint32_t FindTrigger(ConditionSeq& active_conditions);
 
 	void Notify();
-
+protected:
+	GuardConditionImpl* IsGuardCondition(Condition* cond);
+	Condition* IsGuardConditionImpl(ConditionImpl* cond) const;
 private:
 	mutable std::mutex mtx_;
 	mutable std::mutex mtxCv_;

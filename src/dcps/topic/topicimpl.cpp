@@ -20,7 +20,7 @@ TopicImpl::TopicImpl(const std::string& name, const std::string& type_name, cons
 TopicImpl::~TopicImpl()
 {
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 
@@ -61,7 +61,7 @@ ReturnCode_t TopicImpl::set_listener(TopicListener* listener, const StatusMask& 
 {
 	//TODO 线程安全 //
     if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
     }
 	listener_ = listener;

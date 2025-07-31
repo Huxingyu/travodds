@@ -113,7 +113,7 @@ SequenceNumber_t HistoryCache::GetSeqNumMin()
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	if (0 == cacheChanges_.size()) {
-		return SEQUENCENUMBER_UNKNOWN;
+		return SequenceNumber_t{0,1};
 	}
 
 	return cacheChanges_.begin()->first;
@@ -124,7 +124,7 @@ SequenceNumber_t HistoryCache::GetSeqNumMax()
 	std::unique_lock<std::mutex> lock(changeMutex_);
 
 	if (0 == cacheChanges_.size()) {
-		return SEQUENCENUMBER_UNKNOWN;
+		return SEQUENCENUMBER_ZERO;
 	}
 
 	return cacheChanges_.rbegin()->first;

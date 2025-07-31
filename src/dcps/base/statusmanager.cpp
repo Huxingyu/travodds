@@ -25,8 +25,7 @@ ReturnCode_t DataWriterStatusManager::UpdateLivelinessLostStatus()
 	if (ENTITYKIND_USER_WRITER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_WRITER_WITH_KEY != guid.entityId.entityKind) {
 		return  RETCODE_OK;
 	}
-		
-
+	
 	std::lock_guard<std::mutex> lock(mtx_);
 
 	livelinessLostStatus_.total_count++;

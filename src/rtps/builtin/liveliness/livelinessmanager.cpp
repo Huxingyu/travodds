@@ -278,7 +278,7 @@ bool LivelinessManager::ParticipantLivelinessChecker()
  			return SendLivelinessMessage(manualHandle_);
 		}
 	}
-	AGILOG(AGILOG_ERROR, "manualByParticipantWriters_.size() <= 0", manualByParticipantWriters_.size());
+	//AGILOG(AGILOG_ERROR, "manualByParticipantWriters_.size() <= 0", manualByParticipantWriters_.size());
 	return false;
 }
 
@@ -361,7 +361,7 @@ void LivelinessManager::LiveLinessStatusChanged(const GUID_t& writerGuid, bool l
 
 void LivelinessManager::LocalStatusChanged(const GUID_t & writer, const LivelinessQosPolicy & livelinessQos, WriterStatus status)
 {
-	if (NOTALIVE == status) {
+	if (WriterStatus::LIVELINESSALIVE != status) {
 		return;
 	}
 		

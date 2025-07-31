@@ -17,11 +17,28 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+class GuardCondition;
+/**
+ * @brief GuardConditionImpl类是ConditionImpl类子类及其具体实现， 
+ * 是一个管理特定的条件的类，其trigger_value完全受应用程序的控制。
+ *
+ * GuardCondition的目的是为应用程序提供手动唤醒WaitSet的方法。
+ * 这是通过将GuardCondition附加到WaitSet，
+ * 然后通过set_trigger_value函数设置trigger_value来实现的。
+ *
+ */
 class GuardConditionImpl : public ConditionImpl {
 public:
-	GuardConditionImpl() {};
+	/**
+	 * @brief 构造函数。
+	 */
+	GuardConditionImpl(GuardCondition* guard);;
 
 	ReturnCode_t set_trigger_value(bool value);
+
+	GuardCondition* GetGuardCondition() const;
+private:
+	GuardCondition* guard_;
 };
 
 AGIDDS_NAMESPACE_END

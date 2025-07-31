@@ -169,3 +169,14 @@ void Writer::GetMatchedSubscriptions(InstanceHandleSeq& subHandles) const
 	participant_->GetMatchedEntitys(guid_.entityId, subHandles);
 }
 
+bool Writer::GetMatchedSubscriptionData(SubscriptionBuiltinTopicData& subscriptionData, const InstanceHandle_t& remotehandle) const
+{
+	if (!participant_->RemoteEntityIsMatched(guid_.entityId, remotehandle)) {
+		return false;
+	}
+	if( RETCODE_OK ==  participant_->GetSublicationData(subscriptionData, remotehandle)) {
+		return true;
+	}	
+	return false;
+}
+
