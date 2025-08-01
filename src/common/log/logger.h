@@ -13,7 +13,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include <cstdint>
 TRAVODDS_NAMESPACE_BEGIN
 

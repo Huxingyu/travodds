@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_DCPS_CONDITION_CONDITION_H
 #define TRAVODDS_DCPS_CONDITION_CONDITION_H
 
-#include  "agidds_dll.h"
+#include  "travodds_dll.h"
 #include  "type/basictype.h"
 
 TRAVODDS_NAMESPACE_BEGIN

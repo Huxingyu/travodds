@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_QOS_QOS_H
 #define TRAVODDS_QOS_QOS_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 
 TRAVODDS_NAMESPACE_BEGIN

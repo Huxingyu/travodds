@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_RTPS_DISCOVERY_SEDP_H
 #define TRAVODDS_RTPS_DISCOVERY_SEDP_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "rtps/discovery/discoverydata.h"
 #include "rtps/endpoint/statefulwriter.h"
 #include "rtps/endpoint/statefulreader.h"

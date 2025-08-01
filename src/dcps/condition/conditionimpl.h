@@ -13,7 +13,7 @@
 #define TRAVODDS_DCPS_CONDITION_CONDITIONIMPL_H
 
 #include <atomic>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "dcps/condition/condition.h"
 

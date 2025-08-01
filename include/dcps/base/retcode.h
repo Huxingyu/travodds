@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_DCPS_BASE_RETCODE_H
 #define TRAVODDS_DCPS_BASE_RETCODE_H
 #include <cstdint>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 // ----------------------------------------------------------------------

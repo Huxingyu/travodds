@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 #include <type_traits>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
 /**
  * @brief SequenceBase类,Sequence序列基类。

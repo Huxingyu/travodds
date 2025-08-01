@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
 #define TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "dcps/base/retcode.h"
 #include "dcps/base/status.h"

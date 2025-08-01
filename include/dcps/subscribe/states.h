@@ -12,7 +12,7 @@
 #ifndef TRAVODDS_DCPS_SUBSCRIBE_STATES_H
 #define TRAVODDS_DCPS_SUBSCRIBE_STATES_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 // Sample states to support reads
