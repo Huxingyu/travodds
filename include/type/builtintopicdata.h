@@ -20,6 +20,7 @@ struct ParticipantBuiltinTopicData
 {
 	BuiltinTopicKey_t 			key;
 	UserDataQosPolicy 			user_data;
+	PropertySeq                 sys_info;
 };
 
 struct TopicBuiltinTopicData {

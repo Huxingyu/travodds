@@ -16,7 +16,6 @@
 #include "dcps/base/retcode.h"
 
 AGIDDS_NAMESPACE_BEGIN
-
 class GuardCondition;
 /**
  * @brief GuardConditionImpl类是ConditionImpl类子类及其具体实现， 
@@ -34,6 +33,13 @@ public:
 	 */
 	GuardConditionImpl(GuardCondition* guard);;
 
+	/**
+	 * @brief 设置trigger_value。
+	 *
+	 * @param [in] value 触发器的新数据。
+	 *
+	 * @return RETCODE_OK
+	 */
 	ReturnCode_t set_trigger_value(bool value);
 
 	GuardCondition* GetGuardCondition() const;

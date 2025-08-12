@@ -6,67 +6,82 @@ AGIDDS_NAMESPACE_BEGIN
 
 namespace Conversion {
 	/**
-	* 将时间转换为秒并返回double
-	*/
+	 * @brief 将Time_t格式时间转换为秒并返回double。
+	 */
 	inline double ToSecondsDouble(const Time_t& t)
 	{
 		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
 	}
 
+	/**
+	 * @brief 将Duration_t格式时间转换为秒并返回double。
+	 */
 	inline double ToSecondsDouble(const Duration_t& t) {
 		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
 	}
 
 	/**
-	* 将时间转换为毫秒并返回double
-	*/
+	 * @brief 将时间转换为毫秒并返回double。
+	 */
 	inline double ToMilliSecondsDouble(const Time_t& t) {
 		return ((double)t.nanosec / 1000000.0) + (double)t.sec*pow(10.0, 3);
 	}
 
+	/**
+	 * @brief 将时间转换为毫秒并返回double。
+	 */
 	inline double ToMilliSecondsDouble(const Duration_t& t) {
 		return ((double)t.nanosec / 1000000.0) + (double)t.sec*pow(10.0, 3);
 	}
 
 	/**
-	* 将时间转换为微秒并返回double
-	*/
+	 * @brief 将时间转换为微秒并返回double。
+	 */
 	inline double ToMicroSecondsDouble(const Time_t& t) {
 		return ((double)t.nanosec / pow(2.0, 32)*pow(10.0, 6)) + (double)t.sec*pow(10.0, 6);
 	}
 
+	/**
+	 * @brief 将时间转换为微秒并返回double。
+	 */
 	inline double ToMicroSecondsDouble(const Duration_t& t) {
 		return ((double)t.nanosec / pow(2.0, 32)*pow(10.0, 6)) + (double)t.sec*pow(10.0, 6);
 	}
 
 
 	/**
-	* 将时间转换为毫秒并返回int64
-	*/
+	 * @brief 将时间转换为毫秒并返回int64。
+	 */
 	inline int64_t ToMilliSecondsInt64(const Time_t& t) {
 		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
 	}
 
+	/**
+	 * @brief 将时间转换为毫秒并返回int64。
+	 */
 	inline int64_t ToMilliSecondsInt64(const Duration_t& t) {
 		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
 	}
 
 	/**
-	* 将时间转换为微秒返回int64
-	*/
+	 * @brief 将时间转换为微秒返回int64。
+	 */
 	inline int64_t ToMicroSecondsInt64(const Time_t& t)
 	{
 		return (int64_t)(t.nanosec / 1000.0) + t.sec*(int64_t)pow(10.0, 6);
 	}
 
+	/**
+	 * @brief 将时间转换为微秒返回int64。
+	 */
 	inline int64_t ToMicroSecondsInt64(const Duration_t& t)
 	{
 		return (int64_t)(t.nanosec / 1000.0) + t.sec*(int64_t)pow(10.0, 6);
 	}
 
 	/**
-	* 将double类型秒转换为Time_t
-	*/
+	 * @brief 将double类型秒转换为Time_t。
+	 */
 	inline Time_t SecondsToTime(double seconds) {
 		Time_t t;
 		t.sec = ((int32_t)seconds);
@@ -75,8 +90,8 @@ namespace Conversion {
 	}
 
 	/**
-	* 将double类型毫秒转换为Time_t
-	*/
+	 * @brief 将double类型毫秒转换为Time_t。
+	 */
 	inline Time_t MilliSecondsToTime(double millisec)
 	{
 		Time_t t;
@@ -86,8 +101,8 @@ namespace Conversion {
 	}
 
 	/**
-	* 将double类型微秒转换为Time_t
-	*/
+	 * @brief 将double类型微秒转换为Time_t。
+	 */
 	inline Time_t MicroSecondsToTime(double microsec)
 	{
 		Time_t t;
@@ -97,8 +112,8 @@ namespace Conversion {
 	}
 
 	/**
-	* 获取两个Time_t之间的绝对差值（以毫秒为单位）并返回double
-	*/
+	 * @brief 获取两个Time_t之间的绝对差值（以毫秒为单位）并返回double。
+	 */
 	inline double TimeAbsDiffToDoubleMillisec(const Time_t& t1, const Time_t& t2)
 	{
 		double result = 0;
@@ -108,8 +123,8 @@ namespace Conversion {
 	}
 
 	/**
-	* 将Duration_t类型转换为Time_t
-	*/
+	 * @brief 将Duration_t类型转换为Time_t。
+	 */
 	inline Time_t DurationToTime(Duration_t duration)
 	{
 		Time_t t;
@@ -119,8 +134,8 @@ namespace Conversion {
 	}
 
 	/**
-	* 将Time_t类型转换为Duration_t
-	*/
+	 * @brief 将Time_t类型转换为Duration_t。
+	 */
 	inline Duration_t TimeToDuration(Time_t time)
 	{
 		Duration_t d;
@@ -129,21 +144,27 @@ namespace Conversion {
 		return d;
 	}
 
-	//!创建一个随机的Time_t，其值为毫秒+[-randoff，randoff]
+	/**
+	 * @brief 创建一个随机的Time_t，其值为毫秒+[-randoff，randoff]。
+	 */
 	inline Time_t MilliSecondsWithRandOffsetToTime(double millisec, double randoff)
 	{
 		randoff = std::abs(randoff);
 		millisec = millisec + (-randoff) + static_cast <double> (rand()) / (static_cast <double> (RAND_MAX / (2 * randoff)));
 		return MilliSecondsToTime(millisec);
 	}
-	//! 创建一个随机的Time_t，其值为微秒+[-randoff，randoff]
+	/**
+	 * @brief 创建一个随机的Time_t，其值为微秒+[-randoff，randoff]
+	 */
 	inline Time_t MicroSecondsWithRandOffsetToTime(double microsec, double randoff)
 	{
 		randoff = std::abs(randoff);
 		microsec = microsec + (-randoff) + static_cast <double> (rand()) / (static_cast <double> (RAND_MAX / (2 * randoff)));
 		return MicroSecondsToTime(microsec);
 	}
-	//! 创建一个随机的Time_t，其值为sec + [-randoff，randoff]
+	/**
+	 * @brief 创建一个随机的Time_t，其值为秒+[-randoff，randoff]
+	 */
 	inline Time_t SecondsWithRandOffsetToTime(double sec, double randoff)
 	{
 		randoff = std::abs(randoff);

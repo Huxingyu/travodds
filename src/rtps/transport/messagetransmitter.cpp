@@ -28,7 +28,11 @@ uint32_t MessageTransmitter::GetTransmitterKind()
 
 void MessageTransmitter::SetUnicastLocatorList(const LocatorVec& locatorlist)
 {
-	unicastLocatorList_ = locatorlist;
+	for (auto& it : locatorlist) {
+		if (it.kind == kind_) {
+			unicastLocatorList_.push_back(it);
+		}
+	}
 }
 
 
@@ -59,9 +63,28 @@ bool MessageTransmitter::CheckSocketPort(uint16_t port, bool checkUdp)
 ReturnCode_t MessageTransmitter::MessageSend(LocatorVec& sourceList, LocatorVec& destinationList, char* message, uint32_t length, uint16_t priority)
 {
 	for (auto& itSource : sourceList) {
+		if (itSource.kind != kind_) {
+			continue;
+		}
 		for (auto& itDest : destinationList) {
+			if (itDest.kind != kind_) {
+				continue;
+			}
 			MessageSend(itSource, itDest, message, length, priority);
 		}
+	}
+	return RETCODE_OK;
+}
+
+ReturnCode_t MessageTransmitter::MessageSend(LocatorVec& destinationList, char* message, uint32_t length, uint16_t priority)
+{
+	Locator_t srcLocator;
+	srcLocator.kind = kind_;
+	for (auto& itDest : destinationList) {
+		if (itDest.kind != kind_) {
+			continue;
+		}
+		MessageSend(srcLocator, itDest, message, length, priority);
 	}
 	return RETCODE_OK;
 }

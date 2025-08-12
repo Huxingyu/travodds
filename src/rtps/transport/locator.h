@@ -15,45 +15,82 @@
 #include <asio.hpp>
 #include "rtps/basictypertps.h"
 AGIDDS_NAMESPACE_BEGIN
-class UDPv4Locator : public Locator_t
+
+
+class AsioLocator : public Locator_t
 {
 public:
-
 	/**
 	 * @brief 构造函数。
 	 *
 	 * @param [in] loc 地址信息。
 	 */
-	UDPv4Locator(const Locator_t& loc);
-
+	AsioLocator(const Locator_t& loc);
 	/**
 	 * @brief 析构函数。
 	 */
-	virtual ~UDPv4Locator() {};
+	virtual ~AsioLocator() {};
+	/**
+	 * @brief 验证地址是否是多播地址。
+	 *
+	 * @return 如果是多播地址则返回true，否则返回false。
+	 */
+	bool IsMulticast() const;
+	/**
+	 * @brief 将octet数组格式ip地址转换为std::string格式。
+	 *
+	 * @return std::string格式ip地址。
+	 */
+	virtual std::string GetStringAddress() const;
 
 	/**
-	 * @brief 将octet数组格式ip地址转换为uint32_t格式。
+	 * @brief 获取uint32_t格式IPv4或IPv6网络地址值。
+	 *
+	 * @return uint32_t格式IPv4或IPv6网络地址值。
+	 */
+	uint32_t GetUIAddress() const;
+
+	/**
+	 * @brief 模板函数，获取网络地址。
+	 * 该函数具体实现根据当前需求返回IPv4地址或IPv6地址
 	 * 
-	 * @return uint32_t格式ip地址。
-	 */	
-	uint32_t GetUIAddressV4();
+	 * @return 网络地址。
+	 */
+	template<typename T>
+	T GetAddress() const {
+		return T();
+	}
 
 	/**
-	 * @brief 将octet数组格式ip地址转换为asio::ip::address_v4格式。
+	 * @brief 验证地址是否都为空。
 	 *
-	 * @return asio::ip::address_v4格式ip地址。
+	 * @return 空则返回true，否则返回false。
 	 */
-	asio::ip::address_v4 GetAddressV4();
-
-	/**
-	 * @brief 获取有效性。
-	 *
-	 * @return 有效则返回true，否则返回false。
-	 */
-	bool Valid();
-private:
-	bool valid_ = true;
+	bool Empty() const;
 };
+
+/**
+ * @brief 模板函数特例，获取IPv4网络地址。
+ *
+ * @return IPv4网络地址。
+ */
+template<>
+inline asio::ip::address_v4 AsioLocator::GetAddress() const
+{
+	return asio::ip::address_v4({ address[12], address[13], address[14], address[15] });
+}
+/**
+ * @brief 模板函数特例，获取IPv6网络地址。
+ *
+ * @return IPv6网络地址。
+ */
+template<>
+inline asio::ip::address_v6 AsioLocator::GetAddress() const
+{
+	asio::ip::address_v6::bytes_type bytes = { 0 };
+	std::memcpy(bytes.data(), address, sizeof(address));
+	return asio::ip::address_v6(bytes);
+}
 
 AGIDDS_NAMESPACE_END
 

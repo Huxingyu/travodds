@@ -14,6 +14,7 @@
 
 #include "type/basictype.h"
 #include "rtps/transport/messagetransmitter.h"
+#include "rtps/transport/locator.h"
 
 AGIDDS_NAMESPACE_BEGIN
 
@@ -24,20 +25,14 @@ using _SEND_PORT_SOCKET_MAP = std::map<Locator_t, std::shared_ptr<asio::ip::udp:
 
 //接收报文的最大长度 基于UDP
 #define MAXSIZE 65527
+class MessageTransmitterUDPv4;
+class MessageTransmitterUDPv6;
 /**
  * @brief MessageTransmitterUDP类，MessageTransmitter的派生类，RTPS报文使用UDP协议发送管理类。
  */
 class MessageTransmitterUDP : public MessageTransmitter
 {
 public:
-	
-	/**
-	 * @brief 构造函数。
-	 *
-	 * @param [in] messageProcessor MessageProcessor指针。
-	 */
-	MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor);
-
 	/**
 	 * @brief 析构函数。
 	 */
@@ -129,9 +124,25 @@ private:
 	 * @param [in] socket UDP通信句柄。
 	 */
 	void AsyncReceive(std::shared_ptr<asio::ip::udp::socket>);
-private:
-	asio::io_context& ioContext_;
 
+	virtual asio::ip::multicast::leave_group GetLeaveGroupOption(const AsioLocator& locator) = 0;
+	virtual asio::ip::multicast::join_group GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc) = 0;
+	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) = 0;
+	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive = false) = 0;
+	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() = 0;
+
+
+protected:
+	/**
+     * @brief 构造函数。
+     *
+     * @param [in] messageProcessor MessageProcessor指针。
+     */
+	MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor);
+
+protected:
+	asio::io_context& ioContext_;
+private:
 	/**
 	 * @brief 创建接收socket。
 	 *
@@ -170,6 +181,32 @@ private:
 
 	/* 保护socket，防止并发使用 */
 	std::mutex mtxSendSocket_;
+	friend MessageTransmitterUDPv4;
+	friend MessageTransmitterUDPv6;
+};
+
+class MessageTransmitterUDPv4 : public MessageTransmitterUDP {
+public:
+	MessageTransmitterUDPv4(std::shared_ptr<MessageProcessor> messageProcessor);
+private:
+	virtual asio::ip::multicast::leave_group GetLeaveGroupOption(const AsioLocator& locator) override;
+	virtual asio::ip::multicast::join_group GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc) override;
+	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
+
+	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
+};
+
+class MessageTransmitterUDPv6 : public MessageTransmitterUDP {
+public:
+	MessageTransmitterUDPv6(std::shared_ptr<MessageProcessor> messageProcessor);
+private:
+	virtual asio::ip::multicast::leave_group GetLeaveGroupOption(const AsioLocator& locator) override;
+	virtual asio::ip::multicast::join_group GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc) override;
+	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
+
+	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 
 AGIDDS_NAMESPACE_END

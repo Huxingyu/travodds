@@ -11,10 +11,8 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/endpoint/statefulwriter.h"
-#include <chrono>
-#include <iostream>
-#include <mutex>
-#include  "common/timeconversion.h"
+#include "rtps/discovery/discovery.h"
+#include "common/timeconversion.h"
 #include "common/log/logger.h"
 
 using namespace std::chrono;
@@ -58,6 +56,11 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 
 DataWriterImpl::~DataWriterImpl()
 {
+	if (deadlineTimer_) {
+		deadlineTimer_->Exit();
+	}
+
+
 	writer_->SetRelatedDataWriter(nullptr);
 	topic_->Dereference();
 
@@ -422,6 +425,9 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 
 ReturnCode_t DataWriterImpl::wait_for_acknowledgments(const Duration_t& max_wait)
 {
+	if (nullptr == writer_) {
+		return RETCODE_NOT_ENABLED;
+	}
 	return writer_->WaitForAcknowledgments(max_wait);
 }
 
@@ -480,14 +486,18 @@ ReturnCode_t DataWriterImpl::assert_liveliness()
 
 ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTopicData& subscription_data, const InstanceHandle_t& subscription_handle)
 {
-	AGILOG(AGILOG_ERROR, "datawriter donot support interface");
-	return RETCODE_UNSUPPORTED;
+	if (nullptr == writer_) {
+		return RETCODE_NOT_ENABLED;
+	}
+	if (writer_->GetMatchedSubscriptionData(subscription_data, subscription_handle)) {
+		return RETCODE_OK;
+	}
+	return RETCODE_BAD_PARAMETER;
 }
 
 ReturnCode_t DataWriterImpl::get_matched_subscriptions(InstanceHandleSeq& subscription_handles)
 {
 	if(nullptr == writer_ ) {
-		AGILOG(AGILOG_ERROR, "writer_ is nullptr");
 		return RETCODE_NOT_ENABLED;
 	}
 	writer_->GetMatchedSubscriptions(subscription_handles);
@@ -503,6 +513,21 @@ ReturnCode_t DataWriterImpl::enable()
 		AGILOG(AGILOG_ERROR, "releate publisher isnot enable");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
+
+
+	DomainParticipantImpl* domainParticipant = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(pub_->get_participant()));
+	if (nullptr == domainParticipant) {
+		return RETCODE_ERROR;
+	}
+	std::shared_ptr<Writer>  writerPtr = domainParticipant->GetRelatedParticipant()->CreateWriter(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
+	if (!writerPtr.get()) {
+		return RETCODE_ERROR;
+	}
+
+	DiscoveredWriterData writerData;
+	writerData.ddsPublicationData = GetBuiltinTopicData();
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+	discovery->WritePublicationData(writerData);
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
         deadlineTimer_ = TimerManager::CreateTimer(

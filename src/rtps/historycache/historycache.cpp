@@ -443,11 +443,13 @@ bool HistoryCache::WriterWaitFor(const std::chrono::nanoseconds& time_out, Write
 
 }
 
-SampleCounters HistoryCache::GetSampleCounters()
+SampleCounters HistoryCache::GetSampleCounters(bool trigger)
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	SampleCounters counters = counters_;
-	counters_.change.store(false);
+	if (trigger) {
+		counters_.change.store(false);
+	}
 	return counters;
 }
 

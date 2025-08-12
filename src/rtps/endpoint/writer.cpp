@@ -92,9 +92,9 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 	return RETCODE_OK;
 }
 
-bool Writer::WaitForAcknowledgments(const Duration_t & max_wait)
+ReturnCode_t Writer::WaitForAcknowledgments(const Duration_t & max_wait)
 {
-	return true;
+	return RETCODE_OK;
 }
 
 bool Writer::IsAckedByAll(SequenceNumber_t changeSeqNum)

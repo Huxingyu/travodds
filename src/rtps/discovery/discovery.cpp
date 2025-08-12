@@ -3,6 +3,7 @@
 #include "common/time/ddstimer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "common/log/logger.h"
+#include "common/sys/sysinfo.h"
 USING_AGIDDS_NAMESPACE;
 
 Discovery::Discovery(DomainParticipantImpl* domainParticipant, std::shared_ptr<ThreadPool> threadPool)
@@ -94,6 +95,7 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	domainParticipant_->get_qos(dpQos);
 	data.ddsParticipantData.key = Conversion::ToBuiltinTopicKey(participant->GetGuid());
 	data.ddsParticipantData.user_data = dpQos.user_data;
+	data.ddsParticipantData.sys_info = SysInfo::GetSysInfoProperties();
 	data.domainId = domainParticipant_->get_domain_id();
 	data.protocolVersion = PROTOCOLVERSION_2_5;
 	data.vendorId = VENDORID_PROSIMA;
@@ -102,7 +104,6 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	data.metatrafficUnicastLocatorList = participant->GetMetatrafficUnicastLocators();
 	data.metatrafficMulticastLocatorList = participant->GetMetatrafficMulticastLocators();
 	data.availableBuiltinEndpoints = builtinEndpointSet_;
-
 	spdp_->WriteSpdPdiscoveredParticipantData(data);
 }
 

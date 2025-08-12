@@ -5,8 +5,9 @@
 #include "common/time/ddstimer.h"
 #include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
-#include <rtps/builtin/liveliness/livelinessmanager.h>
+#include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "common/log/logger.h"
+#include <chrono>
 USING_AGIDDS_NAMESPACE;
 
 StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
@@ -21,7 +22,9 @@ StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, con
 }
 
 StatefulWriter::~StatefulWriter() {
-
+	if (timer_) {
+		timer_->Exit();
+	}
 }
 void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
@@ -69,17 +72,33 @@ std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGu
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
-	return matchedReaders_[readerGuid];
+	auto itor = matchedReaders_.find(readerGuid);
+	if (itor == matchedReaders_.end()) {
+		AGILOG(AGILOG_ERROR, "no match reader");
+		return nullptr;
+	}
+	return itor->second;
 }
 
-bool StatefulWriter::WaitForAcknowledgments(const Duration_t & max_wait)
+ReturnCode_t StatefulWriter::WaitForAcknowledgments(const Duration_t & max_wait)
 {
-	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
+	{
+		std::lock_guard<std::mutex> lock(readerPorxyMutex_);
+		if (CheckAllAcked()) {
+			return RETCODE_OK;
+		}
+	}
+	std::chrono::nanoseconds maxW(max_wait.ToNs());
+	std::unique_lock<std::mutex> ackLock(allAckedMtx_);
+	auto result = condAllAcked_.wait_for(ackLock, maxW);
+	return result == std::cv_status::no_timeout ? RETCODE_OK : RETCODE_TIMEOUT;
+}
 
+bool StatefulWriter::CheckAllAcked()
+{
 	SequenceNumber_t sequenceNumber = writerCache_->GetSeqNumMax();
-	//TODO 超时机制待实现
-	for (auto reader : matchedReaders_) {
-		if (false == reader.second->IsAcked(sequenceNumber)) {
+	for (auto& reader : matchedReaders_) {
+		if (false == reader.second->IsAllAcked(sequenceNumber)) {
 			return false;
 		}
 	}
@@ -167,6 +186,10 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 	if (RETCODE_RECEIVE_DUPLICATE == ret) {
 		// 返回RETCODE_RECEIVE_DUPLICATE，表示Ack报文接收重复，不处理
 		return RETCODE_OK;
+	} else if (RETCODE_OK == ret) {
+		if(CheckAllAcked()) {
+			condAllAcked_.notify_all();
+		}
 	}
 
 	if (qos_.durability.kind != TRANSIENT_LOCAL_DURABILITY_QOS) {
@@ -231,13 +254,6 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	}
 
 	DataSubMessage_t dataSubMessage;
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-	srcLocators.push_back(srcLocator);
-	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	SerializedBuffer* buffer = change->serializedBuffer;
 	if (buffer->next) {
@@ -259,6 +275,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = change->sequenceNumber;
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
+		uint32_t sendFragCount = 0;
 		do {
 			/* 分片报文处理 */
 			uint32_t shift = 0;
@@ -281,8 +298,13 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			std::sort(dstLocators.begin(), dstLocators.end());
 			dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
 
-			messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+			participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
 
+			/* TODO 添加延时 */
+			sendFragCount++;
+			if (0 == sendFragCount % DATAFRAG_DELAY_NUM) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 			buffer = buffer->next;
 		} while (buffer);
 
@@ -307,14 +329,6 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;
 
-		LocatorVec srcLocators;
-		Locator_t srcLocator;
-		srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-		srcLocators.push_back(srcLocator);
-		//TODO 发送报文
-		std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
 		uint32_t shift = 0;
 
 		MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
@@ -337,7 +351,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 		std::sort(dstLocators.begin(), dstLocators.end());
 		dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
-		messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+		participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 
 	}
 
@@ -396,17 +410,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	LocatorSeq unicastList = readerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = readerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
-		return RETCODE_ERROR;
-	}
 	char data[1224] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -458,7 +461,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO 暂时屏蔽组播
 	// messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	
@@ -549,13 +552,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 		gapMsg.gapList.bitmap.size = s + 1;
 		gapMsg.gapList.bitmap.SetBit(s); 
 	}
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-	srcLocators.push_back(srcLocator);
-	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	LocatorVec dstLocators = proxy->GetUnicastLocatorList();
 
@@ -571,7 +567,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	shift = 0;
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
 }
 
 /* 重传分片数据 */
@@ -582,12 +578,10 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 	/* 找到对应的序号的数据 */
 	std::shared_ptr<CacheChange> cache =  writerCache_->GetChange(datafrag.writerSN);
 	if (cache) {
-		std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 		DataFragSubMessage_t dataFragSubMessage;
 
-		if (0 != cache->inlineQos.size())
-		{
+		if (0 != cache->inlineQos.size()) {
 			dataFragSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataFragSubMessage.inlineQos = cache->inlineQos;
 		}
@@ -604,30 +598,44 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
 
 		SerializedBuffer* buffer = cache->serializedBuffer;
-		LocatorVec srcLocators;
-		Locator_t srcLocator;
-		srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-		srcLocators.push_back(srcLocator);
 		LocatorVec dstLocators = readerProxy->GetUnicastLocatorList();
-		int num = 0;
-		for (int32_t i = 1; i <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; i++, num) {
 
-			if (i == datafrag.fragmentNumberState.bitmapBase + num) {
+        for(uint32_t i = 1; i < datafrag.fragmentNumberState.bitmapBase; i++)
+        {
+            if(nullptr != buffer){
+                buffer = buffer->next;
+            }
+        }
 
-					if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
+        if(nullptr == buffer){
+            AGILOG(AGILOG_ERROR, "buffer is nullptr");
+			return RETCODE_ERROR;
+        }
 
-					uint32_t shift = 0;
-					dataFragSubMessage.dataFrag.fragmentsInSubmessage = 1;
-					dataFragSubMessage.dataFrag.fragmentSize = DATAMESSAGE_LIMIT;
-					dataFragSubMessage.dataFrag.fragmentStartingNum = i;
-					dataFragSubMessage.dataFrag.sampleSize = cache->dataSize;
-					MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
+		/* TODO  */
+		int32_t fragSendCount = 0;
+		for (int32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
+			if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
 
-					MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
-					messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+		        if(nullptr == buffer){
+		            AGILOG(AGILOG_ERROR, "buffer is nullptr");
+					return RETCODE_ERROR;
+		        }
+			
+				uint32_t shift = 0;
+				dataFragSubMessage.dataFrag.fragmentsInSubmessage = 1;
+				dataFragSubMessage.dataFrag.fragmentSize = DATAMESSAGE_LIMIT;
+				dataFragSubMessage.dataFrag.fragmentStartingNum = num + datafrag.fragmentNumberState.bitmapBase;
+				dataFragSubMessage.dataFrag.sampleSize = cache->dataSize;
+				MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
+				
+				MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
+				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				fragSendCount++;
+
+				if (0 == fragSendCount % DATAFRAG_DELAY_NUM) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
-				num++;
 			}
 			buffer = buffer->next;
 		}

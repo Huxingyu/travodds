@@ -79,12 +79,6 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 	}
 
 	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
 	//srcLocators = participant_->GetDefaultUnicastLocators();
 	//TODO 封装报文
 
@@ -124,7 +118,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 			for (auto& readerlocator : readerLocators_) {
 				LocatorVec dstLocators;
 				dstLocators.push_back(readerlocator.first);
-				messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
 			}
 
 			buffer = buffer->next;
@@ -162,7 +156,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		for (auto& readerlocator : readerLocators_) {
 			LocatorVec dstLocators;
 			dstLocators.push_back(readerlocator.first);
-			messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+			participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 		}
 			
 	}
@@ -204,7 +198,7 @@ ReturnCode_t StatelessWriter::ReceiveAckNackMessage(const Receive_t&  headerMsg,
 	static_cast<void>(headerMsg);
 	static_cast<void>(ackMsg);
 
-	return RETCODE_UNSUPPORTED;
+	return RETCODE_OK;
 }
 
 ReturnCode_t StatelessWriter::ReceiveNackFragMessage(const Receive_t&  headerMsg, const NackFragSubMessage_t& nackMsg)
@@ -212,5 +206,5 @@ ReturnCode_t StatelessWriter::ReceiveNackFragMessage(const Receive_t&  headerMsg
 	static_cast<void>(headerMsg);
 	static_cast<void>(nackMsg);
 
-	return RETCODE_UNSUPPORTED;
+	return RETCODE_OK;
 }

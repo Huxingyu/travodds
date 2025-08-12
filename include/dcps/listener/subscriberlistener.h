@@ -17,9 +17,18 @@
 AGIDDS_NAMESPACE_BEGIN
 
 class Subscriber;
+/**
+ * @brief 类SubscriberListener，最终用户应该使用它来实现对某些操作的特定回调。
+ * 它还继承所有DataReaderListener回调。
+ *
+ */
 class SubscriberListener : public DataReaderListener {
 public:
-
+    /**
+     * @brief 由用户实现的虚拟功能，包含当新数据消息在任何读取器上可用时要执行的操作。
+     *
+     * @param subscriber Subscriber
+     */
     virtual void on_data_on_readers(Subscriber* subscriber)
     {
 	    

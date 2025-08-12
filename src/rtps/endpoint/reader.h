@@ -304,7 +304,7 @@ protected:
 	/* 接收到的数据信息的最新的数据序号  */
 	SequenceNumber_t lastSequenceNumber_;
 
-	std::map<InstanceHandle_t, SampleInfo> statusCache_;
+	//std::map<InstanceHandle_t, SampleInfo> statusCache_;
 
 	ReaderListener* readerListener_;
 	

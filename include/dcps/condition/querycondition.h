@@ -32,14 +32,14 @@ public:
 
 	/**
 	 * @brief 获取query_parameters。
-	 * @param value 返回查询到的数据。
+	 * @param [in] value 返回查询到的数据。
 	 * @return RETCODE_OK
 	 */
 	virtual ReturnCode_t get_query_parameters(StringSeq& query_parameters) const = 0;
 
 	/**
 	 * @brief 设置query_parameters。
-	 * @param value 要设置的新数据。
+	 * @param [in] value 要设置的新数据。
 	 * @return RETCODE_OK
 	 */
 	virtual ReturnCode_t set_query_parameters(const StringSeq& query_parameters) = 0;
