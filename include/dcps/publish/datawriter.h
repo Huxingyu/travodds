@@ -70,7 +70,7 @@ public:
      * @brief 通知应用程序将修改特定实例。
      * 它为中间件提供了一个预先配置自己以提高性能的机会。
      *
-     * @param[in] instance 用于获取实例键值的示例。
+     * @param [in] instance 用于获取实例键值的示例。
      * 
      * @return 包含实例键的句柄。
      * 该句柄可以用于连续的“写入”或“释放”函数。
@@ -126,7 +126,7 @@ public:
     virtual ReturnCode_t unregister_instance_w_timestamp(const void* const instance, const InstanceHandle_t& handle, const Time_t& timestamp) = 0;
 
     /**
-     * @brief 此函数可用于检索与instance_handle对应的实例密钥。
+     * @brief 此函数可用于检索与instance_handle对应的实例键值。
      * 该函数将仅填充在key_holder实例内形成键的字段。
      *
      * 如果InstanceHandle_t句柄与DataWriter已知的现有数据对象不对应，
@@ -155,8 +155,8 @@ public:
      *
      * 特殊值HANDLE_NIL可以用于参数句柄。这表示应该依靠键值从instance_data自动推断实例的标识。
      *
-     * @param [in] data 指向数据的指针
-     * @param [in] handle InstanceHandle_t.
+     * @param [in] data 指向数据的指针。
+     * @param [in] handle InstanceHandle_t。
      * @return 如果引入的句柄与与数据关联的句柄不匹配返回RETCODE_PRECONDITION_NOT_MET，
      * 如果数据正确发送，则返回RETCODE_OK，否则返回RETCCODE_ERROR。
      */
@@ -188,7 +188,7 @@ public:
      * @param[in] handle  数据的InstanceHandle
      * 
      * @return RETCODE_PRECONDITION_NOT_MET，如果引入的句柄与与数据关联的句柄不匹配，
-     * 如果数据正确发送，则返回RETCODE_OK，否则返回RETCCODE_ERROR。
+     * 如果数据正确删除，则返回RETCODE_OK，否则返回RETCCODE_ERROR。
      */
     virtual ReturnCode_t dispose(const void* const data, const InstanceHandle_t& handle)= 0;
 
@@ -291,9 +291,9 @@ public:
     virtual ReturnCode_t get_matched_subscription_data(SubscriptionBuiltinTopicData& subscription_data, const InstanceHandle_t& subscription_handle)= 0;
 
     /**
-     * @brief 获取对应的数据读者的InstanceHandle_t。
+     * @brief 获取对应已匹配的数据读者句柄集合。
      *
-     * @param [out] subscription_handles 返回InstanceHandle_t的容器。
+     * @param [out] subscription_handles 已匹配的数据读者句柄集合。
      * 
      * @return RETCODE_OK
      */

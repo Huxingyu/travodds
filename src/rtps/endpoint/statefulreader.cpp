@@ -427,6 +427,12 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
+		/* wangyi Lifespan 超期判断，超期过滤数据 */
+		if (!datareader_->CheckLifespan(cache)) {
+			cache = proxy->GetSubmitCache();
+			continue;
+		}
+
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}

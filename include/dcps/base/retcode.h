@@ -43,6 +43,8 @@ const ReturnCode_t  RETCODE_PORT_IN_USE = 101;
 const ReturnCode_t   RETCODE_APPLY_MEM_ERR = 201;
 /* wangyi time_based_filter 过滤判断，未超时 */
 const ReturnCode_t   RETCODE_TIME_BASED_FILTER = 301;
+/* wangyi LifeSpan 超期判断 */
+const ReturnCode_t   RETCODE_LIFESPAN_TIMEOUT = 302;
 
 
 AGIDDS_NAMESPACE_END

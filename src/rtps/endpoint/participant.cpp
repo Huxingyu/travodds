@@ -453,6 +453,8 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteReaderGuid);
 		writer->GetRelatedDataWriter()->OnPublicationMatched(handle,false);
+
+		writer->GetRelatedDataWriter()->RemoveReaderFilter(guid);
 	}
 
 	remoteReaders_.erase(itor);
@@ -660,6 +662,14 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 		return;
 	}
 
+	// yuguxu 主题数据过滤器
+	if (subData.contentFilter.contentFilteredTopicName.size() > 0 &&
+		subData.contentFilter.relatedTopicName == pubData.topic_name &&
+		subData.contentFilter.filterClassName == SQL_FILTER_NAME &&
+		subData.contentFilter.filterExpression.size() > 0) {
+		dw->AddReaderFilter(subData.remoteReaderGuid, subData.contentFilter);
+	}
+
 	writer->MatchedReaderAdd(subData);
 
 	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
@@ -697,10 +707,16 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	if (pubData.ddsPublicationData.topic_name != subData.topic_name) {
 		return;
 	}
-
+	const ContentFilteredTopicImpl* cfTopic = dynamic_cast<const ContentFilteredTopicImpl*>(reader->GetRelatedDataReader()->get_topicdescription());
 	const TopicImpl* topicImpl = dynamic_cast<const TopicImpl*>(reader->GetRelatedDataReader()->get_topicdescription());
-	if (nullptr == topicImpl)
+	if(nullptr != cfTopic) {
+		topicImpl = dynamic_cast<const TopicImpl*>(cfTopic->get_related_topic());
+	}
+
+	if (nullptr == topicImpl) {
 		return;
+	}
+
 
 	if(pubData.ddsPublicationData.type_name != subData.type_name)
 	{
@@ -831,10 +847,10 @@ int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter>
 			continue;
 		}
 		ret = messageTransmitter->ReceiveAddrAdd(itor);
-		if (RETCODE_PORT_IN_USE == ret && applyMutation) {
+		if (RETCODE_OK != ret && applyMutation) {
 			/* 限制重新尝试次数 */
 			uint32_t tries = 100u;
-			for (uint32_t i = 0; RETCODE_PORT_IN_USE == ret && i < tries; i++) {
+			for (uint32_t i = 0; RETCODE_OK != ret && i < tries; i++) {
 				itor.port += PARTICIPANTID_GAIN;
 				ret = messageTransmitter->ReceiveAddrAdd(itor);
 			}
@@ -931,27 +947,26 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 	//TODO 分区匹配
 	bool ret = true;
 	if (0 != pubData.partition.name.size()  || 0 != subData.partition.name.size()) {
-		ret = false;
+		ret = RegexPartitionsMatch(pubData.partition.name, subData.partition.name);
 	}
-	for (auto pubName : pubData.partition.name) {
-		if (ret) {
-			/* 已经匹配成功 */
-			break;
-		}
-		for (auto subName : subData.partition.name) {
-			std::regex pubRegex(pubName);
-			std::regex subRegex(subName);
-			if (std::regex_match(subName, pubRegex)) {
-				ret = true;
-				break;
-			}
-			if (std::regex_match(pubName, subRegex)) {
-				ret = true;
-				break;
-			}
-
-		}
-	}
+	//for (auto pubName : pubData.partition.name) {
+	//	if (ret) {
+	//		/* 已经匹配成功 */
+	//		break;
+	//	}
+	//	for (auto subName : subData.partition.name) {
+	//		std::regex pubRegex(pubName);
+	//		std::regex subRegex(subName);
+	//		if (std::regex_match(subName, pubRegex)) {
+	//			ret = true;
+	//			break;
+	//		}
+	//		if (std::regex_match(pubName, subRegex)) {
+	//			ret = true;
+	//			break;
+	//		}
+	//	}
+	//}
 	if (!ret) {
 		qosSeq.insert(PARTITION_QOS_POLICY_ID);
 	}
@@ -1023,4 +1038,69 @@ void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& 
 std::shared_ptr<LivelinessManager> Participant::GetLivelinessManager()
 {
 	return livelinessManager_;
+}
+
+/* 检查字符串是否包含正则元字符 */ 
+bool Participant::IsRegexPattern(const std::string& str)
+{
+	/* 检测正则元字符 */
+	static const std::vector<std::string> regexIndicators = {
+		".*", ".+", ".?", "\\d", "\\w", "\\s",
+		"^", "$", "|", "(", ")", "[", "]", "{", "}"
+	};
+
+	for (const auto& indicator : regexIndicators) {
+		if (str.find(indicator) != std::string::npos) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/* 分区匹配检测函数 */
+bool Participant::RegexPartitionMatch(const std::string& pubName,const std::string& subName)
+{
+	bool pubIsRegex = IsRegexPattern(pubName);
+	bool subIsRegex = IsRegexPattern(subName);
+
+	/* 规则1: 双方都是正则模式 -> 不匹配 */
+	if (pubIsRegex && subIsRegex) {
+		return false;
+	}
+
+	try {
+		/* 规则2: 发布者是正则，订阅者是具体名称 */
+		if (pubIsRegex && !subIsRegex) {
+			std::regex pubPattern(pubName);
+			return std::regex_match(subName, pubPattern);
+		}
+
+		/* 规则3: 订阅者是正则，发布者是具体名称 */
+		if (!pubIsRegex && subIsRegex) {
+			std::regex subPattern(subName);
+			return std::regex_match(pubName, subPattern);
+		}
+
+		/* 规则4: 双方都是具体名称 */
+		return pubName == subName;
+	}
+	catch (const std::regex_error& e) {
+		std::cerr << "正则表达式错误: " << e.what()
+			<< " 模式: " << (pubIsRegex ? pubName : subName)
+			<< std::endl;
+		return false;
+	}
+}
+
+/* 分区列表匹配 */
+bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const StringSeq& subPatterns)
+{
+	for (const auto& subPattern : subPatterns) {
+		for (const auto& pubPartition : pubPartitions) {
+			if (RegexPartitionMatch(pubPartition, subPattern)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }

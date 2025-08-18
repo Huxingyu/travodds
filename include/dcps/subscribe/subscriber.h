@@ -152,7 +152,7 @@ public:
     virtual const DomainParticipant* get_participant() const = 0;
 
     /**
-     * @brief 删除所有包含的DataReader。
+     * @brief 删除包含的所有DataReader。
      * 如果DataReader具有任何QueryCondition或ReadCondition，则在DataReader本身之前删除它们。
      *
      * @return 如果成功返回RETCODE_OK，否则返回错误代码。
@@ -183,7 +183,7 @@ public:
      * 获取到的值get_default_datareader_qos将与上次成功
      * 调用get_default_datareader_qos时指定的值集匹配，否则，如果从未进行调用，则为默认值。
      *
-     * @param [in] qos 返回default_qos对应的DataReaderQos。
+     * @param [out] qos 返回default_qos对应的DataReaderQos。
      * 
      * @return RETCODE_OK
      */

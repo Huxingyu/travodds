@@ -67,6 +67,14 @@ Locator_t ReaderLocator::GetLocator()
 {
 	return locator_;
 }
+void ReaderLocator::SetRemoteGuid(const GUID_t& guid)
+{
+	remoteGuid_ = guid;
+}
+const GUID_t& ReaderLocator::GetRemoteGuid()
+{
+	return remoteGuid_;
+}
 //
 //bool ReaderLocator::sendData()
 //{
