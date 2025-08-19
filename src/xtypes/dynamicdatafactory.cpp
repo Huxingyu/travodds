@@ -10,7 +10,7 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#include "xtypes/dynamicdataFactory.h"
+#include "xtypes/dynamicdatafactory.h"
 #include "xtypes/dynamicdata.h"
 
 AGIDDS_NAMESPACE_BEGIN
