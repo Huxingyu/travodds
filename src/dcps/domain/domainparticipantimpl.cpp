@@ -702,6 +702,8 @@ ReturnCode_t DomainParticipantImpl::enable()
 
 	discovery_->InitBuiltinEndpoint();
 
+	participant_->InitNetwork();
+
 	discovery_->WriteSpdPdiscoveredParticipantData();
 
 	ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);

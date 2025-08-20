@@ -65,6 +65,13 @@ public:
 	ReturnCode_t Init();
 
 	/**
+	 * @brief 初始化网络。
+	 *
+	 * @return 初始化成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	ReturnCode_t InitNetwork();
+
+	/**
 	 * @brief 创建发布端在rtps层映射Writer。
 	 *  将创建完成的映射存储到容器中。
 	 *

@@ -61,7 +61,7 @@ ReturnCode_t Participant::Init()
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
-	
+
 	messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
 	//messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
 
@@ -71,7 +71,7 @@ ReturnCode_t Participant::Init()
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
 	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
-	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
+
 
 
 	for (auto& ip : localIps) {
@@ -89,8 +89,14 @@ ReturnCode_t Participant::Init()
 		ipLoc.port = spdpPort;
 		metatrafficUnicastLocatorList_.push_back(ipLoc);
 	}
+	//Locator_t localAddress;
+	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
+	return RETCODE_OK;
+}
 
-
+ReturnCode_t Participant::InitNetwork()
+{
+	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
 	for (auto& messageTransmitter : messageTransmitters_) {
 		Locator_t unicastAddress;
 		//网络传输模块对象初始化发送地址、接收地址
@@ -127,11 +133,9 @@ ReturnCode_t Participant::Init()
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
 		}
 	}
-
-	//Locator_t localAddress;
-	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
 	return RETCODE_OK;
 }
+
 std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key)
 {
 	std::shared_ptr<Writer> writerPtr;
