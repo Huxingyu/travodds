@@ -66,7 +66,7 @@ ReturnCode_t Participant::Init()
 	//messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
 
 	std::vector<InfoIP_t> localIps;
-	IpContainer::GetInfoIPs(localIps);
+	IpContainer::GetInfoIPs(localIps,true);
 	int32_t participantid = 0;
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
