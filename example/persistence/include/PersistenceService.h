@@ -17,6 +17,9 @@
 
 AGIDDS_NAMESPACE_BEGIN
 
+// 前向声明
+class PersistenceService;
+
 /**
  * @brief DDS持久化服务主类
  * 
@@ -35,22 +38,7 @@ public:
         Time_t storage_time;
     };
 
-private:
-    // DDS实体
-    DomainParticipant* participant_;
-    std::map<std::string, DataReader*> collectors_;
-    std::map<std::string, DataWriter*> publishers_;
-    
-    // 存储相关
-    sqlite3* db_;
-    std::string db_path_;
-    
-    // 线程控制
-    std::atomic<bool> running_;
-    std::thread discovery_thread_;
-    std::thread cleanup_thread_;
-    
-    // 数据监听器
+    // 数据监听器类
     class PersistenceDataListener : public DataReaderListener {
     private:
         PersistenceService* service_;
@@ -62,6 +50,24 @@ private:
         
         void on_data_available(DataReader* reader) override;
     };
+
+private:
+    // DDS实体
+    DomainParticipant* participant_;
+    std::map<std::string, DataReader*> collectors_;
+    std::map<std::string, DataWriter*> publishers_;
+    
+    // 监听器存储 - 防止监听器被过早销毁
+    std::map<std::string, std::shared_ptr<PersistenceDataListener>> listeners_;
+    
+    // 存储相关
+    sqlite3* db_;
+    std::string db_path_;
+    
+    // 线程控制
+    std::atomic<bool> running_;
+    std::thread discovery_thread_;
+    std::thread cleanup_thread_;
 
 public:
     /**

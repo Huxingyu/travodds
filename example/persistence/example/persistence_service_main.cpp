@@ -1,5 +1,6 @@
 #include "PersistenceService.h"
 #include "dcps/domain/domainparticipantfactory.h"
+#include "../../cpp/hello_world/HelloWorldTypeSupport.h"
 #include <iostream>
 #include <signal.h>
 
@@ -39,6 +40,16 @@ int main(int argc, char* argv[]) {
             std::cerr << "Failed to create DomainParticipant" << std::endl;
             return -1;
         }
+        
+        // 注册HelloWorld类型到持久化服务的DomainParticipant
+        std::cout << "Registering HelloWorld type..." << std::endl;
+        const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
+        ReturnCode_t register_ret = participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
+        if (register_ret != RETCODE_OK) {
+            std::cerr << "Failed to register HelloWorld type" << std::endl;
+            return -1;
+        }
+        std::cout << "HelloWorld type registered successfully" << std::endl;
         
         // 创建持久化服务
         std::string db_path = "persistence_service.db";

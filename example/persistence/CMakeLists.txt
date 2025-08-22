@@ -29,6 +29,13 @@ target_link_libraries(persistence_service
 # 持久化服务示例程序
 add_executable(persistence_service_app
     example/persistence_service_main.cpp
+    ../cpp/hello_world/HelloWorld.cpp
+    ../cpp/hello_world/HelloWorldTypeSupport.cpp
+)
+
+target_include_directories(persistence_service_app 
+    PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/hello_world
 )
 
 target_link_libraries(persistence_service_app 

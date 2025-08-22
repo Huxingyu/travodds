@@ -67,6 +67,7 @@ void PersistenceService::stop() {
     
     collectors_.clear();
     publishers_.clear();
+    listeners_.clear();  // 清理监听器
 }
 
 bool PersistenceService::initialize_database() {
@@ -212,8 +213,9 @@ void PersistenceService::handle_discovered_writer(const PublicationBuiltinTopicD
         reader_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
         reader_qos.history.kind = KEEP_ALL_HISTORY_QOS;
         
-        // 创建监听器
+        // 创建监听器并存储到类成员中
         auto listener = std::make_shared<PersistenceDataListener>(this, topic_name);
+        listeners_[topic_name] = listener;  // 存储监听器，防止被销毁
         
         DataReader* reader = subscriber->create_datareader(
             topic, reader_qos, listener.get(), STATUS_MASK_ALL);
@@ -452,22 +454,21 @@ void PersistenceService::cleanup_loop() {
 void PersistenceService::PersistenceDataListener::on_data_available(DataReader* reader) {
     std::cout << "Data available for topic: " << topic_name_ << std::endl;
     
-    // 这里需要根据具体的数据类型来读取和存储数据
-    // 实际实现中需要使用TypeSupport来处理不同的数据类型
-    
-    // 示例：假设是通用数据
-    // SequenceData<GenericData> data_seq;
-    // SampleInfoSeq info_seq;
-    // 
-    // ReturnCode_t ret = reader->read(data_seq, info_seq, LENGTH_UNLIMITED,
-    //                                ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE);
-    // 
-    // if (ret == RETCODE_OK) {
-    //     for (size_t i = 0; i < data_seq.length(); ++i) {
-    //         if (info_seq[i].valid_data) {
-    //             service_->store_data(topic_name_, "GenericData", 
-    //                                &data_seq[i], sizeof(data_seq[i]), info_seq[i]);
-    //         }
-    //     }
-    // }
+    try {
+        // 对于HelloWorld类型的特殊处理
+        if (topic_name_ == "HelloWorldTopic") {
+            // 暂时只记录数据到达，不进行实际读取
+            // 避免因为类型不匹配导致的段错误
+            std::cout << "HelloWorld data detected, but not processed (avoiding type mismatch)" << std::endl;
+            return;
+        }
+        
+        // 对于其他类型，也暂时只记录
+        std::cout << "Data detected for topic: " << topic_name_ << " (not processed)" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error in data listener: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Unknown error in data listener" << std::endl;
+    }
 }
