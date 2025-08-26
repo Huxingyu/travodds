@@ -16,7 +16,7 @@
 #include "dcps/topic/topicdescriptionimpl.h"
 AGIDDS_NAMESPACE_BEGIN
 class TopicImpl;
-
+class TypeObject;
 /**
  * @brief ContentFilteredTopicImpl类，TopicDescription的具体实现，允许基于内容的订阅。
  */
@@ -81,6 +81,9 @@ public:
      *         RETCODE_BAD_PARAMETER  表达式参数与当前filterexpression不匹配。
      */
     ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters);
+
+public:
+    static bool ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, TypeObject* typeObject);
 private:
 
     TopicImpl* relatedTopic_ = nullptr;

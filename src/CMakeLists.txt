@@ -27,6 +27,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include
+    ${PROJECT_SOURCE_DIR}/thirdparty/tao
 )
 
 # 设置源文件

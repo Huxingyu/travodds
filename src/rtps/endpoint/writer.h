@@ -228,6 +228,13 @@ public:
 
 	void SetFlowController(FlowController* controller);
 	FlowController* GetFlowController ();
+
+	/**
+	 * @brief 获取数据写者缓冲区。
+	 *
+	 * @return 返回数据写者缓冲区指针。
+	 */
+	std::shared_ptr<HistoryCache> GetWriterCache();
 protected:
 
 	bool pushMode_ = true;

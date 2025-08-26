@@ -22,6 +22,7 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 	  qos_(qos), listener_(listener), sub_(sub), typeSupport_(typeSupport),
       statusMgr_(new DataReaderStatusManager(this)),
 	  deadlineTimer_(nullptr),
+	  lifespanTimer_(nullptr),
 	  lastInstance_(HANDLE_NIL),
       history_(nullptr)
 {
@@ -31,7 +32,6 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 		memcpy(builtinData_.key.value, &handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 		InstanceHandle_t handle = sub_->get_participant()->get_instance_handle();
 		memcpy(builtinData_.participant_key.value, &handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-		builtinData_.topic_name = topic->get_name();
 		builtinData_.type_name = topic->get_type_name();
 		builtinData_.durability = qos.durability;
 		builtinData_.deadline = qos.deadline;
@@ -51,7 +51,21 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 		if (realTopic) {
 			TopicQos topicQos;
 			realTopic->get_qos(topicQos);
+			builtinData_.topic_name = topic->get_name();
 			builtinData_.topic_data = topicQos.topic_data;
+		}
+		ContentFilteredTopic* filteredTopic = dynamic_cast<ContentFilteredTopic*>(topic);
+		if (filteredTopic) {
+			TopicQos topicQos;
+			filteredTopic->get_related_topic()->get_qos(topicQos);
+			builtinData_.topic_name = filteredTopic->get_related_topic()->get_name();
+			builtinData_.topic_data = topicQos.topic_data;
+			contentFilter_.contentFilteredTopicName = filteredTopic->get_name();
+			contentFilter_.relatedTopicName = filteredTopic->get_related_topic()->get_name();
+			/* sql 语法 */
+			contentFilter_.filterClassName = SQL_FILTER_NAME;
+			contentFilter_.filterExpression = filteredTopic->get_filter_expression();
+			filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
 		}
 	}
 }
@@ -60,6 +74,10 @@ DataReaderImpl::~DataReaderImpl()
 {
 	if (deadlineTimer_) {
 		deadlineTimer_->Exit();
+	}
+
+	if (lifespanTimer_) {
+		lifespanTimer_->Exit();
 	}
 
 	reader_->SetRelatedDataReader(nullptr);
@@ -655,12 +673,22 @@ ReturnCode_t DataReaderImpl::enable()
         );
 	}
 
+	/* wangyi lifespan Qos 定时器添加  */
+	lifespanTimer_ = TimerManager::CreateTimer(
+		TIME_INFINITE,
+		[this] {
+		LifespanTimeout();
+		},
+		"dr.lifespan"
+	);
+
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredReaderData readerData;
 	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	readerData.contentFilter = contentFilter_;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 	discovery->WriteSubscriptionData(readerData);
 
@@ -790,6 +818,80 @@ void DataReaderImpl::DeadlineTimeout()
 	}
 	
 	statusMgr_->UpdateRequestedDeadlineMissedStatus(instance);
+}
+
+bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
+{
+	/* 非用户reader不触发判断 */
+	GUID_t guid = reader_->GetGuid();
+	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind) {
+		return  true;
+	}
+
+	PublicationBuiltinTopicData publicationData;
+	if (!reader_->GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(cache->writerGuid))) {
+		return false;
+	}
+	 
+	if (publicationData.lifespan.duration == Duration_t(TIME_INFINITE))
+	{
+		return true;
+	}
+
+	Duration_t expirationTime = Conversion::TimeToDuration(cache->sourceTimespace) + publicationData.lifespan.duration;
+	Duration_t currentTime;
+	Duration_t::now(currentTime);
+
+	//如果新报文到达得太晚，则它可能已过期。
+	//如果已过期，将其从历史记录中删除，并返回false，以避免通知监听器。
+	if (expirationTime < currentTime)
+	{
+		reader_->GetReaderCache()->RemoveChange(cache);
+		return false;
+	}
+
+	/* wangyi TODO 定时器停止后不再启动，待查 */
+	//if (reader_->GetReaderCache()->GetMinSourceTimespace().get() == cache.get()) {
+	//	lifespanTimer_->Stop();
+	//}
+
+	Duration_t interval = expirationTime - currentTime;
+	lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
+	lifespanTimer_->ReStart();
+	return true;
+}
+
+bool DataReaderImpl::LifespanTimeout()
+{
+	Duration_t currentTime;
+	Duration_t::now(currentTime);
+	std::shared_ptr<CacheChange> earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+	while (earliestChange != nullptr) {
+
+		PublicationBuiltinTopicData publicationData;
+		reader_->GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(earliestChange->writerGuid));
+
+		if (publicationData.lifespan.duration == Duration_t(TIME_INFINITE))
+		{
+			break;
+		}
+
+		Duration_t expirationTime = Conversion::TimeToDuration(earliestChange->sourceTimespace) + publicationData.lifespan.duration;
+
+		/* 检查最早的报文缓存是否已过期（启动计时器的报文缓存可能已从历史记录中删除）*/
+		if (currentTime < expirationTime)
+		{
+			Duration_t interval = expirationTime - currentTime;
+			lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
+			return true;
+		}
+		else {
+			// 最早的报文缓存已过期，删除该报文。
+			reader_->GetReaderCache()->RemoveChange(earliestChange);
+			earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+		}
+	}
+	return false;
 }
 
 ReturnCode_t DataReaderImpl::UpdateLivelinessChangedStatus(const InstanceHandle_t & handle, const bool & alive, const bool & ensure)

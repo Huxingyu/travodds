@@ -763,7 +763,6 @@ inline void Parameter<ContentFilterProperty_t>::writerMsg(octet* msg)
 {
 	uint32_t inOffset = 0;
 	inOffset += WriterString(msg, parameter_.contentFilteredTopicName);
-	inOffset += WriterString(msg + inOffset, parameter_.contentFilteredTopicName);
 	inOffset += WriterString(msg + inOffset, parameter_.relatedTopicName);
 	inOffset += WriterString(msg + inOffset, parameter_.filterClassName);
 	inOffset += WriterString(msg + inOffset, parameter_.filterExpression);
