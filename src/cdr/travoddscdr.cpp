@@ -136,17 +136,76 @@ CdrSerializer::CdrSerializer(SerializedBuffer* buffer, bool littleEndian)
     }
 }
 
+bool CdrSerializer::convertUft32ToUtf16(const wchar_t utf32Value, uint16_t* utf16Value)
+{
+    uint32_t codePoint = static_cast<uint32_t>(utf32Value);
+    if (codePoint < 0x10000) {
+        utf16Value[0] = static_cast<uint16_t>(codePoint);
+    } else if (codePoint <= 0x10FFFF) {
+        // 转换为surrogate pair
+        codePoint -= 0x10000;
+        utf16Value[0] = static_cast<uint16_t>((codePoint >> 10) + 0xD800);
+        utf16Value[1] = static_cast<uint16_t>((codePoint & 0x3FF) + 0xDC00);
+    } else {
+        fprintf(stderr, "Invalid wchar_t value: %u\n", codePoint);
+        return false;
+    }
+    return true;
+}
+
+bool CdrSerializer::serializeBaseType(wchar_t value) 
+{
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return serializeBaseType<uint16_t>(static_cast<uint16_t>(value));
+    } else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        uint16_t utf16Value[2] = {0, 0};
+        if (!convertUft32ToUtf16(value, utf16Value)) {
+            return false;
+        }
+        // 当前仅考虑utf16与uft32编码相同的宽字符
+        return serializeBaseType<uint16_t>(utf16Value[0]);
+    } else {
+        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrSerializer::serializeBaseTypeArray(const wchar_t* value, uint32_t length) 
+{
+    if (length == 0) {
+        return true;
+    }
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return serializeBaseTypeArray<uint16_t>(reinterpret_cast<const uint16_t*>(value), length);
+    } else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        for (uint32_t i = 0; i < length; i++) {
+            if (!serializeBaseType(value[i])) {
+                fprintf(stderr, "serialize wchar_t array index[%u] failed.\n", i);
+                return false;
+            }
+        }
+        return true;
+    } else {
+        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
 bool CdrSerializer::serializeLongDouble(LongDouble value) 
 {
     uint32_t ldSize = sizeof(long double);
-    static char s_padData[16] = { 0 };
+    static char s_alignedData[8] = { 0 };
+    // 16字节按照8字节对齐
+    uint32_t offset = (~index_ + 1) & (8 - 1);
+    index_ += offset;
+    SerializedBuffer* retBuffer = curProcessMsgBlock_->writeData(s_alignedData, offset);
     // 填充0
     if (useLittleEndian_ == isLittleEndian()) {
-        bool ret = serializeBaseTypeArray(s_padData, 16 - ldSize);
-        if (!ret) {
-            return false;
-        }
-        return serializeBaseType(static_cast<double>(value.ld));
+        return serializeBaseTypeArray(value.c, sizeof(LongDouble));
     } else {
         // 交换value.c的字节序
         LongDouble tmpValue = value;
@@ -189,7 +248,7 @@ bool CdrSerializer::serializeWString(const wchar_t* value, uint32_t length)
     if (!serializeBaseType<uint32_t>(length)) {
         return false;
     }
-    if (!serializeBaseTypeArray<wchar_t>(value, length)) {
+    if (!serializeBaseTypeArray(value, length)) {
         return false;
     }
     return true;
@@ -329,6 +388,66 @@ CdrDeserializer::CdrDeserializer(SerializedBuffer* buffer, bool littleEndian)
     }
 }
 
+bool CdrDeserializer::convertUft16ToUtf32(const uint16_t utf16Value, wchar_t& utf32Value)
+{
+    // 当前仅考虑utf16编码和utf32编码相同的情况
+    utf32Value = static_cast<uint32_t>(utf16Value);
+    return true;
+}
+
+bool CdrDeserializer::deserializeBaseType(wchar_t& value)
+{
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        uint16_t int16Val;
+        if (deserializeBaseType<uint16_t>(int16Val)) {
+            value = static_cast<wchar_t>(int16Val);
+            return true;
+        }
+        return false;
+    }
+    else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，反序列化后转化为utf32
+        uint16_t int16Val;
+        if (!deserializeBaseType<uint16_t>(int16Val)) {
+            return false;
+        }
+        if (!convertUft16ToUtf32(int16Val, value)) {
+            return false;
+        }
+        return true;
+    }
+    else {
+        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrDeserializer::deserializeBaseTypeArray(wchar_t* value, uint32_t length)
+{
+    if (length == 0) {
+        return true;
+    }
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return deserializeBaseTypeArray<uint16_t>(reinterpret_cast<uint16_t*>(value), length);
+    }
+    else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        for (uint32_t i = 0; i < length; i++) {
+            if (!deserializeBaseType(value[i])) {
+                fprintf(stderr, "deserialize wchar_t array index[%u] failed.\n", i);
+                return false;
+            }
+        }
+        return true;
+    }
+    else {
+        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
 bool CdrDeserializer::isLittleEndian() const
 {
     union agicdr_endian_test {
@@ -383,7 +502,7 @@ bool CdrDeserializer::deserializeWString(std::wstring& value)
         return false;
     }
     value.resize(strLen);
-    if (!deserializeBaseTypeArray<wchar_t>(&value[0], strLen)) {
+    if (!deserializeBaseTypeArray(&value[0], strLen)) {
         return false;
     }
     return true;

@@ -132,6 +132,11 @@ public:
     bool serializeLongDouble(LongDouble value);
 
     bool serializeLongDoubleArray(const LongDouble* value, uint32_t length);
+
+    bool serializeBaseType(wchar_t value);
+
+    bool serializeBaseTypeArray(const wchar_t* value, uint32_t length);
+
     /**
      * @brief 序列化基本数类型
      * 
@@ -378,6 +383,16 @@ public:
      * @return 是否成功。
      */
     bool getKeyHash(char* keyHash, bool forceMd5 = false);
+
+    /**
+     * @brief 将UTF-32编码的字符串转换为UTF-16编码。
+     * 
+     * @param utf32Value UTF-32编码的字符串。
+     * @param utf16Value 转换后的UTF-16编码字符。
+     * 
+     * @return 是否转换成功。
+     */
+    static bool convertUft32ToUtf16(const wchar_t utf32Value, uint16_t* utf16Value);
 private:
     /** @brief	序列化目标缓冲区，由SerializedBuffer链表组成，该域表示链表的头指针。 */
     SerializedBuffer* tgaMsgBlock_;
@@ -413,13 +428,13 @@ public:
     bool deserializeLongDouble(LongDouble& value) 
     {
         static char s_alignedData[8] = { 0 };
-        uint32_t ldSize = sizeof(long double);
-        // 先读取补齐的数据
-        bool ret = deserializeBaseTypeArray<char>(s_alignedData, 16 - ldSize);
+        uint32_t offset = alignSize(8);
+        // 先读取对齐的数据
+        bool ret = deserializeBaseTypeArray<char>(s_alignedData, offset);
         if (!ret) {
             return false;
         }
-        return deserializeBaseType(value.ld);
+        return deserializeBaseTypeArray(value.c, sizeof(LongDouble));
     }
     
     bool deserializeLongDoubleArray(LongDouble* value, uint32_t length) 
@@ -431,6 +446,10 @@ public:
         }
         return true;
     }
+
+    bool deserializeBaseType(wchar_t& value);
+
+    bool deserializeBaseTypeArray(wchar_t* value, uint32_t length);
 
     template<typename T>
     bool deserializeBaseType(T& value) 
@@ -557,6 +576,8 @@ public:
     {
         return ((~index_ + 1) & (typeSize - 1));
     }
+
+    bool convertUft16ToUtf32(const uint16_t utf16Value, wchar_t& utf32Value);
 private:
     SerializedBuffer* tgaMsgBlock_;
     SerializedBuffer* curProcessMsgBlock_;
