@@ -36,24 +36,24 @@ typedef enum LogType
 } LogType;
 
 /**
- * @fn    int32_t AGILogInitial(uint32_t consoleMask, uint32_t fileMask);
+ * @fn    int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask);
  *
  * @brief    初始化用户日志接口.
  *
  * @param    consoleMask    输出到控制台的日志等级掩码.
  * @param    fileMask       输出到日志文件的日志等级掩码.
  */
-int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask);
+int32_t LogInitial(uint32_t consoleMask = 0xffff, uint32_t fileMask = 0xffff);
 
 /**
- * @fn  int32_t AGILogDestroy();
+ * @fn  int32_t LogDestroy();
  *
  * @brief   回收为日志系统提供资源等。
  */
 int32_t LogDestroy();
 
 /**
- * @fn  void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t line, const char* format, ...);
+ * @fn  void LogToConsole(LogType type, const char* file, const char* func, uint32_t line, const char* format, ...);
  *
  * @brief   输出日志到控制台。
  *
