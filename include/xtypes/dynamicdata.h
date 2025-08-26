@@ -13,7 +13,7 @@
 #ifndef DYNAMIC_DATA_H
 #define DYNAMIC_DATA_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictype.h"
 #include "xtypes/memberdescriptor.h"
 #include "type/basictype.h"
@@ -22,7 +22,7 @@
 #include <map>
 #include <vector>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 typedef std::vector<class DynamicData*> DynamicDataSeq;
 
@@ -392,7 +392,6 @@ private:
     ReturnCode_t initialize_values();
 
 private:
-    /** @brief 只读属性，该DynamicData关联的类型。*/
 
     DynamicType& type_;
 
@@ -424,6 +423,6 @@ private:
     std::map<MemberId, MemberDescriptor> descriptor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_DATA_H

@@ -13,7 +13,7 @@
 #include "xtypes/dynamicdata.h"
 #include <sstream>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicData::DynamicData(DynamicType &type) : type_(type) {
     // 增加类型的引用计数
@@ -615,7 +615,7 @@ size_t DynamicData::get_item_count() const {
     return -1;
 }
 
-size_t AGIDDS::DynamicData::get_memberid_item_count(MemberId id) const {
+size_t DynamicData::get_memberid_item_count(MemberId id) const {
     if (type_.descriptor_.kind_ == TK_STRUCTURE ||
         type_.descriptor_.kind_ == TK_UNION) {
         // 复杂类型的成员
@@ -3450,4 +3450,4 @@ ReturnCode_t DynamicData::set_wstring_values(MemberId id,
     return RETCODE_BAD_PARAMETER;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

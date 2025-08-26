@@ -3,7 +3,7 @@
 #include "rtps/endpoint/statefulwriter.h"
 #include "common/threads/threadpool.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 FlowControlScheduler::FlowControlScheduler()
 	:asyncThreads_(new ThreadPool(1))

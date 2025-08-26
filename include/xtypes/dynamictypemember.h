@@ -13,14 +13,14 @@
 #ifndef DYNAMIC_TYPE_MEMBER_H
 #define DYNAMIC_TYPE_MEMBER_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/base/retcode.h"
 #include "xtypes/annotationdescriptor.h"
 #include "xtypes/memberdescriptor.h"
 #include <string>
 #include <map>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief DynamicTypeMember表示类型的“成员”，具有引用语义。
@@ -103,6 +103,6 @@ private:
     MemberDescriptor descriptor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_MEMBER_H

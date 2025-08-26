@@ -13,7 +13,7 @@
 #include "xtypes/typedescriptor.h"
 #include "xtypes/dynamictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 TypeDescriptor::TypeDescriptor()
     : kind_(TK_NONE), name_(""), base_type_(nullptr),
@@ -99,4 +99,4 @@ unsigned int TypeDescriptor::get_bound_count() const {
     return total_bounds;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

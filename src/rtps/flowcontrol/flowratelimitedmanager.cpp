@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 FlowRateLimitedManager::FlowRateLimitedManager(Participant* participant, const FlowParameters& parameters)
     : participant_(participant), 

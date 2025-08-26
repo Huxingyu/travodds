@@ -1,6 +1,6 @@
 #include "dcps/sql/ddssqlcondition.h"
 
-using namespace AGIDDS::DDSSQL;
+using namespace TRAVODDS::DDSSQL;
 
 DDSSQLLogicalCondition::DDSSQLLogicalCondition(LogicalOperationKind op, const std::shared_ptr<DDSSQLCondition>& left, const std::shared_ptr<DDSSQLCondition>& right)
 	: op_(op), left_(left), right_(right)

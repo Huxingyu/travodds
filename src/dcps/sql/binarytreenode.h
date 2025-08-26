@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SQL_BINARY_TREE_NODE_H
-#define AGIDDS_DCPS_SQL_BINARY_TREE_NODE_H
+#ifndef TRAVODDS_DCPS_SQL_BINARY_TREE_NODE_H
+#define TRAVODDS_DCPS_SQL_BINARY_TREE_NODE_H
 #include <pegtl.hpp>
 #include <pegtl/contrib/parse_tree.hpp>
 #include "dcps/sql/ddssqlfield.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 namespace DDSSQL {
 	namespace pegtl = tao::pegtl;
 
@@ -52,6 +52,6 @@ namespace DDSSQL {
 
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

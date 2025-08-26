@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SQL_PREDICATE_H
-#define AGIDDS_DCPS_SQL_PREDICATE_H
+#ifndef TRAVODDS_DCPS_SQL_PREDICATE_H
+#define TRAVODDS_DCPS_SQL_PREDICATE_H
 
 #include <vector>
 #include <memory>
 #include "dcps/sql/ddssqlfield.h"
 #include "dcps/sql/ddssqlcondition.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 namespace DDSSQL {
 
     enum class RelOperationKind : uint8_t
@@ -52,6 +52,6 @@ namespace DDSSQL {
 
 	};
 }
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

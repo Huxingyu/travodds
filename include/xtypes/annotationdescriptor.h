@@ -13,11 +13,11 @@
 #ifndef ANNOTATION_DESCRIPTOR_H
 #define ANNOTATION_DESCRIPTOR_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include <string>
 #include <map>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DynamicType;
 
@@ -87,6 +87,6 @@ public:
     bool is_consistent() const;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // ANNOTATION_DESCRIPTOR_H

@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SQL_GRAMMAR_H
-#define AGIDDS_DCPS_SQL_GRAMMAR_H
+#ifndef TRAVODDS_DCPS_SQL_GRAMMAR_H
+#define TRAVODDS_DCPS_SQL_GRAMMAR_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
 #include <pegtl.hpp>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace DDSSQL {
 	namespace pegtl = tao::pegtl;
@@ -235,5 +235,5 @@ namespace DDSSQL {
     //struct ExpressionGrammar : pegtl::must<Expression, pegtl::eof > {};
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

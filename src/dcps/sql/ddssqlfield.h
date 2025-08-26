@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SQL_FIELD_H
-#define AGIDDS_DCPS_SQL_FIELD_H
+#ifndef TRAVODDS_DCPS_SQL_FIELD_H
+#define TRAVODDS_DCPS_SQL_FIELD_H
 
 #include <cstdint>
 #include <array>
@@ -18,10 +18,10 @@
 #include <unordered_set>
 #include <regex>
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/base/retcode.h"
 #include "xtypes/typekind.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class DynamicData;
 class DynamicType;
 namespace DDSSQL {
@@ -152,6 +152,6 @@ namespace DDSSQL {
     };
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

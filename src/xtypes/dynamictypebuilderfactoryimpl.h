@@ -18,7 +18,7 @@
 #include <map>
 #include <mutex>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief DynamicTypeBuilderFactoryImpl类是DynamicTypeBuilderFactory的实现类。
@@ -66,6 +66,6 @@ class DynamicTypeBuilderFactoryImpl : public DynamicTypeBuilderFactory {
     std::mutex mutex_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_BUILDER_FACTORY_IMPL_H

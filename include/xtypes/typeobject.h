@@ -29,9 +29,9 @@
 extern "C" {
 #endif
 
-namespace AGIDDS { class TypeLibrary; } 
+namespace TRAVODDS { class TypeLibrary; } 
 
-namespace AGIDDS {
+namespace TRAVODDS {
 
 typedef short TypeKind;
 
@@ -85,38 +85,38 @@ const TypeKind ANNOTATION_TYPE = 23;
 
 typedef short PrimitiveTypeId;
 
-const PrimitiveTypeId NO_TYPE_ID = AGIDDS::NO_TYPE;
+const PrimitiveTypeId NO_TYPE_ID = NO_TYPE;
 
-const PrimitiveTypeId BOOLEAN_TYPE_ID = AGIDDS::BOOLEAN_TYPE;
+const PrimitiveTypeId BOOLEAN_TYPE_ID = BOOLEAN_TYPE;
 
-const PrimitiveTypeId BYTE_TYPE_ID = AGIDDS::BYTE_TYPE;
+const PrimitiveTypeId BYTE_TYPE_ID = BYTE_TYPE;
 
-const PrimitiveTypeId INT_16_TYPE_ID = AGIDDS::INT_16_TYPE;
+const PrimitiveTypeId INT_16_TYPE_ID = INT_16_TYPE;
 
-const PrimitiveTypeId UINT_16_TYPE_ID = AGIDDS::UINT_16_TYPE;
+const PrimitiveTypeId UINT_16_TYPE_ID = UINT_16_TYPE;
 
-const PrimitiveTypeId INT_32_TYPE_ID = AGIDDS::INT_32_TYPE;
+const PrimitiveTypeId INT_32_TYPE_ID = INT_32_TYPE;
 
-const PrimitiveTypeId UINT_32_TYPE_ID = AGIDDS::UINT_32_TYPE;
+const PrimitiveTypeId UINT_32_TYPE_ID = UINT_32_TYPE;
 
-const PrimitiveTypeId INT_64_TYPE_ID = AGIDDS::INT_64_TYPE;
+const PrimitiveTypeId INT_64_TYPE_ID = INT_64_TYPE;
 
-const PrimitiveTypeId UINT_64_TYPE_ID = AGIDDS::UINT_64_TYPE;
+const PrimitiveTypeId UINT_64_TYPE_ID = UINT_64_TYPE;
 
-const PrimitiveTypeId FLOAT_32_TYPE_ID = AGIDDS::FLOAT_32_TYPE;
+const PrimitiveTypeId FLOAT_32_TYPE_ID = FLOAT_32_TYPE;
 
-const PrimitiveTypeId FLOAT_64_TYPE_ID = AGIDDS::FLOAT_64_TYPE;
+const PrimitiveTypeId FLOAT_64_TYPE_ID = FLOAT_64_TYPE;
 
-const PrimitiveTypeId FLOAT_128_TYPE_ID = AGIDDS::FLOAT_128_TYPE;
+const PrimitiveTypeId FLOAT_128_TYPE_ID = FLOAT_128_TYPE;
 
-const PrimitiveTypeId CHAR_8_TYPE_ID = AGIDDS::CHAR_8_TYPE;
+const PrimitiveTypeId CHAR_8_TYPE_ID = CHAR_8_TYPE;
 
-const PrimitiveTypeId CHAR_32_TYPE_ID = AGIDDS::CHAR_32_TYPE;
+const PrimitiveTypeId CHAR_32_TYPE_ID = CHAR_32_TYPE;
 
 class DDS_TYPE_API _TypeId {
 public:
-    AGIDDS::TypeKind u_;
-    AGIDDS::PrimitiveTypeId primitive_type_id;
+    TypeKind u_;
+    PrimitiveTypeId primitive_type_id;
     unsigned long long constructed_type_id;
 };
 
@@ -128,7 +128,7 @@ const MemberId MEMBER_ID_INVALID = 268435455;
 // @nested
 class DDS_TYPE_API AnnotationMemberValue {
 public:
-    AGIDDS::TypeKind u_;
+    TypeKind u_;
     char boolean_value;
     unsigned char byte_value;
     short int_16_value;
@@ -153,8 +153,8 @@ public:
     bool operator<(const AnnotationUsageMember& ) const {
         return false;
     }
-    AGIDDS::MemberId member_id;
-    AGIDDS::AnnotationMemberValue value;
+    MemberId member_id;
+    AnnotationMemberValue value;
 };
 
 // @appendable
@@ -164,8 +164,8 @@ public:
     bool operator<(const AnnotationUsage& ) const {
         return false;
     }
-    AGIDDS::_TypeId type_id;
-    std::vector<AGIDDS::AnnotationUsageMember> member;
+    _TypeId type_id;
+    std::vector<AnnotationUsageMember> member;
 };
 
 // @bit_bound()
@@ -182,8 +182,8 @@ public:
     bool operator<(const TypeProperty& ) const {
         return false;
     }
-    AGIDDS::TypeFlag flag;
-    AGIDDS::_TypeId type_id;
+    TypeFlag flag;
+    _TypeId type_id;
     std::string name;
 };
 
@@ -199,8 +199,8 @@ public:
     bool operator<(const Type& ) const {
         return false;
     }
-    AGIDDS::TypeProperty property;// @id(AGIDDS::PROPERTY_TYPE_MEMBER_ID) 
-    std::vector<AGIDDS::AnnotationUsage> annotation;// @id(AGIDDS::ANNOTATION_TYPE_MEMBER_ID) 
+    TypeProperty property;// @id(PROPERTY_TYPE_MEMBER_ID) 
+    std::vector<AnnotationUsage> annotation;// @id(ANNOTATION_TYPE_MEMBER_ID) 
 };
 
 // @bit_bound()
@@ -218,9 +218,9 @@ public:
     bool operator<(const MemberProperty& ) const {
         return false;
     }
-    AGIDDS::MemberFlag flag;
-    AGIDDS::MemberId member_id;
-    AGIDDS::_TypeId type_id;
+    MemberFlag flag;
+    MemberId member_id;
+    _TypeId type_id;
     std::string name;
 };
 
@@ -236,8 +236,8 @@ public:
     bool operator<(const Member& ) const {
         return false;
     }
-    AGIDDS::MemberProperty property;// @id(AGIDDS::PROPERTY_MEMBER_MEMBER_ID) 
-    std::vector<AGIDDS::AnnotationUsage> annotation;// @id(AGIDDS::ANNOTATION_MEMBER_MEMBER_ID) 
+    MemberProperty property;// @id(PROPERTY_MEMBER_MEMBER_ID) 
+    std::vector<AnnotationUsage> annotation;// @id(ANNOTATION_MEMBER_MEMBER_ID) 
 };
 
 enum StructureTypeMemberId {
@@ -247,13 +247,13 @@ enum StructureTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API StructureType : public AGIDDS::Type {
+class DDS_TYPE_API StructureType : public Type {
 public:
     bool operator<(const StructureType& ) const {
         return false;
     }
-    AGIDDS::_TypeId base_type;// @id(AGIDDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID) 
-    std::vector<AGIDDS::Member> member;// @id(AGIDDS::MEMBER_STRUCTURETYPE_MEMBER_ID) 
+    _TypeId base_type;// @id(BASE_TYPE_STRUCTURETYPE_MEMBER_ID) 
+    std::vector<Member> member;// @id(MEMBER_STRUCTURETYPE_MEMBER_ID) 
 };
 
 enum UnionMemberMemberId {
@@ -262,12 +262,12 @@ enum UnionMemberMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API UnionMember : public AGIDDS::Member {
+class DDS_TYPE_API UnionMember : public Member {
 public:
     bool operator<(const UnionMember& ) const {
         return false;
     }
-    std::vector<int> label;// @id(AGIDDS::LABEL_UNIONMEMBER_MEMBER_ID) 
+    std::vector<int> label;// @id(LABEL_UNIONMEMBER_MEMBER_ID) 
 };
 
 enum UnionTypeMemberId {
@@ -276,12 +276,12 @@ enum UnionTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API UnionType : public AGIDDS::Type {
+class DDS_TYPE_API UnionType : public Type {
 public:
     bool operator<(const UnionType& ) const {
         return false;
     }
-    std::vector<AGIDDS::UnionMember> member;// @id(AGIDDS::MEMBER_UNIONTYPE_MEMBER_ID) 
+    std::vector<UnionMember> member;// @id(MEMBER_UNIONTYPE_MEMBER_ID) 
 };
 
 enum AnnotationMemberMemberId {
@@ -290,12 +290,12 @@ enum AnnotationMemberMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API AnnotationMember : public AGIDDS::Member {
+class DDS_TYPE_API AnnotationMember : public Member {
 public:
     bool operator<(const AnnotationMember& ) const {
         return false;
     }
-    AGIDDS::AnnotationMemberValue default_value;// @id(AGIDDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID) 
+    AnnotationMemberValue default_value;// @id(DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID) 
 };
 
 enum AnnotationTypeMemberId {
@@ -305,13 +305,13 @@ enum AnnotationTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API AnnotationType : public AGIDDS::Type {
+class DDS_TYPE_API AnnotationType : public Type {
 public:
     bool operator<(const AnnotationType& ) const {
         return false;
     }
-    AGIDDS::_TypeId base_type;// @id(AGIDDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID) 
-    std::vector<AGIDDS::AnnotationMember> member;// @id(AGIDDS::MEMBER_ANNOTATIONTYPE_MEMBER_ID) 
+    _TypeId base_type;// @id(BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID) 
+    std::vector<AnnotationMember> member;// @id(MEMBER_ANNOTATIONTYPE_MEMBER_ID) 
 };
 
 enum AliasTypeMemberId {
@@ -320,12 +320,12 @@ enum AliasTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API AliasType : public AGIDDS::Type {
+class DDS_TYPE_API AliasType : public Type {
 public:
     bool operator<(const AliasType& ) const {
         return false;
     }
-    AGIDDS::_TypeId base_type;// @id(AGIDDS::BASE_TYPE_ALIASTYPE_MEMBER_ID) 
+    _TypeId base_type;// @id(BASE_TYPE_ALIASTYPE_MEMBER_ID) 
 };
 
 typedef unsigned int Bound;
@@ -339,13 +339,13 @@ enum CollectionTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API CollectionType : public AGIDDS::Type {
+class DDS_TYPE_API CollectionType : public Type {
 public:
     bool operator<(const CollectionType& ) const {
         return false;
     }
-    AGIDDS::_TypeId element_type;// @id(AGIDDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID) 
-    char element_shared;// @id(AGIDDS::ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID) 
+    _TypeId element_type;// @id(ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID) 
+    char element_shared;// @id(ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID) 
 };
 
 enum ArrayTypeMemberId {
@@ -354,12 +354,12 @@ enum ArrayTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API ArrayType : public AGIDDS::CollectionType {
+class DDS_TYPE_API ArrayType : public CollectionType {
 public:
     bool operator<(const ArrayType& ) const {
         return false;
     }
-    std::vector<AGIDDS::Bound> bound;// @id(AGIDDS::BOUND_ARRAYTYPE_MEMBER_ID) 
+    std::vector<Bound> bound;// @id(BOUND_ARRAYTYPE_MEMBER_ID) 
 };
 
 enum MapTypeMemberId {
@@ -369,13 +369,13 @@ enum MapTypeMemberId {
 
 // @appendable
 // @nested
-class DDS_TYPE_API MapType : public AGIDDS::CollectionType {
+class DDS_TYPE_API MapType : public CollectionType {
 public:
     bool operator<(const MapType& ) const {
         return false;
     }
-    AGIDDS::_TypeId key_element_type;// @id(AGIDDS::KEY_ELEMENT_TYPE_MAPTYPE_MEMBER_ID) 
-    AGIDDS::Bound bound;// @id(AGIDDS::BOUND_MAPTYPE_MEMBER_ID) 
+    _TypeId key_element_type;// @id(KEY_ELEMENT_TYPE_MAPTYPE_MEMBER_ID) 
+    Bound bound;// @id(BOUND_MAPTYPE_MEMBER_ID) 
 };
 
 enum SequenceTypeMemberId {
@@ -384,12 +384,12 @@ enum SequenceTypeMemberId {
 
 // @appendable
 // @nested
-class DDS_TYPE_API SequenceType : public AGIDDS::CollectionType {
+class DDS_TYPE_API SequenceType : public CollectionType {
 public:
     bool operator<(const SequenceType& ) const {
         return false;
     }
-    AGIDDS::Bound bound;// @id(AGIDDS::BOUND_SEQUENCETYPE_MEMBER_ID) 
+    Bound bound;// @id(BOUND_SEQUENCETYPE_MEMBER_ID) 
 };
 
 enum StringTypeMemberId {
@@ -398,12 +398,12 @@ enum StringTypeMemberId {
 
 // @appendable
 // @nested
-class DDS_TYPE_API StringType : public AGIDDS::CollectionType {
+class DDS_TYPE_API StringType : public CollectionType {
 public:
     bool operator<(const StringType& ) const {
         return false;
     }
-    AGIDDS::Bound bound;// @id(AGIDDS::BOUND_STRINGTYPE_MEMBER_ID) 
+    Bound bound;// @id(BOUND_STRINGTYPE_MEMBER_ID) 
 };
 
 // @appendable
@@ -424,13 +424,13 @@ enum BitSetTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API BitSetType : public AGIDDS::Type {
+class DDS_TYPE_API BitSetType : public Type {
 public:
     bool operator<(const BitSetType& ) const {
         return false;
     }
-    AGIDDS::Bound bit_bound;// @id(AGIDDS::BIT_BOUND_BITSETTYPE_MEMBER_ID) 
-    std::vector<AGIDDS::Bit> bit;// @id(AGIDDS::BIT_BITSETTYPE_MEMBER_ID) 
+    Bound bit_bound;// @id(BIT_BOUND_BITSETTYPE_MEMBER_ID) 
+    std::vector<Bit> bit;// @id(BIT_BITSETTYPE_MEMBER_ID) 
 };
 
 // @appendable
@@ -451,13 +451,13 @@ enum EnumerationTypeMemberId {
 
 // @mutable
 // @nested
-class DDS_TYPE_API EnumerationType : public AGIDDS::Type {
+class DDS_TYPE_API EnumerationType : public Type {
 public:
     bool operator<(const EnumerationType& ) const {
         return false;
     }
-    AGIDDS::Bound bit_bound;// @id(AGIDDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID) 
-    std::vector<AGIDDS::EnumeratedConstant> constant;// @id(AGIDDS::CONSTANT_ENUMERATIONTYPE_MEMBER_ID) 
+    Bound bit_bound;// @id(BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID) 
+    std::vector<EnumeratedConstant> constant;// @id(CONSTANT_ENUMERATIONTYPE_MEMBER_ID) 
 };
 
 // @appendable
@@ -473,16 +473,16 @@ public:
 
 // @bit_bound()
 enum TypeLibraryElementKind {
-    ALIAS_TYPE_ELEMENT = AGIDDS::ALIAS_TYPE,
-    ANNOTATION_TYPE_ELEMENT = AGIDDS::ANNOTATION_TYPE,
-    ARRAY_TYPE_ELEMENT = AGIDDS::ARRAY_TYPE,
-    BITSET_TYPE_ELEMENT = AGIDDS::BITSET_TYPE,
-    ENUMERATION_TYPE_ELEMENT = AGIDDS::ENUMERATION_TYPE,
-    MAP_TYPE_ELEMENT = AGIDDS::MAP_TYPE,
-    SEQUENCE_TYPE_ELEMENT = AGIDDS::SEQUENCE_TYPE,
-    STRING_TYPE_ELEMENT = AGIDDS::STRING_TYPE,
-    STRUCTURE_TYPE_ELEMENT = AGIDDS::STRUCTURE_TYPE,
-    UNION_TYPE_ELEMENT = AGIDDS::UNION_TYPE,
+    ALIAS_TYPE_ELEMENT = ALIAS_TYPE,
+    ANNOTATION_TYPE_ELEMENT = ANNOTATION_TYPE,
+    ARRAY_TYPE_ELEMENT = ARRAY_TYPE,
+    BITSET_TYPE_ELEMENT = BITSET_TYPE,
+    ENUMERATION_TYPE_ELEMENT = ENUMERATION_TYPE,
+    MAP_TYPE_ELEMENT = MAP_TYPE,
+    SEQUENCE_TYPE_ELEMENT = SEQUENCE_TYPE,
+    STRING_TYPE_ELEMENT = STRING_TYPE,
+    STRUCTURE_TYPE_ELEMENT = STRUCTURE_TYPE,
+    UNION_TYPE_ELEMENT = UNION_TYPE,
     MODULE_ELEMENT = 24,
 };
 
@@ -490,18 +490,18 @@ enum TypeLibraryElementKind {
 // @nested
 class DDS_TYPE_API TypeLibraryElement {
 public:
-    AGIDDS::TypeLibraryElementKind u_;
-    AGIDDS::AliasType alias_type;// @id(1) 
-    AGIDDS::AnnotationType annotation_type;// @id(2) 
-    AGIDDS::ArrayType array_type;// @id(3) 
-    AGIDDS::BitSetType bitset_type;// @id(4) 
-    AGIDDS::EnumerationType enumeration_type;// @id(5) 
-    AGIDDS::MapType map_type;// @id(6) 
-    AGIDDS::SequenceType sequence_type;// @id(7) 
-    AGIDDS::StringType string_type;// @id(8) 
-    AGIDDS::StructureType structure_type;// @id(9) 
-    AGIDDS::UnionType union_type;// @id(10) 
-    AGIDDS::_Module mod;// @id(11) 
+    TypeLibraryElementKind u_;
+    AliasType alias_type;// @id(1) 
+    AnnotationType annotation_type;// @id(2) 
+    ArrayType array_type;// @id(3) 
+    BitSetType bitset_type;// @id(4) 
+    EnumerationType enumeration_type;// @id(5) 
+    MapType map_type;// @id(6) 
+    SequenceType sequence_type;// @id(7) 
+    StringType string_type;// @id(8) 
+    StructureType structure_type;// @id(9) 
+    UnionType union_type;// @id(10) 
+    _Module mod;// @id(11) 
 };
 
 // @appendable
@@ -511,7 +511,7 @@ public:
     bool operator<(const TypeLibrary& ) const {
         return false;
     }
-    std::vector<AGIDDS::TypeLibraryElement> element;
+    std::vector<TypeLibraryElement> element;
 };
 
 // @mutable
@@ -520,8 +520,8 @@ public:
     bool operator<(const TypeObject& ) const {
         return false;
     }
-    AGIDDS::TypeLibrary library;// @id(0) 
-    std::vector<AGIDDS::_TypeId> the_type;// @id(1) 
+    TypeLibrary library;// @id(0) 
+    std::vector<_TypeId> the_type;// @id(1) 
 };
 
 } // namespace AGIDDS

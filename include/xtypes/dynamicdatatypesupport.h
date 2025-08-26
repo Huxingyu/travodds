@@ -13,14 +13,14 @@
 #ifndef DYNAMIC_DATA_TYPESUPPORT_H
 #define DYNAMIC_DATA_TYPESUPPORT_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictype.h"
 #include "xtypes/dynamicdata.h"
 #include "dcps/topic/typesupport.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
-class DynamicDataTypeSupport : public AGIDDS::TypeSupport {
+class DynamicDataTypeSupport : public TypeSupport {
 public:
     DynamicDataTypeSupport(DynamicType* type);
     
@@ -38,25 +38,24 @@ public:
 
     virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
 
-    virtual AGIDDS::TypeObject* get_typeobject() override;
+    virtual TypeObject* get_typeobject() override;
 
-    virtual AGIDDS::ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;
 
-    virtual int MakeKey(const void* data, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
 private:
-    unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, AGIDDS::MemberId id, const std::string& name, unsigned int currentAlignment);
-    int serialize_member(DynamicData* dynamicData, AGIDDSCdrSerializer* cdr, DynamicType* type, AGIDDS::MemberId id, const std::string& name, int endian);
+    unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, MemberId id, const std::string& name, unsigned int currentAlignment);
+    int serialize_member(DynamicData* dynamicData, AGIDDSCdrSerializer* cdr, DynamicType* type, MemberId id, const std::string& name, int endian);
 private:
-    /** @brief 关联的数据类型描述。*/
     DynamicType* type_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_DATA_TYPESUPPORT_H

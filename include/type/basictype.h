@@ -296,6 +296,21 @@ struct Duration_t {
 		return (this->sec != other.sec) || (this->nanosec != other.nanosec);
 	}
 
+	Duration_t operator + (const Duration_t& other) const {
+		Duration_t result;
+
+		// 计算秒差
+		result.sec = this->sec + other.sec;
+		result.nanosec = this->nanosec + other.nanosec;
+
+		if (result.nanosec >= 1000000000) {
+			result.sec += static_cast<int32_t>(result.nanosec / 1000000000);
+			result.nanosec %= 1000000000;
+		}
+
+		return result;
+	}
+
 	Duration_t operator - (const Duration_t& other) const {
 		Duration_t result;
 

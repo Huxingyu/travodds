@@ -15,7 +15,7 @@
 
 #include "dcps/topic/typesupport.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DomainParticipant;
 class DynamicType;
@@ -45,6 +45,6 @@ public:
     static ReturnCode_t delete_type_support(DynamicTypeSupport *type_support);
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPESUPPORT_H

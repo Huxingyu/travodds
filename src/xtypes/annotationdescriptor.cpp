@@ -13,7 +13,7 @@
 #include "xtypes/annotationdescriptor.h"
 #include "xtypes/dynamictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 AnnotationDescriptor::AnnotationDescriptor(const AnnotationDescriptor &other)
     : type_(other.type_), value_(other.value_) {
@@ -55,4 +55,4 @@ bool AnnotationDescriptor::equals(const AnnotationDescriptor &other) const {
 
 bool AnnotationDescriptor::is_consistent() const { return type_ != nullptr; }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

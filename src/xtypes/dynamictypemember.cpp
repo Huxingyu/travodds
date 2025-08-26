@@ -12,7 +12,7 @@
 
 #include "xtypes/dynamictypemember.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicTypeMember::DynamicTypeMember(const MemberDescriptor &descriptor)
     : descriptor_(descriptor) {
@@ -56,4 +56,4 @@ bool DynamicTypeMember::is_key() const {
     return false;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

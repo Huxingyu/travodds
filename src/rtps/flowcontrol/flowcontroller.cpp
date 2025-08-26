@@ -2,7 +2,7 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/endpoint/writer.h"
 #include "rtps/endpoint/statefulwriter.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 FlowController::FlowController(Participant* participant, const FlowControllerConfig& config)
 	: config_(config), participant_(participant), scheduler_(nullptr)

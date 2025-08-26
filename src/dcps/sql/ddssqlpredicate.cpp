@@ -1,6 +1,6 @@
 #include "dcps/sql/ddssqlpredicate.h"
 
-using namespace AGIDDS::DDSSQL;
+using namespace TRAVODDS::DDSSQL;
 
 DDSSQLPredicate::DDSSQLPredicate(RelOperationKind op, const std::shared_ptr<TypicalValue>& left, const std::shared_ptr<TypicalValue>& right)
     : op_(op), left_(left), right_(right)

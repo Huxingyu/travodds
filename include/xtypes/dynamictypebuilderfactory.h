@@ -13,12 +13,12 @@
 #ifndef DYNAMIC_TYPE_BUILDER_FACTORY_H
 #define DYNAMIC_TYPE_BUILDER_FACTORY_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/base/retcode.h"
 #include <vector>
 #include <string>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DynamicType;
 class DynamicTypeBuilder;
@@ -174,6 +174,6 @@ protected:
     DynamicTypeBuilderFactory& operator=(const DynamicTypeBuilderFactory&) = default;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_BUILDER_FACTORY_H

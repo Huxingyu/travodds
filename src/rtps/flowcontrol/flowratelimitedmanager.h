@@ -10,8 +10,8 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGIDDS_RTPS_FLOWCONTROL_FLOWRATELIMITEDMANAGER_H
-#define AGIDDS_RTPS_FLOWCONTROL_FLOWRATELIMITEDMANAGER_H
+#ifndef TRAVODDS_RTPS_FLOWCONTROL_FLOWRATELIMITEDMANAGER_H
+#define TRAVODDS_RTPS_FLOWCONTROL_FLOWRATELIMITEDMANAGER_H
 
 #include <condition_variable>
 #include <atomic>
@@ -19,7 +19,7 @@
 #include "rtps/basictypertps.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Timer;
 class Participant;
@@ -57,5 +57,5 @@ private:
 	std::mutex mtx_;
 	std::shared_ptr<Timer> timer_;
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

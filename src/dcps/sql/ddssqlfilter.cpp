@@ -5,8 +5,8 @@
 #include "xtypes/dynamicdatafactory.h"
 #include "xtypes/dynamicdatatypesupport.h"
 
-USING_AGIDDS_NAMESPACE
-using namespace AGIDDS::DDSSQL;
+USING_TRAVODDS_NAMESPACE
+using namespace DDSSQL;
 using namespace tao::pegtl;
 
 DDSSQLFilter::DDSSQLFilter(TypeObject* typeObject)

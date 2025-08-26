@@ -13,7 +13,7 @@
 #include "xtypes/dynamicdatafactory.h"
 #include "xtypes/dynamicdata.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicDataFactory &DynamicDataFactory::get_instance() {
     static DynamicDataFactory instance;
@@ -31,4 +31,4 @@ ReturnCode_t DynamicDataFactory::delete_data(DynamicData &data) const {
     return RETCODE_OK;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

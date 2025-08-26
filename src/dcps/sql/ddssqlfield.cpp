@@ -3,7 +3,7 @@
 #include "xtypes/dynamicdata.h"
 #include <stdexcept> 
 #include <cassert> 
-using namespace AGIDDS::DDSSQL;
+using namespace TRAVODDS::DDSSQL;
 
 template<typename T>
 int CompareValues(

@@ -10,13 +10,13 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLLER_H
-#define AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLLER_H
+#ifndef TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLLER_H
+#define TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLLER_H
 
 #include "rtps/flowcontrol/flowcontroltype.h"
 #include "rtps/flowcontrol/flowcontrolscheduler.h"
 #include "rtps/basictypertps.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 class StatefulWriter;
@@ -75,5 +75,5 @@ public:
 };
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

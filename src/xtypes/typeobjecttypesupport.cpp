@@ -12,51 +12,51 @@
 
 #include "xtypes/typeobjecttypesupport.h"
 
-USING_AGIDDS_NAMESPACE
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-AGIDDS::_TypeIdTypeSupport* AGIDDS::_TypeIdTypeSupport::get_instance() {
-    static AGIDDS::_TypeIdTypeSupport instance;
+ USING_TRAVODDS_NAMESPACE
+
+_TypeIdTypeSupport* _TypeIdTypeSupport::get_instance() {
+    static _TypeIdTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::_TypeIdTypeSupport::create_data() {
-    return new AGIDDS::_TypeId();
+void* _TypeIdTypeSupport::create_data() {
+    return new _TypeId();
 }
 
-void AGIDDS::_TypeIdTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::_TypeId*>(data);
+void _TypeIdTypeSupport::delete_data(void* data) {
+    delete static_cast<_TypeId*>(data);
 }
 
-int AGIDDS::_TypeIdTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::_TypeId* dstData = static_cast<AGIDDS::_TypeId*>(dst);
-    AGIDDS::_TypeId* srcData = static_cast<AGIDDS::_TypeId*>(src);
+int _TypeIdTypeSupport::copy_data(void* dst, void* src) {
+    _TypeId* dstData = static_cast<_TypeId*>(dst);
+    _TypeId* srcData = static_cast<_TypeId*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::_TypeIdTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::_TypeId* structData = static_cast<AGIDDS::_TypeId*>(data);
+unsigned int _TypeIdTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    _TypeId* structData = static_cast<_TypeId*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
-    case AGIDDS::BYTE_TYPE:
-    case AGIDDS::INT_16_TYPE:
-    case AGIDDS::UINT_16_TYPE:
-    case AGIDDS::INT_32_TYPE:
-    case AGIDDS::UINT_32_TYPE:
-    case AGIDDS::INT_64_TYPE:
-    case AGIDDS::UINT_64_TYPE:
-    case AGIDDS::FLOAT_32_TYPE:
-    case AGIDDS::FLOAT_64_TYPE:
-    case AGIDDS::FLOAT_128_TYPE:
-    case AGIDDS::CHAR_8_TYPE:
-    case AGIDDS::CHAR_32_TYPE:
+    case BOOLEAN_TYPE:
+    case BYTE_TYPE:
+    case INT_16_TYPE:
+    case UINT_16_TYPE:
+    case INT_32_TYPE:
+    case UINT_32_TYPE:
+    case INT_64_TYPE:
+    case UINT_64_TYPE:
+    case FLOAT_32_TYPE:
+    case FLOAT_64_TYPE:
+    case FLOAT_128_TYPE:
+    case CHAR_8_TYPE:
+    case CHAR_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
     default:
@@ -66,25 +66,25 @@ unsigned int AGIDDS::_TypeIdTypeSupport::get_serialized_data_size(void* data, un
     return 0;
 }
 
-unsigned int AGIDDS::_TypeIdTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::_TypeId* structData = static_cast<AGIDDS::_TypeId*>(data);
+unsigned int _TypeIdTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    _TypeId* structData = static_cast<_TypeId*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
-    case AGIDDS::BYTE_TYPE:
-    case AGIDDS::INT_16_TYPE:
-    case AGIDDS::UINT_16_TYPE:
-    case AGIDDS::INT_32_TYPE:
-    case AGIDDS::UINT_32_TYPE:
-    case AGIDDS::INT_64_TYPE:
-    case AGIDDS::UINT_64_TYPE:
-    case AGIDDS::FLOAT_32_TYPE:
-    case AGIDDS::FLOAT_64_TYPE:
-    case AGIDDS::FLOAT_128_TYPE:
-    case AGIDDS::CHAR_8_TYPE:
-    case AGIDDS::CHAR_32_TYPE:
+    case BOOLEAN_TYPE:
+    case BYTE_TYPE:
+    case INT_16_TYPE:
+    case UINT_16_TYPE:
+    case INT_32_TYPE:
+    case UINT_32_TYPE:
+    case INT_64_TYPE:
+    case UINT_64_TYPE:
+    case FLOAT_32_TYPE:
+    case FLOAT_64_TYPE:
+    case FLOAT_128_TYPE:
+    case CHAR_8_TYPE:
+    case CHAR_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
     default:
@@ -94,27 +94,27 @@ unsigned int AGIDDS::_TypeIdTypeSupport::get_max_serialized_data_size(void* data
     return 0;
 }
 
-int AGIDDS::_TypeIdTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::_TypeId* structData = static_cast<AGIDDS::_TypeId*>(data);
+int _TypeIdTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    _TypeId* structData = static_cast<_TypeId*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
         fprintf(stderr, "Serialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
-    case AGIDDS::BYTE_TYPE:
-    case AGIDDS::INT_16_TYPE:
-    case AGIDDS::UINT_16_TYPE:
-    case AGIDDS::INT_32_TYPE:
-    case AGIDDS::UINT_32_TYPE:
-    case AGIDDS::INT_64_TYPE:
-    case AGIDDS::UINT_64_TYPE:
-    case AGIDDS::FLOAT_32_TYPE:
-    case AGIDDS::FLOAT_64_TYPE:
-    case AGIDDS::FLOAT_128_TYPE:
-    case AGIDDS::CHAR_8_TYPE:
-    case AGIDDS::CHAR_32_TYPE:
+    case BOOLEAN_TYPE:
+    case BYTE_TYPE:
+    case INT_16_TYPE:
+    case UINT_16_TYPE:
+    case INT_32_TYPE:
+    case UINT_32_TYPE:
+    case INT_64_TYPE:
+    case UINT_64_TYPE:
+    case FLOAT_32_TYPE:
+    case FLOAT_64_TYPE:
+    case FLOAT_128_TYPE:
+    case CHAR_8_TYPE:
+    case CHAR_32_TYPE:
         if (!cdr->serializeBaseType(structData->primitive_type_id)) {
             fprintf(stderr, "Serialization failed for field: structData->primitive_type_id\n");
             return -1;
@@ -130,8 +130,8 @@ int AGIDDS::_TypeIdTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* 
     return 0;
 }
 
-int AGIDDS::_TypeIdTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::_TypeId* structData = static_cast<AGIDDS::_TypeId*>(data);
+int _TypeIdTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    _TypeId* structData = static_cast<_TypeId*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
@@ -140,19 +140,19 @@ int AGIDDS::_TypeIdTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializ
         return -1;
     }
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
-    case AGIDDS::BYTE_TYPE:
-    case AGIDDS::INT_16_TYPE:
-    case AGIDDS::UINT_16_TYPE:
-    case AGIDDS::INT_32_TYPE:
-    case AGIDDS::UINT_32_TYPE:
-    case AGIDDS::INT_64_TYPE:
-    case AGIDDS::UINT_64_TYPE:
-    case AGIDDS::FLOAT_32_TYPE:
-    case AGIDDS::FLOAT_64_TYPE:
-    case AGIDDS::FLOAT_128_TYPE:
-    case AGIDDS::CHAR_8_TYPE:
-    case AGIDDS::CHAR_32_TYPE:
+    case BOOLEAN_TYPE:
+    case BYTE_TYPE:
+    case INT_16_TYPE:
+    case UINT_16_TYPE:
+    case INT_32_TYPE:
+    case UINT_32_TYPE:
+    case INT_64_TYPE:
+    case UINT_64_TYPE:
+    case FLOAT_32_TYPE:
+    case FLOAT_64_TYPE:
+    case FLOAT_128_TYPE:
+    case CHAR_8_TYPE:
+    case CHAR_32_TYPE:
         if (!cdr->deserializeBaseType(structData->primitive_type_id)) {
             fprintf(stderr, "Deserialization failed for field: structData->primitive_type_id\n");
             return -1;
@@ -168,16 +168,16 @@ int AGIDDS::_TypeIdTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializ
     return 0;
 }
 
-TypeObject* AGIDDS::_TypeIdTypeSupport::get_typeobject() {
+TypeObject* _TypeIdTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::_TypeIdTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::_TypeId* structData = static_cast<AGIDDS::_TypeId*>(data);
+int _TypeIdTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    _TypeId* structData = static_cast<_TypeId*>(data);
     return 0;
 }
 
-int AGIDDS::_TypeIdTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int _TypeIdTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -188,7 +188,7 @@ int AGIDDS::_TypeIdTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHan
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::_TypeIdTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t _TypeIdTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -205,186 +205,186 @@ ReturnCode_t AGIDDS::_TypeIdTypeSupport::get_instancehandle(void* data, AGIDDSCd
     return RETCODE_OK;
 }
 
-bool AGIDDS::_TypeIdTypeSupport::has_key() {
+bool _TypeIdTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::_TypeIdTypeSupport::get_typename() {
-    return "AGIDDS::_TypeId";
+const char* _TypeIdTypeSupport::get_typename() {
+    return "_TypeId";
 }
 
-AGIDDS::AnnotationMemberValueTypeSupport* AGIDDS::AnnotationMemberValueTypeSupport::get_instance() {
-    static AGIDDS::AnnotationMemberValueTypeSupport instance;
+AnnotationMemberValueTypeSupport* AnnotationMemberValueTypeSupport::get_instance() {
+    static AnnotationMemberValueTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AnnotationMemberValueTypeSupport::create_data() {
-    return new AGIDDS::AnnotationMemberValue();
+void* AnnotationMemberValueTypeSupport::create_data() {
+    return new AnnotationMemberValue();
 }
 
-void AGIDDS::AnnotationMemberValueTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AnnotationMemberValue*>(data);
+void AnnotationMemberValueTypeSupport::delete_data(void* data) {
+    delete static_cast<AnnotationMemberValue*>(data);
 }
 
-int AGIDDS::AnnotationMemberValueTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AnnotationMemberValue* dstData = static_cast<AGIDDS::AnnotationMemberValue*>(dst);
-    AGIDDS::AnnotationMemberValue* srcData = static_cast<AGIDDS::AnnotationMemberValue*>(src);
+int AnnotationMemberValueTypeSupport::copy_data(void* dst, void* src) {
+    AnnotationMemberValue* dstData = static_cast<AnnotationMemberValue*>(dst);
+    AnnotationMemberValue* srcData = static_cast<AnnotationMemberValue*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationMemberValueTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationMemberValue* structData = static_cast<AGIDDS::AnnotationMemberValue*>(data);
+unsigned int AnnotationMemberValueTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
+    case BOOLEAN_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
         break;
-    case AGIDDS::BYTE_TYPE:
+    case BYTE_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned char), currentAlignment);
         break;
-    case AGIDDS::INT_16_TYPE:
+    case INT_16_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
-    case AGIDDS::UINT_16_TYPE:
+    case UINT_16_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned short), currentAlignment);
         break;
-    case AGIDDS::INT_32_TYPE:
+    case INT_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
         break;
-    case AGIDDS::UINT_32_TYPE:
+    case UINT_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
         break;
-    case AGIDDS::INT_64_TYPE:
+    case INT_64_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(long long), currentAlignment);
         break;
-    case AGIDDS::UINT_64_TYPE:
+    case UINT_64_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
         break;
-    case AGIDDS::FLOAT_32_TYPE:
+    case FLOAT_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
         break;
-    case AGIDDS::FLOAT_64_TYPE:
+    case FLOAT_64_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
         break;
-    case AGIDDS::FLOAT_128_TYPE:
+    case FLOAT_128_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(LongDouble), currentAlignment);
         break;
-    case AGIDDS::CHAR_8_TYPE:
+    case CHAR_8_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
         break;
-    case AGIDDS::CHAR_32_TYPE:
+    case CHAR_32_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(wchar_t), currentAlignment);
         break;
-    case AGIDDS::ENUMERATION_TYPE:
+    case ENUMERATION_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
         break;
-    case AGIDDS::STRING_TYPE:
+    case STRING_TYPE:
         currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->string_value.size() + 1, currentAlignment);
         break;
     }
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationMemberValueTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int AnnotationMemberValueTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::AnnotationMemberValueTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationMemberValue* structData = static_cast<AGIDDS::AnnotationMemberValue*>(data);
+int AnnotationMemberValueTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
         fprintf(stderr, "Serialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
+    case BOOLEAN_TYPE:
         if (!cdr->serializeBaseType(structData->boolean_value)) {
             fprintf(stderr, "Serialization failed for field: structData->boolean_value\n");
             return -1;
         }
         break;
-    case AGIDDS::BYTE_TYPE:
+    case BYTE_TYPE:
         if (!cdr->serializeBaseType(structData->byte_value)) {
             fprintf(stderr, "Serialization failed for field: structData->byte_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_16_TYPE:
+    case INT_16_TYPE:
         if (!cdr->serializeBaseType(structData->int_16_value)) {
             fprintf(stderr, "Serialization failed for field: structData->int_16_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_16_TYPE:
+    case UINT_16_TYPE:
         if (!cdr->serializeBaseType(structData->uint_16_value)) {
             fprintf(stderr, "Serialization failed for field: structData->uint_16_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_32_TYPE:
+    case INT_32_TYPE:
         if (!cdr->serializeBaseType(structData->int_32_value)) {
             fprintf(stderr, "Serialization failed for field: structData->int_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_32_TYPE:
+    case UINT_32_TYPE:
         if (!cdr->serializeBaseType(structData->uint_32_value)) {
             fprintf(stderr, "Serialization failed for field: structData->uint_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_64_TYPE:
+    case INT_64_TYPE:
         if (!cdr->serializeBaseType(structData->int_64_value)) {
             fprintf(stderr, "Serialization failed for field: structData->int_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_64_TYPE:
+    case UINT_64_TYPE:
         if (!cdr->serializeBaseType(structData->uint_64_value)) {
             fprintf(stderr, "Serialization failed for field: structData->uint_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_32_TYPE:
+    case FLOAT_32_TYPE:
         if (!cdr->serializeBaseType(structData->float_32_value)) {
             fprintf(stderr, "Serialization failed for field: structData->float_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_64_TYPE:
+    case FLOAT_64_TYPE:
         if (!cdr->serializeBaseType(structData->float_64_value)) {
             fprintf(stderr, "Serialization failed for field: structData->float_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_128_TYPE:
+    case FLOAT_128_TYPE:
         if (!cdr->serializeLongDouble(*(LongDouble*)&structData->float_128_value)) {
             fprintf(stderr, "Serialization failed for field: structData->float_128_value\n");
             return -1;
         }
         break;
-    case AGIDDS::CHAR_8_TYPE:
+    case CHAR_8_TYPE:
         if (!cdr->serializeBaseType(structData->character_value)) {
             fprintf(stderr, "Serialization failed for field: structData->character_value\n");
             return -1;
         }
         break;
-    case AGIDDS::CHAR_32_TYPE:
+    case CHAR_32_TYPE:
         if (!cdr->serializeBaseType(structData->wide_character_value)) {
             fprintf(stderr, "Serialization failed for field: structData->wide_character_value\n");
             return -1;
         }
         break;
-    case AGIDDS::ENUMERATION_TYPE:
+    case ENUMERATION_TYPE:
         if (!cdr->serializeBaseType(structData->enumeration_value)) {
             fprintf(stderr, "Serialization failed for field: structData->enumeration_value\n");
             return -1;
         }
         break;
-    case AGIDDS::STRING_TYPE:
+    case STRING_TYPE:
         if (!cdr->serializeString(structData->string_value)) {
             fprintf(stderr, "Serialization failed for field: structData->string_value\n");
             return -1;
@@ -394,8 +394,8 @@ int AGIDDS::AnnotationMemberValueTypeSupport::serialize_data(void* data, AGIDDSC
     return 0;
 }
 
-int AGIDDS::AnnotationMemberValueTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AnnotationMemberValue* structData = static_cast<AGIDDS::AnnotationMemberValue*>(data);
+int AnnotationMemberValueTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
@@ -404,91 +404,91 @@ int AGIDDS::AnnotationMemberValueTypeSupport::deserialize_data(void* data, AGIDD
         return -1;
     }
     switch(structData->u_) {
-    case AGIDDS::BOOLEAN_TYPE:
+    case BOOLEAN_TYPE:
         if (!cdr->deserializeBaseType(structData->boolean_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->boolean_value\n");
             return -1;
         }
         break;
-    case AGIDDS::BYTE_TYPE:
+    case BYTE_TYPE:
         if (!cdr->deserializeBaseType(structData->byte_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->byte_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_16_TYPE:
+    case INT_16_TYPE:
         if (!cdr->deserializeBaseType(structData->int_16_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->int_16_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_16_TYPE:
+    case UINT_16_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_16_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->uint_16_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_32_TYPE:
+    case INT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->int_32_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->int_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_32_TYPE:
+    case UINT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_32_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->uint_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::INT_64_TYPE:
+    case INT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->int_64_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->int_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::UINT_64_TYPE:
+    case UINT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_64_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->uint_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_32_TYPE:
+    case FLOAT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->float_32_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->float_32_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_64_TYPE:
+    case FLOAT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->float_64_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->float_64_value\n");
             return -1;
         }
         break;
-    case AGIDDS::FLOAT_128_TYPE:
+    case FLOAT_128_TYPE:
         if (!cdr->deserializeLongDouble(*(LongDouble*)&structData->float_128_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->float_128_value\n");
             return -1;
         }
         break;
-    case AGIDDS::CHAR_8_TYPE:
+    case CHAR_8_TYPE:
         if (!cdr->deserializeBaseType(structData->character_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->character_value\n");
             return -1;
         }
         break;
-    case AGIDDS::CHAR_32_TYPE:
+    case CHAR_32_TYPE:
         if (!cdr->deserializeBaseType(structData->wide_character_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->wide_character_value\n");
             return -1;
         }
         break;
-    case AGIDDS::ENUMERATION_TYPE:
+    case ENUMERATION_TYPE:
         if (!cdr->deserializeBaseType(structData->enumeration_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->enumeration_value\n");
             return -1;
         }
         break;
-    case AGIDDS::STRING_TYPE:
+    case STRING_TYPE:
         if (!cdr->deserializeString(structData->string_value)) {
             fprintf(stderr, "Deserialization failed for field: structData->string_value\n");
             return -1;
@@ -498,16 +498,16 @@ int AGIDDS::AnnotationMemberValueTypeSupport::deserialize_data(void* data, AGIDD
     return 0;
 }
 
-TypeObject* AGIDDS::AnnotationMemberValueTypeSupport::get_typeobject() {
+TypeObject* AnnotationMemberValueTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AnnotationMemberValueTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationMemberValue* structData = static_cast<AGIDDS::AnnotationMemberValue*>(data);
+int AnnotationMemberValueTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     return 0;
 }
 
-int AGIDDS::AnnotationMemberValueTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AnnotationMemberValueTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -518,7 +518,7 @@ int AGIDDS::AnnotationMemberValueTypeSupport::MakeKey(const void* data, Instance
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AnnotationMemberValueTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationMemberValueTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -535,68 +535,68 @@ ReturnCode_t AGIDDS::AnnotationMemberValueTypeSupport::get_instancehandle(void* 
     return RETCODE_OK;
 }
 
-bool AGIDDS::AnnotationMemberValueTypeSupport::has_key() {
+bool AnnotationMemberValueTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AnnotationMemberValueTypeSupport::get_typename() {
-    return "AGIDDS::AnnotationMemberValue";
+const char* AnnotationMemberValueTypeSupport::get_typename() {
+    return "AnnotationMemberValue";
 }
 
-AGIDDS::AnnotationUsageMemberTypeSupport* AGIDDS::AnnotationUsageMemberTypeSupport::get_instance() {
-    static AGIDDS::AnnotationUsageMemberTypeSupport instance;
+AnnotationUsageMemberTypeSupport* AnnotationUsageMemberTypeSupport::get_instance() {
+    static AnnotationUsageMemberTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AnnotationUsageMemberTypeSupport::create_data() {
-    return new AGIDDS::AnnotationUsageMember();
+void* AnnotationUsageMemberTypeSupport::create_data() {
+    return new AnnotationUsageMember();
 }
 
-void AGIDDS::AnnotationUsageMemberTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AnnotationUsageMember*>(data);
+void AnnotationUsageMemberTypeSupport::delete_data(void* data) {
+    delete static_cast<AnnotationUsageMember*>(data);
 }
 
-int AGIDDS::AnnotationUsageMemberTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AnnotationUsageMember* dstData = static_cast<AGIDDS::AnnotationUsageMember*>(dst);
-    AGIDDS::AnnotationUsageMember* srcData = static_cast<AGIDDS::AnnotationUsageMember*>(src);
+int AnnotationUsageMemberTypeSupport::copy_data(void* dst, void* src) {
+    AnnotationUsageMember* dstData = static_cast<AnnotationUsageMember*>(dst);
+    AnnotationUsageMember* srcData = static_cast<AnnotationUsageMember*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationUsageMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationUsageMember* structData = static_cast<AGIDDS::AnnotationUsageMember*>(data);
+unsigned int AnnotationUsageMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
-    currentAlignment += AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->value, currentAlignment);
+    currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::AnnotationUsageMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationUsageMember* structData = static_cast<AGIDDS::AnnotationUsageMember*>(data);
+unsigned int AnnotationUsageMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
-    currentAlignment += AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->value, currentAlignment);
+    currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::AnnotationUsageMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationUsageMember* structData = static_cast<AGIDDS::AnnotationUsageMember*>(data);
+int AnnotationUsageMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->member_id)) {
         fprintf(stderr, "Serialization failed for field: structData->member_id\n");
         return -1;
     }
-    if (AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->value, cdr, endian) != 0) {
+    if (AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->value, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::AnnotationUsageMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AnnotationUsageMember* structData = static_cast<AGIDDS::AnnotationUsageMember*>(data);
+int AnnotationUsageMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -605,24 +605,24 @@ int AGIDDS::AnnotationUsageMemberTypeSupport::deserialize_data(void* data, AGIDD
         fprintf(stderr, "Deserialization failed for field: structData->member_id\n");
         return -1;
     }
-    if (AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->value, cdr, endian) != 0) {
+    if (AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->value, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
 }
 
-TypeObject* AGIDDS::AnnotationUsageMemberTypeSupport::get_typeobject() {
+TypeObject* AnnotationUsageMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AnnotationUsageMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationUsageMember* structData = static_cast<AGIDDS::AnnotationUsageMember*>(data);
+int AnnotationUsageMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::AnnotationUsageMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AnnotationUsageMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -633,7 +633,7 @@ int AGIDDS::AnnotationUsageMemberTypeSupport::MakeKey(const void* data, Instance
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AnnotationUsageMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationUsageMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -650,54 +650,54 @@ ReturnCode_t AGIDDS::AnnotationUsageMemberTypeSupport::get_instancehandle(void* 
     return RETCODE_OK;
 }
 
-bool AGIDDS::AnnotationUsageMemberTypeSupport::has_key() {
+bool AnnotationUsageMemberTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AnnotationUsageMemberTypeSupport::get_typename() {
-    return "AGIDDS::AnnotationUsageMember";
+const char* AnnotationUsageMemberTypeSupport::get_typename() {
+    return "AnnotationUsageMember";
 }
 
-AGIDDS::AnnotationUsageTypeSupport* AGIDDS::AnnotationUsageTypeSupport::get_instance() {
-    static AGIDDS::AnnotationUsageTypeSupport instance;
+AnnotationUsageTypeSupport* AnnotationUsageTypeSupport::get_instance() {
+    static AnnotationUsageTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AnnotationUsageTypeSupport::create_data() {
-    return new AGIDDS::AnnotationUsage();
+void* AnnotationUsageTypeSupport::create_data() {
+    return new AnnotationUsage();
 }
 
-void AGIDDS::AnnotationUsageTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AnnotationUsage*>(data);
+void AnnotationUsageTypeSupport::delete_data(void* data) {
+    delete static_cast<AnnotationUsage*>(data);
 }
 
-int AGIDDS::AnnotationUsageTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AnnotationUsage* dstData = static_cast<AGIDDS::AnnotationUsage*>(dst);
-    AGIDDS::AnnotationUsage* srcData = static_cast<AGIDDS::AnnotationUsage*>(src);
+int AnnotationUsageTypeSupport::copy_data(void* dst, void* src) {
+    AnnotationUsage* dstData = static_cast<AnnotationUsage*>(dst);
+    AnnotationUsage* srcData = static_cast<AnnotationUsage*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationUsageTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationUsage* structData = static_cast<AGIDDS::AnnotationUsage*>(data);
+unsigned int AnnotationUsageTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        currentAlignment += AGIDDS::AnnotationUsageMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
+        currentAlignment += AnnotationUsageMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::AnnotationUsageTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int AnnotationUsageTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationUsage* structData = static_cast<AGIDDS::AnnotationUsage*>(data);
+int AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     uint32_t tmpLength = 0;
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -707,7 +707,7 @@ int AGIDDS::AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSeri
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        if (AGIDDS::AnnotationUsageMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
+        if (AnnotationUsageMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
@@ -715,13 +715,13 @@ int AGIDDS::AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSeri
     return 0;
 }
 
-int AGIDDS::AnnotationUsageTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AnnotationUsage* structData = static_cast<AGIDDS::AnnotationUsage*>(data);
+int AnnotationUsageTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -731,7 +731,7 @@ int AGIDDS::AnnotationUsageTypeSupport::deserialize_data(void* data, AGIDDSCdrDe
     }
     structData->member.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
-        if (AGIDDS::AnnotationUsageMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
+        if (AnnotationUsageMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
             fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
             return -1;
         }
@@ -739,17 +739,17 @@ int AGIDDS::AnnotationUsageTypeSupport::deserialize_data(void* data, AGIDDSCdrDe
     return 0;
 }
 
-TypeObject* AGIDDS::AnnotationUsageTypeSupport::get_typeobject() {
+TypeObject* AnnotationUsageTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AnnotationUsageTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationUsage* structData = static_cast<AGIDDS::AnnotationUsage*>(data);
+int AnnotationUsageTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::AnnotationUsageTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AnnotationUsageTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -760,7 +760,7 @@ int AGIDDS::AnnotationUsageTypeSupport::MakeKey(const void* data, InstanceHandle
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AnnotationUsageTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationUsageTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -777,56 +777,56 @@ ReturnCode_t AGIDDS::AnnotationUsageTypeSupport::get_instancehandle(void* data, 
     return RETCODE_OK;
 }
 
-bool AGIDDS::AnnotationUsageTypeSupport::has_key() {
+bool AnnotationUsageTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AnnotationUsageTypeSupport::get_typename() {
-    return "AGIDDS::AnnotationUsage";
+const char* AnnotationUsageTypeSupport::get_typename() {
+    return "AnnotationUsage";
 }
 
-AGIDDS::TypePropertyTypeSupport* AGIDDS::TypePropertyTypeSupport::get_instance() {
-    static AGIDDS::TypePropertyTypeSupport instance;
+TypePropertyTypeSupport* TypePropertyTypeSupport::get_instance() {
+    static TypePropertyTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::TypePropertyTypeSupport::create_data() {
-    return new AGIDDS::TypeProperty();
+void* TypePropertyTypeSupport::create_data() {
+    return new TypeProperty();
 }
 
-void AGIDDS::TypePropertyTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::TypeProperty*>(data);
+void TypePropertyTypeSupport::delete_data(void* data) {
+    delete static_cast<TypeProperty*>(data);
 }
 
-int AGIDDS::TypePropertyTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::TypeProperty* dstData = static_cast<AGIDDS::TypeProperty*>(dst);
-    AGIDDS::TypeProperty* srcData = static_cast<AGIDDS::TypeProperty*>(src);
+int TypePropertyTypeSupport::copy_data(void* dst, void* src) {
+    TypeProperty* dstData = static_cast<TypeProperty*>(dst);
+    TypeProperty* srcData = static_cast<TypeProperty*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::TypePropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeProperty* structData = static_cast<AGIDDS::TypeProperty*>(data);
+unsigned int TypePropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::TypePropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeProperty* structData = static_cast<AGIDDS::TypeProperty*>(data);
+unsigned int TypePropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeProperty* structData = static_cast<AGIDDS::TypeProperty*>(data);
+int TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeProperty* structData = static_cast<TypeProperty*>(data);
     uint32_t tmpLength = 0;
     switch(16 / 8) {
     case 1:
@@ -852,7 +852,7 @@ int AGIDDS::TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSeriali
         return -1;
         break;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -863,8 +863,8 @@ int AGIDDS::TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSeriali
     return 0;
 }
 
-int AGIDDS::TypePropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::TypeProperty* structData = static_cast<AGIDDS::TypeProperty*>(data);
+int TypePropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -875,28 +875,28 @@ int AGIDDS::TypePropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeser
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::TypeFlag>(tmpCharEnum);
+        structData->flag = static_cast<TypeFlag>(tmpCharEnum);
         break;
     case 2:
         if (!cdr->deserializeBaseType(tmpShortEnum)) {
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::TypeFlag>(tmpShortEnum);
+        structData->flag = static_cast<TypeFlag>(tmpShortEnum);
         break;
     case 4:
         if (!cdr->deserializeBaseType(tmpIntEnum)) {
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::TypeFlag>(tmpIntEnum);
+        structData->flag = static_cast<TypeFlag>(tmpIntEnum);
         break;
     default:
         fprintf(stderr, "Deserialization failed for field: structData->flag\n");
         return -1;
         break;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -907,17 +907,17 @@ int AGIDDS::TypePropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeser
     return 0;
 }
 
-TypeObject* AGIDDS::TypePropertyTypeSupport::get_typeobject() {
+TypeObject* TypePropertyTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::TypePropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeProperty* structData = static_cast<AGIDDS::TypeProperty*>(data);
+int TypePropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeProperty* structData = static_cast<TypeProperty*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::TypePropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int TypePropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -928,7 +928,7 @@ int AGIDDS::TypePropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t&
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::TypePropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypePropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -945,43 +945,43 @@ ReturnCode_t AGIDDS::TypePropertyTypeSupport::get_instancehandle(void* data, AGI
     return RETCODE_OK;
 }
 
-bool AGIDDS::TypePropertyTypeSupport::has_key() {
+bool TypePropertyTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::TypePropertyTypeSupport::get_typename() {
-    return "AGIDDS::TypeProperty";
+const char* TypePropertyTypeSupport::get_typename() {
+    return "TypeProperty";
 }
 
-AGIDDS::TypeTypeSupport* AGIDDS::TypeTypeSupport::get_instance() {
-    static AGIDDS::TypeTypeSupport instance;
+TypeTypeSupport* TypeTypeSupport::get_instance() {
+    static TypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::TypeTypeSupport::create_data() {
-    return new AGIDDS::Type();
+void* TypeTypeSupport::create_data() {
+    return new Type();
 }
 
-void AGIDDS::TypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::Type*>(data);
+void TypeTypeSupport::delete_data(void* data) {
+    delete static_cast<Type*>(data);
 }
 
-int AGIDDS::TypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::Type* dstData = static_cast<AGIDDS::Type*>(dst);
-    AGIDDS::Type* srcData = static_cast<AGIDDS::Type*>(src);
+int TypeTypeSupport::copy_data(void* dst, void* src) {
+    Type* dstData = static_cast<Type*>(dst);
+    Type* srcData = static_cast<Type*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::TypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::Type* structData = static_cast<AGIDDS::Type*>(data);
+unsigned int TypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    Type* structData = static_cast<Type*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::TypePropertyTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->property, currentAlignment);
+    currentAlignment += TypePropertyTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->property, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -989,39 +989,39 @@ unsigned int AGIDDS::TypeTypeSupport::get_serialized_data_size(void* data, unsig
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
-        currentAlignment += AGIDDS::AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
+        currentAlignment += AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::TypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int TypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Type* structData = static_cast<AGIDDS::Type*>(data);
+int TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Type* structData = static_cast<Type*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::PROPERTY_TYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, PROPERTY_TYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->property\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::TypePropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
+    if (TypePropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->property\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::ANNOTATION_TYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, ANNOTATION_TYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->annotation\n");
         return -1;
@@ -1033,7 +1033,7 @@ int AGIDDS::TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr
         return -1;
     }
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
-        if (AGIDDS::AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
+        if (AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
             return -1;
         }
@@ -1043,8 +1043,8 @@ int AGIDDS::TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr
     return 0;
 }
 
-int AGIDDS::TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::Type* structData = static_cast<AGIDDS::Type*>(data);
+int TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    Type* structData = static_cast<Type*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1056,25 +1056,25 @@ int AGIDDS::TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer*
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::Type\n");
+            fprintf(stderr, "Deserialization failed for field: Type\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::PROPERTY_TYPE_MEMBER_ID:
-            if (AGIDDS::TypePropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
+        case PROPERTY_TYPE_MEMBER_ID:
+            if (TypePropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->property\n");
                 return -1;
             }
             break;
-        case AGIDDS::ANNOTATION_TYPE_MEMBER_ID:
+        case ANNOTATION_TYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->annotation\n");
                 return -1;
             }
             structData->annotation.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
+                if (AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
                     return -1;
                 }
@@ -1084,7 +1084,7 @@ int AGIDDS::TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer*
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::Type\n");
+                fprintf(stderr, "Deserialization failed for field: Type\n");
                 return -1;
             }
             break;
@@ -1097,12 +1097,12 @@ int AGIDDS::TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer*
     return 0;
 }
 
-TypeObject* AGIDDS::TypeTypeSupport::get_typeobject() {
+TypeObject* TypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::TypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Type* structData = static_cast<AGIDDS::Type*>(data);
+int TypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Type* structData = static_cast<Type*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -1111,7 +1111,7 @@ int AGIDDS::TypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr,
     return 0;
 }
 
-int AGIDDS::TypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int TypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -1122,7 +1122,7 @@ int AGIDDS::TypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::TypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1139,58 +1139,58 @@ ReturnCode_t AGIDDS::TypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSe
     return RETCODE_OK;
 }
 
-bool AGIDDS::TypeTypeSupport::has_key() {
+bool TypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::TypeTypeSupport::get_typename() {
-    return "AGIDDS::Type";
+const char* TypeTypeSupport::get_typename() {
+    return "Type";
 }
 
-AGIDDS::MemberPropertyTypeSupport* AGIDDS::MemberPropertyTypeSupport::get_instance() {
-    static AGIDDS::MemberPropertyTypeSupport instance;
+MemberPropertyTypeSupport* MemberPropertyTypeSupport::get_instance() {
+    static MemberPropertyTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::MemberPropertyTypeSupport::create_data() {
-    return new AGIDDS::MemberProperty();
+void* MemberPropertyTypeSupport::create_data() {
+    return new MemberProperty();
 }
 
-void AGIDDS::MemberPropertyTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::MemberProperty*>(data);
+void MemberPropertyTypeSupport::delete_data(void* data) {
+    delete static_cast<MemberProperty*>(data);
 }
 
-int AGIDDS::MemberPropertyTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::MemberProperty* dstData = static_cast<AGIDDS::MemberProperty*>(dst);
-    AGIDDS::MemberProperty* srcData = static_cast<AGIDDS::MemberProperty*>(src);
+int MemberPropertyTypeSupport::copy_data(void* dst, void* src) {
+    MemberProperty* dstData = static_cast<MemberProperty*>(dst);
+    MemberProperty* srcData = static_cast<MemberProperty*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::MemberPropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::MemberProperty* structData = static_cast<AGIDDS::MemberProperty*>(data);
+unsigned int MemberPropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::MemberPropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::MemberProperty* structData = static_cast<AGIDDS::MemberProperty*>(data);
+unsigned int MemberPropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::MemberProperty* structData = static_cast<AGIDDS::MemberProperty*>(data);
+int MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    MemberProperty* structData = static_cast<MemberProperty*>(data);
     uint32_t tmpLength = 0;
     switch(16 / 8) {
     case 1:
@@ -1220,7 +1220,7 @@ int AGIDDS::MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSeria
         fprintf(stderr, "Serialization failed for field: structData->member_id\n");
         return -1;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -1231,8 +1231,8 @@ int AGIDDS::MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSeria
     return 0;
 }
 
-int AGIDDS::MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::MemberProperty* structData = static_cast<AGIDDS::MemberProperty*>(data);
+int MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1243,21 +1243,21 @@ int AGIDDS::MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::MemberFlag>(tmpCharEnum);
+        structData->flag = static_cast<MemberFlag>(tmpCharEnum);
         break;
     case 2:
         if (!cdr->deserializeBaseType(tmpShortEnum)) {
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::MemberFlag>(tmpShortEnum);
+        structData->flag = static_cast<MemberFlag>(tmpShortEnum);
         break;
     case 4:
         if (!cdr->deserializeBaseType(tmpIntEnum)) {
             fprintf(stderr, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
-        structData->flag = static_cast<AGIDDS::MemberFlag>(tmpIntEnum);
+        structData->flag = static_cast<MemberFlag>(tmpIntEnum);
         break;
     default:
         fprintf(stderr, "Deserialization failed for field: structData->flag\n");
@@ -1268,7 +1268,7 @@ int AGIDDS::MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
         fprintf(stderr, "Deserialization failed for field: structData->member_id\n");
         return -1;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
@@ -1279,17 +1279,17 @@ int AGIDDS::MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
     return 0;
 }
 
-TypeObject* AGIDDS::MemberPropertyTypeSupport::get_typeobject() {
+TypeObject* MemberPropertyTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::MemberPropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::MemberProperty* structData = static_cast<AGIDDS::MemberProperty*>(data);
+int MemberPropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    MemberProperty* structData = static_cast<MemberProperty*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::MemberPropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int MemberPropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -1300,7 +1300,7 @@ int AGIDDS::MemberPropertyTypeSupport::MakeKey(const void* data, InstanceHandle_
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::MemberPropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MemberPropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1317,43 +1317,43 @@ ReturnCode_t AGIDDS::MemberPropertyTypeSupport::get_instancehandle(void* data, A
     return RETCODE_OK;
 }
 
-bool AGIDDS::MemberPropertyTypeSupport::has_key() {
+bool MemberPropertyTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::MemberPropertyTypeSupport::get_typename() {
-    return "AGIDDS::MemberProperty";
+const char* MemberPropertyTypeSupport::get_typename() {
+    return "MemberProperty";
 }
 
-AGIDDS::MemberTypeSupport* AGIDDS::MemberTypeSupport::get_instance() {
-    static AGIDDS::MemberTypeSupport instance;
+MemberTypeSupport* MemberTypeSupport::get_instance() {
+    static MemberTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::MemberTypeSupport::create_data() {
-    return new AGIDDS::Member();
+void* MemberTypeSupport::create_data() {
+    return new Member();
 }
 
-void AGIDDS::MemberTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::Member*>(data);
+void MemberTypeSupport::delete_data(void* data) {
+    delete static_cast<Member*>(data);
 }
 
-int AGIDDS::MemberTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::Member* dstData = static_cast<AGIDDS::Member*>(dst);
-    AGIDDS::Member* srcData = static_cast<AGIDDS::Member*>(src);
+int MemberTypeSupport::copy_data(void* dst, void* src) {
+    Member* dstData = static_cast<Member*>(dst);
+    Member* srcData = static_cast<Member*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::MemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::Member* structData = static_cast<AGIDDS::Member*>(data);
+unsigned int MemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    Member* structData = static_cast<Member*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::MemberPropertyTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->property, currentAlignment);
+    currentAlignment += MemberPropertyTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->property, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -1361,39 +1361,39 @@ unsigned int AGIDDS::MemberTypeSupport::get_serialized_data_size(void* data, uns
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
-        currentAlignment += AGIDDS::AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
+        currentAlignment += AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::MemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int MemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Member* structData = static_cast<AGIDDS::Member*>(data);
+int MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Member* structData = static_cast<Member*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::PROPERTY_MEMBER_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, PROPERTY_MEMBER_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->property\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::MemberPropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
+    if (MemberPropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->property\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::ANNOTATION_MEMBER_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, ANNOTATION_MEMBER_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->annotation\n");
         return -1;
@@ -1405,7 +1405,7 @@ int AGIDDS::MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* c
         return -1;
     }
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
-        if (AGIDDS::AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
+        if (AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
             return -1;
         }
@@ -1415,8 +1415,8 @@ int AGIDDS::MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* c
     return 0;
 }
 
-int AGIDDS::MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::Member* structData = static_cast<AGIDDS::Member*>(data);
+int MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    Member* structData = static_cast<Member*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1428,25 +1428,25 @@ int AGIDDS::MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserialize
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::Member\n");
+            fprintf(stderr, "Deserialization failed for field: Member\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::PROPERTY_MEMBER_MEMBER_ID:
-            if (AGIDDS::MemberPropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
+        case PROPERTY_MEMBER_MEMBER_ID:
+            if (MemberPropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->property\n");
                 return -1;
             }
             break;
-        case AGIDDS::ANNOTATION_MEMBER_MEMBER_ID:
+        case ANNOTATION_MEMBER_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->annotation\n");
                 return -1;
             }
             structData->annotation.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
+                if (AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
                     return -1;
                 }
@@ -1456,7 +1456,7 @@ int AGIDDS::MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserialize
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::Member\n");
+                fprintf(stderr, "Deserialization failed for field: Member\n");
                 return -1;
             }
             break;
@@ -1469,12 +1469,12 @@ int AGIDDS::MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserialize
     return 0;
 }
 
-TypeObject* AGIDDS::MemberTypeSupport::get_typeobject() {
+TypeObject* MemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::MemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Member* structData = static_cast<AGIDDS::Member*>(data);
+int MemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Member* structData = static_cast<Member*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -1483,7 +1483,7 @@ int AGIDDS::MemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cd
     return 0;
 }
 
-int AGIDDS::MemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int MemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -1494,7 +1494,7 @@ int AGIDDS::MemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHand
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::MemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1511,44 +1511,44 @@ ReturnCode_t AGIDDS::MemberTypeSupport::get_instancehandle(void* data, AGIDDSCdr
     return RETCODE_OK;
 }
 
-bool AGIDDS::MemberTypeSupport::has_key() {
+bool MemberTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::MemberTypeSupport::get_typename() {
-    return "AGIDDS::Member";
+const char* MemberTypeSupport::get_typename() {
+    return "Member";
 }
 
-AGIDDS::StructureTypeTypeSupport* AGIDDS::StructureTypeTypeSupport::get_instance() {
-    static AGIDDS::StructureTypeTypeSupport instance;
+StructureTypeTypeSupport* StructureTypeTypeSupport::get_instance() {
+    static StructureTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::StructureTypeTypeSupport::create_data() {
-    return new AGIDDS::StructureType();
+void* StructureTypeTypeSupport::create_data() {
+    return new StructureType();
 }
 
-void AGIDDS::StructureTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::StructureType*>(data);
+void StructureTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<StructureType*>(data);
 }
 
-int AGIDDS::StructureTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::StructureType* dstData = static_cast<AGIDDS::StructureType*>(dst);
-    AGIDDS::StructureType* srcData = static_cast<AGIDDS::StructureType*>(src);
+int StructureTypeTypeSupport::copy_data(void* dst, void* src) {
+    StructureType* dstData = static_cast<StructureType*>(dst);
+    StructureType* srcData = static_cast<StructureType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::StructureTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::StructureType* structData = static_cast<AGIDDS::StructureType*>(data);
+unsigned int StructureTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    StructureType* structData = static_cast<StructureType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -1556,43 +1556,43 @@ unsigned int AGIDDS::StructureTypeTypeSupport::get_serialized_data_size(void* da
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        currentAlignment += AGIDDS::MemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
+        currentAlignment += MemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::StructureTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int StructureTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::StructureType* structData = static_cast<AGIDDS::StructureType*>(data);
+int StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    StructureType* structData = static_cast<StructureType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BASE_TYPE_STRUCTURETYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::MEMBER_STRUCTURETYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, MEMBER_STRUCTURETYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->member\n");
         return -1;
@@ -1604,7 +1604,7 @@ int AGIDDS::StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerial
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        if (AGIDDS::MemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
+        if (MemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
@@ -1614,8 +1614,8 @@ int AGIDDS::StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerial
     return 0;
 }
 
-int AGIDDS::StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::StructureType* structData = static_cast<AGIDDS::StructureType*>(data);
+int StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    StructureType* structData = static_cast<StructureType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1625,31 +1625,31 @@ int AGIDDS::StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDese
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::StructureType\n");
+            fprintf(stderr, "Deserialization failed for field: StructureType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID:
-            if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
+        case BASE_TYPE_STRUCTURETYPE_MEMBER_ID:
+            if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
             break;
-        case AGIDDS::MEMBER_STRUCTURETYPE_MEMBER_ID:
+        case MEMBER_STRUCTURETYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::MemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
+                if (MemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
@@ -1659,7 +1659,7 @@ int AGIDDS::StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDese
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::StructureType\n");
+                fprintf(stderr, "Deserialization failed for field: StructureType\n");
                 return -1;
             }
             break;
@@ -1672,25 +1672,25 @@ int AGIDDS::StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDese
     return 0;
 }
 
-TypeObject* AGIDDS::StructureTypeTypeSupport::get_typeobject() {
+TypeObject* StructureTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::StructureTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::StructureType* structData = static_cast<AGIDDS::StructureType*>(data);
+int StructureTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    StructureType* structData = static_cast<StructureType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::StructureTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int StructureTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -1701,7 +1701,7 @@ int AGIDDS::StructureTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::StructureTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t StructureTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1718,40 +1718,40 @@ ReturnCode_t AGIDDS::StructureTypeTypeSupport::get_instancehandle(void* data, AG
     return RETCODE_OK;
 }
 
-bool AGIDDS::StructureTypeTypeSupport::has_key() {
+bool StructureTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::StructureTypeTypeSupport::get_typename() {
-    return "AGIDDS::StructureType";
+const char* StructureTypeTypeSupport::get_typename() {
+    return "StructureType";
 }
 
-AGIDDS::UnionMemberTypeSupport* AGIDDS::UnionMemberTypeSupport::get_instance() {
-    static AGIDDS::UnionMemberTypeSupport instance;
+UnionMemberTypeSupport* UnionMemberTypeSupport::get_instance() {
+    static UnionMemberTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::UnionMemberTypeSupport::create_data() {
-    return new AGIDDS::UnionMember();
+void* UnionMemberTypeSupport::create_data() {
+    return new UnionMember();
 }
 
-void AGIDDS::UnionMemberTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::UnionMember*>(data);
+void UnionMemberTypeSupport::delete_data(void* data) {
+    delete static_cast<UnionMember*>(data);
 }
 
-int AGIDDS::UnionMemberTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::UnionMember* dstData = static_cast<AGIDDS::UnionMember*>(dst);
-    AGIDDS::UnionMember* srcData = static_cast<AGIDDS::UnionMember*>(src);
+int UnionMemberTypeSupport::copy_data(void* dst, void* src) {
+    UnionMember* dstData = static_cast<UnionMember*>(dst);
+    UnionMember* srcData = static_cast<UnionMember*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::UnionMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::UnionMember* structData = static_cast<AGIDDS::UnionMember*>(data);
+unsigned int UnionMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    UnionMember* structData = static_cast<UnionMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::MemberTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Member*>(structData), currentAlignment);
+    currentAlignment += MemberTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Member*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
@@ -1762,23 +1762,23 @@ unsigned int AGIDDS::UnionMemberTypeSupport::get_serialized_data_size(void* data
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::UnionMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int UnionMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::UnionMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::UnionMember* structData = static_cast<AGIDDS::UnionMember*>(data);
+int UnionMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    UnionMember* structData = static_cast<UnionMember*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::LABEL_UNIONMEMBER_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, LABEL_UNIONMEMBER_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->label\n");
         return -1;
@@ -1798,8 +1798,8 @@ int AGIDDS::UnionMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializ
     return 0;
 }
 
-int AGIDDS::UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::UnionMember* structData = static_cast<AGIDDS::UnionMember*>(data);
+int UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    UnionMember* structData = static_cast<UnionMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1809,18 +1809,18 @@ int AGIDDS::UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseri
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::UnionMember\n");
+            fprintf(stderr, "Deserialization failed for field: UnionMember\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::LABEL_UNIONMEMBER_MEMBER_ID:
+        case LABEL_UNIONMEMBER_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->label\n");
                 return -1;
@@ -1835,7 +1835,7 @@ int AGIDDS::UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseri
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::UnionMember\n");
+                fprintf(stderr, "Deserialization failed for field: UnionMember\n");
                 return -1;
             }
             break;
@@ -1848,25 +1848,25 @@ int AGIDDS::UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseri
     return 0;
 }
 
-TypeObject* AGIDDS::UnionMemberTypeSupport::get_typeobject() {
+TypeObject* UnionMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::UnionMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::UnionMember* structData = static_cast<AGIDDS::UnionMember*>(data);
+int UnionMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    UnionMember* structData = static_cast<UnionMember*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::UnionMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int UnionMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -1877,7 +1877,7 @@ int AGIDDS::UnionMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& 
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::UnionMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t UnionMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1894,69 +1894,69 @@ ReturnCode_t AGIDDS::UnionMemberTypeSupport::get_instancehandle(void* data, AGID
     return RETCODE_OK;
 }
 
-bool AGIDDS::UnionMemberTypeSupport::has_key() {
+bool UnionMemberTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::UnionMemberTypeSupport::get_typename() {
-    return "AGIDDS::UnionMember";
+const char* UnionMemberTypeSupport::get_typename() {
+    return "UnionMember";
 }
 
-AGIDDS::UnionTypeTypeSupport* AGIDDS::UnionTypeTypeSupport::get_instance() {
-    static AGIDDS::UnionTypeTypeSupport instance;
+UnionTypeTypeSupport* UnionTypeTypeSupport::get_instance() {
+    static UnionTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::UnionTypeTypeSupport::create_data() {
-    return new AGIDDS::UnionType();
+void* UnionTypeTypeSupport::create_data() {
+    return new UnionType();
 }
 
-void AGIDDS::UnionTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::UnionType*>(data);
+void UnionTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<UnionType*>(data);
 }
 
-int AGIDDS::UnionTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::UnionType* dstData = static_cast<AGIDDS::UnionType*>(dst);
-    AGIDDS::UnionType* srcData = static_cast<AGIDDS::UnionType*>(src);
+int UnionTypeTypeSupport::copy_data(void* dst, void* src) {
+    UnionType* dstData = static_cast<UnionType*>(dst);
+    UnionType* srcData = static_cast<UnionType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::UnionTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::UnionType* structData = static_cast<AGIDDS::UnionType*>(data);
+unsigned int UnionTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    UnionType* structData = static_cast<UnionType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        currentAlignment += AGIDDS::UnionMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
+        currentAlignment += UnionMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::UnionTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int UnionTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::UnionType* structData = static_cast<AGIDDS::UnionType*>(data);
+int UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    UnionType* structData = static_cast<UnionType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->label\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::MEMBER_UNIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, MEMBER_UNIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->member\n");
         return -1;
@@ -1968,7 +1968,7 @@ int AGIDDS::UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        if (AGIDDS::UnionMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
+        if (UnionMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
@@ -1978,8 +1978,8 @@ int AGIDDS::UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer
     return 0;
 }
 
-int AGIDDS::UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::UnionType* structData = static_cast<AGIDDS::UnionType*>(data);
+int UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    UnionType* structData = static_cast<UnionType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -1989,25 +1989,25 @@ int AGIDDS::UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->label\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::UnionType\n");
+            fprintf(stderr, "Deserialization failed for field: UnionType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::MEMBER_UNIONTYPE_MEMBER_ID:
+        case MEMBER_UNIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::UnionMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
+                if (UnionMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
@@ -2017,7 +2017,7 @@ int AGIDDS::UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::UnionType\n");
+                fprintf(stderr, "Deserialization failed for field: UnionType\n");
                 return -1;
             }
             break;
@@ -2030,25 +2030,25 @@ int AGIDDS::UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     return 0;
 }
 
-TypeObject* AGIDDS::UnionTypeTypeSupport::get_typeobject() {
+TypeObject* UnionTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::UnionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::UnionType* structData = static_cast<AGIDDS::UnionType*>(data);
+int UnionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    UnionType* structData = static_cast<UnionType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::UnionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int UnionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -2059,7 +2059,7 @@ int AGIDDS::UnionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iH
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::UnionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t UnionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2076,82 +2076,82 @@ ReturnCode_t AGIDDS::UnionTypeTypeSupport::get_instancehandle(void* data, AGIDDS
     return RETCODE_OK;
 }
 
-bool AGIDDS::UnionTypeTypeSupport::has_key() {
+bool UnionTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::UnionTypeTypeSupport::get_typename() {
-    return "AGIDDS::UnionType";
+const char* UnionTypeTypeSupport::get_typename() {
+    return "UnionType";
 }
 
-AGIDDS::AnnotationMemberTypeSupport* AGIDDS::AnnotationMemberTypeSupport::get_instance() {
-    static AGIDDS::AnnotationMemberTypeSupport instance;
+AnnotationMemberTypeSupport* AnnotationMemberTypeSupport::get_instance() {
+    static AnnotationMemberTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AnnotationMemberTypeSupport::create_data() {
-    return new AGIDDS::AnnotationMember();
+void* AnnotationMemberTypeSupport::create_data() {
+    return new AnnotationMember();
 }
 
-void AGIDDS::AnnotationMemberTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AnnotationMember*>(data);
+void AnnotationMemberTypeSupport::delete_data(void* data) {
+    delete static_cast<AnnotationMember*>(data);
 }
 
-int AGIDDS::AnnotationMemberTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AnnotationMember* dstData = static_cast<AGIDDS::AnnotationMember*>(dst);
-    AGIDDS::AnnotationMember* srcData = static_cast<AGIDDS::AnnotationMember*>(src);
+int AnnotationMemberTypeSupport::copy_data(void* dst, void* src) {
+    AnnotationMember* dstData = static_cast<AnnotationMember*>(dst);
+    AnnotationMember* srcData = static_cast<AnnotationMember*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationMember* structData = static_cast<AGIDDS::AnnotationMember*>(data);
+unsigned int AnnotationMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::MemberTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Member*>(structData), currentAlignment);
+    currentAlignment += MemberTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Member*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->default_value, currentAlignment);
+    currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->default_value, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::AnnotationMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationMember* structData = static_cast<AGIDDS::AnnotationMember*>(data);
+unsigned int AnnotationMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->default_value, currentAlignment);
+    currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->default_value, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::AnnotationMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationMember* structData = static_cast<AGIDDS::AnnotationMember*>(data);
+int AnnotationMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->default_value, cdr, endian) != 0) {
+    if (AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->default_value, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
@@ -2160,8 +2160,8 @@ int AGIDDS::AnnotationMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSer
     return 0;
 }
 
-int AGIDDS::AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AnnotationMember* structData = static_cast<AGIDDS::AnnotationMember*>(data);
+int AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -2171,19 +2171,19 @@ int AGIDDS::AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrD
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::AnnotationMember\n");
+            fprintf(stderr, "Deserialization failed for field: AnnotationMember\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID:
-            if (AGIDDS::AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->default_value, cdr, endian) != 0) {
+        case DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID:
+            if (AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->default_value, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->default_value\n");
                 return -1;
             }
@@ -2192,7 +2192,7 @@ int AGIDDS::AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrD
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::AnnotationMember\n");
+                fprintf(stderr, "Deserialization failed for field: AnnotationMember\n");
                 return -1;
             }
             break;
@@ -2205,25 +2205,25 @@ int AGIDDS::AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrD
     return 0;
 }
 
-TypeObject* AGIDDS::AnnotationMemberTypeSupport::get_typeobject() {
+TypeObject* AnnotationMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AnnotationMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationMember* structData = static_cast<AGIDDS::AnnotationMember*>(data);
+int AnnotationMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Member*>(structData), cdr, endian) != 0) {
+    if (MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::AnnotationMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AnnotationMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -2234,7 +2234,7 @@ int AGIDDS::AnnotationMemberTypeSupport::MakeKey(const void* data, InstanceHandl
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AnnotationMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2251,44 +2251,44 @@ ReturnCode_t AGIDDS::AnnotationMemberTypeSupport::get_instancehandle(void* data,
     return RETCODE_OK;
 }
 
-bool AGIDDS::AnnotationMemberTypeSupport::has_key() {
+bool AnnotationMemberTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AnnotationMemberTypeSupport::get_typename() {
-    return "AGIDDS::AnnotationMember";
+const char* AnnotationMemberTypeSupport::get_typename() {
+    return "AnnotationMember";
 }
 
-AGIDDS::AnnotationTypeTypeSupport* AGIDDS::AnnotationTypeTypeSupport::get_instance() {
-    static AGIDDS::AnnotationTypeTypeSupport instance;
+AnnotationTypeTypeSupport* AnnotationTypeTypeSupport::get_instance() {
+    static AnnotationTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AnnotationTypeTypeSupport::create_data() {
-    return new AGIDDS::AnnotationType();
+void* AnnotationTypeTypeSupport::create_data() {
+    return new AnnotationType();
 }
 
-void AGIDDS::AnnotationTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AnnotationType*>(data);
+void AnnotationTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<AnnotationType*>(data);
 }
 
-int AGIDDS::AnnotationTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AnnotationType* dstData = static_cast<AGIDDS::AnnotationType*>(dst);
-    AGIDDS::AnnotationType* srcData = static_cast<AGIDDS::AnnotationType*>(src);
+int AnnotationTypeTypeSupport::copy_data(void* dst, void* src) {
+    AnnotationType* dstData = static_cast<AnnotationType*>(dst);
+    AnnotationType* srcData = static_cast<AnnotationType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AnnotationTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AnnotationType* structData = static_cast<AGIDDS::AnnotationType*>(data);
+unsigned int AnnotationTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AnnotationType* structData = static_cast<AnnotationType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -2296,43 +2296,43 @@ unsigned int AGIDDS::AnnotationTypeTypeSupport::get_serialized_data_size(void* d
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        currentAlignment += AGIDDS::AnnotationMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
+        currentAlignment += AnnotationMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::AnnotationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int AnnotationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationType* structData = static_cast<AGIDDS::AnnotationType*>(data);
+int AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationType* structData = static_cast<AnnotationType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::MEMBER_ANNOTATIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, MEMBER_ANNOTATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->member\n");
         return -1;
@@ -2344,7 +2344,7 @@ int AGIDDS::AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeria
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
-        if (AGIDDS::AnnotationMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
+        if (AnnotationMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
@@ -2354,8 +2354,8 @@ int AGIDDS::AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeria
     return 0;
 }
 
-int AGIDDS::AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AnnotationType* structData = static_cast<AGIDDS::AnnotationType*>(data);
+int AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AnnotationType* structData = static_cast<AnnotationType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -2365,31 +2365,31 @@ int AGIDDS::AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->default_value\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::AnnotationType\n");
+            fprintf(stderr, "Deserialization failed for field: AnnotationType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID:
-            if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
+        case BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID:
+            if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
             break;
-        case AGIDDS::MEMBER_ANNOTATIONTYPE_MEMBER_ID:
+        case MEMBER_ANNOTATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::AnnotationMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
+                if (AnnotationMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
@@ -2399,7 +2399,7 @@ int AGIDDS::AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::AnnotationType\n");
+                fprintf(stderr, "Deserialization failed for field: AnnotationType\n");
                 return -1;
             }
             break;
@@ -2412,25 +2412,25 @@ int AGIDDS::AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
     return 0;
 }
 
-TypeObject* AGIDDS::AnnotationTypeTypeSupport::get_typeobject() {
+TypeObject* AnnotationTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AnnotationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AnnotationType* structData = static_cast<AGIDDS::AnnotationType*>(data);
+int AnnotationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AnnotationType* structData = static_cast<AnnotationType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::AnnotationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AnnotationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -2441,7 +2441,7 @@ int AGIDDS::AnnotationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AnnotationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2458,82 +2458,82 @@ ReturnCode_t AGIDDS::AnnotationTypeTypeSupport::get_instancehandle(void* data, A
     return RETCODE_OK;
 }
 
-bool AGIDDS::AnnotationTypeTypeSupport::has_key() {
+bool AnnotationTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AnnotationTypeTypeSupport::get_typename() {
-    return "AGIDDS::AnnotationType";
+const char* AnnotationTypeTypeSupport::get_typename() {
+    return "AnnotationType";
 }
 
-AGIDDS::AliasTypeTypeSupport* AGIDDS::AliasTypeTypeSupport::get_instance() {
-    static AGIDDS::AliasTypeTypeSupport instance;
+AliasTypeTypeSupport* AliasTypeTypeSupport::get_instance() {
+    static AliasTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::AliasTypeTypeSupport::create_data() {
-    return new AGIDDS::AliasType();
+void* AliasTypeTypeSupport::create_data() {
+    return new AliasType();
 }
 
-void AGIDDS::AliasTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::AliasType*>(data);
+void AliasTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<AliasType*>(data);
 }
 
-int AGIDDS::AliasTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::AliasType* dstData = static_cast<AGIDDS::AliasType*>(dst);
-    AGIDDS::AliasType* srcData = static_cast<AGIDDS::AliasType*>(src);
+int AliasTypeTypeSupport::copy_data(void* dst, void* src) {
+    AliasType* dstData = static_cast<AliasType*>(dst);
+    AliasType* srcData = static_cast<AliasType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::AliasTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AliasType* structData = static_cast<AGIDDS::AliasType*>(data);
+unsigned int AliasTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AliasType* structData = static_cast<AliasType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->base_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::AliasTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::AliasType* structData = static_cast<AGIDDS::AliasType*>(data);
+unsigned int AliasTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    AliasType* structData = static_cast<AliasType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->base_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->base_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::AliasTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AliasType* structData = static_cast<AGIDDS::AliasType*>(data);
+int AliasTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AliasType* structData = static_cast<AliasType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BASE_TYPE_ALIASTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BASE_TYPE_ALIASTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
@@ -2542,8 +2542,8 @@ int AGIDDS::AliasTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer
     return 0;
 }
 
-int AGIDDS::AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::AliasType* structData = static_cast<AGIDDS::AliasType*>(data);
+int AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    AliasType* structData = static_cast<AliasType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -2553,19 +2553,19 @@ int AGIDDS::AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::AliasType\n");
+            fprintf(stderr, "Deserialization failed for field: AliasType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BASE_TYPE_ALIASTYPE_MEMBER_ID:
-            if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
+        case BASE_TYPE_ALIASTYPE_MEMBER_ID:
+            if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
@@ -2574,7 +2574,7 @@ int AGIDDS::AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::AliasType\n");
+                fprintf(stderr, "Deserialization failed for field: AliasType\n");
                 return -1;
             }
             break;
@@ -2587,25 +2587,25 @@ int AGIDDS::AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     return 0;
 }
 
-TypeObject* AGIDDS::AliasTypeTypeSupport::get_typeobject() {
+TypeObject* AliasTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::AliasTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::AliasType* structData = static_cast<AGIDDS::AliasType*>(data);
+int AliasTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    AliasType* structData = static_cast<AliasType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::AliasTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int AliasTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -2616,7 +2616,7 @@ int AGIDDS::AliasTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iH
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::AliasTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AliasTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2633,44 +2633,44 @@ ReturnCode_t AGIDDS::AliasTypeTypeSupport::get_instancehandle(void* data, AGIDDS
     return RETCODE_OK;
 }
 
-bool AGIDDS::AliasTypeTypeSupport::has_key() {
+bool AliasTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::AliasTypeTypeSupport::get_typename() {
-    return "AGIDDS::AliasType";
+const char* AliasTypeTypeSupport::get_typename() {
+    return "AliasType";
 }
 
-AGIDDS::CollectionTypeTypeSupport* AGIDDS::CollectionTypeTypeSupport::get_instance() {
-    static AGIDDS::CollectionTypeTypeSupport instance;
+CollectionTypeTypeSupport* CollectionTypeTypeSupport::get_instance() {
+    static CollectionTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::CollectionTypeTypeSupport::create_data() {
-    return new AGIDDS::CollectionType();
+void* CollectionTypeTypeSupport::create_data() {
+    return new CollectionType();
 }
 
-void AGIDDS::CollectionTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::CollectionType*>(data);
+void CollectionTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<CollectionType*>(data);
 }
 
-int AGIDDS::CollectionTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::CollectionType* dstData = static_cast<AGIDDS::CollectionType*>(dst);
-    AGIDDS::CollectionType* srcData = static_cast<AGIDDS::CollectionType*>(src);
+int CollectionTypeTypeSupport::copy_data(void* dst, void* src) {
+    CollectionType* dstData = static_cast<CollectionType*>(dst);
+    CollectionType* srcData = static_cast<CollectionType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::CollectionTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::CollectionType* structData = static_cast<AGIDDS::CollectionType*>(data);
+unsigned int CollectionTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    CollectionType* structData = static_cast<CollectionType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -2682,15 +2682,15 @@ unsigned int AGIDDS::CollectionTypeTypeSupport::get_serialized_data_size(void* d
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::CollectionTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::CollectionType* structData = static_cast<AGIDDS::CollectionType*>(data);
+unsigned int CollectionTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    CollectionType* structData = static_cast<CollectionType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->element_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->element_type, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -2702,32 +2702,32 @@ unsigned int AGIDDS::CollectionTypeTypeSupport::get_max_serialized_data_size(voi
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::CollectionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::CollectionType* structData = static_cast<AGIDDS::CollectionType*>(data);
+int CollectionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    CollectionType* structData = static_cast<CollectionType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->element_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->element_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->element_type, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->element_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->element_shared\n");
         return -1;
@@ -2742,8 +2742,8 @@ int AGIDDS::CollectionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeria
     return 0;
 }
 
-int AGIDDS::CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::CollectionType* structData = static_cast<AGIDDS::CollectionType*>(data);
+int CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    CollectionType* structData = static_cast<CollectionType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -2753,24 +2753,24 @@ int AGIDDS::CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::CollectionType\n");
+            fprintf(stderr, "Deserialization failed for field: CollectionType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID:
-            if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->element_type, cdr, endian) != 0) {
+        case ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID:
+            if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->element_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->element_type\n");
                 return -1;
             }
             break;
-        case AGIDDS::ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID:
+        case ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->element_shared)) {
                 fprintf(stderr, "Deserialization failed for field: structData->element_shared\n");
                 return -1;
@@ -2780,7 +2780,7 @@ int AGIDDS::CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::CollectionType\n");
+                fprintf(stderr, "Deserialization failed for field: CollectionType\n");
                 return -1;
             }
             break;
@@ -2793,25 +2793,25 @@ int AGIDDS::CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDes
     return 0;
 }
 
-TypeObject* AGIDDS::CollectionTypeTypeSupport::get_typeobject() {
+TypeObject* CollectionTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::CollectionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::CollectionType* structData = static_cast<AGIDDS::CollectionType*>(data);
+int CollectionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    CollectionType* structData = static_cast<CollectionType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::CollectionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int CollectionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -2822,7 +2822,7 @@ int AGIDDS::CollectionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::CollectionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t CollectionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2839,40 +2839,40 @@ ReturnCode_t AGIDDS::CollectionTypeTypeSupport::get_instancehandle(void* data, A
     return RETCODE_OK;
 }
 
-bool AGIDDS::CollectionTypeTypeSupport::has_key() {
+bool CollectionTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::CollectionTypeTypeSupport::get_typename() {
-    return "AGIDDS::CollectionType";
+const char* CollectionTypeTypeSupport::get_typename() {
+    return "CollectionType";
 }
 
-AGIDDS::ArrayTypeTypeSupport* AGIDDS::ArrayTypeTypeSupport::get_instance() {
-    static AGIDDS::ArrayTypeTypeSupport instance;
+ArrayTypeTypeSupport* ArrayTypeTypeSupport::get_instance() {
+    static ArrayTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::ArrayTypeTypeSupport::create_data() {
-    return new AGIDDS::ArrayType();
+void* ArrayTypeTypeSupport::create_data() {
+    return new ArrayType();
 }
 
-void AGIDDS::ArrayTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::ArrayType*>(data);
+void ArrayTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<ArrayType*>(data);
 }
 
-int AGIDDS::ArrayTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::ArrayType* dstData = static_cast<AGIDDS::ArrayType*>(dst);
-    AGIDDS::ArrayType* srcData = static_cast<AGIDDS::ArrayType*>(src);
+int ArrayTypeTypeSupport::copy_data(void* dst, void* src) {
+    ArrayType* dstData = static_cast<ArrayType*>(dst);
+    ArrayType* srcData = static_cast<ArrayType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::ArrayTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::ArrayType* structData = static_cast<AGIDDS::ArrayType*>(data);
+unsigned int ArrayTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    ArrayType* structData = static_cast<ArrayType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), currentAlignment);
+    currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
@@ -2885,23 +2885,23 @@ unsigned int AGIDDS::ArrayTypeTypeSupport::get_serialized_data_size(void* data, 
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::ArrayTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int ArrayTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::ArrayTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::ArrayType* structData = static_cast<AGIDDS::ArrayType*>(data);
+int ArrayTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    ArrayType* structData = static_cast<ArrayType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->element_shared\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BOUND_ARRAYTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BOUND_ARRAYTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->bound\n");
         return -1;
@@ -2923,8 +2923,8 @@ int AGIDDS::ArrayTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer
     return 0;
 }
 
-int AGIDDS::ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::ArrayType* structData = static_cast<AGIDDS::ArrayType*>(data);
+int ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    ArrayType* structData = static_cast<ArrayType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -2934,18 +2934,18 @@ int AGIDDS::ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->element_shared\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::ArrayType\n");
+            fprintf(stderr, "Deserialization failed for field: ArrayType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BOUND_ARRAYTYPE_MEMBER_ID:
+        case BOUND_ARRAYTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->bound\n");
                 return -1;
@@ -2962,7 +2962,7 @@ int AGIDDS::ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::ArrayType\n");
+                fprintf(stderr, "Deserialization failed for field: ArrayType\n");
                 return -1;
             }
             break;
@@ -2975,25 +2975,25 @@ int AGIDDS::ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserial
     return 0;
 }
 
-TypeObject* AGIDDS::ArrayTypeTypeSupport::get_typeobject() {
+TypeObject* ArrayTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::ArrayTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::ArrayType* structData = static_cast<AGIDDS::ArrayType*>(data);
+int ArrayTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    ArrayType* structData = static_cast<ArrayType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::ArrayTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int ArrayTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3004,7 +3004,7 @@ int AGIDDS::ArrayTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iH
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::ArrayTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t ArrayTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3021,61 +3021,61 @@ ReturnCode_t AGIDDS::ArrayTypeTypeSupport::get_instancehandle(void* data, AGIDDS
     return RETCODE_OK;
 }
 
-bool AGIDDS::ArrayTypeTypeSupport::has_key() {
+bool ArrayTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::ArrayTypeTypeSupport::get_typename() {
-    return "AGIDDS::ArrayType";
+const char* ArrayTypeTypeSupport::get_typename() {
+    return "ArrayType";
 }
 
-AGIDDS::MapTypeTypeSupport* AGIDDS::MapTypeTypeSupport::get_instance() {
-    static AGIDDS::MapTypeTypeSupport instance;
+MapTypeTypeSupport* MapTypeTypeSupport::get_instance() {
+    static MapTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::MapTypeTypeSupport::create_data() {
-    return new AGIDDS::MapType();
+void* MapTypeTypeSupport::create_data() {
+    return new MapType();
 }
 
-void AGIDDS::MapTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::MapType*>(data);
+void MapTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<MapType*>(data);
 }
 
-int AGIDDS::MapTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::MapType* dstData = static_cast<AGIDDS::MapType*>(dst);
-    AGIDDS::MapType* srcData = static_cast<AGIDDS::MapType*>(src);
+int MapTypeTypeSupport::copy_data(void* dst, void* src) {
+    MapType* dstData = static_cast<MapType*>(dst);
+    MapType* srcData = static_cast<MapType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::MapTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::MapType* structData = static_cast<AGIDDS::MapType*>(data);
+unsigned int MapTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    MapType* structData = static_cast<MapType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), currentAlignment);
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->key_element_type, currentAlignment);
+    currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->key_element_type, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::MapTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::MapType* structData = static_cast<AGIDDS::MapType*>(data);
+unsigned int MapTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    MapType* structData = static_cast<MapType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->key_element_type, currentAlignment);
+    currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->key_element_type, currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::MapTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::MapType* structData = static_cast<AGIDDS::MapType*>(data);
+int MapTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    MapType* structData = static_cast<MapType*>(data);
     uint32_t tmpLength = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound[i]\n");
         return -1;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->key_element_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->key_element_type, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->key_element_type\n");
         return -1;
     }
@@ -3086,17 +3086,17 @@ int AGIDDS::MapTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* 
     return 0;
 }
 
-int AGIDDS::MapTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::MapType* structData = static_cast<AGIDDS::MapType*>(data);
+int MapTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    MapType* structData = static_cast<MapType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound[i]\n");
         return -1;
     }
-    if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->key_element_type, cdr, endian) != 0) {
+    if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->key_element_type, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->key_element_type\n");
         return -1;
     }
@@ -3107,21 +3107,21 @@ int AGIDDS::MapTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializ
     return 0;
 }
 
-TypeObject* AGIDDS::MapTypeTypeSupport::get_typeobject() {
+TypeObject* MapTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::MapTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::MapType* structData = static_cast<AGIDDS::MapType*>(data);
+int MapTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    MapType* structData = static_cast<MapType*>(data);
     bool memberHasKey = false;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::MapTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int MapTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3132,7 +3132,7 @@ int AGIDDS::MapTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHan
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::MapTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MapTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3149,55 +3149,55 @@ ReturnCode_t AGIDDS::MapTypeTypeSupport::get_instancehandle(void* data, AGIDDSCd
     return RETCODE_OK;
 }
 
-bool AGIDDS::MapTypeTypeSupport::has_key() {
+bool MapTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::MapTypeTypeSupport::get_typename() {
-    return "AGIDDS::MapType";
+const char* MapTypeTypeSupport::get_typename() {
+    return "MapType";
 }
 
-AGIDDS::SequenceTypeTypeSupport* AGIDDS::SequenceTypeTypeSupport::get_instance() {
-    static AGIDDS::SequenceTypeTypeSupport instance;
+SequenceTypeTypeSupport* SequenceTypeTypeSupport::get_instance() {
+    static SequenceTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::SequenceTypeTypeSupport::create_data() {
-    return new AGIDDS::SequenceType();
+void* SequenceTypeTypeSupport::create_data() {
+    return new SequenceType();
 }
 
-void AGIDDS::SequenceTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::SequenceType*>(data);
+void SequenceTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<SequenceType*>(data);
 }
 
-int AGIDDS::SequenceTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::SequenceType* dstData = static_cast<AGIDDS::SequenceType*>(dst);
-    AGIDDS::SequenceType* srcData = static_cast<AGIDDS::SequenceType*>(src);
+int SequenceTypeTypeSupport::copy_data(void* dst, void* src) {
+    SequenceType* dstData = static_cast<SequenceType*>(dst);
+    SequenceType* srcData = static_cast<SequenceType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::SequenceTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::SequenceType* structData = static_cast<AGIDDS::SequenceType*>(data);
+unsigned int SequenceTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    SequenceType* structData = static_cast<SequenceType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), currentAlignment);
+    currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::SequenceTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::SequenceType* structData = static_cast<AGIDDS::SequenceType*>(data);
+unsigned int SequenceTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    SequenceType* structData = static_cast<SequenceType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::SequenceTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::SequenceType* structData = static_cast<AGIDDS::SequenceType*>(data);
+int SequenceTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    SequenceType* structData = static_cast<SequenceType*>(data);
     uint32_t tmpLength = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound\n");
         return -1;
     }
@@ -3208,13 +3208,13 @@ int AGIDDS::SequenceTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeriali
     return 0;
 }
 
-int AGIDDS::SequenceTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::SequenceType* structData = static_cast<AGIDDS::SequenceType*>(data);
+int SequenceTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    SequenceType* structData = static_cast<SequenceType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
@@ -3225,21 +3225,21 @@ int AGIDDS::SequenceTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeser
     return 0;
 }
 
-TypeObject* AGIDDS::SequenceTypeTypeSupport::get_typeobject() {
+TypeObject* SequenceTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::SequenceTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::SequenceType* structData = static_cast<AGIDDS::SequenceType*>(data);
+int SequenceTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    SequenceType* structData = static_cast<SequenceType*>(data);
     bool memberHasKey = false;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::SequenceTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int SequenceTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3250,7 +3250,7 @@ int AGIDDS::SequenceTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t&
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::SequenceTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t SequenceTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3267,55 +3267,55 @@ ReturnCode_t AGIDDS::SequenceTypeTypeSupport::get_instancehandle(void* data, AGI
     return RETCODE_OK;
 }
 
-bool AGIDDS::SequenceTypeTypeSupport::has_key() {
+bool SequenceTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::SequenceTypeTypeSupport::get_typename() {
-    return "AGIDDS::SequenceType";
+const char* SequenceTypeTypeSupport::get_typename() {
+    return "SequenceType";
 }
 
-AGIDDS::StringTypeTypeSupport* AGIDDS::StringTypeTypeSupport::get_instance() {
-    static AGIDDS::StringTypeTypeSupport instance;
+StringTypeTypeSupport* StringTypeTypeSupport::get_instance() {
+    static StringTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::StringTypeTypeSupport::create_data() {
-    return new AGIDDS::StringType();
+void* StringTypeTypeSupport::create_data() {
+    return new StringType();
 }
 
-void AGIDDS::StringTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::StringType*>(data);
+void StringTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<StringType*>(data);
 }
 
-int AGIDDS::StringTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::StringType* dstData = static_cast<AGIDDS::StringType*>(dst);
-    AGIDDS::StringType* srcData = static_cast<AGIDDS::StringType*>(src);
+int StringTypeTypeSupport::copy_data(void* dst, void* src) {
+    StringType* dstData = static_cast<StringType*>(dst);
+    StringType* srcData = static_cast<StringType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::StringTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::StringType* structData = static_cast<AGIDDS::StringType*>(data);
+unsigned int StringTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    StringType* structData = static_cast<StringType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), currentAlignment);
+    currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::StringTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::StringType* structData = static_cast<AGIDDS::StringType*>(data);
+unsigned int StringTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    StringType* structData = static_cast<StringType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::StringTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::StringType* structData = static_cast<AGIDDS::StringType*>(data);
+int StringTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    StringType* structData = static_cast<StringType*>(data);
     uint32_t tmpLength = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound\n");
         return -1;
     }
@@ -3326,13 +3326,13 @@ int AGIDDS::StringTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     return 0;
 }
 
-int AGIDDS::StringTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::StringType* structData = static_cast<AGIDDS::StringType*>(data);
+int StringTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    StringType* structData = static_cast<StringType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
@@ -3343,21 +3343,21 @@ int AGIDDS::StringTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
     return 0;
 }
 
-TypeObject* AGIDDS::StringTypeTypeSupport::get_typeobject() {
+TypeObject* StringTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::StringTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::StringType* structData = static_cast<AGIDDS::StringType*>(data);
+int StringTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    StringType* structData = static_cast<StringType*>(data);
     bool memberHasKey = false;
-    if (AGIDDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::CollectionType*>(structData), cdr, endian) != 0) {
+    if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::StringTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int StringTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3368,7 +3368,7 @@ int AGIDDS::StringTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& i
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::StringTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t StringTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3385,36 +3385,36 @@ ReturnCode_t AGIDDS::StringTypeTypeSupport::get_instancehandle(void* data, AGIDD
     return RETCODE_OK;
 }
 
-bool AGIDDS::StringTypeTypeSupport::has_key() {
+bool StringTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::StringTypeTypeSupport::get_typename() {
-    return "AGIDDS::StringType";
+const char* StringTypeTypeSupport::get_typename() {
+    return "StringType";
 }
 
-AGIDDS::BitTypeSupport* AGIDDS::BitTypeSupport::get_instance() {
-    static AGIDDS::BitTypeSupport instance;
+BitTypeSupport* BitTypeSupport::get_instance() {
+    static BitTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::BitTypeSupport::create_data() {
-    return new AGIDDS::Bit();
+void* BitTypeSupport::create_data() {
+    return new Bit();
 }
 
-void AGIDDS::BitTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::Bit*>(data);
+void BitTypeSupport::delete_data(void* data) {
+    delete static_cast<Bit*>(data);
 }
 
-int AGIDDS::BitTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::Bit* dstData = static_cast<AGIDDS::Bit*>(dst);
-    AGIDDS::Bit* srcData = static_cast<AGIDDS::Bit*>(src);
+int BitTypeSupport::copy_data(void* dst, void* src) {
+    Bit* dstData = static_cast<Bit*>(dst);
+    Bit* srcData = static_cast<Bit*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::BitTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::Bit* structData = static_cast<AGIDDS::Bit*>(data);
+unsigned int BitTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    Bit* structData = static_cast<Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
@@ -3422,8 +3422,8 @@ unsigned int AGIDDS::BitTypeSupport::get_serialized_data_size(void* data, unsign
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::BitTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::Bit* structData = static_cast<AGIDDS::Bit*>(data);
+unsigned int BitTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    Bit* structData = static_cast<Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
@@ -3431,8 +3431,8 @@ unsigned int AGIDDS::BitTypeSupport::get_max_serialized_data_size(void* data, un
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::BitTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Bit* structData = static_cast<AGIDDS::Bit*>(data);
+int BitTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Bit* structData = static_cast<Bit*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->index)) {
         fprintf(stderr, "Serialization failed for field: structData->index\n");
@@ -3445,8 +3445,8 @@ int AGIDDS::BitTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr,
     return 0;
 }
 
-int AGIDDS::BitTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::Bit* structData = static_cast<AGIDDS::Bit*>(data);
+int BitTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    Bit* structData = static_cast<Bit*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -3462,17 +3462,17 @@ int AGIDDS::BitTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* 
     return 0;
 }
 
-TypeObject* AGIDDS::BitTypeSupport::get_typeobject() {
+TypeObject* BitTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::BitTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::Bit* structData = static_cast<AGIDDS::Bit*>(data);
+int BitTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    Bit* structData = static_cast<Bit*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::BitTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int BitTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3483,7 +3483,7 @@ int AGIDDS::BitTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle,
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::BitTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t BitTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3500,40 +3500,40 @@ ReturnCode_t AGIDDS::BitTypeSupport::get_instancehandle(void* data, AGIDDSCdrSer
     return RETCODE_OK;
 }
 
-bool AGIDDS::BitTypeSupport::has_key() {
+bool BitTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::BitTypeSupport::get_typename() {
-    return "AGIDDS::Bit";
+const char* BitTypeSupport::get_typename() {
+    return "Bit";
 }
 
-AGIDDS::BitSetTypeTypeSupport* AGIDDS::BitSetTypeTypeSupport::get_instance() {
-    static AGIDDS::BitSetTypeTypeSupport instance;
+BitSetTypeTypeSupport* BitSetTypeTypeSupport::get_instance() {
+    static BitSetTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::BitSetTypeTypeSupport::create_data() {
-    return new AGIDDS::BitSetType();
+void* BitSetTypeTypeSupport::create_data() {
+    return new BitSetType();
 }
 
-void AGIDDS::BitSetTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::BitSetType*>(data);
+void BitSetTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<BitSetType*>(data);
 }
 
-int AGIDDS::BitSetTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::BitSetType* dstData = static_cast<AGIDDS::BitSetType*>(dst);
-    AGIDDS::BitSetType* srcData = static_cast<AGIDDS::BitSetType*>(src);
+int BitSetTypeTypeSupport::copy_data(void* dst, void* src) {
+    BitSetType* dstData = static_cast<BitSetType*>(dst);
+    BitSetType* srcData = static_cast<BitSetType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::BitSetTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::BitSetType* structData = static_cast<AGIDDS::BitSetType*>(data);
+unsigned int BitSetTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    BitSetType* structData = static_cast<BitSetType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
@@ -3545,30 +3545,30 @@ unsigned int AGIDDS::BitSetTypeTypeSupport::get_serialized_data_size(void* data,
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->bit.size(); ++i) {
-        currentAlignment += AGIDDS::BitTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->bit[i], currentAlignment);
+        currentAlignment += BitTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->bit[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::BitSetTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int BitSetTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::BitSetType* structData = static_cast<AGIDDS::BitSetType*>(data);
+int BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    BitSetType* structData = static_cast<BitSetType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->name\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BIT_BOUND_BITSETTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BIT_BOUND_BITSETTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
         return -1;
@@ -3581,7 +3581,7 @@ int AGIDDS::BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BIT_BITSETTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BIT_BITSETTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->bit\n");
         return -1;
@@ -3593,7 +3593,7 @@ int AGIDDS::BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
         return -1;
     }
     for (size_t i = 0; i < structData->bit.size(); ++i) {
-        if (AGIDDS::BitTypeSupport::get_instance()->serialize_data((void*)&structData->bit[i], cdr, endian) != 0) {
+        if (BitTypeSupport::get_instance()->serialize_data((void*)&structData->bit[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->bit[i]\n");
             return -1;
         }
@@ -3603,8 +3603,8 @@ int AGIDDS::BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     return 0;
 }
 
-int AGIDDS::BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::BitSetType* structData = static_cast<AGIDDS::BitSetType*>(data);
+int BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    BitSetType* structData = static_cast<BitSetType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -3614,31 +3614,31 @@ int AGIDDS::BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::BitSetType\n");
+            fprintf(stderr, "Deserialization failed for field: BitSetType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BIT_BOUND_BITSETTYPE_MEMBER_ID:
+        case BIT_BOUND_BITSETTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->bit_bound)) {
                 fprintf(stderr, "Deserialization failed for field: structData->bit_bound\n");
                 return -1;
             }
             break;
-        case AGIDDS::BIT_BITSETTYPE_MEMBER_ID:
+        case BIT_BITSETTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->bit\n");
                 return -1;
             }
             structData->bit.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::BitTypeSupport::get_instance()->deserialize_data(&structData->bit[i], cdr, endian) != 0) {
+                if (BitTypeSupport::get_instance()->deserialize_data(&structData->bit[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->bit[i]\n");
                     return -1;
                 }
@@ -3648,7 +3648,7 @@ int AGIDDS::BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::BitSetType\n");
+                fprintf(stderr, "Deserialization failed for field: BitSetType\n");
                 return -1;
             }
             break;
@@ -3661,25 +3661,25 @@ int AGIDDS::BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
     return 0;
 }
 
-TypeObject* AGIDDS::BitSetTypeTypeSupport::get_typeobject() {
+TypeObject* BitSetTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::BitSetTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::BitSetType* structData = static_cast<AGIDDS::BitSetType*>(data);
+int BitSetTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    BitSetType* structData = static_cast<BitSetType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::BitSetTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int BitSetTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3690,7 +3690,7 @@ int AGIDDS::BitSetTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& i
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::BitSetTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t BitSetTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3707,36 +3707,36 @@ ReturnCode_t AGIDDS::BitSetTypeTypeSupport::get_instancehandle(void* data, AGIDD
     return RETCODE_OK;
 }
 
-bool AGIDDS::BitSetTypeTypeSupport::has_key() {
+bool BitSetTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::BitSetTypeTypeSupport::get_typename() {
-    return "AGIDDS::BitSetType";
+const char* BitSetTypeTypeSupport::get_typename() {
+    return "BitSetType";
 }
 
-AGIDDS::EnumeratedConstantTypeSupport* AGIDDS::EnumeratedConstantTypeSupport::get_instance() {
-    static AGIDDS::EnumeratedConstantTypeSupport instance;
+EnumeratedConstantTypeSupport* EnumeratedConstantTypeSupport::get_instance() {
+    static EnumeratedConstantTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::EnumeratedConstantTypeSupport::create_data() {
-    return new AGIDDS::EnumeratedConstant();
+void* EnumeratedConstantTypeSupport::create_data() {
+    return new EnumeratedConstant();
 }
 
-void AGIDDS::EnumeratedConstantTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::EnumeratedConstant*>(data);
+void EnumeratedConstantTypeSupport::delete_data(void* data) {
+    delete static_cast<EnumeratedConstant*>(data);
 }
 
-int AGIDDS::EnumeratedConstantTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::EnumeratedConstant* dstData = static_cast<AGIDDS::EnumeratedConstant*>(dst);
-    AGIDDS::EnumeratedConstant* srcData = static_cast<AGIDDS::EnumeratedConstant*>(src);
+int EnumeratedConstantTypeSupport::copy_data(void* dst, void* src) {
+    EnumeratedConstant* dstData = static_cast<EnumeratedConstant*>(dst);
+    EnumeratedConstant* srcData = static_cast<EnumeratedConstant*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::EnumeratedConstantTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::EnumeratedConstant* structData = static_cast<AGIDDS::EnumeratedConstant*>(data);
+unsigned int EnumeratedConstantTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
@@ -3744,8 +3744,8 @@ unsigned int AGIDDS::EnumeratedConstantTypeSupport::get_serialized_data_size(voi
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::EnumeratedConstantTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::EnumeratedConstant* structData = static_cast<AGIDDS::EnumeratedConstant*>(data);
+unsigned int EnumeratedConstantTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
@@ -3753,8 +3753,8 @@ unsigned int AGIDDS::EnumeratedConstantTypeSupport::get_max_serialized_data_size
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::EnumeratedConstantTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::EnumeratedConstant* structData = static_cast<AGIDDS::EnumeratedConstant*>(data);
+int EnumeratedConstantTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->value)) {
         fprintf(stderr, "Serialization failed for field: structData->value\n");
@@ -3767,8 +3767,8 @@ int AGIDDS::EnumeratedConstantTypeSupport::serialize_data(void* data, AGIDDSCdrS
     return 0;
 }
 
-int AGIDDS::EnumeratedConstantTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::EnumeratedConstant* structData = static_cast<AGIDDS::EnumeratedConstant*>(data);
+int EnumeratedConstantTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -3784,17 +3784,17 @@ int AGIDDS::EnumeratedConstantTypeSupport::deserialize_data(void* data, AGIDDSCd
     return 0;
 }
 
-TypeObject* AGIDDS::EnumeratedConstantTypeSupport::get_typeobject() {
+TypeObject* EnumeratedConstantTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::EnumeratedConstantTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::EnumeratedConstant* structData = static_cast<AGIDDS::EnumeratedConstant*>(data);
+int EnumeratedConstantTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::EnumeratedConstantTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int EnumeratedConstantTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -3805,7 +3805,7 @@ int AGIDDS::EnumeratedConstantTypeSupport::MakeKey(const void* data, InstanceHan
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::EnumeratedConstantTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t EnumeratedConstantTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3822,40 +3822,40 @@ ReturnCode_t AGIDDS::EnumeratedConstantTypeSupport::get_instancehandle(void* dat
     return RETCODE_OK;
 }
 
-bool AGIDDS::EnumeratedConstantTypeSupport::has_key() {
+bool EnumeratedConstantTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::EnumeratedConstantTypeSupport::get_typename() {
-    return "AGIDDS::EnumeratedConstant";
+const char* EnumeratedConstantTypeSupport::get_typename() {
+    return "EnumeratedConstant";
 }
 
-AGIDDS::EnumerationTypeTypeSupport* AGIDDS::EnumerationTypeTypeSupport::get_instance() {
-    static AGIDDS::EnumerationTypeTypeSupport instance;
+EnumerationTypeTypeSupport* EnumerationTypeTypeSupport::get_instance() {
+    static EnumerationTypeTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::EnumerationTypeTypeSupport::create_data() {
-    return new AGIDDS::EnumerationType();
+void* EnumerationTypeTypeSupport::create_data() {
+    return new EnumerationType();
 }
 
-void AGIDDS::EnumerationTypeTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::EnumerationType*>(data);
+void EnumerationTypeTypeSupport::delete_data(void* data) {
+    delete static_cast<EnumerationType*>(data);
 }
 
-int AGIDDS::EnumerationTypeTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::EnumerationType* dstData = static_cast<AGIDDS::EnumerationType*>(dst);
-    AGIDDS::EnumerationType* srcData = static_cast<AGIDDS::EnumerationType*>(src);
+int EnumerationTypeTypeSupport::copy_data(void* dst, void* src) {
+    EnumerationType* dstData = static_cast<EnumerationType*>(dst);
+    EnumerationType* srcData = static_cast<EnumerationType*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::EnumerationTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::EnumerationType* structData = static_cast<AGIDDS::EnumerationType*>(data);
+unsigned int EnumerationTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    EnumerationType* structData = static_cast<EnumerationType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
-    currentAlignment += AGIDDS::TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<AGIDDS::Type*>(structData), currentAlignment);
+    currentAlignment += TypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<Type*>(structData), currentAlignment);
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
@@ -3867,30 +3867,30 @@ unsigned int AGIDDS::EnumerationTypeTypeSupport::get_serialized_data_size(void* 
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->constant.size(); ++i) {
-        currentAlignment += AGIDDS::EnumeratedConstantTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->constant[i], currentAlignment);
+        currentAlignment += EnumeratedConstantTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->constant[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::EnumerationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int EnumerationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::EnumerationType* structData = static_cast<AGIDDS::EnumerationType*>(data);
+int EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    EnumerationType* structData = static_cast<EnumerationType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->name\n");
         return -1;
     }
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
         return -1;
@@ -3903,7 +3903,7 @@ int AGIDDS::EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeri
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     useExtend = true;
-    lenAddr = cdr->serializeParameterHeader(useExtend, true, AGIDDS::CONSTANT_ENUMERATIONTYPE_MEMBER_ID);
+    lenAddr = cdr->serializeParameterHeader(useExtend, true, CONSTANT_ENUMERATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
         fprintf(stderr, "Serialization failed for field: structData->constant\n");
         return -1;
@@ -3915,7 +3915,7 @@ int AGIDDS::EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeri
         return -1;
     }
     for (size_t i = 0; i < structData->constant.size(); ++i) {
-        if (AGIDDS::EnumeratedConstantTypeSupport::get_instance()->serialize_data((void*)&structData->constant[i], cdr, endian) != 0) {
+        if (EnumeratedConstantTypeSupport::get_instance()->serialize_data((void*)&structData->constant[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->constant[i]\n");
             return -1;
         }
@@ -3925,8 +3925,8 @@ int AGIDDS::EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSeri
     return 0;
 }
 
-int AGIDDS::EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::EnumerationType* structData = static_cast<AGIDDS::EnumerationType*>(data);
+int EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    EnumerationType* structData = static_cast<EnumerationType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -3936,31 +3936,31 @@ int AGIDDS::EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDe
     bool useExtend = false;
     bool mustUnderstand = false;
     unsigned int readLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::EnumerationType\n");
+            fprintf(stderr, "Deserialization failed for field: EnumerationType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
-        case AGIDDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID:
+        case BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->bit_bound)) {
                 fprintf(stderr, "Deserialization failed for field: structData->bit_bound\n");
                 return -1;
             }
             break;
-        case AGIDDS::CONSTANT_ENUMERATIONTYPE_MEMBER_ID:
+        case CONSTANT_ENUMERATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
                 fprintf(stderr, "Deserialization length failed for field: structData->constant\n");
                 return -1;
             }
             structData->constant.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::EnumeratedConstantTypeSupport::get_instance()->deserialize_data(&structData->constant[i], cdr, endian) != 0) {
+                if (EnumeratedConstantTypeSupport::get_instance()->deserialize_data(&structData->constant[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->constant[i]\n");
                     return -1;
                 }
@@ -3970,7 +3970,7 @@ int AGIDDS::EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDe
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::EnumerationType\n");
+                fprintf(stderr, "Deserialization failed for field: EnumerationType\n");
                 return -1;
             }
             break;
@@ -3983,25 +3983,25 @@ int AGIDDS::EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDe
     return 0;
 }
 
-TypeObject* AGIDDS::EnumerationTypeTypeSupport::get_typeobject() {
+TypeObject* EnumerationTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::EnumerationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::EnumerationType* structData = static_cast<AGIDDS::EnumerationType*>(data);
+int EnumerationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    EnumerationType* structData = static_cast<EnumerationType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
-    if (AGIDDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<AGIDDS::Type*>(structData), cdr, endian) != 0) {
+    if (TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
 }
 
-int AGIDDS::EnumerationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int EnumerationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -4012,7 +4012,7 @@ int AGIDDS::EnumerationTypeTypeSupport::MakeKey(const void* data, InstanceHandle
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::EnumerationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t EnumerationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4029,52 +4029,52 @@ ReturnCode_t AGIDDS::EnumerationTypeTypeSupport::get_instancehandle(void* data, 
     return RETCODE_OK;
 }
 
-bool AGIDDS::EnumerationTypeTypeSupport::has_key() {
+bool EnumerationTypeTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::EnumerationTypeTypeSupport::get_typename() {
-    return "AGIDDS::EnumerationType";
+const char* EnumerationTypeTypeSupport::get_typename() {
+    return "EnumerationType";
 }
 
-AGIDDS::_ModuleTypeSupport* AGIDDS::_ModuleTypeSupport::get_instance() {
-    static AGIDDS::_ModuleTypeSupport instance;
+_ModuleTypeSupport* _ModuleTypeSupport::get_instance() {
+    static _ModuleTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::_ModuleTypeSupport::create_data() {
-    return new AGIDDS::_Module();
+void* _ModuleTypeSupport::create_data() {
+    return new _Module();
 }
 
-void AGIDDS::_ModuleTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::_Module*>(data);
+void _ModuleTypeSupport::delete_data(void* data) {
+    delete static_cast<_Module*>(data);
 }
 
-int AGIDDS::_ModuleTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::_Module* dstData = static_cast<AGIDDS::_Module*>(dst);
-    AGIDDS::_Module* srcData = static_cast<AGIDDS::_Module*>(src);
+int _ModuleTypeSupport::copy_data(void* dst, void* src) {
+    _Module* dstData = static_cast<_Module*>(dst);
+    _Module* srcData = static_cast<_Module*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::_ModuleTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::_Module* structData = static_cast<AGIDDS::_Module*>(data);
+unsigned int _ModuleTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    _Module* structData = static_cast<_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::_ModuleTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::_Module* structData = static_cast<AGIDDS::_Module*>(data);
+unsigned int _ModuleTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    _Module* structData = static_cast<_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AGIDDS::_ModuleTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::_Module* structData = static_cast<AGIDDS::_Module*>(data);
+int _ModuleTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    _Module* structData = static_cast<_Module*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
         fprintf(stderr, "Serialization failed for field: structData->name\n");
@@ -4083,8 +4083,8 @@ int AGIDDS::_ModuleTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* 
     return 0;
 }
 
-int AGIDDS::_ModuleTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::_Module* structData = static_cast<AGIDDS::_Module*>(data);
+int _ModuleTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    _Module* structData = static_cast<_Module*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -4096,17 +4096,17 @@ int AGIDDS::_ModuleTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializ
     return 0;
 }
 
-TypeObject* AGIDDS::_ModuleTypeSupport::get_typeobject() {
+TypeObject* _ModuleTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::_ModuleTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::_Module* structData = static_cast<AGIDDS::_Module*>(data);
+int _ModuleTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    _Module* structData = static_cast<_Module*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::_ModuleTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int _ModuleTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -4117,7 +4117,7 @@ int AGIDDS::_ModuleTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHan
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::_ModuleTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t _ModuleTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4134,36 +4134,36 @@ ReturnCode_t AGIDDS::_ModuleTypeSupport::get_instancehandle(void* data, AGIDDSCd
     return RETCODE_OK;
 }
 
-bool AGIDDS::_ModuleTypeSupport::has_key() {
+bool _ModuleTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::_ModuleTypeSupport::get_typename() {
-    return "AGIDDS::_Module";
+const char* _ModuleTypeSupport::get_typename() {
+    return "_Module";
 }
 
-AGIDDS::TypeLibraryElementTypeSupport* AGIDDS::TypeLibraryElementTypeSupport::get_instance() {
-    static AGIDDS::TypeLibraryElementTypeSupport instance;
+TypeLibraryElementTypeSupport* TypeLibraryElementTypeSupport::get_instance() {
+    static TypeLibraryElementTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::TypeLibraryElementTypeSupport::create_data() {
-    return new AGIDDS::TypeLibraryElement();
+void* TypeLibraryElementTypeSupport::create_data() {
+    return new TypeLibraryElement();
 }
 
-void AGIDDS::TypeLibraryElementTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::TypeLibraryElement*>(data);
+void TypeLibraryElementTypeSupport::delete_data(void* data) {
+    delete static_cast<TypeLibraryElement*>(data);
 }
 
-int AGIDDS::TypeLibraryElementTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::TypeLibraryElement* dstData = static_cast<AGIDDS::TypeLibraryElement*>(dst);
-    AGIDDS::TypeLibraryElement* srcData = static_cast<AGIDDS::TypeLibraryElement*>(src);
+int TypeLibraryElementTypeSupport::copy_data(void* dst, void* src) {
+    TypeLibraryElement* dstData = static_cast<TypeLibraryElement*>(dst);
+    TypeLibraryElement* srcData = static_cast<TypeLibraryElement*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeLibraryElement* structData = static_cast<AGIDDS::TypeLibraryElement*>(data);
+unsigned int TypeLibraryElementTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
@@ -4174,91 +4174,91 @@ unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_serialized_data_size(voi
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     switch(structData->u_) {
-    case AGIDDS::ALIAS_TYPE_ELEMENT:
+    case ALIAS_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::AliasTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->alias_type, currentAlignment);
+        currentAlignment += AliasTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->alias_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ANNOTATION_TYPE_ELEMENT:
+    case ANNOTATION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::AnnotationTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation_type, currentAlignment);
+        currentAlignment += AnnotationTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ARRAY_TYPE_ELEMENT:
+    case ARRAY_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::ArrayTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->array_type, currentAlignment);
+        currentAlignment += ArrayTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->array_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::BITSET_TYPE_ELEMENT:
+    case BITSET_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::BitSetTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->bitset_type, currentAlignment);
+        currentAlignment += BitSetTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->bitset_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ENUMERATION_TYPE_ELEMENT:
+    case ENUMERATION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::EnumerationTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->enumeration_type, currentAlignment);
+        currentAlignment += EnumerationTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->enumeration_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::MAP_TYPE_ELEMENT:
+    case MAP_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::MapTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->map_type, currentAlignment);
+        currentAlignment += MapTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->map_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::SEQUENCE_TYPE_ELEMENT:
+    case SEQUENCE_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::SequenceTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->sequence_type, currentAlignment);
+        currentAlignment += SequenceTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->sequence_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::STRING_TYPE_ELEMENT:
+    case STRING_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::StringTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->string_type, currentAlignment);
+        currentAlignment += StringTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->string_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::STRUCTURE_TYPE_ELEMENT:
+    case STRUCTURE_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::StructureTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->structure_type, currentAlignment);
+        currentAlignment += StructureTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->structure_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::UNION_TYPE_ELEMENT:
+    case UNION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::UnionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->union_type, currentAlignment);
+        currentAlignment += UnionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->union_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::MODULE_ELEMENT:
+    case MODULE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::_ModuleTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->mod, currentAlignment);
+        currentAlignment += _ModuleTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->mod, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
@@ -4266,8 +4266,8 @@ unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_serialized_data_size(voi
     return 0;
 }
 
-unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeLibraryElement* structData = static_cast<AGIDDS::TypeLibraryElement*>(data);
+unsigned int TypeLibraryElementTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
@@ -4278,91 +4278,91 @@ unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_max_serialized_data_size
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     switch(structData->u_) {
-    case AGIDDS::ALIAS_TYPE_ELEMENT:
+    case ALIAS_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::AliasTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->alias_type, currentAlignment);
+        currentAlignment += AliasTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->alias_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ANNOTATION_TYPE_ELEMENT:
+    case ANNOTATION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::AnnotationTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->annotation_type, currentAlignment);
+        currentAlignment += AnnotationTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->annotation_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ARRAY_TYPE_ELEMENT:
+    case ARRAY_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::ArrayTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->array_type, currentAlignment);
+        currentAlignment += ArrayTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->array_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::BITSET_TYPE_ELEMENT:
+    case BITSET_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::BitSetTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->bitset_type, currentAlignment);
+        currentAlignment += BitSetTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->bitset_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::ENUMERATION_TYPE_ELEMENT:
+    case ENUMERATION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::EnumerationTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->enumeration_type, currentAlignment);
+        currentAlignment += EnumerationTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->enumeration_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::MAP_TYPE_ELEMENT:
+    case MAP_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::MapTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->map_type, currentAlignment);
+        currentAlignment += MapTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->map_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::SEQUENCE_TYPE_ELEMENT:
+    case SEQUENCE_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::SequenceTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->sequence_type, currentAlignment);
+        currentAlignment += SequenceTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->sequence_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::STRING_TYPE_ELEMENT:
+    case STRING_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::StringTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->string_type, currentAlignment);
+        currentAlignment += StringTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->string_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::STRUCTURE_TYPE_ELEMENT:
+    case STRUCTURE_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::StructureTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->structure_type, currentAlignment);
+        currentAlignment += StructureTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->structure_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::UNION_TYPE_ELEMENT:
+    case UNION_TYPE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::UnionTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->union_type, currentAlignment);
+        currentAlignment += UnionTypeTypeSupport::get_instance()->get_max_serialized_data_size(&structData->union_type, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
-    case AGIDDS::MODULE_ELEMENT:
+    case MODULE_ELEMENT:
         currentAlignment += 4;
         tmpAlignment = currentAlignment;
         currentAlignment = 0;
-        currentAlignment += AGIDDS::_ModuleTypeSupport::get_instance()->get_max_serialized_data_size(&structData->mod, currentAlignment);
+        currentAlignment += _ModuleTypeSupport::get_instance()->get_max_serialized_data_size(&structData->mod, currentAlignment);
         currentAlignment += tmpAlignment;
         currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
         break;
@@ -4370,8 +4370,8 @@ unsigned int AGIDDS::TypeLibraryElementTypeSupport::get_max_serialized_data_size
     return 0;
 }
 
-int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeLibraryElement* structData = static_cast<AGIDDS::TypeLibraryElement*>(data);
+int TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -4411,7 +4411,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
     afterLen = cdr->getRemainingSpace();
     cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
     switch(structData->u_) {
-    case AGIDDS::ALIAS_TYPE_ELEMENT:
+    case ALIAS_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 1);
         if (!lenAddr) {
@@ -4419,14 +4419,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::AliasTypeTypeSupport::get_instance()->serialize_data((void*)&structData->alias_type, cdr, endian) != 0) {
+        if (AliasTypeTypeSupport::get_instance()->serialize_data((void*)&structData->alias_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->alias_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::ANNOTATION_TYPE_ELEMENT:
+    case ANNOTATION_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 2);
         if (!lenAddr) {
@@ -4434,14 +4434,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::AnnotationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->annotation_type, cdr, endian) != 0) {
+        if (AnnotationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->annotation_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->annotation_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::ARRAY_TYPE_ELEMENT:
+    case ARRAY_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 3);
         if (!lenAddr) {
@@ -4449,14 +4449,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::ArrayTypeTypeSupport::get_instance()->serialize_data((void*)&structData->array_type, cdr, endian) != 0) {
+        if (ArrayTypeTypeSupport::get_instance()->serialize_data((void*)&structData->array_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->array_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::BITSET_TYPE_ELEMENT:
+    case BITSET_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 4);
         if (!lenAddr) {
@@ -4464,14 +4464,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::BitSetTypeTypeSupport::get_instance()->serialize_data((void*)&structData->bitset_type, cdr, endian) != 0) {
+        if (BitSetTypeTypeSupport::get_instance()->serialize_data((void*)&structData->bitset_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->bitset_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::ENUMERATION_TYPE_ELEMENT:
+    case ENUMERATION_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 5);
         if (!lenAddr) {
@@ -4479,14 +4479,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::EnumerationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->enumeration_type, cdr, endian) != 0) {
+        if (EnumerationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->enumeration_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->enumeration_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::MAP_TYPE_ELEMENT:
+    case MAP_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 6);
         if (!lenAddr) {
@@ -4494,14 +4494,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::MapTypeTypeSupport::get_instance()->serialize_data((void*)&structData->map_type, cdr, endian) != 0) {
+        if (MapTypeTypeSupport::get_instance()->serialize_data((void*)&structData->map_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->map_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::SEQUENCE_TYPE_ELEMENT:
+    case SEQUENCE_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 7);
         if (!lenAddr) {
@@ -4509,14 +4509,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::SequenceTypeTypeSupport::get_instance()->serialize_data((void*)&structData->sequence_type, cdr, endian) != 0) {
+        if (SequenceTypeTypeSupport::get_instance()->serialize_data((void*)&structData->sequence_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->sequence_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::STRING_TYPE_ELEMENT:
+    case STRING_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 8);
         if (!lenAddr) {
@@ -4524,14 +4524,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::StringTypeTypeSupport::get_instance()->serialize_data((void*)&structData->string_type, cdr, endian) != 0) {
+        if (StringTypeTypeSupport::get_instance()->serialize_data((void*)&structData->string_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->string_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::STRUCTURE_TYPE_ELEMENT:
+    case STRUCTURE_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 9);
         if (!lenAddr) {
@@ -4539,14 +4539,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::StructureTypeTypeSupport::get_instance()->serialize_data((void*)&structData->structure_type, cdr, endian) != 0) {
+        if (StructureTypeTypeSupport::get_instance()->serialize_data((void*)&structData->structure_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->structure_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::UNION_TYPE_ELEMENT:
+    case UNION_TYPE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 10);
         if (!lenAddr) {
@@ -4554,14 +4554,14 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::UnionTypeTypeSupport::get_instance()->serialize_data((void*)&structData->union_type, cdr, endian) != 0) {
+        if (UnionTypeTypeSupport::get_instance()->serialize_data((void*)&structData->union_type, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->union_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
         cdr->parameterLenSerialize(lenAddr, beforeLen - afterLen, useExtend ? 4 : 2);
         break;
-    case AGIDDS::MODULE_ELEMENT:
+    case MODULE_ELEMENT:
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 11);
         if (!lenAddr) {
@@ -4569,7 +4569,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
-        if (AGIDDS::_ModuleTypeSupport::get_instance()->serialize_data((void*)&structData->mod, cdr, endian) != 0) {
+        if (_ModuleTypeSupport::get_instance()->serialize_data((void*)&structData->mod, cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->mod\n");
             return -1;
         }
@@ -4580,8 +4580,8 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrS
     return 0;
 }
 
-int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::TypeLibraryElement* structData = static_cast<AGIDDS::TypeLibraryElement*>(data);
+int TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
@@ -4592,7 +4592,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCd
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::TypeLibraryElement\n");
+            fprintf(stderr, "Deserialization failed for field: TypeLibraryElement\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
@@ -4604,21 +4604,21 @@ int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCd
                     fprintf(stderr, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
-                structData->u_ = static_cast<AGIDDS::TypeLibraryElementKind>(tmpCharEnum);
+                structData->u_ = static_cast<TypeLibraryElementKind>(tmpCharEnum);
                 break;
             case 2:
                 if (!cdr->deserializeBaseType(tmpShortEnum)) {
                     fprintf(stderr, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
-                structData->u_ = static_cast<AGIDDS::TypeLibraryElementKind>(tmpShortEnum);
+                structData->u_ = static_cast<TypeLibraryElementKind>(tmpShortEnum);
                 break;
             case 4:
                 if (!cdr->deserializeBaseType(tmpIntEnum)) {
                     fprintf(stderr, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
-                structData->u_ = static_cast<AGIDDS::TypeLibraryElementKind>(tmpIntEnum);
+                structData->u_ = static_cast<TypeLibraryElementKind>(tmpIntEnum);
                 break;
             default:
                 fprintf(stderr, "Deserialization failed for field: structData->u_\n");
@@ -4627,67 +4627,67 @@ int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCd
             }
             break;
         case 1:
-            if (AGIDDS::AliasTypeTypeSupport::get_instance()->deserialize_data(&structData->alias_type, cdr, endian) != 0) {
+            if (AliasTypeTypeSupport::get_instance()->deserialize_data(&structData->alias_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->alias_type\n");
                 return -1;
             }
             break;
         case 2:
-            if (AGIDDS::AnnotationTypeTypeSupport::get_instance()->deserialize_data(&structData->annotation_type, cdr, endian) != 0) {
+            if (AnnotationTypeTypeSupport::get_instance()->deserialize_data(&structData->annotation_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->annotation_type\n");
                 return -1;
             }
             break;
         case 3:
-            if (AGIDDS::ArrayTypeTypeSupport::get_instance()->deserialize_data(&structData->array_type, cdr, endian) != 0) {
+            if (ArrayTypeTypeSupport::get_instance()->deserialize_data(&structData->array_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->array_type\n");
                 return -1;
             }
             break;
         case 4:
-            if (AGIDDS::BitSetTypeTypeSupport::get_instance()->deserialize_data(&structData->bitset_type, cdr, endian) != 0) {
+            if (BitSetTypeTypeSupport::get_instance()->deserialize_data(&structData->bitset_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->bitset_type\n");
                 return -1;
             }
             break;
         case 5:
-            if (AGIDDS::EnumerationTypeTypeSupport::get_instance()->deserialize_data(&structData->enumeration_type, cdr, endian) != 0) {
+            if (EnumerationTypeTypeSupport::get_instance()->deserialize_data(&structData->enumeration_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->enumeration_type\n");
                 return -1;
             }
             break;
         case 6:
-            if (AGIDDS::MapTypeTypeSupport::get_instance()->deserialize_data(&structData->map_type, cdr, endian) != 0) {
+            if (MapTypeTypeSupport::get_instance()->deserialize_data(&structData->map_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->map_type\n");
                 return -1;
             }
             break;
         case 7:
-            if (AGIDDS::SequenceTypeTypeSupport::get_instance()->deserialize_data(&structData->sequence_type, cdr, endian) != 0) {
+            if (SequenceTypeTypeSupport::get_instance()->deserialize_data(&structData->sequence_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->sequence_type\n");
                 return -1;
             }
             break;
         case 8:
-            if (AGIDDS::StringTypeTypeSupport::get_instance()->deserialize_data(&structData->string_type, cdr, endian) != 0) {
+            if (StringTypeTypeSupport::get_instance()->deserialize_data(&structData->string_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->string_type\n");
                 return -1;
             }
             break;
         case 9:
-            if (AGIDDS::StructureTypeTypeSupport::get_instance()->deserialize_data(&structData->structure_type, cdr, endian) != 0) {
+            if (StructureTypeTypeSupport::get_instance()->deserialize_data(&structData->structure_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->structure_type\n");
                 return -1;
             }
             break;
         case 10:
-            if (AGIDDS::UnionTypeTypeSupport::get_instance()->deserialize_data(&structData->union_type, cdr, endian) != 0) {
+            if (UnionTypeTypeSupport::get_instance()->deserialize_data(&structData->union_type, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->union_type\n");
                 return -1;
             }
             break;
         case 11:
-            if (AGIDDS::_ModuleTypeSupport::get_instance()->deserialize_data(&structData->mod, cdr, endian) != 0) {
+            if (_ModuleTypeSupport::get_instance()->deserialize_data(&structData->mod, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->mod\n");
                 return -1;
             }
@@ -4696,7 +4696,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCd
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::TypeLibraryElement\n");
+                fprintf(stderr, "Deserialization failed for field: TypeLibraryElement\n");
                 return -1;
             }
             break;
@@ -4709,12 +4709,12 @@ int AGIDDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCd
     return 0;
 }
 
-TypeObject* AGIDDS::TypeLibraryElementTypeSupport::get_typeobject() {
+TypeObject* TypeLibraryElementTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::TypeLibraryElementTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeLibraryElement* structData = static_cast<AGIDDS::TypeLibraryElement*>(data);
+int TypeLibraryElementTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
@@ -4722,7 +4722,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::serialize_key(void* data, AGIDDSCdrSe
     return 0;
 }
 
-int AGIDDS::TypeLibraryElementTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int TypeLibraryElementTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -4733,7 +4733,7 @@ int AGIDDS::TypeLibraryElementTypeSupport::MakeKey(const void* data, InstanceHan
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::TypeLibraryElementTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeLibraryElementTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4750,51 +4750,51 @@ ReturnCode_t AGIDDS::TypeLibraryElementTypeSupport::get_instancehandle(void* dat
     return RETCODE_OK;
 }
 
-bool AGIDDS::TypeLibraryElementTypeSupport::has_key() {
+bool TypeLibraryElementTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::TypeLibraryElementTypeSupport::get_typename() {
-    return "AGIDDS::TypeLibraryElement";
+const char* TypeLibraryElementTypeSupport::get_typename() {
+    return "TypeLibraryElement";
 }
 
-AGIDDS::TypeLibraryTypeSupport* AGIDDS::TypeLibraryTypeSupport::get_instance() {
-    static AGIDDS::TypeLibraryTypeSupport instance;
+TypeLibraryTypeSupport* TypeLibraryTypeSupport::get_instance() {
+    static TypeLibraryTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::TypeLibraryTypeSupport::create_data() {
-    return new AGIDDS::TypeLibrary();
+void* TypeLibraryTypeSupport::create_data() {
+    return new TypeLibrary();
 }
 
-void AGIDDS::TypeLibraryTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::TypeLibrary*>(data);
+void TypeLibraryTypeSupport::delete_data(void* data) {
+    delete static_cast<TypeLibrary*>(data);
 }
 
-int AGIDDS::TypeLibraryTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::TypeLibrary* dstData = static_cast<AGIDDS::TypeLibrary*>(dst);
-    AGIDDS::TypeLibrary* srcData = static_cast<AGIDDS::TypeLibrary*>(src);
+int TypeLibraryTypeSupport::copy_data(void* dst, void* src) {
+    TypeLibrary* dstData = static_cast<TypeLibrary*>(dst);
+    TypeLibrary* srcData = static_cast<TypeLibrary*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::TypeLibraryTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeLibrary* structData = static_cast<AGIDDS::TypeLibrary*>(data);
+unsigned int TypeLibraryTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->element.size(); ++i) {
-        currentAlignment += AGIDDS::TypeLibraryElementTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element[i], currentAlignment);
+        currentAlignment += TypeLibraryElementTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element[i], currentAlignment);
     }
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::TypeLibraryTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int TypeLibraryTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeLibrary* structData = static_cast<AGIDDS::TypeLibrary*>(data);
+int TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     uint32_t tmpLength = 0;
     tmpLength = static_cast<uint32_t>(structData->element.size());
     if (!cdr->serializeBaseType(tmpLength)) {
@@ -4802,7 +4802,7 @@ int AGIDDS::TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializ
         return -1;
     }
     for (size_t i = 0; i < structData->element.size(); ++i) {
-        if (AGIDDS::TypeLibraryElementTypeSupport::get_instance()->serialize_data((void*)&structData->element[i], cdr, endian) != 0) {
+        if (TypeLibraryElementTypeSupport::get_instance()->serialize_data((void*)&structData->element[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->element[i]\n");
             return -1;
         }
@@ -4810,8 +4810,8 @@ int AGIDDS::TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializ
     return 0;
 }
 
-int AGIDDS::TypeLibraryTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::TypeLibrary* structData = static_cast<AGIDDS::TypeLibrary*>(data);
+int TypeLibraryTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -4822,7 +4822,7 @@ int AGIDDS::TypeLibraryTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseri
     }
     structData->element.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
-        if (AGIDDS::TypeLibraryElementTypeSupport::get_instance()->deserialize_data(&structData->element[i], cdr, endian) != 0) {
+        if (TypeLibraryElementTypeSupport::get_instance()->deserialize_data(&structData->element[i], cdr, endian) != 0) {
             fprintf(stderr, "Deserialization failed for field: structData->element[i]\n");
             return -1;
         }
@@ -4830,17 +4830,17 @@ int AGIDDS::TypeLibraryTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseri
     return 0;
 }
 
-TypeObject* AGIDDS::TypeLibraryTypeSupport::get_typeobject() {
+TypeObject* TypeLibraryTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::TypeLibraryTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeLibrary* structData = static_cast<AGIDDS::TypeLibrary*>(data);
+int TypeLibraryTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     bool memberHasKey = false;
     return 0;
 }
 
-int AGIDDS::TypeLibraryTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int TypeLibraryTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -4851,7 +4851,7 @@ int AGIDDS::TypeLibraryTypeSupport::MakeKey(const void* data, InstanceHandle_t& 
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::TypeLibraryTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeLibraryTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4868,43 +4868,43 @@ ReturnCode_t AGIDDS::TypeLibraryTypeSupport::get_instancehandle(void* data, AGID
     return RETCODE_OK;
 }
 
-bool AGIDDS::TypeLibraryTypeSupport::has_key() {
+bool TypeLibraryTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::TypeLibraryTypeSupport::get_typename() {
-    return "AGIDDS::TypeLibrary";
+const char* TypeLibraryTypeSupport::get_typename() {
+    return "TypeLibrary";
 }
 
-AGIDDS::TypeObjectTypeSupport* AGIDDS::TypeObjectTypeSupport::get_instance() {
-    static AGIDDS::TypeObjectTypeSupport instance;
+TypeObjectTypeSupport* TypeObjectTypeSupport::get_instance() {
+    static TypeObjectTypeSupport instance;
     return &instance;
 }
 
-void* AGIDDS::TypeObjectTypeSupport::create_data() {
-    return new AGIDDS::TypeObject();
+void* TypeObjectTypeSupport::create_data() {
+    return new TypeObject();
 }
 
-void AGIDDS::TypeObjectTypeSupport::delete_data(void* data) {
-    delete static_cast<AGIDDS::TypeObject*>(data);
+void TypeObjectTypeSupport::delete_data(void* data) {
+    delete static_cast<TypeObject*>(data);
 }
 
-int AGIDDS::TypeObjectTypeSupport::copy_data(void* dst, void* src) {
-    AGIDDS::TypeObject* dstData = static_cast<AGIDDS::TypeObject*>(dst);
-    AGIDDS::TypeObject* srcData = static_cast<AGIDDS::TypeObject*>(src);
+int TypeObjectTypeSupport::copy_data(void* dst, void* src) {
+    TypeObject* dstData = static_cast<TypeObject*>(dst);
+    TypeObject* srcData = static_cast<TypeObject*>(src);
     *dstData = *srcData;
     return 0;
 }
 
-unsigned int AGIDDS::TypeObjectTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    AGIDDS::TypeObject* structData = static_cast<AGIDDS::TypeObject*>(data);
+unsigned int TypeObjectTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
+    TypeObject* structData = static_cast<TypeObject*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDS::TypeLibraryTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->library, currentAlignment);
+    currentAlignment += TypeLibraryTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->library, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
@@ -4912,19 +4912,19 @@ unsigned int AGIDDS::TypeObjectTypeSupport::get_serialized_data_size(void* data,
     currentAlignment = 0;
     currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->the_type.size(); ++i) {
-        currentAlignment += AGIDDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->the_type[i], currentAlignment);
+        currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->the_type[i], currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-unsigned int AGIDDS::TypeObjectTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+unsigned int TypeObjectTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     return LENGTH_UNLIMITED;
 }
 
-int AGIDDS::TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeObject* structData = static_cast<AGIDDS::TypeObject*>(data);
+int TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeObject* structData = static_cast<TypeObject*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -4937,7 +4937,7 @@ int AGIDDS::TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
-    if (AGIDDS::TypeLibraryTypeSupport::get_instance()->serialize_data((void*)&structData->library, cdr, endian) != 0) {
+    if (TypeLibraryTypeSupport::get_instance()->serialize_data((void*)&structData->library, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->library\n");
         return -1;
     }
@@ -4956,7 +4956,7 @@ int AGIDDS::TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
         return -1;
     }
     for (size_t i = 0; i < structData->the_type.size(); ++i) {
-        if (AGIDDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->the_type[i], cdr, endian) != 0) {
+        if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->the_type[i], cdr, endian) != 0) {
             fprintf(stderr, "Serialization failed for field: structData->the_type[i]\n");
             return -1;
         }
@@ -4966,8 +4966,8 @@ int AGIDDS::TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     return 0;
 }
 
-int AGIDDS::TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
-    AGIDDS::TypeObject* structData = static_cast<AGIDDS::TypeObject*>(data);
+int TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+    TypeObject* structData = static_cast<TypeObject*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -4979,13 +4979,13 @@ int AGIDDS::TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: AGIDDS::TypeObject\n");
+            fprintf(stderr, "Deserialization failed for field: TypeObject\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case 0:
-            if (AGIDDS::TypeLibraryTypeSupport::get_instance()->deserialize_data(&structData->library, cdr, endian) != 0) {
+            if (TypeLibraryTypeSupport::get_instance()->deserialize_data(&structData->library, cdr, endian) != 0) {
                 fprintf(stderr, "Deserialization failed for field: structData->library\n");
                 return -1;
             }
@@ -4997,7 +4997,7 @@ int AGIDDS::TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
             }
             structData->the_type.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
-                if (AGIDDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->the_type[i], cdr, endian) != 0) {
+                if (_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->the_type[i], cdr, endian) != 0) {
                     fprintf(stderr, "Deserialization failed for field: structData->the_type[i]\n");
                     return -1;
                 }
@@ -5007,7 +5007,7 @@ int AGIDDS::TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: AGIDDS::TypeObject\n");
+                fprintf(stderr, "Deserialization failed for field: TypeObject\n");
                 return -1;
             }
             break;
@@ -5020,12 +5020,12 @@ int AGIDDS::TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeseria
     return 0;
 }
 
-TypeObject* AGIDDS::TypeObjectTypeSupport::get_typeobject() {
+TypeObject* TypeObjectTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AGIDDS::TypeObjectTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
-    AGIDDS::TypeObject* structData = static_cast<AGIDDS::TypeObject*>(data);
+int TypeObjectTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+    TypeObject* structData = static_cast<TypeObject*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -5034,7 +5034,7 @@ int AGIDDS::TypeObjectTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer
     return 0;
 }
 
-int AGIDDS::TypeObjectTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
+int TypeObjectTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5) {
     unsigned int serializedSize = get_serialized_data_size((void*)data, 0);
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
@@ -5045,7 +5045,7 @@ int AGIDDS::TypeObjectTypeSupport::MakeKey(const void* data, InstanceHandle_t& i
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AGIDDS::TypeObjectTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeObjectTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -5062,12 +5062,12 @@ ReturnCode_t AGIDDS::TypeObjectTypeSupport::get_instancehandle(void* data, AGIDD
     return RETCODE_OK;
 }
 
-bool AGIDDS::TypeObjectTypeSupport::has_key() {
+bool TypeObjectTypeSupport::has_key() {
     return false;
 }
 
-const char* AGIDDS::TypeObjectTypeSupport::get_typename() {
-    return "AGIDDS::TypeObject";
+const char* TypeObjectTypeSupport::get_typename() {
+    return "TypeObject";
 }
 
 #ifdef __cplusplus

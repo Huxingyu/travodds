@@ -14,7 +14,7 @@
 #include "xtypes/dynamictype.h"
 #include "xtypes/dynamictypebuilder.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicTypeBuilderFactoryImpl *DynamicTypeBuilderFactoryImpl::s_instance_ =
     nullptr;
@@ -209,4 +209,4 @@ DynamicType *DynamicTypeBuilderFactoryImpl::create_type_w_document(
     return nullptr;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
