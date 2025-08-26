@@ -37,7 +37,7 @@ TRAVODDS_NAMESPACE_BEGIN
  *          ALIAS_TYPE | 行为与别名的基础类型相同。
  *          其他类型 | 不被视为具有成员。
  */
-class DynamicTypeMember {
+class DDS_DLL DynamicTypeMember {
 public:
     /**
      * @brief 获取所有应用于此成员的注释

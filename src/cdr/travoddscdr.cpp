@@ -147,7 +147,7 @@ bool CdrSerializer::convertUft32ToUtf16(const wchar_t utf32Value, uint16_t* utf1
         utf16Value[0] = static_cast<uint16_t>((codePoint >> 10) + 0xD800);
         utf16Value[1] = static_cast<uint16_t>((codePoint & 0x3FF) + 0xDC00);
     } else {
-        fprintf(stderr, "Invalid wchar_t value: %u\n", codePoint);
+        TRAVODDS_LOG(LOG_ERROR, "Invalid wchar_t value: %u\n", codePoint);
         return false;
     }
     return true;
@@ -167,7 +167,7 @@ bool CdrSerializer::serializeBaseType(wchar_t value)
         // 当前仅考虑utf16与uft32编码相同的宽字符
         return serializeBaseType<uint16_t>(utf16Value[0]);
     } else {
-        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
         return false;
     }
 }
@@ -184,13 +184,13 @@ bool CdrSerializer::serializeBaseTypeArray(const wchar_t* value, uint32_t length
         // 如果是utf32编码，如linux，转化为utf16编码后序列化
         for (uint32_t i = 0; i < length; i++) {
             if (!serializeBaseType(value[i])) {
-                fprintf(stderr, "serialize wchar_t array index[%u] failed.\n", i);
+                TRAVODDS_LOG(LOG_ERROR, "serialize wchar_t array index[%u] failed.\n", i);
                 return false;
             }
         }
         return true;
     } else {
-        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
         return false;
     }
 }
@@ -418,7 +418,7 @@ bool CdrDeserializer::deserializeBaseType(wchar_t& value)
         return true;
     }
     else {
-        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
         return false;
     }
 }
@@ -436,14 +436,14 @@ bool CdrDeserializer::deserializeBaseTypeArray(wchar_t* value, uint32_t length)
         // 如果是utf32编码，如linux，转化为utf16编码后序列化
         for (uint32_t i = 0; i < length; i++) {
             if (!deserializeBaseType(value[i])) {
-                fprintf(stderr, "deserialize wchar_t array index[%u] failed.\n", i);
+                TRAVODDS_LOG(LOG_ERROR, "deserialize wchar_t array index[%u] failed.\n", i);
                 return false;
             }
         }
         return true;
     }
     else {
-        fprintf(stderr, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
         return false;
     }
 }

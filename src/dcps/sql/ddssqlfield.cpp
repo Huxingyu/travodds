@@ -444,14 +444,14 @@ bool DDSSQLFieldValue::SetBaseValue(DynamicData* memberData, MemberId memberId, 
     }
     case TypeKind::TK_ENUM:
     case TypeKind::TK_INT32: {
-        long value;
+        int32_t value;
         memberData->get_int32_value(value, memberId);
         kind = type == TypeKind::TK_INT32 ? SIGNED_INTEGER : ENUM;
         signedIntegerValue = value;
         return true;
     }
     case TypeKind::TK_INT64: {
-        long long value;
+        int64_t value;
         memberData->get_int64_value(value, memberId);
         kind = SIGNED_INTEGER;
         signedIntegerValue = value;
@@ -465,14 +465,14 @@ bool DDSSQLFieldValue::SetBaseValue(DynamicData* memberData, MemberId memberId, 
         return true;
     }
     case TypeKind::TK_UINT32: {
-        unsigned long value;
+        uint32_t value;
         memberData->get_uint32_value(value, memberId);
         kind = UNSIGNED_INTEGER;
         unsignedIntegerValue = value;
         return true;
     }
     case TypeKind::TK_UINT64: {
-        unsigned long long value;
+        uint64_t value;
         memberData->get_uint64_value(value, memberId);
         kind = UNSIGNED_INTEGER;
         unsignedIntegerValue = value;

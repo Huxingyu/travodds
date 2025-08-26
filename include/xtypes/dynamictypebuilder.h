@@ -29,7 +29,7 @@ TRAVODDS_NAMESPACE_BEGIN
  * 
  * @details 它用于实例化具体的DynamicType对象。
  */
-class DynamicTypeBuilder {
+class DDS_DLL DynamicTypeBuilder {
     friend class DynamicTypeBuilderFactoryImpl;
 public:
     /**

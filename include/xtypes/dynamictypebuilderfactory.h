@@ -30,7 +30,7 @@ class TypeObject;
  * 
  * @brief 该类在逻辑上是一个单例，它的“唯一”实例是创建和删除DynamicTypeBuilder对象的入口。
  */
-class DynamicTypeBuilderFactory {
+class DDS_DLL DynamicTypeBuilderFactory {
 public:
 
     /**

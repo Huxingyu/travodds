@@ -11,6 +11,7 @@
 //See the Mulan PSL v2 for more details.
 
 #include "xtypes/dynamicdata.h"
+#include "common/log/logger.h"
 #include <sstream>
 
 TRAVODDS_NAMESPACE_BEGIN
@@ -158,11 +159,11 @@ ReturnCode_t DynamicData::initialize_values() {
             break;
         }
         case TK_BITMASK: {
-            printf("Bitmask type not supported in sequence initialization.\n");
+            TRAVODDS_LOG(LOG_ERROR, "Bitmask type not supported in sequence initialization.\n");
             break;
         }
         case TK_BITSET: {
-            printf("Bitset type not supported in sequence initialization.\n");
+            TRAVODDS_LOG(LOG_ERROR, "Bitset type not supported in sequence initialization.\n");
             break;
         }
         case TK_STRUCTURE:
@@ -255,15 +256,15 @@ ReturnCode_t DynamicData::initialize_values() {
         break;
     }
     case TK_BITMASK: {
-        printf("Bitmask type not supported in value initialization.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Bitmask type not supported in value initialization.\n");
         break;
     }
     case TK_BITSET: {
-        printf("Bitset type not supported in value initialization.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Bitset type not supported in value initialization.\n");
         break;
     }
     case TK_ANNOTATION: {
-        printf("Annotation type not supported in value initialization.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Annotation type not supported in value initialization.\n");
         break;
     }
     case TK_ALIAS: {
@@ -456,7 +457,7 @@ void DynamicData::clear_all_values() {
 }
 
 void DynamicData::clear_nonkey_values() {
-    printf("clear_nonkey_values not implemented yet.\n");
+    TRAVODDS_LOG(LOG_ERROR, "clear_nonkey_values not implemented yet.\n");
 }
 
 DynamicData *DynamicData::clone() const { 
@@ -615,7 +616,7 @@ size_t DynamicData::get_item_count() const {
     return -1;
 }
 
-size_t DynamicData::get_memberid_item_count(MemberId id) const {
+size_t TRAVODDS::DynamicData::get_memberid_item_count(MemberId id) const {
     if (type_.descriptor_.kind_ == TK_STRUCTURE ||
         type_.descriptor_.kind_ == TK_UNION) {
         // 复杂类型的成员
@@ -640,7 +641,7 @@ int DynamicData::return_loaned_value(DynamicData &data) {
 
 DynamicType &DynamicData::get_type() const { return type_; }
 
-ReturnCode_t DynamicData::get_int32_value(long &value, MemberId id) {
+ReturnCode_t DynamicData::get_int32_value(int32_t &value, MemberId id) {
     // 基本数据类型
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
@@ -651,23 +652,23 @@ ReturnCode_t DynamicData::get_int32_value(long &value, MemberId id) {
         }
         // 以下为promote: 比较小的类型转换为较大的类型
         case TK_BOOLEAN: {
-            value = static_cast<long>(value_[MEMBER_ID_INVALID].boolean_value);
+            value = static_cast<int32_t>(value_[MEMBER_ID_INVALID].boolean_value);
             return RETCODE_OK;
         }
         case TK_CHAR8: {
-            value = static_cast<long>(value_[MEMBER_ID_INVALID].charvalue);
+            value = static_cast<int32_t>(value_[MEMBER_ID_INVALID].charvalue);
             return RETCODE_OK;
         }
         case TK_CHAR16: {
-            value = static_cast<long>(value_[MEMBER_ID_INVALID].wchar_value);
+            value = static_cast<int32_t>(value_[MEMBER_ID_INVALID].wchar_value);
             return RETCODE_OK;
         }
         case TK_INT16: {
-            value = static_cast<long>(value_[MEMBER_ID_INVALID].int16_value);
+            value = static_cast<int32_t>(value_[MEMBER_ID_INVALID].int16_value);
             return RETCODE_OK;
         }
         case TK_UINT16: {
-            value = static_cast<long>(value_[MEMBER_ID_INVALID].uint16_value);
+            value = static_cast<int32_t>(value_[MEMBER_ID_INVALID].uint16_value);
             return RETCODE_OK;
         }
         default:
@@ -686,7 +687,7 @@ ReturnCode_t DynamicData::get_int32_value(long &value, MemberId id) {
     return RETCODE_BAD_PARAMETER;
 }
 
-ReturnCode_t DynamicData::set_int32_value(MemberId id, long value) {
+ReturnCode_t DynamicData::set_int32_value(MemberId id, int32_t value) {
     // 基本数据类型
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
@@ -698,7 +699,7 @@ ReturnCode_t DynamicData::set_int32_value(MemberId id, long value) {
         // 以下为promote: 比较小的类型转换为较大的类型
         case TK_INT64: {
             value_[MEMBER_ID_INVALID].int64_value =
-                static_cast<long long>(value);
+                static_cast<int64_t>(value);
             return RETCODE_OK;
         }
         case TK_FLOAT64: {
@@ -729,7 +730,7 @@ ReturnCode_t DynamicData::set_int32_value(MemberId id, long value) {
 }
 
 // 基本类型的 get/set 方法实现
-ReturnCode_t DynamicData::get_uint32_value(unsigned long &value, MemberId id) {
+ReturnCode_t DynamicData::get_uint32_value(uint32_t &value, MemberId id) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
         case TK_UINT32: {
@@ -738,17 +739,17 @@ ReturnCode_t DynamicData::get_uint32_value(unsigned long &value, MemberId id) {
         }
         // promote: 较小类型转换为较大类型
         case TK_BOOLEAN: {
-            value = static_cast<unsigned long>(
+            value = static_cast<uint32_t>(
                 value_[MEMBER_ID_INVALID].boolean_value);
             return RETCODE_OK;
         }
         case TK_BYTE: {
-            value = static_cast<unsigned long>(
+            value = static_cast<uint32_t>(
                 value_[MEMBER_ID_INVALID].byte_value);
             return RETCODE_OK;
         }
         case TK_UINT16: {
-            value = static_cast<unsigned long>(
+            value = static_cast<uint32_t>(
                 value_[MEMBER_ID_INVALID].uint16_value);
             return RETCODE_OK;
         }
@@ -768,7 +769,7 @@ ReturnCode_t DynamicData::get_uint32_value(unsigned long &value, MemberId id) {
     return RETCODE_BAD_PARAMETER;
 }
 
-ReturnCode_t DynamicData::set_uint32_value(MemberId id, unsigned long value) {
+ReturnCode_t DynamicData::set_uint32_value(MemberId id, uint32_t value) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
         case TK_UINT32: {
@@ -778,12 +779,12 @@ ReturnCode_t DynamicData::set_uint32_value(MemberId id, unsigned long value) {
         // promote: 较小类型转换为较大类型
         case TK_INT64: {
             value_[MEMBER_ID_INVALID].int64_value =
-                static_cast<long long>(value);
+                static_cast<int64_t>(value);
             return RETCODE_OK;
         }
         case TK_UINT64: {
             value_[MEMBER_ID_INVALID].uint64_value =
-                static_cast<unsigned long long>(value);
+                static_cast<uint64_t>(value);
             return RETCODE_OK;
         }
         case TK_FLOAT64: {
@@ -856,12 +857,12 @@ ReturnCode_t DynamicData::set_int16_value(MemberId id, short value) {
             return RETCODE_OK;
         }
         case TK_INT32: {
-            value_[MEMBER_ID_INVALID].int32_value = static_cast<long>(value);
+            value_[MEMBER_ID_INVALID].int32_value = static_cast<int32_t>(value);
             return RETCODE_OK;
         }
         case TK_INT64: {
             value_[MEMBER_ID_INVALID].int64_value =
-                static_cast<long long>(value);
+                static_cast<int64_t>(value);
             return RETCODE_OK;
         }
         case TK_FLOAT32: {
@@ -936,12 +937,12 @@ ReturnCode_t DynamicData::set_uint16_value(MemberId id, unsigned short value) {
         }
         case TK_UINT32: {
             value_[MEMBER_ID_INVALID].uint32_value =
-                static_cast<unsigned long>(value);
+                static_cast<uint32_t>(value);
             return RETCODE_OK;
         }
         case TK_UINT64: {
             value_[MEMBER_ID_INVALID].uint64_value =
-                static_cast<unsigned long long>(value);
+                static_cast<uint64_t>(value);
             return RETCODE_OK;
         }
         case TK_FLOAT32: {
@@ -974,7 +975,7 @@ ReturnCode_t DynamicData::set_uint16_value(MemberId id, unsigned short value) {
     return RETCODE_BAD_PARAMETER;
 }
 
-ReturnCode_t DynamicData::get_int64_value(long long &value, MemberId id) {
+ReturnCode_t DynamicData::get_int64_value(int64_t &value, MemberId id) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
         case TK_INT64: {
@@ -983,36 +984,36 @@ ReturnCode_t DynamicData::get_int64_value(long long &value, MemberId id) {
         }
         case TK_BOOLEAN: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].boolean_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].boolean_value);
             return RETCODE_OK;
         }
         case TK_CHAR8: {
-            value = static_cast<long long>(value_[MEMBER_ID_INVALID].charvalue);
+            value = static_cast<int64_t>(value_[MEMBER_ID_INVALID].charvalue);
             return RETCODE_OK;
         }
         case TK_CHAR16: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].wchar_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].wchar_value);
             return RETCODE_OK;
         }
         case TK_INT16: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].int16_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].int16_value);
             return RETCODE_OK;
         }
         case TK_INT32: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].int32_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].int32_value);
             return RETCODE_OK;
         }
         case TK_UINT16: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].uint16_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].uint16_value);
             return RETCODE_OK;
         }
         case TK_UINT32: {
             value =
-                static_cast<long long>(value_[MEMBER_ID_INVALID].uint32_value);
+                static_cast<int64_t>(value_[MEMBER_ID_INVALID].uint32_value);
             return RETCODE_OK;
         }
         default:
@@ -1031,7 +1032,7 @@ ReturnCode_t DynamicData::get_int64_value(long long &value, MemberId id) {
     return RETCODE_BAD_PARAMETER;
 }
 
-ReturnCode_t DynamicData::set_int64_value(MemberId id, long long value) {
+ReturnCode_t DynamicData::set_int64_value(MemberId id, int64_t value) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
         case TK_INT64: {
@@ -1064,7 +1065,7 @@ ReturnCode_t DynamicData::set_int64_value(MemberId id, long long value) {
     return RETCODE_BAD_PARAMETER;
 }
 
-ReturnCode_t DynamicData::get_uint64_value(unsigned long long &value,
+ReturnCode_t DynamicData::get_uint64_value(uint64_t &value,
                                            MemberId id) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
@@ -1073,22 +1074,22 @@ ReturnCode_t DynamicData::get_uint64_value(unsigned long long &value,
             return RETCODE_OK;
         }
         case TK_BOOLEAN: {
-            value = static_cast<unsigned long long>(
+            value = static_cast<uint64_t>(
                 value_[MEMBER_ID_INVALID].boolean_value);
             return RETCODE_OK;
         }
         case TK_BYTE: {
-            value = static_cast<unsigned long long>(
+            value = static_cast<uint64_t>(
                 value_[MEMBER_ID_INVALID].byte_value);
             return RETCODE_OK;
         }
         case TK_UINT16: {
-            value = static_cast<unsigned long long>(
+            value = static_cast<uint64_t>(
                 value_[MEMBER_ID_INVALID].uint16_value);
             return RETCODE_OK;
         }
         case TK_UINT32: {
-            value = static_cast<unsigned long long>(
+            value = static_cast<uint64_t>(
                 value_[MEMBER_ID_INVALID].uint32_value);
             return RETCODE_OK;
         }
@@ -1109,7 +1110,7 @@ ReturnCode_t DynamicData::get_uint64_value(unsigned long long &value,
 }
 
 ReturnCode_t DynamicData::set_uint64_value(MemberId id,
-                                           unsigned long long value) {
+                                           uint64_t value) {
     if (id == MEMBER_ID_INVALID) {
         switch (type_.descriptor_.kind_) {
         case TK_UINT64: {
@@ -1863,7 +1864,7 @@ ReturnCode_t DynamicData::set_int32_values(MemberId id, const Int32Seq &value) {
                     curValue.int64_values.resize(value.size());
                     for (size_t i = 0; i < value.size(); ++i) {
                         curValue.int64_values[i] =
-                            static_cast<long long>(value[i]);
+                            static_cast<int64_t>(value[i]);
                     }
                 }
                 return RETCODE_OK;

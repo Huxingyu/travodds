@@ -22,7 +22,7 @@ TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief DynamicDataFactory类用于创建DynamicData对象。
  */
-class DynamicDataFactory {
+class DDS_DLL DynamicDataFactory {
 public:
     /**
      * @brief 获取DynamicDataFactory的单例实例

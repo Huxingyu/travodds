@@ -28,7 +28,7 @@ class DynamicType;
  * 
  * @details MemberDescriptor对象具有值语义，允许它们被深度复制和比较。
  */
-class MemberDescriptor {
+class DDS_DLL MemberDescriptor {
 public:
     /**
      * @brief 成员ID

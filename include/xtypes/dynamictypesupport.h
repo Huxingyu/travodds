@@ -20,7 +20,7 @@ TRAVODDS_NAMESPACE_BEGIN
 class DomainParticipant;
 class DynamicType;
 
-class DynamicTypeSupport : public TypeSupport {   
+class DDS_DLL DynamicTypeSupport : public TypeSupport {   
 public:
     /**
      * @brief   创建并返回一个新的DynamicTypeSupport对象，该对象能够将给定类型注册到DomainParticipant。

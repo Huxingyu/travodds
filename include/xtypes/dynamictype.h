@@ -30,7 +30,7 @@ TRAVODDS_NAMESPACE_BEGIN
  * @details DynamicType对象具有引用语义，因为预计存在大量对它们的引用（例如，在每个从给定DynamicType创建的DynamicData对象中）。
  *          然而，该类型仍然提供操作以允许按值复制和比较。
  */
-class DynamicType {
+class DDS_DLL DynamicType {
 public:
     /** @brief  关联的类型描述。 */
     TypeDescriptor descriptor_;

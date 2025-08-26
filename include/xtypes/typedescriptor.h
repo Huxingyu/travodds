@@ -28,7 +28,7 @@ class DynamicType;
  * 
  * @brief TypeDescriptor将类型的状态打包在一起。TypeDescriptor对象具有值语义，允许它们被深度复制和比较。
  */
-class TypeDescriptor {
+class DDS_DLL TypeDescriptor {
 public:
     /** @brief  类型。 */
     TypeKind kind_;
