@@ -45,13 +45,17 @@ public:
      * @brief 为此实例设置DomainParticipantQos。
      *
      * @param [in] qos DomainParticipantQos
+     * 
+     * @return 如果一切正常，返回RETCODE_OK代码，否则返回错误代码。
      */
 	virtual ReturnCode_t set_qos(const DomainParticipantQos& qos) = 0;
 
     /**
      * @brief 获取此实例的DomainParticipantQos设置。
      *
-     * @return qos DomainParticipantQos。
+     * @param [out] qos DomainParticipantQos。
+     * 
+     * @return RETCODE_OK
      */
 	virtual ReturnCode_t get_qos(DomainParticipantQos& qos) const = 0;
 
@@ -64,6 +68,8 @@ public:
      *
      * @param [in] listener 监听器句柄。
      * @param [in] mask     定义将通知监听器的位掩码。
+     * 
+     * @return RETCODE_OK
      */
 	virtual ReturnCode_t set_listener(DomainParticipantListener* listener, const StatusMask& mask) = 0;
 
@@ -79,7 +85,7 @@ public:
      * 
      * @param [in] qos 发布者的QoS
      * @param [in] listenerer 指向监听器的指针。
-     * @param [in] mask StatusMask位掩码。
+     * @param [in] mask StatusMask位掩码,用于指定哪些特定事件会触发监听器的回调。
      * 
      * @return 指向已创建发布者的指针。
      */
@@ -100,7 +106,7 @@ public:
      * 
      * @param [in] qos 订阅者的QoS
      * @param [in] listenerer 指向监听器的指针。
-     * @param [in] mask StatusMask位掩码。
+     * @param [in] mask StatusMask位掩码，用于指定哪些特定事件会触发监听器的回调。
      * 
      * @return 指向已创建订阅者的指针。
      */
@@ -157,7 +163,7 @@ public:
      *
      * @param [in] contentfilteredtopic 要删除的内容筛选主题。
      * 
-     * @return 如果传递的主题为空ptr，则返回RETCODE_BAD_MEMETER；
+     * @return 如果传递的主题为nullptr，则返回RETCODE_BAD_MEMETER；
      * 如果主题不属于此参与者或被任何实体引用，则返回RETCODE_PRECONDITIONNOT_MET；
      * 如果删除了ContentFilteredTopic，则返回RETCODE_OK。
      */
@@ -209,9 +215,9 @@ public:
     virtual TopicDescription* lookup_topicdescription(const std::string& name) const = 0;
 
     /**
-     * @brief 允许访问内置订阅者。
+     * @brief 访问内置订阅者。
      *
-     * @return 指向内置订阅者的指针，在错误情况下为nullptr
+     * @return 指向内置订阅者的指针，在错误情况下为nullptr。
      */
     virtual const Subscriber* get_builtin_subscriber() const = 0;
 
@@ -238,22 +244,22 @@ public:
     virtual ReturnCode_t ignore_topic(const InstanceHandle_t& handle) = 0;
 
     /**
-     * @brief 在本地忽略数据写者。
+     * @brief 在本地忽略远端发布者。
      *
      * @note 此函数不需要是可逆的。
      *
-     * @param [in] handle 要忽略的数据写者的标识符。
+     * @param [in] handle 要忽略的远端发布者的标识符。
      * 
      * @return 如果一切正常，返回RETCODE_OK代码，否则返回错误代码。
      */
     virtual ReturnCode_t ignore_publication(const InstanceHandle_t& handle) = 0;
 
     /**
-     * @brief 在本地忽略数据读者。
+     * @brief 在本地忽略远端订阅者。
      *
      * @note 此函数不需要是可逆的。
      *
-     * @param [in] handle 要忽略的数据读者的标识符
+     * @param [in] handle 要忽略的远端订阅者的标识符
      * 
      * @return 如果一切正常，返回RETCODE_OK代码，否则返回错误代码。
      */
@@ -268,7 +274,7 @@ public:
     virtual DomainId_t get_domain_id() const = 0;
 
     /**
-     * @brief 删除通过“create”方法创建的所有实体
+     * @brief 删除通过“create”系列函数创建的所有实体
      *
      * @return 如果一切正常，返回RETCODE_OK代码，否则返回错误代码
      */
@@ -390,7 +396,7 @@ public:
     /**
      * @brief 检索在域中发现且未被“忽略”的DomainParticits列表。
      *
-     * @param [out] participant_handles 指向将返回已发现参与者的向量。
+     * @param [out] participant_handles 指向将返回已发现参与者的指针。
      * 
      * @return 如果一切正常返回RETCODE_OK，否则返回错误代码。
      */
@@ -409,7 +415,7 @@ public:
     /**
      * @brief 检索在域中发现且未被“忽略”的主题列表。
      *
-     * @param [out] topic_handles 指向返回已发现主题的向量。
+     * @param [out] topic_handles 指向返回已发现主题的指针。
      * 
      * @return 如果一切正常RETCODE_OK，则返回错误代码。
      */
@@ -584,7 +590,7 @@ public:
         StatusMask mask) = 0;
 
     /**
-     * @brief 指定Qos仓库中的Qos设置为默认发布者Qos。
+     * @brief 指定Qos仓库中的Qos设置为默认主题Qos。
      * 
      * @param [in] library_name QoS库的名字，允许为NULL，将转换为空字符串。
      * @param [in] profile_name QoS配置名称，允许为NULL，转化为空字符串。
