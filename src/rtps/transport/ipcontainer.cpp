@@ -14,7 +14,7 @@
 
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
 {

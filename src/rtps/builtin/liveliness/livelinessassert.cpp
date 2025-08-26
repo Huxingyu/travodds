@@ -6,7 +6,7 @@
 #include "common/log/logger.h"
 #include <iomanip>
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 using namespace std::chrono;
 
 // 线程安全的时间间隔计算器

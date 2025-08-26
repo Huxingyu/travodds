@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H
-#define AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H
+#ifndef TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H
+#define TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H
 
 #include "dcps/publish/publisher.h"
 #include "dcps/subscribe/subscriber.h"
@@ -18,7 +18,7 @@
 #include "dcps/topic/multitopic.h"
 #include "dcps/listener/domainparticipantlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Publisher;
 class TypeSupport;
@@ -620,6 +620,6 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H
+#endif // !TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANT_H

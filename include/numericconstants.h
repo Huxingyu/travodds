@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_NUMERIC_CONSTANTS_H
-#define AGIDDS_NUMERIC_CONSTANTS_H
+#ifndef TRAVODDS_NUMERIC_CONSTANTS_H
+#define TRAVODDS_NUMERIC_CONSTANTS_H
 
 #include <cstdint>  
 #include <cstddef>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace SubMessageFlag {
 	constexpr uint8_t NONE_FLAG                      = 0x00; // 无标志位
@@ -144,5 +144,6 @@ constexpr uint32_t EXPRESSION_PARAMETERS_MAX = 100;
 
 constexpr const char* const SQL_FILTER_NAME = "DDSSQL";
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
+
 #endif

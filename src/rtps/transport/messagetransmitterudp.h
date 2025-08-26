@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
-#define AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
+#ifndef TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
+#define TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
 
 #include "type/basictype.h"
 #include "rtps/transport/messagetransmitter.h"
 #include "rtps/transport/locator.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 using _SEND_SOCKET_MAP = std::map<uint32_t, std::map<uint32_t, std::shared_ptr<asio::ip::udp::socket>>>;
 using _RECV_SOCKET_MAP = std::map<uint16_t, std::shared_ptr<asio::ip::udp::socket>>;
@@ -210,6 +210,6 @@ private:
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

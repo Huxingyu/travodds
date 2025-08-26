@@ -3,7 +3,7 @@
 #include "rtps/flowcontrol/flowcontroller.h"
 #include "common/log/logger.h"
 #include <chrono>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Writer::Writer(const DataWriterQos& qos, const TopicKind_t& kind)
 	: qos_(qos),

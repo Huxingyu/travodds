@@ -5,7 +5,7 @@
 #include "rtps/transport/asiocontext.h"
 #include "common/sys/sysinfo.h"
 #include <iostream>
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 DomainParticipantFactory* DomainParticipantFactory::get_instance()
 {

@@ -1,7 +1,7 @@
 #include "qos/qospolicycheck.h"
 #include "common/log/logger.h" 
 #include "rtps/endpoint/participant.h"
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 /* 危险正则表达式检测，防止恶意输入！ */
 bool QosPolicyCheck::IsDangerousPattern(const std::string& pattern)

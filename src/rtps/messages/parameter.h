@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_MESSAGES_PARAMETER_H
-#define AGIDDS_RTPS_MESSAGES_PARAMETER_H
+#ifndef TRAVODDS_RTPS_MESSAGES_PARAMETER_H
+#define TRAVODDS_RTPS_MESSAGES_PARAMETER_H
 
 #include "type/basictype.h"
 #include "qos/qos.h"
 #include "rtps/discovery/discoverydata.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 enum ParameterId : uint16_t {
 	/* rtps v2.5 Table 9.18*/
@@ -1202,6 +1202,6 @@ inline bool ParameterList::GetParameter(const ParameterId& pid, Parameter_t& par
 	return false;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

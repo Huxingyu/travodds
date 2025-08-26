@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_BASE_RETCODE_H
-#define AGIDDS_DCPS_BASE_RETCODE_H
+#ifndef TRAVODDS_DCPS_BASE_RETCODE_H
+#define TRAVODDS_DCPS_BASE_RETCODE_H
 #include <cstdint>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 // ----------------------------------------------------------------------
 // Return codes
 // ----------------------------------------------------------------------
@@ -47,5 +47,5 @@ const ReturnCode_t   RETCODE_TIME_BASED_FILTER = 301;
 const ReturnCode_t   RETCODE_LIFESPAN_TIMEOUT = 302;
 
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_BASE_RETCODE_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_BASE_RETCODE_H

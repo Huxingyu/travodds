@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTER_H
-#define AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTER_H
+#ifndef TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTER_H
+#define TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTER_H
 
 #include <chrono>
 #include <thread>
@@ -21,7 +21,7 @@
 #include "dcps/base/retcode.h"
 #include "common/memory/memorypool.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class MessageProcessor;
 /**
@@ -215,6 +215,6 @@ protected:
 	std::shared_ptr<MessageProcessor> messageProcessor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

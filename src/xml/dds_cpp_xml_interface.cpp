@@ -14,7 +14,7 @@
 #include "xml/dds_xml_repo.h"
 #include "common/log/logger.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef _XML_INTERFACE_CPP
 
@@ -348,6 +348,6 @@ ReturnCode_t TopicImpl::set_qos_with_profile(
     return set_qos(qos);
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif //_XML_INTERFACE_CPP

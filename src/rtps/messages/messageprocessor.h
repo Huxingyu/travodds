@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_MESSAGES_MESSAGEPROCESSOR_H
-#define AGIDDS_RTPS_MESSAGES_MESSAGEPROCESSOR_H
+#ifndef TRAVODDS_RTPS_MESSAGES_MESSAGEPROCESSOR_H
+#define TRAVODDS_RTPS_MESSAGES_MESSAGEPROCESSOR_H
 
 #include "dcps/topic/typesupport.h"
 #include "rtps/basictypertps.h"
 #include "rtps/messages/cdrmessage_t.h"
 #include "rtps/historycache/historycache.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 //声明
 class Participant;
@@ -414,5 +414,5 @@ private:
 	Participant* participant_;
 
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

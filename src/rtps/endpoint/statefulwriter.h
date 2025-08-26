@@ -14,7 +14,7 @@
 #include "rtps/endpoint/writer.h"
 #include "rtps/endpoint/readerproxy.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Timer;
 
@@ -222,4 +222,4 @@ private:
 
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

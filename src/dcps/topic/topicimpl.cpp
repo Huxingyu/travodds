@@ -3,7 +3,7 @@
 #include "qos/qospolicycheck.h"
 #include "rtps/endpoint/participant.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 TopicImpl::TopicImpl(const std::string& name, const std::string& type_name, const TopicQos& qos, TopicListener* listener, StatusMask mask, DomainParticipant* participant)

@@ -11,7 +11,7 @@
 #include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 /************************************************************
 ** MessageProcessor类构造函数

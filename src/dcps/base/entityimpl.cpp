@@ -1,6 +1,6 @@
 #include "dcps/base/entityimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 EntityImpl::EntityImpl(const StatusMask& mask)
 	: enable_(false),

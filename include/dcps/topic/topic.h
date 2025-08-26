@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TOPIC_H
-#define AGIDDS_DCPS_TOPIC_TOPIC_H
+#ifndef TRAVODDS_DCPS_TOPIC_TOPIC_H
+#define TRAVODDS_DCPS_TOPIC_TOPIC_H
 
 #include "dcps/topic/topicdescription.h"
 #include "dcps/domain/domainentity.h"
 #include "dcps/listener/topiclistener.h"
 #include "qos/qos.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief Topic类，表示发布和订阅都绑定到单个数据类型的实际情况。
  */
@@ -93,6 +93,6 @@ AGIDDS_NAMESPACE_BEGIN
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_TOPIC_TOPIC_H
+#endif // !TRAVODDS_DCPS_TOPIC_TOPIC_H

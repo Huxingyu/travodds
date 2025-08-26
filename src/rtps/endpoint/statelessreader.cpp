@@ -4,7 +4,7 @@
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 StatelessReader::StatelessReader(const DataReaderQos & qos, const GUID_t & guid, const TopicKind_t& kind)

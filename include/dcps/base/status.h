@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_BASE_STATUS_H
-#define AGIDDS_DCPS_BASE_STATUS_H
+#ifndef TRAVODDS_DCPS_BASE_STATUS_H
+#define TRAVODDS_DCPS_BASE_STATUS_H
 
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 // ----------------------------------------------------------------------
 // Status to support listeners and conditions
 // ----------------------------------------------------------------------
@@ -171,5 +171,5 @@ struct SubscriptionMatchedStatus {
 	}
 };
 
-AGIDDS_NAMESPACE_END
-#endif // ! AGIDDS_DCPS_BASE_STATUS_H
+TRAVODDS_NAMESPACE_END
+#endif // ! TRAVODDS_DCPS_BASE_STATUS_H

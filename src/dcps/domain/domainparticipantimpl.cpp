@@ -9,7 +9,7 @@
 #include "rtps/discovery/discovery.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "common/log/logger.h"
-AGIDDS_NAMESPACE_BEGIN;
+TRAVODDS_NAMESPACE_BEGIN;
 
 DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId, const DomainParticipantQos& qos, DomainParticipantListener* listener, StatusMask mask)
     : EntityImpl(mask), domainId_(domainId), qos_(qos), listener_(listener), threadPool_(new ThreadPool(1))
@@ -790,4 +790,4 @@ InstanceHandle_t DomainParticipantImpl::GenerateInstanceHandle(const GUID_t& gui
 }
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

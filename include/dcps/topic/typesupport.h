@@ -9,16 +9,17 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
-#define AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
+#ifndef TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
+#define TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "dcps/base/retcode.h"
 #include "dcps/base/status.h"
 #include "cdr/agicdr.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
+
 
 class DDS_DLL TypeObject {
 public:
@@ -124,6 +125,6 @@ public:
 		return byte[0];
 	}
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // ! AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
+#endif // ! TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H

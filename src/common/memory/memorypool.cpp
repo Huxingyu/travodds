@@ -1,6 +1,6 @@
 #include "common/memory/memorypool.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 MemoryPool::~MemoryPool()
 {
 	for (BufferNode* node : allocatedBuffers_) {

@@ -1,6 +1,6 @@
 #include "rtps/transport/asiocontext.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 AsioContext::AsioContext()
 	: ioContext_(), workGuard_(ioContext_.get_executor())
