@@ -8,9 +8,7 @@
 extern "C" {
 #endif
 
-USING_TRAVODDS_NAMESPACE
-
-class DDS_TYPE_API HelloWorldTypeSupport : public TypeSupport {
+class DDS_TYPE_API HelloWorldTypeSupport : public TRAVODDS::TypeSupport {
 public:
     static HelloWorldTypeSupport* get_instance();
 
@@ -24,21 +22,21 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, TRAVODDS::CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, TRAVODDS::CdrDeserializer* cdr, int endian) override;
 
-    virtual TypeObject* get_typeobject() override;
+    virtual TRAVODDS::TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual TRAVODDS::ReturnCode_t get_instancehandle(void* data, TRAVODDS::CdrSerializer* cdr, TRAVODDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;
 
-    virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual int MakeKey(const void* data, TRAVODDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, TRAVODDS::CdrSerializer* cdr, int endian);
 
 private:
     HelloWorldTypeSupport() = default;

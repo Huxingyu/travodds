@@ -107,7 +107,7 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
 #else
     struct ifaddrs* ifaddr = nullptr;
     if (getifaddrs(&ifaddr) == -1) {
-		AGILOG(AGILOG_ERROR, "getifaddrs Err[%d]", errno);
+		TRAVODDS_LOG(LOG_ERROR, "getifaddrs Err[%d]", errno);
         return false;
     }
 
