@@ -84,12 +84,12 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
     if (&qos != &DATAWRITER_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 
@@ -170,7 +170,7 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 
 	//InstanceHandle_t instance_handle;
 	if (!typeSupport_->has_key()) {
-		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return HANDLE_NIL;
 	}
 	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
@@ -179,7 +179,7 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
 	buffer->buffer = buffer->origin_buffer;
 	
-	AGIDDSCdrSerializer cdr(buffer);
+	CdrSerializer cdr(buffer);
 	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
 	/* 生成key */
@@ -192,7 +192,7 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 			delete buffer;
 			buffer = nullptr;
 			handle = HANDLE_NIL;
-			AGILOG(AGILOG_ERROR, "AddKeyHistory Error");
+			TRAVODDS_LOG(LOG_ERROR, "AddKeyHistory Error");
 		}
 		
 	} else {
@@ -220,19 +220,19 @@ ReturnCode_t DataWriterImpl::unregister_instance_w_timestamp(const void* const i
 ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
 	if (!typeSupport_->has_key()) {
-		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
 	}
 
 	SerializedBuffer* cacheData = history_->get_key_value(handle);
 	if (nullptr == cacheData) {
-		AGILOG(AGILOG_ERROR, "cacheData is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "cacheData is nullptr");
 		return RETCODE_BAD_PARAMETER;
 	}
-	AGIDDSCdrDeserializer cdr(cacheData);
+	CdrDeserializer cdr(cacheData);
 	int32_t ret = typeSupport_->deserialize_data(key_holder, &cdr, DEFAULT_ENDIAN);
 	if (0 != ret) {
-		AGILOG(AGILOG_ERROR, "deserialize_data Error[%d]", ret);
+		TRAVODDS_LOG(LOG_ERROR, "deserialize_data Error[%d]", ret);
 		return RETCODE_ERROR; 
 	}
 	return RETCODE_OK;
@@ -273,12 +273,12 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		MakeKey(instance_data, instanceHandle, true);
 
 		if (HANDLE_NIL != handle && !history_->IsKeyRegistered(handle)){
-			AGILOG(AGILOG_ERROR, "handle invalid");
+			TRAVODDS_LOG(LOG_ERROR, "handle invalid");
 			return RETCODE_BAD_PARAMETER;
 		}
 
 		if (HANDLE_NIL != handle && handle != instanceHandle) {
-			AGILOG(AGILOG_ERROR, "handle not met");
+			TRAVODDS_LOG(LOG_ERROR, "handle not met");
 			return RETCODE_PRECONDITION_NOT_MET;
 		}
 
@@ -288,7 +288,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 			if (HANDLE_NIL == instanceHandle) {
 				/* 注册失败 可能是因为max_instance的值达到 */
-				AGILOG(AGILOG_ERROR, "RegistInstance Err ret= %d", ret);
+				TRAVODDS_LOG(LOG_ERROR, "RegistInstance Err ret= %d", ret);
 				return ret;
 			}
 		}
@@ -305,11 +305,11 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	ret = CreateSerializedBuffer(bufferHeader, size);
 	if (RETCODE_OK != ret) {
 		DeleteSerializedBuffer(bufferHeader);
-		AGILOG(AGILOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 		return ret;
 	}
 
-	AGIDDSCdrSerializer cdr(bufferHeader);
+	CdrSerializer cdr(bufferHeader);
 	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
 	std::set<GUID_t> filterReaders;
@@ -324,7 +324,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
 	if (nullptr == cacheChange) {
-		AGILOG(AGILOG_ERROR, "cacheChange ret= %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "cacheChange ret= %d", ret);
 		return RETCODE_ERROR;
 	}
 
@@ -342,7 +342,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 	ret = writer_->AddNewCachce(cacheChange);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "AddNewCachce Err ret= %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "AddNewCachce Err ret= %d", ret);
 		return ret;
 	}
 	{
@@ -384,29 +384,29 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 
 	//InstanceHandle_t instance_handle;
 	if (!typeSupport_->has_key()) {
-		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
 	}
 	
 	if (timespace.sec < 0) {
-		AGILOG(AGILOG_ERROR, "timespace.sec[%d] < 0", timespace.sec);
+		TRAVODDS_LOG(LOG_ERROR, "timespace.sec[%d] < 0", timespace.sec);
 		return RETCODE_BAD_PARAMETER;
 	}
 	ret = MakeKey(data, instanceHandle, true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "handle bad parameter")
+		TRAVODDS_LOG(LOG_ERROR, "handle bad parameter")
 		return RETCODE_BAD_PARAMETER;
 	}
 
 	/* (生成Key错误 && 不是注册的key && (传入的句柄不是HANDLE_NIL &&  传入的handle和实际不一致 ) */
 	if (handle != HANDLE_NIL && (!history_->IsKeyRegistered(handle))) {
-		AGILOG(AGILOG_ERROR, "handle bad parameter");
+		TRAVODDS_LOG(LOG_ERROR, "handle bad parameter");
 		return RETCODE_BAD_PARAMETER;
 	}
 
 	/*  传入的handle和实际不一致  */
 	if (handle != instanceHandle && handle != HANDLE_NIL) {
-		AGILOG(AGILOG_ERROR, "handle not met");
+		TRAVODDS_LOG(LOG_ERROR, "handle not met");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 
@@ -430,20 +430,20 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 	buffer = new SerializedBuffer;
 	buffer->buffer_size = 0;
 	if (!memoryPool_->getBuffer(buffer->buffer_size + BUFF_SHIFT * 2, buffer->origin_buffer)) {
-		AGILOG(AGILOG_ERROR, "getBuffer error size[%d]", buffer->buffer_size);
+		TRAVODDS_LOG(LOG_ERROR, "getBuffer error size[%d]", buffer->buffer_size);
 		return ret;
 	}
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(kind, buffer, instanceHandle, timespace);
 	if (nullptr == cacheChange) {
-		AGILOG(AGILOG_ERROR, "NewChange Err");
+		TRAVODDS_LOG(LOG_ERROR, "NewChange Err");
 		return RETCODE_ERROR;
 	}
 	cacheChange->inlineQos.push_back(keyParam);
 	cacheChange->inlineQos.push_back(statueParam);
 	ret = writer_->AddNewCachce(cacheChange);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "AddNewCachce Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "AddNewCachce Err ret = %d", ret);
 		return ret;
 	}
 	if (!dispose) {
@@ -495,12 +495,12 @@ const Publisher* DataWriterImpl::get_publisher() const
 ReturnCode_t DataWriterImpl::assert_liveliness()
 {
 	if (writer_ == nullptr) {
-		AGILOG(AGILOG_ERROR, "writer_ is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "writer_ is nullptr");
 		return RETCODE_NOT_ENABLED;
 	}
 
 	if (!(dynamic_cast<DomainParticipantImpl*>(pub_->get_participant()))->GetLivelinessManager()->AssertLiveliness(writer_->GetGuid(),true, qos_.liveliness.kind)) {
-		AGILOG(AGILOG_ERROR, "Could not assert liveliness of write");
+		TRAVODDS_LOG(LOG_ERROR, "Could not assert liveliness of write");
 		return RETCODE_ERROR;
 	}
 
@@ -541,7 +541,7 @@ ReturnCode_t DataWriterImpl::enable()
 		return RETCODE_OK;
 	}
 	if (!pub_->IsEnable()) {
-		AGILOG(AGILOG_ERROR, "releate publisher isnot enable");
+		TRAVODDS_LOG(LOG_ERROR, "releate publisher isnot enable");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 
@@ -628,7 +628,7 @@ bool DataWriterImpl::MakeKey(const void* const data, InstanceHandle_t& handle, b
 	memoryPool_->getBuffer(buffer.buffer_size, buffer.origin_buffer);
 	buffer.buffer = buffer.origin_buffer;
 
-	AGIDDSCdrSerializer cdr(&buffer);
+	CdrSerializer cdr(&buffer);
 	bool ret = typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);
 
 	memoryPool_->releaseBuffer(buffer.origin_buffer);
@@ -682,13 +682,13 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 {
 	
 	if (source_timestamp.sec < 0) {
-		AGILOG(AGILOG_ERROR, "source_timestamp.sec[%d] < 0", source_timestamp.sec);
+		TRAVODDS_LOG(LOG_ERROR, "source_timestamp.sec[%d] < 0", source_timestamp.sec);
 		return RETCODE_BAD_PARAMETER;
 	}
 
 	//InstanceHandle_t instance_handle;
 	if (!typeSupport_->has_key()) {
-		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_BAD_PARAMETER;
 	}
 	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
@@ -697,7 +697,7 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
 	buffer->buffer = buffer->origin_buffer;
 
-	AGIDDSCdrSerializer cdr(buffer);
+	CdrSerializer cdr(buffer);
 	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 
 	/* 生成key */
@@ -711,7 +711,7 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 			delete buffer;
 			buffer = nullptr;
 			handle = HANDLE_NIL;
-			AGILOG(AGILOG_ERROR, "AddKeyHistory Err ret = %d",ret);
+			TRAVODDS_LOG(LOG_ERROR, "AddKeyHistory Err ret = %d",ret);
 			return ret;
 		}
 
@@ -779,7 +779,7 @@ ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHea
 ReturnCode_t DataWriterImpl::DeleteSerializedBuffer(SerializedBuffer* buffer)
 {
 	if (!buffer) {
-		AGILOG(AGILOG_ERROR, "buffer is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
 		return RETCODE_ERROR;
 	}
 

@@ -32,7 +32,7 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
         nullptr, adapters.get(), &size);
 
     if (ERROR_SUCCESS != ret) {
-		AGILOG(AGILOG_ERROR, "GetAdaptersAddresses Err[%d]", GetLastError());
+		TRAVODDS_LOG(LOG_ERROR, "GetAdaptersAddresses Err[%d]", GetLastError());
         return false;
     }
 

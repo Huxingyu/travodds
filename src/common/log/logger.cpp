@@ -20,24 +20,23 @@ TRAVODDS_NAMESPACE_BEGIN
 static uint32_t g_consoleMask = 0xffff;
 static uint32_t g_fileMask = 0xffff;
 
-int32_t AGILogInitial(uint32_t consoleMask, uint32_t fileMask)
+int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
 {
     g_consoleMask = consoleMask;
     g_fileMask = fileMask;
     return 0;
 }
 
-int32_t AGILogDestroy()
+int32_t LogDestroy()
 {
     g_consoleMask = 0;
     g_fileMask = 0;
     return 0;
 }
 
-void AGILogToConsole(LogType type, const char* file, const char* func, 
+void LogToConsole(LogType type, const char* file, const char* func, 
     uint32_t line, const char* format, ...)
 {
-    return;
     if (!(g_consoleMask & type)) {
         return;
     }
@@ -51,10 +50,10 @@ void AGILogToConsole(LogType type, const char* file, const char* func,
     // 打印时间和日志级别
     const char* typeStr = "";
     switch (type) {
-        case AGILOG_ERROR: typeStr = "ERROR"; break;
-        case AGILOG_WARNING: typeStr = "WARNING"; break;
-        case AGILOG_DEBUG: typeStr = "DEBUG"; break;
-        case AGILOG_INFO: typeStr = "INFO"; break;
+        case LOG_ERROR: typeStr = "ERROR"; break;
+        case LOG_WARNING: typeStr = "WARNING"; break;
+        case LOG_DEBUG: typeStr = "DEBUG"; break;
+        case LOG_INFO: typeStr = "INFO"; break;
         default: typeStr = "UNKNOWN"; break;
     }
     

@@ -15,6 +15,7 @@
 
 #include "travodds_dll.h"
 #include <cstdint>
+
 TRAVODDS_NAMESPACE_BEGIN
 
 /**
@@ -25,13 +26,13 @@ TRAVODDS_NAMESPACE_BEGIN
 typedef enum LogType
 {
     /** @brief  程序出现不可忽略的错误。  */
-    AGILOG_ERROR = 0x0001 << 1,
+    LOG_ERROR = 0x0001 << 1,
     /** @brief  警告信息但是能够正常运行。  */
-    AGILOG_WARNING = 0x0001 << 2,
+    LOG_WARNING = 0x0001 << 2,
     /** @brief  系统管理员视角的信息,比如一些调试信息。  */
-    AGILOG_DEBUG = 0x0001 << 3,
+    LOG_DEBUG = 0x0001 << 3,
     /** @brief  通知用户视角信息。  */
-    AGILOG_INFO = 0x0001 << 4,
+    LOG_INFO = 0x0001 << 4,
 } LogType;
 
 /**
@@ -42,14 +43,14 @@ typedef enum LogType
  * @param    consoleMask    输出到控制台的日志等级掩码.
  * @param    fileMask       输出到日志文件的日志等级掩码.
  */
-int32_t AGILogInitial(uint32_t consoleMask, uint32_t fileMask);
+int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask);
 
 /**
  * @fn  int32_t AGILogDestroy();
  *
  * @brief   回收为日志系统提供资源等。
  */
-int32_t AGILogDestroy();
+int32_t LogDestroy();
 
 /**
  * @fn  void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t line, const char* format, ...);
@@ -63,7 +64,7 @@ int32_t AGILogDestroy();
  * @param   format  字符串格式(类printf).
  * @param   ...     变参。
  */
-void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t line, const char* format, ...);
+void LogToConsole(LogType type, const char* file, const char* func, uint32_t line, const char* format, ...);
 
 /**
  * @brief   输出日志的宏。
@@ -72,7 +73,7 @@ void AGILogToConsole(LogType type, const char* file, const char* func, uint32_t 
  * @param   format  字符串格式(类printf).
  * @param   ...     变参。
  */
-#define AGILOG(type, format, ...) AGILogToConsole(type, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__); \
+#define TRAVODDS_LOG(type, format, ...) LogToConsole(type, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__); \
 
 TRAVODDS_NAMESPACE_END
 

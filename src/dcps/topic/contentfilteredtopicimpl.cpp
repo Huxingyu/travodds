@@ -36,7 +36,7 @@ ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq
         return RETCODE_OK;
     }
 
-	AGILOG(AGILOG_ERROR, "SIZE ERR");
+	TRAVODDS_LOG(LOG_ERROR, "SIZE ERR");
     return RETCODE_ERROR;
 }
 

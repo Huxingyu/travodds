@@ -55,7 +55,7 @@ bool MessageTransmitter::CheckSocketPort(uint16_t port, bool checkUdp)
 		return true;
 	} catch (const std::exception& e) {
 		static_cast<void>(e);
-		AGILOG(AGILOG_ERROR, "CheckSocketPort Err[%s]", e.what());
+		TRAVODDS_LOG(LOG_ERROR, "CheckSocketPort Err[%s]", e.what());
 		return false;
 	}
 }

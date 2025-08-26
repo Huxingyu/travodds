@@ -10,7 +10,7 @@ AsioContext::AsioContext()
 			ioContext_.run();
 		} catch (const std::exception& e) {
 			static_cast<void>(e);
-			AGILOG(AGILOG_ERROR, "ioContext Err e[%s]", e.what());
+			TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
 		}
 	});
 }

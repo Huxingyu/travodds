@@ -5,7 +5,7 @@ ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(PL_DEFAULT_ENDIAN)
 {
 	if (length < 4) {
-		AGILOG(AGILOG_ERROR, "length[%d] < 4", length);
+		TRAVODDS_LOG(LOG_ERROR, "length[%d] < 4", length);
 		return;
 	}
 	msgEndian_ = static_cast<EndiannessKind>(*(msg + 1));

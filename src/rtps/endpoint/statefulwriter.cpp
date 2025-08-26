@@ -75,7 +75,7 @@ std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGu
 
 	auto itor = matchedReaders_.find(readerGuid);
 	if (itor == matchedReaders_.end()) {
-		AGILOG(AGILOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
 		return nullptr;
 	}
 	return itor->second;
@@ -131,7 +131,7 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, b
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "messageTransmitter is nullptr");
 		}
 	}
 
@@ -174,12 +174,12 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -222,12 +222,12 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -402,7 +402,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	//TODO 此函数可以发送HeartBeat报文,当时后续需要优化改进
 
 	if (!readerProxy) {
-		AGILOG(AGILOG_ERROR, "readerProxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "readerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -487,7 +487,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy)
 {
 	//TODO 
-	AGILOG(AGILOG_ERROR, " not support interface");
+	TRAVODDS_LOG(LOG_ERROR, " not support interface");
 	return RETCODE_UNSUPPORTED;
 }
 
@@ -623,7 +623,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
         }
 
         if(nullptr == buffer){
-            AGILOG(AGILOG_ERROR, "buffer is nullptr");
+            TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
 			return RETCODE_ERROR;
         }
 
@@ -633,7 +633,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 			if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
 
 		        if(nullptr == buffer){
-		            AGILOG(AGILOG_ERROR, "buffer is nullptr");
+		            TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
 					return RETCODE_ERROR;
 		        }
 			

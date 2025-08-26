@@ -42,7 +42,7 @@ unsigned int _TypeIdTypeSupport::get_serialized_data_size(void* data, unsigned i
     _TypeId* structData = static_cast<_TypeId*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case BOOLEAN_TYPE:
     case BYTE_TYPE:
@@ -57,10 +57,10 @@ unsigned int _TypeIdTypeSupport::get_serialized_data_size(void* data, unsigned i
     case FLOAT_128_TYPE:
     case CHAR_8_TYPE:
     case CHAR_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
     default:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
         break;
     }
     return 0;
@@ -70,7 +70,7 @@ unsigned int _TypeIdTypeSupport::get_max_serialized_data_size(void* data, unsign
     _TypeId* structData = static_cast<_TypeId*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case BOOLEAN_TYPE:
     case BYTE_TYPE:
@@ -85,16 +85,16 @@ unsigned int _TypeIdTypeSupport::get_max_serialized_data_size(void* data, unsign
     case FLOAT_128_TYPE:
     case CHAR_8_TYPE:
     case CHAR_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
     default:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
         break;
     }
     return 0;
 }
 
-int _TypeIdTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int _TypeIdTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     _TypeId* structData = static_cast<_TypeId*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
@@ -130,7 +130,7 @@ int _TypeIdTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int
     return 0;
 }
 
-int _TypeIdTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int _TypeIdTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     _TypeId* structData = static_cast<_TypeId*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -172,7 +172,7 @@ TypeObject* _TypeIdTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int _TypeIdTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int _TypeIdTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     _TypeId* structData = static_cast<_TypeId*>(data);
     return 0;
 }
@@ -182,13 +182,13 @@ int _TypeIdTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, boo
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t _TypeIdTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t _TypeIdTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -237,52 +237,52 @@ unsigned int AnnotationMemberValueTypeSupport::get_serialized_data_size(void* da
     AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case BOOLEAN_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
         break;
     case BYTE_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned char), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned char), currentAlignment);
         break;
     case INT_16_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
         break;
     case UINT_16_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned short), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned short), currentAlignment);
         break;
     case INT_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
         break;
     case UINT_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
         break;
     case INT_64_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(long long), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(long long), currentAlignment);
         break;
     case UINT_64_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
         break;
     case FLOAT_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
         break;
     case FLOAT_64_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
         break;
     case FLOAT_128_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(LongDouble), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(LongDouble), currentAlignment);
         break;
     case CHAR_8_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
         break;
     case CHAR_32_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(wchar_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(wchar_t), currentAlignment);
         break;
     case ENUMERATION_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
         break;
     case STRING_TYPE:
-        currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->string_value.size() + 1, currentAlignment);
+        currentAlignment += CdrSerializer::getStringSize(structData->string_value.size() + 1, currentAlignment);
         break;
     }
     return 0;
@@ -292,7 +292,7 @@ unsigned int AnnotationMemberValueTypeSupport::get_max_serialized_data_size(void
     return LENGTH_UNLIMITED;
 }
 
-int AnnotationMemberValueTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationMemberValueTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
@@ -394,7 +394,7 @@ int AnnotationMemberValueTypeSupport::serialize_data(void* data, AGIDDSCdrSerial
     return 0;
 }
 
-int AnnotationMemberValueTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AnnotationMemberValueTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -502,7 +502,7 @@ TypeObject* AnnotationMemberValueTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AnnotationMemberValueTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationMemberValueTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AnnotationMemberValue* structData = static_cast<AnnotationMemberValue*>(data);
     return 0;
 }
@@ -512,13 +512,13 @@ int AnnotationMemberValueTypeSupport::MakeKey(const void* data, InstanceHandle_t
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AnnotationMemberValueTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationMemberValueTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -567,7 +567,7 @@ unsigned int AnnotationUsageMemberTypeSupport::get_serialized_data_size(void* da
     AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
 }
@@ -576,12 +576,12 @@ unsigned int AnnotationUsageMemberTypeSupport::get_max_serialized_data_size(void
     AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int AnnotationUsageMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationUsageMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->member_id)) {
@@ -595,7 +595,7 @@ int AnnotationUsageMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerial
     return 0;
 }
 
-int AnnotationUsageMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AnnotationUsageMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -616,7 +616,7 @@ TypeObject* AnnotationUsageMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AnnotationUsageMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationUsageMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AnnotationUsageMember* structData = static_cast<AnnotationUsageMember*>(data);
     bool memberHasKey = false;
     return 0;
@@ -627,13 +627,13 @@ int AnnotationUsageMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AnnotationUsageMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationUsageMemberTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -683,7 +683,7 @@ unsigned int AnnotationUsageTypeSupport::get_serialized_data_size(void* data, un
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
         currentAlignment += AnnotationUsageMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
@@ -694,7 +694,7 @@ unsigned int AnnotationUsageTypeSupport::get_max_serialized_data_size(void* data
     return LENGTH_UNLIMITED;
 }
 
-int AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationUsageTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     uint32_t tmpLength = 0;
     if (_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
@@ -715,7 +715,7 @@ int AnnotationUsageTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* 
     return 0;
 }
 
-int AnnotationUsageTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AnnotationUsageTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -743,7 +743,7 @@ TypeObject* AnnotationUsageTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AnnotationUsageTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationUsageTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AnnotationUsage* structData = static_cast<AnnotationUsage*>(data);
     bool memberHasKey = false;
     return 0;
@@ -754,13 +754,13 @@ int AnnotationUsageTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHan
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AnnotationUsageTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationUsageTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -809,9 +809,9 @@ unsigned int TypePropertyTypeSupport::get_serialized_data_size(void* data, unsig
     TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -819,13 +819,13 @@ unsigned int TypePropertyTypeSupport::get_max_serialized_data_size(void* data, u
     TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypePropertyTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TypeProperty* structData = static_cast<TypeProperty*>(data);
     uint32_t tmpLength = 0;
     switch(16 / 8) {
@@ -863,7 +863,7 @@ int TypePropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr
     return 0;
 }
 
-int TypePropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int TypePropertyTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TypeProperty* structData = static_cast<TypeProperty*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -911,7 +911,7 @@ TypeObject* TypePropertyTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int TypePropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypePropertyTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TypeProperty* structData = static_cast<TypeProperty*>(data);
     bool memberHasKey = false;
     return 0;
@@ -922,13 +922,13 @@ int TypePropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t TypePropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypePropertyTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -987,7 +987,7 @@ unsigned int TypeTypeSupport::get_serialized_data_size(void* data, unsigned int 
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
         currentAlignment += AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
     }
@@ -1000,7 +1000,7 @@ unsigned int TypeTypeSupport::get_max_serialized_data_size(void* data, unsigned 
     return LENGTH_UNLIMITED;
 }
 
-int TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     Type* structData = static_cast<Type*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -1043,7 +1043,7 @@ int TypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int en
     return 0;
 }
 
-int TypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int TypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     Type* structData = static_cast<Type*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -1101,7 +1101,7 @@ TypeObject* TypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int TypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     Type* structData = static_cast<Type*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -1116,13 +1116,13 @@ int TypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool f
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t TypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1171,10 +1171,10 @@ unsigned int MemberPropertyTypeSupport::get_serialized_data_size(void* data, uns
     MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -1182,14 +1182,14 @@ unsigned int MemberPropertyTypeSupport::get_max_serialized_data_size(void* data,
     MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MemberPropertyTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     MemberProperty* structData = static_cast<MemberProperty*>(data);
     uint32_t tmpLength = 0;
     switch(16 / 8) {
@@ -1231,7 +1231,7 @@ int MemberPropertyTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* c
     return 0;
 }
 
-int MemberPropertyTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int MemberPropertyTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     MemberProperty* structData = static_cast<MemberProperty*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -1283,7 +1283,7 @@ TypeObject* MemberPropertyTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int MemberPropertyTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MemberPropertyTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     MemberProperty* structData = static_cast<MemberProperty*>(data);
     bool memberHasKey = false;
     return 0;
@@ -1294,13 +1294,13 @@ int MemberPropertyTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHand
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t MemberPropertyTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MemberPropertyTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1359,7 +1359,7 @@ unsigned int MemberTypeSupport::get_serialized_data_size(void* data, unsigned in
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
         currentAlignment += AnnotationUsageTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->annotation[i], currentAlignment);
     }
@@ -1372,7 +1372,7 @@ unsigned int MemberTypeSupport::get_max_serialized_data_size(void* data, unsigne
     return LENGTH_UNLIMITED;
 }
 
-int MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     Member* structData = static_cast<Member*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -1415,7 +1415,7 @@ int MemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int 
     return 0;
 }
 
-int MemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int MemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     Member* structData = static_cast<Member*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -1473,7 +1473,7 @@ TypeObject* MemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int MemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     Member* structData = static_cast<Member*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -1488,13 +1488,13 @@ int MemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t MemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MemberTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1554,7 +1554,7 @@ unsigned int StructureTypeTypeSupport::get_serialized_data_size(void* data, unsi
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
         currentAlignment += MemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
@@ -1567,7 +1567,7 @@ unsigned int StructureTypeTypeSupport::get_max_serialized_data_size(void* data, 
     return LENGTH_UNLIMITED;
 }
 
-int StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int StructureTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     StructureType* structData = static_cast<StructureType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -1614,7 +1614,7 @@ int StructureTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cd
     return 0;
 }
 
-int StructureTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int StructureTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     StructureType* structData = static_cast<StructureType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -1676,7 +1676,7 @@ TypeObject* StructureTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int StructureTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int StructureTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     StructureType* structData = static_cast<StructureType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -1695,13 +1695,13 @@ int StructureTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandl
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t StructureTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t StructureTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1755,8 +1755,8 @@ unsigned int UnionMemberTypeSupport::get_serialized_data_size(void* data, unsign
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(int), structData->label.size(), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), structData->label.size(), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
@@ -1766,7 +1766,7 @@ unsigned int UnionMemberTypeSupport::get_max_serialized_data_size(void* data, un
     return LENGTH_UNLIMITED;
 }
 
-int UnionMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int UnionMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     UnionMember* structData = static_cast<UnionMember*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -1798,7 +1798,7 @@ int UnionMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr,
     return 0;
 }
 
-int UnionMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int UnionMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     UnionMember* structData = static_cast<UnionMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -1852,7 +1852,7 @@ TypeObject* UnionMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int UnionMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int UnionMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     UnionMember* structData = static_cast<UnionMember*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -1871,13 +1871,13 @@ int UnionMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle,
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t UnionMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t UnionMemberTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -1931,7 +1931,7 @@ unsigned int UnionTypeTypeSupport::get_serialized_data_size(void* data, unsigned
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
         currentAlignment += UnionMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
@@ -1944,7 +1944,7 @@ unsigned int UnionTypeTypeSupport::get_max_serialized_data_size(void* data, unsi
     return LENGTH_UNLIMITED;
 }
 
-int UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int UnionTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     UnionType* structData = static_cast<UnionType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -1978,7 +1978,7 @@ int UnionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, i
     return 0;
 }
 
-int UnionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int UnionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     UnionType* structData = static_cast<UnionType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2034,7 +2034,7 @@ TypeObject* UnionTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int UnionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int UnionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     UnionType* structData = static_cast<UnionType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2053,13 +2053,13 @@ int UnionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, b
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t UnionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t UnionTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2133,7 +2133,7 @@ unsigned int AnnotationMemberTypeSupport::get_max_serialized_data_size(void* dat
     return currentAlignment - initialAlignment;
 }
 
-int AnnotationMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -2160,7 +2160,7 @@ int AnnotationMemberTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer*
     return 0;
 }
 
-int AnnotationMemberTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AnnotationMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2209,7 +2209,7 @@ TypeObject* AnnotationMemberTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AnnotationMemberTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AnnotationMember* structData = static_cast<AnnotationMember*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2228,13 +2228,13 @@ int AnnotationMemberTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHa
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AnnotationMemberTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationMemberTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2294,7 +2294,7 @@ unsigned int AnnotationTypeTypeSupport::get_serialized_data_size(void* data, uns
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
         currentAlignment += AnnotationMemberTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->member[i], currentAlignment);
     }
@@ -2307,7 +2307,7 @@ unsigned int AnnotationTypeTypeSupport::get_max_serialized_data_size(void* data,
     return LENGTH_UNLIMITED;
 }
 
-int AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AnnotationType* structData = static_cast<AnnotationType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -2354,7 +2354,7 @@ int AnnotationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* c
     return 0;
 }
 
-int AnnotationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AnnotationTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AnnotationType* structData = static_cast<AnnotationType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2416,7 +2416,7 @@ TypeObject* AnnotationTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AnnotationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AnnotationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AnnotationType* structData = static_cast<AnnotationType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2435,13 +2435,13 @@ int AnnotationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHand
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AnnotationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AnnotationTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2515,7 +2515,7 @@ unsigned int AliasTypeTypeSupport::get_max_serialized_data_size(void* data, unsi
     return currentAlignment - initialAlignment;
 }
 
-int AliasTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AliasTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     AliasType* structData = static_cast<AliasType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -2542,7 +2542,7 @@ int AliasTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, i
     return 0;
 }
 
-int AliasTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int AliasTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     AliasType* structData = static_cast<AliasType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2591,7 +2591,7 @@ TypeObject* AliasTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int AliasTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int AliasTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     AliasType* structData = static_cast<AliasType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2610,13 +2610,13 @@ int AliasTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, b
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t AliasTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t AliasTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2676,7 +2676,7 @@ unsigned int CollectionTypeTypeSupport::get_serialized_data_size(void* data, uns
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
@@ -2696,13 +2696,13 @@ unsigned int CollectionTypeTypeSupport::get_max_serialized_data_size(void* data,
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
-int CollectionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int CollectionTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     CollectionType* structData = static_cast<CollectionType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -2742,7 +2742,7 @@ int CollectionTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* c
     return 0;
 }
 
-int CollectionTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int CollectionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     CollectionType* structData = static_cast<CollectionType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2797,7 +2797,7 @@ TypeObject* CollectionTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int CollectionTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int CollectionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     CollectionType* structData = static_cast<CollectionType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2816,13 +2816,13 @@ int CollectionTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHand
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t CollectionTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t CollectionTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -2876,9 +2876,9 @@ unsigned int ArrayTypeTypeSupport::get_serialized_data_size(void* data, unsigned
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->bound.size(); ++i) {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     }
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
@@ -2889,7 +2889,7 @@ unsigned int ArrayTypeTypeSupport::get_max_serialized_data_size(void* data, unsi
     return LENGTH_UNLIMITED;
 }
 
-int ArrayTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int ArrayTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     ArrayType* structData = static_cast<ArrayType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -2923,7 +2923,7 @@ int ArrayTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, i
     return 0;
 }
 
-int ArrayTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int ArrayTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     ArrayType* structData = static_cast<ArrayType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -2979,7 +2979,7 @@ TypeObject* ArrayTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int ArrayTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int ArrayTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     ArrayType* structData = static_cast<ArrayType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -2998,13 +2998,13 @@ int ArrayTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, b
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t ArrayTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t ArrayTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3055,7 +3055,7 @@ unsigned int MapTypeTypeSupport::get_serialized_data_size(void* data, unsigned i
     unsigned int tmpAlignment = 0;
     currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->key_element_type, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -3064,11 +3064,11 @@ unsigned int MapTypeTypeSupport::get_max_serialized_data_size(void* data, unsign
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += _TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->key_element_type, currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int MapTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MapTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     MapType* structData = static_cast<MapType*>(data);
     uint32_t tmpLength = 0;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3086,7 +3086,7 @@ int MapTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int
     return 0;
 }
 
-int MapTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int MapTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     MapType* structData = static_cast<MapType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3111,7 +3111,7 @@ TypeObject* MapTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int MapTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int MapTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     MapType* structData = static_cast<MapType*>(data);
     bool memberHasKey = false;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3126,13 +3126,13 @@ int MapTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, boo
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t MapTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t MapTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3182,7 +3182,7 @@ unsigned int SequenceTypeTypeSupport::get_serialized_data_size(void* data, unsig
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -3190,11 +3190,11 @@ unsigned int SequenceTypeTypeSupport::get_max_serialized_data_size(void* data, u
     SequenceType* structData = static_cast<SequenceType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int SequenceTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int SequenceTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     SequenceType* structData = static_cast<SequenceType*>(data);
     uint32_t tmpLength = 0;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3208,7 +3208,7 @@ int SequenceTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr
     return 0;
 }
 
-int SequenceTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int SequenceTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     SequenceType* structData = static_cast<SequenceType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3229,7 +3229,7 @@ TypeObject* SequenceTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int SequenceTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int SequenceTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     SequenceType* structData = static_cast<SequenceType*>(data);
     bool memberHasKey = false;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3244,13 +3244,13 @@ int SequenceTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t SequenceTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t SequenceTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3300,7 +3300,7 @@ unsigned int StringTypeTypeSupport::get_serialized_data_size(void* data, unsigne
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<CollectionType*>(structData), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -3308,11 +3308,11 @@ unsigned int StringTypeTypeSupport::get_max_serialized_data_size(void* data, uns
     StringType* structData = static_cast<StringType*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int StringTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int StringTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     StringType* structData = static_cast<StringType*>(data);
     uint32_t tmpLength = 0;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3326,7 +3326,7 @@ int StringTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, 
     return 0;
 }
 
-int StringTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int StringTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     StringType* structData = static_cast<StringType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3347,7 +3347,7 @@ TypeObject* StringTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int StringTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int StringTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     StringType* structData = static_cast<StringType*>(data);
     bool memberHasKey = false;
     if (CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<CollectionType*>(structData), cdr, endian) != 0) {
@@ -3362,13 +3362,13 @@ int StringTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, 
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t StringTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t StringTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3417,8 +3417,8 @@ unsigned int BitTypeSupport::get_serialized_data_size(void* data, unsigned int c
     Bit* structData = static_cast<Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -3426,12 +3426,12 @@ unsigned int BitTypeSupport::get_max_serialized_data_size(void* data, unsigned i
     Bit* structData = static_cast<Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int BitTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int BitTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     Bit* structData = static_cast<Bit*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->index)) {
@@ -3445,7 +3445,7 @@ int BitTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int end
     return 0;
 }
 
-int BitTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int BitTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     Bit* structData = static_cast<Bit*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3466,7 +3466,7 @@ TypeObject* BitTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int BitTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int BitTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     Bit* structData = static_cast<Bit*>(data);
     bool memberHasKey = false;
     return 0;
@@ -3477,13 +3477,13 @@ int BitTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, bool fo
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t BitTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t BitTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3537,13 +3537,13 @@ unsigned int BitSetTypeTypeSupport::get_serialized_data_size(void* data, unsigne
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->bit.size(); ++i) {
         currentAlignment += BitTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->bit[i], currentAlignment);
     }
@@ -3556,7 +3556,7 @@ unsigned int BitSetTypeTypeSupport::get_max_serialized_data_size(void* data, uns
     return LENGTH_UNLIMITED;
 }
 
-int BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int BitSetTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     BitSetType* structData = static_cast<BitSetType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -3603,7 +3603,7 @@ int BitSetTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, 
     return 0;
 }
 
-int BitSetTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int BitSetTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     BitSetType* structData = static_cast<BitSetType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3665,7 +3665,7 @@ TypeObject* BitSetTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int BitSetTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int BitSetTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     BitSetType* structData = static_cast<BitSetType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -3684,13 +3684,13 @@ int BitSetTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, 
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t BitSetTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t BitSetTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3739,8 +3739,8 @@ unsigned int EnumeratedConstantTypeSupport::get_serialized_data_size(void* data,
     EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -3748,12 +3748,12 @@ unsigned int EnumeratedConstantTypeSupport::get_max_serialized_data_size(void* d
     EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int EnumeratedConstantTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int EnumeratedConstantTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->value)) {
@@ -3767,7 +3767,7 @@ int EnumeratedConstantTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     return 0;
 }
 
-int EnumeratedConstantTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int EnumeratedConstantTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3788,7 +3788,7 @@ TypeObject* EnumeratedConstantTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int EnumeratedConstantTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int EnumeratedConstantTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     EnumeratedConstant* structData = static_cast<EnumeratedConstant*>(data);
     bool memberHasKey = false;
     return 0;
@@ -3799,13 +3799,13 @@ int EnumeratedConstantTypeSupport::MakeKey(const void* data, InstanceHandle_t& i
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t EnumeratedConstantTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t EnumeratedConstantTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -3859,13 +3859,13 @@ unsigned int EnumerationTypeTypeSupport::get_serialized_data_size(void* data, un
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->constant.size(); ++i) {
         currentAlignment += EnumeratedConstantTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->constant[i], currentAlignment);
     }
@@ -3878,7 +3878,7 @@ unsigned int EnumerationTypeTypeSupport::get_max_serialized_data_size(void* data
     return LENGTH_UNLIMITED;
 }
 
-int EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int EnumerationTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     EnumerationType* structData = static_cast<EnumerationType*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -3925,7 +3925,7 @@ int EnumerationTypeTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* 
     return 0;
 }
 
-int EnumerationTypeTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int EnumerationTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     EnumerationType* structData = static_cast<EnumerationType*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -3987,7 +3987,7 @@ TypeObject* EnumerationTypeTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int EnumerationTypeTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int EnumerationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     EnumerationType* structData = static_cast<EnumerationType*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -4006,13 +4006,13 @@ int EnumerationTypeTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHan
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t EnumerationTypeTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t EnumerationTypeTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4061,7 +4061,7 @@ unsigned int _ModuleTypeSupport::get_serialized_data_size(void* data, unsigned i
     _Module* structData = static_cast<_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -4069,11 +4069,11 @@ unsigned int _ModuleTypeSupport::get_max_serialized_data_size(void* data, unsign
     _Module* structData = static_cast<_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getStringSize(256, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
-int _ModuleTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int _ModuleTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     _Module* structData = static_cast<_Module*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
@@ -4083,7 +4083,7 @@ int _ModuleTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int
     return 0;
 }
 
-int _ModuleTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int _ModuleTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     _Module* structData = static_cast<_Module*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -4100,7 +4100,7 @@ TypeObject* _ModuleTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int _ModuleTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int _ModuleTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     _Module* structData = static_cast<_Module*>(data);
     bool memberHasKey = false;
     return 0;
@@ -4111,13 +4111,13 @@ int _ModuleTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, boo
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t _ModuleTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t _ModuleTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4170,7 +4170,7 @@ unsigned int TypeLibraryElementTypeSupport::get_serialized_data_size(void* data,
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     switch(structData->u_) {
@@ -4274,7 +4274,7 @@ unsigned int TypeLibraryElementTypeSupport::get_max_serialized_data_size(void* d
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     switch(structData->u_) {
@@ -4370,7 +4370,7 @@ unsigned int TypeLibraryElementTypeSupport::get_max_serialized_data_size(void* d
     return 0;
 }
 
-int TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -4580,7 +4580,7 @@ int TypeLibraryElementTypeSupport::serialize_data(void* data, AGIDDSCdrSerialize
     return 0;
 }
 
-int TypeLibraryElementTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int TypeLibraryElementTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
@@ -4713,7 +4713,7 @@ TypeObject* TypeLibraryElementTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int TypeLibraryElementTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeLibraryElementTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TypeLibraryElement* structData = static_cast<TypeLibraryElement*>(data);
     bool useExtend = true;
     char* lenAddr = nullptr;
@@ -4727,13 +4727,13 @@ int TypeLibraryElementTypeSupport::MakeKey(const void* data, InstanceHandle_t& i
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t TypeLibraryElementTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeLibraryElementTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4782,7 +4782,7 @@ unsigned int TypeLibraryTypeSupport::get_serialized_data_size(void* data, unsign
     TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->element.size(); ++i) {
         currentAlignment += TypeLibraryElementTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element[i], currentAlignment);
     }
@@ -4793,7 +4793,7 @@ unsigned int TypeLibraryTypeSupport::get_max_serialized_data_size(void* data, un
     return LENGTH_UNLIMITED;
 }
 
-int TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeLibraryTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     uint32_t tmpLength = 0;
     tmpLength = static_cast<uint32_t>(structData->element.size());
@@ -4810,7 +4810,7 @@ int TypeLibraryTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr,
     return 0;
 }
 
-int TypeLibraryTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int TypeLibraryTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -4834,7 +4834,7 @@ TypeObject* TypeLibraryTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int TypeLibraryTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeLibraryTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TypeLibrary* structData = static_cast<TypeLibrary*>(data);
     bool memberHasKey = false;
     return 0;
@@ -4845,13 +4845,13 @@ int TypeLibraryTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle,
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t TypeLibraryTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeLibraryTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;
@@ -4910,7 +4910,7 @@ unsigned int TypeObjectTypeSupport::get_serialized_data_size(void* data, unsigne
     currentAlignment += 4;
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
-    currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->the_type.size(); ++i) {
         currentAlignment += _TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->the_type[i], currentAlignment);
     }
@@ -4923,7 +4923,7 @@ unsigned int TypeObjectTypeSupport::get_max_serialized_data_size(void* data, uns
     return LENGTH_UNLIMITED;
 }
 
-int TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeObjectTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TypeObject* structData = static_cast<TypeObject*>(data);
     uint32_t tmpLength = 0;
     bool useExtend = true;
@@ -4966,7 +4966,7 @@ int TypeObjectTypeSupport::serialize_data(void* data, AGIDDSCdrSerializer* cdr, 
     return 0;
 }
 
-int TypeObjectTypeSupport::deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) {
+int TypeObjectTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TypeObject* structData = static_cast<TypeObject*>(data);
     unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
@@ -5024,7 +5024,7 @@ TypeObject* TypeObjectTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-int TypeObjectTypeSupport::serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian) {
+int TypeObjectTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TypeObject* structData = static_cast<TypeObject*>(data);
     bool memberHasKey = false;
     bool useExtend = true;
@@ -5039,13 +5039,13 @@ int TypeObjectTypeSupport::MakeKey(const void* data, InstanceHandle_t& iHandle, 
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void*)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-ReturnCode_t TypeObjectTypeSupport::get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
+ReturnCode_t TypeObjectTypeSupport::get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
         return RETCODE_OK;

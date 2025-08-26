@@ -110,7 +110,7 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 	catch (std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Exception: " << e.what() << std::endl;
-		AGILOG(AGILOG_ERROR, "ioContext Err e[%s]", e.what());
+		TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
@@ -146,7 +146,7 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 	}
 
 	if (nullptr == SendSocket) {
-		AGILOG(AGILOG_ERROR, "SendSocket is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "SendSocket is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -224,7 +224,7 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrRemove(Locator_t receiveAddr)
 	/*  只退组，不删除socket */
 	ret = DropMemberShip(receiveAddr);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "DropMemberShip error, ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "DropMemberShip error, ret = %d", ret);
 		return ret;
 	}
 
@@ -315,7 +315,7 @@ ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 		}
 		catch (const std::exception& e) {
 			static_cast<void>(e);
-			AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
+			TRAVODDS_LOG(LOG_ERROR, "Err[%s]", e.what());
 			//std::cerr << "Error: " << e.what() << std::endl;
 			continue;
 		}
@@ -343,7 +343,7 @@ ReturnCode_t MessageTransmitterUDP::DropMemberShip(Locator_t receiveAddr)
 	catch (const std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Error: " << e.what() << std::endl;
-		AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
+		TRAVODDS_LOG(LOG_ERROR, "Err[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;

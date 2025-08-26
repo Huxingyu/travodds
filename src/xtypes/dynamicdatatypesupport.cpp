@@ -45,49 +45,49 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
     unsigned int initialAlignment = currentAlignment;
     switch (type->get_kind()) {
     case TK_BOOLEAN: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(bool), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(bool), currentAlignment);
         break;
     }
     case TK_CHAR8:
     case TK_BYTE: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(octet), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(octet), currentAlignment);
         break;
     }
     case TK_CHAR16:
     case TK_INT16: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int16_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int16_t), currentAlignment);
         break;
     }
     case TK_INT32: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int32_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int32_t), currentAlignment);
         break;
     }
     case TK_INT64: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int64_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int64_t), currentAlignment);
         break;
     }
     case TK_UINT16: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint16_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint16_t), currentAlignment);
         break;
     }
     case TK_UINT32: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
         break;
     }
     case TK_UINT64: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint64_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint64_t), currentAlignment);
         break;
     }
     case TK_FLOAT32: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
         break;
     }
     case TK_FLOAT64: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
         break;
     }
     case TK_FLOAT128: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(long double), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(long double), currentAlignment);
         break;
     }
     case TK_STRING8: {
@@ -96,7 +96,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
             printf("Failed to get string8 value for member ID %u\n", id);
             return 0;
         }
-        currentAlignment += AGIDDSCdrSerializer::getStringSize(static_cast<uint32_t>(value.length() + 1), currentAlignment);
+        currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(value.length() + 1), currentAlignment);
         break;
     }
     case TK_STRING16: {
@@ -105,15 +105,15 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
             printf("Failed to get string16 value for member ID %u\n", id);
             return 0;
         }
-        currentAlignment += AGIDDSCdrSerializer::getWStringSize(static_cast<uint32_t>(value.length()), currentAlignment);
+        currentAlignment += CdrSerializer::getWStringSize(static_cast<uint32_t>(value.length()), currentAlignment);
         break;
     }
     case TK_ENUM: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(int32_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int32_t), currentAlignment);
         break;
     }
     case TK_BITMASK: {
-        currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+        currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
         break;
     }
     case TK_SEQUENCE:
@@ -126,54 +126,54 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
         }
         if (isSequence) {
             // 序列化长度
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
         }
         size_t eleCount = dynamicData->get_memberid_item_count(id);
         switch (eleType->get_kind()) {
         case TK_BOOLEAN: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(bool), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(bool), eleCount, currentAlignment);
             break;
         }
         case TK_CHAR8:
         case TK_BYTE: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(octet), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(octet), eleCount, currentAlignment);
             break;
         }
         case TK_CHAR16:
         case TK_INT16: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(int16_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int16_t), eleCount, currentAlignment);
             break;
         }
         case TK_INT32: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(int32_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int32_t), eleCount, currentAlignment);
             break;
         }
         case TK_INT64: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(int64_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int64_t), eleCount, currentAlignment);
             break;
         }
         case TK_UINT16: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(uint16_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(uint16_t), eleCount, currentAlignment);
             break;
         }
         case TK_UINT32: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(uint32_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(uint32_t), eleCount, currentAlignment);
             break;
         }
         case TK_UINT64: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(uint64_t), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(uint64_t), eleCount, currentAlignment);
             break;
         }
         case TK_FLOAT32: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(float), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(float), eleCount, currentAlignment);
             break;
         }
         case TK_FLOAT64: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(double), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(double), eleCount, currentAlignment);
             break;
         }
         case TK_FLOAT128: {
-            currentAlignment += AGIDDSCdrSerializer::getBaseTypeArraySize(sizeof(long double), eleCount, currentAlignment);
+            currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(long double), eleCount, currentAlignment);
             break;
         }
         case TK_STRING8: {
@@ -183,7 +183,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
                 return 0;
             }
             for (std::string& value : values) {
-                currentAlignment += AGIDDSCdrSerializer::getStringSize(static_cast<uint32_t>(value.length() + 1), currentAlignment);
+                currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(value.length() + 1), currentAlignment);
             }
             break;
         }
@@ -194,7 +194,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
                 return -1;
             }
             for (std::wstring& value : values) {
-                currentAlignment += AGIDDSCdrSerializer::getWStringSize(static_cast<uint32_t>(value.length()), currentAlignment);
+                currentAlignment += CdrSerializer::getWStringSize(static_cast<uint32_t>(value.length()), currentAlignment);
             }
             break;
         }
@@ -276,7 +276,7 @@ unsigned int DynamicDataTypeSupport::get_max_serialized_data_size(void *data, un
     return -1;
 }
 
-int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, AGIDDSCdrSerializer *cdr, DynamicType *type, MemberId id,
+int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, CdrSerializer *cdr, DynamicType *type, MemberId id,
                                              const std::string &name, int endian) {
     ReturnCode_t retcode;
     switch (type->get_kind()) {
@@ -904,7 +904,7 @@ int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, AGIDDSCdr
     return RETCODE_OK;
 }
 
-int DynamicDataTypeSupport::serialize_data(void *data, AGIDDSCdrSerializer *cdr, int endian) {
+int DynamicDataTypeSupport::serialize_data(void *data, CdrSerializer *cdr, int endian) {
     if (!data || !cdr) {
         return -1;
     }
@@ -932,7 +932,7 @@ int DynamicDataTypeSupport::serialize_data(void *data, AGIDDSCdrSerializer *cdr,
     return 0;
 }
 
-int DynamicDataTypeSupport::deserialize_data(void *data, AGIDDSCdrDeserializer *cdr, int endian) {
+int DynamicDataTypeSupport::deserialize_data(void *data, CdrDeserializer *cdr, int endian) {
     if (!data || !cdr) {
         return RETCODE_BAD_PARAMETER;
     }
@@ -1296,7 +1296,7 @@ TypeObject *DynamicDataTypeSupport::get_typeobject() {
     return nullptr;
 }
 
-ReturnCode_t DynamicDataTypeSupport::get_instancehandle(void *data, AGIDDSCdrSerializer *cdr, InstanceHandle_t &iHandle,
+ReturnCode_t DynamicDataTypeSupport::get_instancehandle(void *data, CdrSerializer *cdr, InstanceHandle_t &iHandle,
                                                                 bool forceMd5) {
     if (!has_key()) {
         iHandle = HANDLE_NIL;
@@ -1339,13 +1339,13 @@ int DynamicDataTypeSupport::MakeKey(const void *data, InstanceHandle_t &iHandle,
     SerializedBuffer buffer;
     buffer.buffer_size = serializedSize;
     buffer.buffer = new char[buffer.buffer_size];
-    AGIDDSCdrSerializer cdr(&buffer);
+    CdrSerializer cdr(&buffer);
     ReturnCode_t ret = get_instancehandle((void *)data, &cdr, iHandle, forceMd5);
     delete[] buffer.buffer;
     return ret == RETCODE_OK ? 0 : -1;
 }
 
-int DynamicDataTypeSupport::serialize_key(void *data, AGIDDSCdrSerializer *cdr, int endian) {
+int DynamicDataTypeSupport::serialize_key(void *data, CdrSerializer *cdr, int endian) {
     if (!data || !cdr) {
         return -1;
     }

@@ -49,12 +49,12 @@ ReturnCode_t DomainParticipantImpl::set_qos(const DomainParticipantQos& qos)
     if (&qos != &PARTICIPANT_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
     qos_ = qosTemp;
@@ -88,13 +88,13 @@ Publisher* DomainParticipantImpl::create_publisher(const PublisherQos& qos, Publ
 {
 	const PublisherQos& qosT = (&qos == &PUBLISHER_QOS_DEFAULT) ? defaultPubQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
 	Publisher* pub = nullptr;
 	std::unique_ptr<PublisherImpl> pubPtr = std::make_unique<PublisherImpl>(qosT, listener, mask, this);
 	if (!pubPtr.get()) {
-		AGILOG(AGILOG_ERROR, "publisher is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "publisher is nullptr");
 		return nullptr;
 	}
     pub = pubPtr.get();
@@ -111,11 +111,11 @@ Publisher* DomainParticipantImpl::create_publisher(const PublisherQos& qos, Publ
 ReturnCode_t DomainParticipantImpl::delete_publisher(Publisher*& publisher)
 {
     if (!publisher) {
-		AGILOG(AGILOG_ERROR, "publisher is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "publisher is nullptr");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != publisher->get_participant()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant donot contain the publisher");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant donot contain the publisher");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = publisher->get_instance_handle();
@@ -123,11 +123,11 @@ ReturnCode_t DomainParticipantImpl::delete_publisher(Publisher*& publisher)
     auto it = pubHandles_.find(handle);
 
     if (it == pubHandles_.end()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant cant find the publisher");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant cant find the publisher");
         return RETCODE_ERROR;
     }
     if (!it->second->Empty()) {
-		AGILOG(AGILOG_ERROR, "publisher not met");
+		TRAVODDS_LOG(LOG_ERROR, "publisher not met");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     pubHandles_.erase(handle);
@@ -139,13 +139,13 @@ Subscriber* DomainParticipantImpl::create_subscriber(const SubscriberQos& qos, S
 {
 	const SubscriberQos& qosT = (&qos == &SUBSCRIBER_QOS_DEFAULT) ? defaultSubQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
 	Subscriber* sub = nullptr;
 	std::unique_ptr<SubscriberImpl> subPtr = std::make_unique<SubscriberImpl>(qosT, listener, mask, this);
 	if (!subPtr.get()) {
-		AGILOG(AGILOG_ERROR, "subscriber is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "subscriber is nullptr");
 		return nullptr;
 	}
     sub = subPtr.get();
@@ -162,11 +162,11 @@ Subscriber* DomainParticipantImpl::create_subscriber(const SubscriberQos& qos, S
 ReturnCode_t DomainParticipantImpl::delete_subscriber(Subscriber*& subscriber)
 {
     if (!subscriber) {
-		AGILOG(AGILOG_ERROR, "subscriber is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "subscriber is nullptr");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != subscriber->get_participant()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant donot contain the subscriber");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant donot contain the subscriber");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = subscriber->get_instance_handle();
@@ -174,11 +174,11 @@ ReturnCode_t DomainParticipantImpl::delete_subscriber(Subscriber*& subscriber)
     auto it = subHandles_.find(handle);
 
     if (it == subHandles_.end()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant cant find the subscriber");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant cant find the subscriber");
         return RETCODE_ERROR;
     }
     if (!it->second->Empty()) {
-		AGILOG(AGILOG_ERROR, "subscriber not met");
+		TRAVODDS_LOG(LOG_ERROR, "subscriber not met");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     subHandles_.erase(handle);
@@ -189,32 +189,32 @@ ReturnCode_t DomainParticipantImpl::delete_subscriber(Subscriber*& subscriber)
 Topic* DomainParticipantImpl::create_topic(const std::string& topic_name, const std::string& type_name, const TopicQos& qos, TopicListener* listener, const StatusMask& mask)
 {
     if (topic_name.empty() || type_name.empty()) {
-        AGILOG(AGILOG_ERROR, "topic_name or type_name is empty");
+        TRAVODDS_LOG(LOG_ERROR, "topic_name or type_name is empty");
 		return nullptr;
     }
     if (topic_name.size() > BYTE_ORDER_LENGTH_MAX || type_name.size() > BYTE_ORDER_LENGTH_MAX) {
-        AGILOG(AGILOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+        TRAVODDS_LOG(LOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
 		return nullptr;
     }
     auto it = typeSupports_.find(type_name);
     if (it == typeSupports_.end()) {
-		AGILOG(AGILOG_ERROR, "type_name[%s] not registed", type_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "type_name[%s] not registed", type_name.c_str());
         return nullptr;
     }
 	const TopicQos& qosT = (&qos == &TOPIC_QOS_DEFAULT) ? defaultTopicQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
     std::lock_guard<std::mutex> lock(mtxTopics_);
     if (topics_.find(topic_name) != topics_.end()) {
-		AGILOG(AGILOG_ERROR, "topic[%s:%s] is created", topic_name.c_str(), type_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] is created", topic_name.c_str(), type_name.c_str());
         return nullptr;
     }
 	Topic* topic = nullptr;
 	std::shared_ptr<TopicImpl> topicPtr = std::make_shared<TopicImpl>(topic_name, type_name, qosT, listener, mask, this);
 	if (!topicPtr.get()) {
-		AGILOG(AGILOG_ERROR, "topic[%s:%s] create failed", topic_name.c_str(), type_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] create failed", topic_name.c_str(), type_name.c_str());
 		return nullptr;
 	}
     topic = topicPtr.get();
@@ -232,22 +232,22 @@ Topic* DomainParticipantImpl::create_topic(const std::string& topic_name, const 
 ReturnCode_t DomainParticipantImpl::delete_topic(Topic*& topic)
 {
     if (!topic) {
-		AGILOG(AGILOG_ERROR, "topic is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "topic is nullptr");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != topic->get_participant()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant donot contain the topic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant donot contain the topic");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = topic->get_instance_handle();
     std::lock_guard<std::mutex> lock(mtxTopics_);
     auto it = topicHandles_.find(handle);
     if (it == topicHandles_.end()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant canot find the topic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant canot find the topic");
         return RETCODE_ERROR;
     }
     if (it->second->IsReferenced()) {
-		AGILOG(AGILOG_ERROR, "topic is used");
+		TRAVODDS_LOG(LOG_ERROR, "topic is used");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     topicHandles_.erase(handle);
@@ -259,16 +259,16 @@ ReturnCode_t DomainParticipantImpl::delete_topic(Topic*& topic)
 ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const std::string& name, Topic* related_topic, const std::string& filter_expression, const StringSeq& expression_parameters)
 {
     if (name.empty() || name.size() > BYTE_ORDER_LENGTH_MAX) {
-        AGILOG(AGILOG_ERROR, "name is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+        TRAVODDS_LOG(LOG_ERROR, "name is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
 		return nullptr;
     }
     if (expression_parameters.size() > EXPRESSION_PARAMETERS_MAX) {
-        AGILOG(AGILOG_ERROR, "expression_parameters size is over max, max size is %d", EXPRESSION_PARAMETERS_MAX);
+        TRAVODDS_LOG(LOG_ERROR, "expression_parameters size is over max, max size is %d", EXPRESSION_PARAMETERS_MAX);
         return nullptr;
 	}
 
     if (nullptr == related_topic || this != related_topic->get_participant()) {
-		AGILOG(AGILOG_ERROR, "related_topic error");
+		TRAVODDS_LOG(LOG_ERROR, "related_topic error");
         return nullptr;
     }
     std::string typeName = related_topic->get_type_name();
@@ -280,12 +280,12 @@ ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const s
     std::lock_guard<std::mutex> lock(mtxTopics_);
 
     if (topics_.find(name) != topics_.end()) {
-		AGILOG(AGILOG_ERROR, "topic[%s] is created", name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s] is created", name.c_str());
         return nullptr;
     }
     std::shared_ptr<ContentFilteredTopicImpl> fitPtr = std::make_shared<ContentFilteredTopicImpl>(name, related_topic, filter_expression, expression_parameters, this);
     if (!fitPtr.get()) {
-		AGILOG(AGILOG_ERROR, "topic[%s] create fail", name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s] create fail", name.c_str());
         return nullptr;
     }
     fit = fitPtr.get();
@@ -297,11 +297,11 @@ ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const s
 ReturnCode_t DomainParticipantImpl::delete_contentfilteredtopic(ContentFilteredTopic*& contentfilteredtopic)
 {
     if (!contentfilteredtopic) {
-		AGILOG(AGILOG_ERROR, "contentfilteredtopics is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "contentfilteredtopics is nullptr");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != contentfilteredtopic->get_participant()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant donot contain the contentfilteredtopic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant donot contain the contentfilteredtopic");
         return RETCODE_PRECONDITION_NOT_MET;
     }
 
@@ -310,11 +310,11 @@ ReturnCode_t DomainParticipantImpl::delete_contentfilteredtopic(ContentFilteredT
     std::lock_guard<std::mutex> lock(mtxTopics_);
     auto it = contentFilteredTopics_.find(name);
     if (contentFilteredTopics_.end() == it) {
-		AGILOG(AGILOG_ERROR, "domainparticipant cant find the contentfilteredtopic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant cant find the contentfilteredtopic");
         return RETCODE_ERROR;
     }
     if (it->second->IsReferenced()) {
-		AGILOG(AGILOG_ERROR, "the contentfilteredtopic is used");
+		TRAVODDS_LOG(LOG_ERROR, "the contentfilteredtopic is used");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     contentFilteredTopics_.erase(name);
@@ -326,28 +326,28 @@ ReturnCode_t DomainParticipantImpl::delete_contentfilteredtopic(ContentFilteredT
 MultiTopic* DomainParticipantImpl::create_multitopic(const std::string& name, const std::string& type_name, const std::string& subscription_expression, const StringSeq& expression_parameters)
 {
     if (name.empty() || type_name.empty()) {
-        AGILOG(AGILOG_ERROR, "topic_name or type_name is empty");
+        TRAVODDS_LOG(LOG_ERROR, "topic_name or type_name is empty");
         return nullptr;
     }
     if (name.size() > BYTE_ORDER_LENGTH_MAX || type_name.size() > BYTE_ORDER_LENGTH_MAX) {
-        AGILOG(AGILOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+        TRAVODDS_LOG(LOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
         return nullptr;
     }
     auto it = typeSupports_.find(type_name);
     if (it == typeSupports_.end()) {
-		AGILOG(AGILOG_ERROR, "type_name[%s] not regist", type_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "type_name[%s] not regist", type_name.c_str());
         return nullptr;
     }
     std::lock_guard<std::mutex> lock(mtxTopics_);
     if (topics_.find(name) != topics_.end()) {
-		AGILOG(AGILOG_ERROR, "topic[%s] is created", name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s] is created", name.c_str());
         return nullptr;
     }
     MultiTopic* mult = nullptr;
 
     std::shared_ptr<MultiTopicImpl> mulTopic = std::make_shared<MultiTopicImpl>(name, type_name, subscription_expression, expression_parameters, this);
     if (!mulTopic.get()) {
-		AGILOG(AGILOG_ERROR, "topic[%s] create failed", name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic[%s] create failed", name.c_str());
         return nullptr;
     }
     mult = mulTopic.get();
@@ -359,22 +359,22 @@ MultiTopic* DomainParticipantImpl::create_multitopic(const std::string& name, co
 ReturnCode_t DomainParticipantImpl::delete_multitopic(MultiTopic*& multitopic)
 {
     if (!multitopic) {
-		AGILOG(AGILOG_ERROR, "multitopic is nullptr ");
+		TRAVODDS_LOG(LOG_ERROR, "multitopic is nullptr ");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != multitopic->get_participant()) {
-		AGILOG(AGILOG_ERROR, "domainparticipant donot contain the multitopic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant donot contain the multitopic");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     std::string name = multitopic->get_name();
     std::lock_guard<std::mutex> lock(mtxTopics_);
     auto it = multiTopics_.find(name);
     if (multiTopics_.end() == it) {
-		AGILOG(AGILOG_ERROR, "domainparticipant cant find the multitopic");
+		TRAVODDS_LOG(LOG_ERROR, "domainparticipant cant find the multitopic");
         return RETCODE_ERROR;
     }
     if (it->second->IsReferenced()) {
-		AGILOG(AGILOG_ERROR, "multitopic is used");
+		TRAVODDS_LOG(LOG_ERROR, "multitopic is used");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     multiTopics_.erase(name);
@@ -397,14 +397,14 @@ Topic* DomainParticipantImpl::find_topic(const std::string& topic_name, const Du
 	}
 
     if (!condTopics_.wait_for(lock, duration, [this, &topic_name]() { return topics_.count(topic_name) > 0; })){
-		AGILOG(AGILOG_ERROR, "topic_name[%s] find Err timeout", topic_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic_name[%s] find Err timeout", topic_name.c_str());
 		return nullptr;
     }
 	
     TopicImpl* impl = dynamic_cast<TopicImpl*>(topics_[topic_name].get());
 
     if (nullptr == impl) {
-		AGILOG(AGILOG_ERROR, "topic_name[%s] find error", topic_name.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "topic_name[%s] find error", topic_name.c_str());
         return nullptr;
     }
     return impl;
@@ -423,7 +423,7 @@ TopicDescription* DomainParticipantImpl::lookup_topicdescription(const std::stri
 
 const Subscriber* DomainParticipantImpl::get_builtin_subscriber() const
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return nullptr;
 }
 
@@ -441,19 +441,19 @@ ReturnCode_t DomainParticipantImpl::ignore_participant(const InstanceHandle_t& h
 
 ReturnCode_t DomainParticipantImpl::ignore_topic(const InstanceHandle_t& handle)
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::ignore_publication(const InstanceHandle_t& handle)
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::ignore_subscription(const InstanceHandle_t& handle)
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
@@ -468,7 +468,7 @@ ReturnCode_t DomainParticipantImpl::delete_contained_entities()
         std::lock_guard<std::mutex> lock(mtxPubs_);
         for (auto& it : pubHandles_) {
             if (RETCODE_OK != it.second->delete_contained_entities()) {
-				AGILOG(AGILOG_ERROR, "publishers delete_contained_entities error");
+				TRAVODDS_LOG(LOG_ERROR, "publishers delete_contained_entities error");
                 return RETCODE_PRECONDITION_NOT_MET;
             }
         }
@@ -478,7 +478,7 @@ ReturnCode_t DomainParticipantImpl::delete_contained_entities()
         std::lock_guard<std::mutex> lock(mtxSubs_);
         for (auto& it : subHandles_) {
             if (RETCODE_OK != it.second->delete_contained_entities()) {
-				AGILOG(AGILOG_ERROR, "subscribers delete_contained_entities error");
+				TRAVODDS_LOG(LOG_ERROR, "subscribers delete_contained_entities error");
                 return RETCODE_PRECONDITION_NOT_MET;
             }
         }
@@ -497,7 +497,7 @@ ReturnCode_t DomainParticipantImpl::delete_contained_entities()
 ReturnCode_t DomainParticipantImpl::assert_liveliness()
 {
 	if (participant_ == nullptr) {
-		AGILOG(AGILOG_ERROR, "participant_ is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "participant_ is nullptr");
 		return RETCODE_NOT_ENABLED;
 	}
 
@@ -508,7 +508,7 @@ ReturnCode_t DomainParticipantImpl::assert_liveliness()
 		}
 	}
 	else {
-		AGILOG(AGILOG_ERROR, "Invalid WLP, cannot assert liveliness of participant");
+		TRAVODDS_LOG(LOG_ERROR, "Invalid WLP, cannot assert liveliness of participant");
 	}
 	return RETCODE_ERROR;
 }
@@ -528,7 +528,7 @@ ReturnCode_t DomainParticipantImpl::set_default_publisher_qos(const PublisherQos
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ICheckQos Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ICheckQos Err ret = %d", ret);
         return ret;
     }
     defaultPubQos_ = qos;
@@ -551,7 +551,7 @@ ReturnCode_t DomainParticipantImpl::set_default_subscriber_qos(const SubscriberQ
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d", ret);
         return ret;
     }
     defaultSubQos_ = qos;
@@ -574,7 +574,7 @@ ReturnCode_t DomainParticipantImpl::set_default_topic_qos(const TopicQos& qos)
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d", ret);
         return ret;
     }
     defaultTopicQos_ = qos;
@@ -600,7 +600,7 @@ ReturnCode_t DomainParticipantImpl::get_discovered_participant_data(ParticipantB
 
     ReturnCode_t ret =  discovery_->GetParticipantData(key, data);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "GetParticipantData Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "GetParticipantData Err ret = %d", ret);
 		return ret;
 	}
 
@@ -611,13 +611,13 @@ ReturnCode_t DomainParticipantImpl::get_discovered_participant_data(ParticipantB
 
 ReturnCode_t DomainParticipantImpl::get_discovered_topics(InstanceHandleSeq& topic_handles) const
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::get_discovered_topic_data(TopicBuiltinTopicData& topic_data, const InstanceHandle_t& topic_handle) const
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
@@ -707,7 +707,7 @@ TypeSupport* DomainParticipantImpl::find_type(const std::string& typeName)
 ReturnCode_t DomainParticipantImpl::registe_type(const std::string& typeName, TypeSupport* typeSupport)
 {
     if (typeName.empty() || typeName.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "typeName is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+		TRAVODDS_LOG(LOG_ERROR, "typeName is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
         return RETCODE_BAD_PARAMETER;
     }
     std::lock_guard<std::mutex> lock(mtxTypes_);
@@ -716,7 +716,7 @@ ReturnCode_t DomainParticipantImpl::registe_type(const std::string& typeName, Ty
         if (it->second == typeSupport) {
             return RETCODE_OK;
         }
-		AGILOG(AGILOG_ERROR, "typeName[%s] is regist, but typesupport is different", typeName.c_str());
+		TRAVODDS_LOG(LOG_ERROR, "typeName[%s] is regist, but typesupport is different", typeName.c_str());
         return RETCODE_PRECONDITION_NOT_MET;
     }
     typeSupports_.insert({ typeName, typeSupport });
@@ -737,7 +737,7 @@ ReturnCode_t DomainParticipantImpl::enable()
 
 	ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err ret = %d ");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d ");
 		return ret;
 	}
 	if (qos_.entity_factory.autoenable_created_entities) {

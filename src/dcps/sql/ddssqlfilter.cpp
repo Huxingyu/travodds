@@ -45,7 +45,7 @@ bool DDSSQLFilter::Validate(SerializedBuffer* buffer)
 	// 使用DynamicDataFactory创建数据容器
 	DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*dynType_);
 	DynamicDataTypeSupport typeSupport(dynType_.get());
-	AGIDDSCdrDeserializer cdr(buffer);
+	CdrDeserializer cdr(buffer);
 	typeSupport.deserialize_data(dyn_data, &cdr, DEFAULT_ENDIAN);
 
 	root_->Reset();

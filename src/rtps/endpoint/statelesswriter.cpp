@@ -74,7 +74,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr")
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr")
 		}
 	}
 

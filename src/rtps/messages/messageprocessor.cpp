@@ -468,7 +468,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 {
 	if (message[0] != 'R' || message[1] != 'T' ||
 		message[2] != 'P' || message[3] != 'S') {
-		AGILOG(AGILOG_ERROR, "Msg received with no RTPS in header, ignoring...");
+		TRAVODDS_LOG(LOG_ERROR, "Msg received with no RTPS in header, ignoring...");
 		return RETCODE_ERROR;
 	}
 
@@ -499,7 +499,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 
  	ret = InterpretMessageHeader(message, messageReceiver);
 	if (ret != RETCODE_OK) {
-		AGILOG(AGILOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
 	messageLen -= sizeof(MessageHeader_t);
@@ -582,7 +582,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (keyFlag && dataFlag) {
-		AGILOG(AGILOG_ERROR, "Message received with Data and Key Flag set, ignoring");
+		TRAVODDS_LOG(LOG_ERROR, "Message received with Data and Key Flag set, ignoring");
 		return RETCODE_ERROR;
 	}
 
@@ -612,7 +612,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	}
 	//TODO 
 	if (dataSubMessage.writerSN <= SEQUENCENUMBER_ZERO) {
-		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
+		TRAVODDS_LOG(LOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
@@ -861,7 +861,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	}
 
 	if (dataFragSubMessage.writerSN <= SequenceNumber_t()) {
-		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
+		TRAVODDS_LOG(LOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 

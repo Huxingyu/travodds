@@ -25,18 +25,18 @@ DomainParticipantFactoryImpl::DomainParticipantFactoryImpl()
 DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t domain_id, const DomainParticipantQos& qos, DomainParticipantListener* listener, const StatusMask& mask)
 {
     if (domain_id > DOMAIN_ID_MAX) {
-		AGILOG(AGILOG_ERROR, "DomainId_t is Err, should 0 <= domain_id <= 232 ");
+		TRAVODDS_LOG(LOG_ERROR, "DomainId_t is Err, should 0 <= domain_id <= 232 ");
 		return nullptr;
     }
 	const DomainParticipantQos& qosT = (&qos == &PARTICIPANT_QOS_DEFAULT) ? defaultParticipantQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
 	DomainParticipant* domainPart = nullptr;
 	std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask);
 	if (!domainParticipant.get()) {
-		AGILOG(AGILOG_ERROR, "Make DP Err");
+		TRAVODDS_LOG(LOG_ERROR, "Make DP Err");
 		return nullptr;
 	}
     domainPart = domainParticipant.get();
@@ -45,7 +45,7 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 		if (RETCODE_OK != domainPart->enable()) {
 			delete_participant(domainPart);
 			domainPart = nullptr;
-			AGILOG(AGILOG_ERROR, "Enable Err");
+			TRAVODDS_LOG(LOG_ERROR, "Enable Err");
 			return nullptr;
 		}
 	}
@@ -64,18 +64,18 @@ DomainParticipantFactoryImpl::~DomainParticipantFactoryImpl()
 ReturnCode_t DomainParticipantFactoryImpl::delete_participant(DomainParticipant*& participant)
 {
     if (!participant) {
-		AGILOG(AGILOG_ERROR, "RETCODE_BAD_PARAMETER");
+		TRAVODDS_LOG(LOG_ERROR, "RETCODE_BAD_PARAMETER");
         return RETCODE_BAD_PARAMETER;
     }
     InstanceHandle_t handle = participant->get_instance_handle();
     std::lock_guard<std::mutex> lock(mtxParticipants_);
     auto it = participants_.find(handle);
     if (it == participants_.end()) {
-		AGILOG(AGILOG_ERROR, "Handle is Err");
+		TRAVODDS_LOG(LOG_ERROR, "Handle is Err");
         return RETCODE_ERROR;
     }
     if (!it->second->Empty()) {
-		AGILOG(AGILOG_ERROR, "DP is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "DP is nullptr");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     participants_.erase(it);
@@ -102,7 +102,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_default_participant_qos(const Dom
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
         return ret;
     }
     defaultParticipantQos_ = qos;
@@ -121,11 +121,11 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos(const DomainParticipantFactor
 
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
         return ret;
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qos)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 	qos_ = qos;

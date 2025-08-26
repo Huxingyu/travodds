@@ -14,7 +14,7 @@
 #define TYPE_OBJECT_TYPESUPPORT_H
 
 #include "dcps/topic/typesupport.h"
-#include "cdr/agicdr.h"
+#include "cdr/travoddscdr.h"
 #include "xtypes/typeobject.h"
 
 #ifdef __cplusplus
@@ -37,13 +37,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -51,7 +51,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     _TypeIdTypeSupport() = default;
@@ -71,13 +71,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -85,7 +85,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AnnotationMemberValueTypeSupport() = default;
@@ -105,13 +105,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -119,7 +119,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AnnotationUsageMemberTypeSupport() = default;
@@ -139,13 +139,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -153,7 +153,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AnnotationUsageTypeSupport() = default;
@@ -173,13 +173,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -187,7 +187,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     TypePropertyTypeSupport() = default;
@@ -207,13 +207,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -221,7 +221,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     TypeTypeSupport() = default;
@@ -241,13 +241,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -255,7 +255,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     MemberPropertyTypeSupport() = default;
@@ -275,13 +275,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -289,7 +289,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     MemberTypeSupport() = default;
@@ -309,13 +309,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -323,7 +323,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     StructureTypeTypeSupport() = default;
@@ -343,13 +343,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -357,7 +357,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     UnionMemberTypeSupport() = default;
@@ -377,13 +377,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -391,7 +391,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     UnionTypeTypeSupport() = default;
@@ -411,13 +411,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -425,7 +425,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AnnotationMemberTypeSupport() = default;
@@ -445,13 +445,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -459,7 +459,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AnnotationTypeTypeSupport() = default;
@@ -479,13 +479,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -493,7 +493,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     AliasTypeTypeSupport() = default;
@@ -513,13 +513,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -527,7 +527,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     CollectionTypeTypeSupport() = default;
@@ -547,13 +547,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -561,7 +561,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     ArrayTypeTypeSupport() = default;
@@ -581,13 +581,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -595,7 +595,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     MapTypeTypeSupport() = default;
@@ -615,13 +615,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -629,7 +629,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     SequenceTypeTypeSupport() = default;
@@ -649,13 +649,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -663,7 +663,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     StringTypeTypeSupport() = default;
@@ -683,13 +683,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -697,7 +697,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     BitTypeSupport() = default;
@@ -717,13 +717,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -731,7 +731,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     BitSetTypeTypeSupport() = default;
@@ -751,13 +751,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -765,7 +765,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     EnumeratedConstantTypeSupport() = default;
@@ -785,13 +785,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -799,7 +799,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     EnumerationTypeTypeSupport() = default;
@@ -819,13 +819,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -833,7 +833,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     _ModuleTypeSupport() = default;
@@ -853,13 +853,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -867,7 +867,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     TypeLibraryElementTypeSupport() = default;
@@ -887,13 +887,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -901,7 +901,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     TypeLibraryTypeSupport() = default;
@@ -921,13 +921,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -935,7 +935,7 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 
 private:
     TypeObjectTypeSupport() = default;

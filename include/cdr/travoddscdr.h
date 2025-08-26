@@ -10,8 +10,8 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGICDR_H
-#define AGICDR_H
+#ifndef TRAVODDSCDR_H
+#define TRAVODDSCDR_H
 
 #include <string>
 #include <cstring>
@@ -26,6 +26,8 @@
 // 取消对编译器的警告C4244
 #pragma warning(disable: 4244)
 #endif
+
+TRAVODDS_NAMESPACE_BEGIN
 
 // 由于各个平台的long double大小不一致，使用union对齐为16字节
 union LongDouble {
@@ -114,7 +116,7 @@ public:
 /**
  * @brief 序列化器。
  */
-class DDS_DLL AGIDDSCdrSerializer
+class DDS_DLL CdrSerializer
 {
 public:
     /**
@@ -123,9 +125,9 @@ public:
      * @param buffer 目标缓冲区。
      * @param littleEndian 是否小端字节序。
      */
-    AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEndian = true);
+    CdrSerializer(SerializedBuffer* buffer, bool littleEndian = true);
 
-    ~AGIDDSCdrSerializer() = default;
+    ~CdrSerializer() = default;
 
     bool serializeLongDouble(LongDouble value);
 
@@ -403,10 +405,10 @@ private:
 /**
  * @brief 反序列化器。
  */
-class DDS_DLL AGIDDSCdrDeserializer {
+class DDS_DLL CdrDeserializer {
 public:
-    AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool littleEndian = true);
-    ~AGIDDSCdrDeserializer() = default;
+    CdrDeserializer(SerializedBuffer* buffer, bool littleEndian = true);
+    ~CdrDeserializer() = default;
 
     bool deserializeLongDouble(LongDouble& value) 
     {
@@ -563,4 +565,6 @@ private:
     bool useLittleEndian_;
 };
 
-#endif // AGICDR_H
+TRAVODDS_NAMESPACE_END
+
+#endif // TRAVODDSCDR_H

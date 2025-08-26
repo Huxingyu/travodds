@@ -35,13 +35,13 @@ ReturnCode_t TopicImpl::set_qos(const TopicQos& qos)
     if (&qos != &TOPIC_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
 
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 
@@ -91,7 +91,7 @@ ReturnCode_t TopicImpl::enable()
 		return RETCODE_OK;
 	}
 	if (!participant_->IsEnable()) {
-		AGILOG(AGILOG_ERROR, "IsEnable Err");
+		TRAVODDS_LOG(LOG_ERROR, "IsEnable Err");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 	enable_ = true;

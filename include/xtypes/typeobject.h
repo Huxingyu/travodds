@@ -17,7 +17,7 @@
 #include <vector>
 #include <map>
 #include <cstdint>
-#include "cdr/agicdr.h"
+#include "cdr/travoddscdr.h"
 
 #if defined(DDS_TYPE_EXPORT) && defined(_WIN32)
 #define DDS_TYPE_API __declspec(dllexport)

@@ -15,7 +15,7 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include "cdr/agicdr.h"
+#include "cdr/travoddscdr.h"
 #include "dcps/base/retcode.h"
 #include "dcps/sql/ddssqlfield.h"
 #include "dcps/sql/binarytreenode.h"

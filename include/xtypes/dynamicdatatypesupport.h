@@ -34,13 +34,13 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) override;
 
     virtual TypeObject* get_typeobject() override;
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
@@ -48,10 +48,10 @@ public:
 
     virtual int MakeKey(const void* data, InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, CdrSerializer* cdr, int endian);
 private:
     unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, MemberId id, const std::string& name, unsigned int currentAlignment);
-    int serialize_member(DynamicData* dynamicData, AGIDDSCdrSerializer* cdr, DynamicType* type, MemberId id, const std::string& name, int endian);
+    int serialize_member(DynamicData* dynamicData, CdrSerializer* cdr, DynamicType* type, MemberId id, const std::string& name, int endian);
 private:
     DynamicType* type_;
 };

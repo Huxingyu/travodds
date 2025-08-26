@@ -240,7 +240,7 @@ ReturnCode_t HistoryCache::FindORAddKey(const InstanceHandle_t& handle, Serializ
 		*vitOut = itor;
 		return RETCODE_OK;
 	}
-	AGILOG(AGILOG_ERROR, "instanceChanges_.size[%d] >=  resourceLimitesQos_.max_instances[%d]", instanceChanges_.size(), resourceLimitesQos_.max_instances);
+	TRAVODDS_LOG(LOG_ERROR, "instanceChanges_.size[%d] >=  resourceLimitesQos_.max_instances[%d]", instanceChanges_.size(), resourceLimitesQos_.max_instances);
 	return RETCODE_OUT_OF_RESOURCES;
 }
 

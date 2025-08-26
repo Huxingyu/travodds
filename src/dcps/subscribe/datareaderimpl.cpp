@@ -98,12 +98,12 @@ ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
     if (&qos != &DATAREADER_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 	if (enable_) {
@@ -168,7 +168,7 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
 		if(RETCODE_ERROR == ret) {
-			AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		}
 		return ret;
 	}
@@ -181,7 +181,7 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -195,7 +195,7 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 	sample_infos.unloan();
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
@@ -208,7 +208,7 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
 		if (buffer->origin_buffer) {
@@ -227,7 +227,7 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
 		condition->get_view_state_mask(), condition->get_instance_state_mask());
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
@@ -239,7 +239,7 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -254,7 +254,7 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
 		condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
@@ -266,7 +266,7 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer,littleEndian);
+		CdrDeserializer cdr(buffer,littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
 		if (buffer->origin_buffer) {
@@ -284,13 +284,13 @@ ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &samp
 	ret = reader_->ReadOrTake(datas, sample_infos,1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE);
 	if (RETCODE_OK == ret) {
 		if (!sample_infos[0].valid_data) {
-			AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 			return ret;
 		}
 		SerializedBuffer* buffer = &datas[0];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
 		sample_info = sample_infos[0];
 	}
@@ -306,13 +306,13 @@ ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &samp
 	ret = reader_->ReadOrTake(datas, sample_infos, 1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE,true);
 	if (RETCODE_OK == ret) {
 		if (!sample_infos[0].valid_data) {
-			AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 			return ret;
 		}
 		SerializedBuffer* buffer = &datas[0];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
 		sample_info = sample_infos[0];
 
@@ -330,7 +330,7 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, a_handle, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
@@ -342,7 +342,7 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 		
 	}
@@ -355,7 +355,7 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, handle, sample_states, view_states, instance_states,true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTakeInstance ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeInstance ret = %d", ret);
 		return ret;
 	}
 
@@ -367,7 +367,7 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
 		if (buffer->origin_buffer) {
@@ -383,7 +383,7 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
@@ -395,7 +395,7 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -407,7 +407,7 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states,true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
@@ -419,7 +419,7 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
 		if (buffer->origin_buffer) {
@@ -437,7 +437,7 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
 		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask());
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
@@ -449,7 +449,7 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 
@@ -463,7 +463,7 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
 		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
@@ -475,7 +475,7 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 		SerializedBuffer* buffer = &datas[i];
 		bool littleEndian = GetEndianess(buffer);
 
-		AGIDDSCdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
 		if (buffer->origin_buffer) {
@@ -493,17 +493,17 @@ ReturnCode_t DataReaderImpl::return_loan(DataSeq& data_values, SampleInfoSeq& sa
 ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
 	if (!typeSupport_->has_key()) {
-		AGILOG(AGILOG_ERROR, "Topic is NO_KEY, operation not permitted");
+		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
 	}
 
 	SerializedBuffer* cacheData = history_->get_key_value(handle);
 	if (nullptr == cacheData) {
-		AGILOG(AGILOG_ERROR, "cacheData is nullptr,RETCODE_BAD_PARAMETER");
+		TRAVODDS_LOG(LOG_ERROR, "cacheData is nullptr,RETCODE_BAD_PARAMETER");
 		return RETCODE_BAD_PARAMETER;
 	}
 
-	AGIDDSCdrDeserializer cdr(cacheData);
+	CdrDeserializer cdr(cacheData);
 	typeSupport_->deserialize_data(key_holder, &cdr, 1);
 	return RETCODE_OK;
 }
@@ -548,7 +548,7 @@ QueryCondition* DataReaderImpl::create_querycondition(SampleStateMask smaple_sta
 ReturnCode_t DataReaderImpl::delete_readcondition(ReadCondition* condition)
 {
 	if (condition == nullptr) {
-		AGILOG(AGILOG_ERROR, "condition is nullptr,RETCODE_BAD_PARAMETER");
+		TRAVODDS_LOG(LOG_ERROR, "condition is nullptr,RETCODE_BAD_PARAMETER");
 		return RETCODE_BAD_PARAMETER;
 	}
 	for (auto it = readcdts_.begin(); it != readcdts_.end(); it++) {
@@ -563,7 +563,7 @@ ReturnCode_t DataReaderImpl::delete_readcondition(ReadCondition* condition)
 			return RETCODE_OK;
 		}
 	}
-	AGILOG(AGILOG_ERROR, "datareder donot contain this condition");
+	TRAVODDS_LOG(LOG_ERROR, "datareder donot contain this condition");
 	return RETCODE_PRECONDITION_NOT_MET;
 }
 
@@ -616,7 +616,7 @@ ReturnCode_t DataReaderImpl::delete_contained_entities()
 
 ReturnCode_t DataReaderImpl::wait_for_historical_data(const Duration_t &max_wait) const
 {
-	AGILOG(AGILOG_ERROR, "datareader donot support interface");
+	TRAVODDS_LOG(LOG_ERROR, "datareader donot support interface");
     return RETCODE_UNSUPPORTED;
 }
 
@@ -634,7 +634,7 @@ ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopi
 ReturnCode_t DataReaderImpl::get_matched_publications(InstanceHandleSeq &publication_handles) const
 {
     if(!reader_) {
-		AGILOG(AGILOG_ERROR, "datareader releated reader is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "datareader releated reader is nullptr");
         return RETCODE_NOT_ENABLED;
     }
     reader_->GetMatchedPublications(publication_handles);
@@ -776,7 +776,7 @@ bool DataReaderImpl::MakeKey(const void*  data, InstanceHandle_t& handle, bool f
 	MemoryPool::GetInstance()->getBuffer(buffer.buffer_size, buffer.origin_buffer);
 	buffer.buffer = buffer.origin_buffer;
 
-	AGIDDSCdrSerializer cdr(&buffer);
+	CdrSerializer cdr(&buffer);
 	
 	bool ret = typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);
 	MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);

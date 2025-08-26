@@ -30,38 +30,38 @@ ReturnCode_t DDSXMLRepo::load(const std::string& xmlFilePath) {
     XMLDocument doc(true, Whitespace::COLLAPSE_WHITESPACE);
     XMLError result = doc.LoadFile(xmlFilePath.c_str());
     if (result != XML_SUCCESS) {
-        AGILOG(AGILOG_ERROR, "Failed to load XML file %s\n", xmlFilePath.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Failed to load XML file %s\n", xmlFilePath.c_str());
         return RETCODE_ERROR;
     }
 
     XMLElement* root = doc.RootElement();
     if (!root) {
-        AGILOG(AGILOG_ERROR, "Failed to get root element\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get root element\n");
         return RETCODE_ERROR;
     }
 
     // 判断根节点必须为dds_qos
     if (strcmp(root->Name(), "dds_qos") != 0) {
-        AGILOG(AGILOG_ERROR, "Root element must be dds_qos\n");
+        TRAVODDS_LOG(LOG_ERROR, "Root element must be dds_qos\n");
         return RETCODE_ERROR;
     }
     // Parse QoS configurations
     for (XMLElement* library = root->FirstChildElement(); library; library = library->NextSiblingElement("qos_library")) {
         // 只允许qos_library子节点
         if (strcmp(library->Name(), "qos_library") != 0) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Only qos_library is allowed\n", library->GetLineNum());
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Only qos_library is allowed\n", library->GetLineNum());
             return RETCODE_ERROR;
         }
         const char* libraryName = library->Attribute("name");
         if (!libraryName) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Missing library name\n", library->GetLineNum());
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Missing library name\n", library->GetLineNum());
             return RETCODE_ERROR;
         }
         // Parse QoS profiles
         for (XMLElement* profile = library->FirstChildElement("qos_profile"); profile; profile = profile->NextSiblingElement("qos_profile")) {
             const char* profileName = profile->Attribute("name");
             if (!profileName) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Missing profile name\n", profile->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Missing profile name\n", profile->GetLineNum());
                 return RETCODE_ERROR;
             }
             if (!parseQosProfile(profile, libraryName, profileName)) {
@@ -130,7 +130,7 @@ bool DDSXMLRepo::parseQosProfile(XMLElement* profile, const std::string& library
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos type %s\n", element->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos type %s\n", element->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -166,14 +166,14 @@ bool DDSXMLRepo::parseDomainParticipantFactoryQosProfile(XMLElement* element, Do
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseDomainParticipantFactoryQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_participantFactoryQosMap[key] = qos;
@@ -209,14 +209,14 @@ bool DDSXMLRepo::parseDomainParticipantQosProfile(XMLElement* element, DomainPar
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseDomainParticipantQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_participantQosMap[key] = qos;
@@ -252,14 +252,14 @@ bool DDSXMLRepo::parsePublisherQosProfile(XMLElement* element, PublisherQos& qos
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parsePublisherQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse PublisherQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse PublisherQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_publisherQosMap[key] = qos;
@@ -295,14 +295,14 @@ bool DDSXMLRepo::parseSubscriberQosProfile(XMLElement* element, SubscriberQos& q
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseSubscriberQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse SubscriberQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse SubscriberQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_subscriberQosMap[key] = qos;
@@ -338,14 +338,14 @@ bool DDSXMLRepo::parseDataWriterQosProfile(XMLElement* element, DataWriterQos& q
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseDataWriterQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_dataWriterQosMap[key] = qos;
@@ -381,14 +381,14 @@ bool DDSXMLRepo::parseDataReaderQosProfile(XMLElement* element, DataReaderQos& q
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseDataReaderQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_dataReaderQosMap[key] = qos;
@@ -424,14 +424,14 @@ bool DDSXMLRepo::parseTopicQosProfile(XMLElement* element, TopicQos& qos, const 
             }
         }
         if (!found) {
-            AGILOG(AGILOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to find base_name %s\n", element->GetLineNum(), baseName);
             return false;
         }
     }
     bool ret = parseTopicQos(element, qos);
     if (!ret)
     {
-        AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
+        TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
         return RETCODE_ERROR;
     }
     m_topicQosMap[key] = qos;
@@ -445,11 +445,11 @@ bool DDSXMLRepo::parseDomainParticipantFactoryQos(XMLElement* element, DomainPar
         if (strcmp(nodeName, "entity_factory") == 0) {
             bool ret = parseEntityFactoryQosPolicy(child, qos.entity_factory);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos entity_factory\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos entity_factory\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -463,17 +463,17 @@ bool DDSXMLRepo::parseDomainParticipantQos(XMLElement* element, DomainParticipan
         if (strcmp(nodeName, "entity_factory") == 0) {
             bool ret = parseEntityFactoryQosPolicy(child, qos.entity_factory);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos entity_factory\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos entity_factory\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "user_data") == 0) {
             bool ret = parseUserDataQosPolicy(child, qos.user_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos user_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos user_data\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -487,29 +487,29 @@ bool DDSXMLRepo::parsePublisherQos(XMLElement* element, PublisherQos& qos) {
         if (strcmp(nodeName, "entity_factory") == 0) {
             bool ret = parseEntityFactoryQosPolicy(child, qos.entity_factory);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse PublisherQos entity_factory\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse PublisherQos entity_factory\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "presentation") == 0) {
             bool ret = parsePresentationQosPolicy(child, qos.presentation);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse PublisherQos presentation\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse PublisherQos presentation\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "partition") == 0) {
             bool ret = parsePartitionQosPolicy(child, qos.partition);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse PublisherQos partition\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse PublisherQos partition\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "group_data") == 0) {
             bool ret = parseGroupDataQosPolicy(child, qos.group_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse PublisherQos group_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse PublisherQos group_data\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -523,29 +523,29 @@ bool DDSXMLRepo::parseSubscriberQos(XMLElement* element, SubscriberQos& qos) {
         if (strcmp(nodeName, "entity_factory") == 0) {
             bool ret = parseEntityFactoryQosPolicy(child, qos.entity_factory);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse SubscriberQos entity_factory\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse SubscriberQos entity_factory\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "presentation") == 0) {
             bool ret = parsePresentationQosPolicy(child, qos.presentation);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse SubscriberQos presentation\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse SubscriberQos presentation\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "partition") == 0) {
             bool ret = parsePartitionQosPolicy(child, qos.partition);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse SubscriberQos partition\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse SubscriberQos partition\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "group_data") == 0) {
             bool ret = parseGroupDataQosPolicy(child, qos.group_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse SubscriberQos group_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse SubscriberQos group_data\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -559,95 +559,95 @@ bool DDSXMLRepo::parseDataWriterQos(XMLElement* element, DataWriterQos& qos) {
         if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos durability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos durability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "durability_service") == 0) {
             bool ret = parseDurabilityServiceQosPolicy(child, qos.durability_service);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos durability_service\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos durability_service\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "deadline") == 0) {
             bool ret = parseDeadlineQosPolicy(child, qos.deadline);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos deadline\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos deadline\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "latency_budget") == 0) {
             bool ret = parseLatencyBudgetQosPolicy(child, qos.latency_budget);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos latency_budget\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos latency_budget\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "liveliness") == 0) {
             bool ret = parseLivelinessQosPolicy(child, qos.liveliness);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos liveliness\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos liveliness\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "reliability") == 0) {
             bool ret = parseReliabilityQosPolicy(child, qos.reliability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos reliability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos reliability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "destination_order") == 0) {
             bool ret = parseDestinationOrderQosPolicy(child, qos.destination_order);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos destination_order\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos destination_order\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "history") == 0) {
             bool ret = parseHistoryQosPolicy(child, qos.history);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos history\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos history\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "resource_limits") == 0) {
             bool ret = parseResourceLimitsQosPolicy(child, qos.resource_limits);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos resource_limits\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos resource_limits\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "transport_priority") == 0) {
             bool ret = parseTransportPriorityQosPolicy(child, qos.transport_priority);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos transport_priority\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos transport_priority\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "lifespan") == 0) {
             bool ret = parseLifespanQosPolicy(child, qos.lifespan);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos lifespan\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos lifespan\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "user_data") == 0) {
             bool ret = parseUserDataQosPolicy(child, qos.user_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos user_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos user_data\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "ownership") == 0) {
             bool ret = parseOwnershipQosPolicy(child, qos.ownership);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos ownership\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos ownership\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "ownership_strength") == 0) {
             bool ret = parseOwnershipStrengthQosPolicy(child, qos.ownership_strength);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos ownership_strength\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos ownership_strength\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "writer_data_lifecycle") == 0) {
             bool ret = parseWriterDataLifecycleQosPolicy(child, qos.writer_data_lifecycle);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataWriterQos writer_data_lifecycle\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos writer_data_lifecycle\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -661,77 +661,77 @@ bool DDSXMLRepo::parseDataReaderQos(XMLElement* element, DataReaderQos& qos) {
         if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos durability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos durability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "deadline") == 0) {
             bool ret = parseDeadlineQosPolicy(child, qos.deadline);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos deadline\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos deadline\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "latency_budget") == 0) {
             bool ret = parseLatencyBudgetQosPolicy(child, qos.latency_budget);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos latency_budget\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos latency_budget\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "liveliness") == 0) {
             bool ret = parseLivelinessQosPolicy(child, qos.liveliness);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos liveliness\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos liveliness\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "reliability") == 0) {
             bool ret = parseReliabilityQosPolicy(child, qos.reliability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos reliability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos reliability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "destination_order") == 0) {
             bool ret = parseDestinationOrderQosPolicy(child, qos.destination_order);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos destination_order\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos destination_order\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "history") == 0) {
             bool ret = parseHistoryQosPolicy(child, qos.history);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos history\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos history\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "resource_limits") == 0) {
             bool ret = parseResourceLimitsQosPolicy(child, qos.resource_limits);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos resource_limits\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos resource_limits\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "user_data") == 0) {
             bool ret = parseUserDataQosPolicy(child, qos.user_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos user_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos user_data\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "ownership") == 0) {
             bool ret = parseOwnershipQosPolicy(child, qos.ownership);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos ownership\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos ownership\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "time_based_filter") == 0) {
             bool ret = parseTimeBasedFilterQosPolicy(child, qos.time_based_filter);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos time_based_filter\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos time_based_filter\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "reader_data_lifecycle") == 0) {
             bool ret = parseReaderDataLifecycleQosPolicy(child, qos.reader_data_lifecycle);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DataReaderQos reader_data_lifecycle\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos reader_data_lifecycle\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -745,83 +745,83 @@ bool DDSXMLRepo::parseTopicQos(XMLElement* element, TopicQos& qos) {
         if (strcmp(nodeName, "topic_data") == 0) {
             bool ret = parseTopicDataQosPolicy(child, qos.topic_data);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos topic_data\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos topic_data\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos durability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos durability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "durability_service") == 0) {
             bool ret = parseDurabilityServiceQosPolicy(child, qos.durability_service);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos durability_service\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos durability_service\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "deadline") == 0) {
             bool ret = parseDeadlineQosPolicy(child, qos.deadline);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos deadline\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos deadline\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "latency_budget") == 0) {
             bool ret = parseLatencyBudgetQosPolicy(child, qos.latency_budget);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos latency_budget\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos latency_budget\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "liveliness") == 0) {
             bool ret = parseLivelinessQosPolicy(child, qos.liveliness);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos liveliness\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos liveliness\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "reliability") == 0) {
             bool ret = parseReliabilityQosPolicy(child, qos.reliability);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos reliability\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos reliability\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "destination_order") == 0) {
             bool ret = parseDestinationOrderQosPolicy(child, qos.destination_order);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos destination_order\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos destination_order\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "history") == 0) {
             bool ret = parseHistoryQosPolicy(child, qos.history);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos history\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos history\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "resource_limits") == 0) {
             bool ret = parseResourceLimitsQosPolicy(child, qos.resource_limits);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos resource_limits\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos resource_limits\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "transport_priority") == 0) {
             bool ret = parseTransportPriorityQosPolicy(child, qos.transport_priority);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos transport_priority\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos transport_priority\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "lifespan") == 0) {
             bool ret = parseLifespanQosPolicy(child, qos.lifespan);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos lifespan\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos lifespan\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "ownership") == 0) {
             bool ret = parseOwnershipQosPolicy(child, qos.ownership);
             if (!ret) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicQos ownership\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicQos ownership\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -962,7 +962,7 @@ bool DDSXMLRepo::parsePositiveIntegerUnlimited(XMLElement* element, int& value) 
         } else {
             XMLError ret = element->QueryIntText((int*)&value);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse positive integer unlimited\n", element->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse positive integer unlimited\n", element->GetLineNum());
                 return false;
             }
         }
@@ -986,7 +986,7 @@ bool DDSXMLRepo::parseDuration(XMLElement* element, Duration_t& duration) {
             } else {
                 XMLError ret = child->QueryIntText((int*)&duration.sec);
                 if (ret != XML_SUCCESS) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse sec\n", child->GetLineNum());
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse sec\n", child->GetLineNum());
                     return false;
                 }
             }
@@ -999,12 +999,12 @@ bool DDSXMLRepo::parseDuration(XMLElement* element, Duration_t& duration) {
             } else {
                 XMLError ret = child->QueryIntText((int*)&duration.nanosec);
                 if (ret != XML_SUCCESS) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse nanosec\n", child->GetLineNum());
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse nanosec\n", child->GetLineNum());
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown Duration element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Duration element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1063,12 +1063,12 @@ bool DDSXMLRepo::parseDurabilityQosPolicy(XMLElement* element, DurabilityQosPoli
                 } else if (strcmp(kind, "PERSISTENT_DURABILITY_QOS") == 0) {
                     qos.kind = PERSISTENT_DURABILITY_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid DurabilityQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid DurabilityQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown DurabilityQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DurabilityQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1086,12 +1086,12 @@ bool DDSXMLRepo::parseUserDataQosPolicy(XMLElement* element, UserDataQosPolicy& 
             const char* value = child->GetText();
             if (value) {
                 if (!parseBase64Binary(child, qos.value)) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse UserDataQosPolicy value\n", child->GetLineNum());
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse UserDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown UserDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown UserDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1115,24 +1115,24 @@ bool DDSXMLRepo::parsePresentationQosPolicy(XMLElement* element, PresentationQos
                 } else if (strcmp(access_scope, "GROUP_PRESENTATION_QOS") == 0) {
                     qos.access_scope = GROUP_PRESENTATION_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid PresentationQosPolicy access_scope: %s\n", child->GetLineNum(), access_scope);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid PresentationQosPolicy access_scope: %s\n", child->GetLineNum(), access_scope);
                     return false;
                 }
             }
         } else if (strcmp(nodeName, "coherent_access") == 0) {
             XMLError ret = child->QueryBoolText(&qos.coherent_access);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse coherent_access\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse coherent_access\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "ordered_access") == 0) {
             XMLError ret = child->QueryBoolText(&qos.ordered_access);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ordered_access\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ordered_access\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown PresentationQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown PresentationQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1148,11 +1148,11 @@ bool DDSXMLRepo::parseDeadlineQosPolicy(XMLElement* element, DeadlineQosPolicy& 
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "period") == 0) {
             if (!parseDuration(child, qos.period)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DeadlineQosPolicy period\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DeadlineQosPolicy period\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown DeadlineQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DeadlineQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1168,11 +1168,11 @@ bool DDSXMLRepo::parseLatencyBudgetQosPolicy(XMLElement* element, LatencyBudgetQ
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "duration") == 0) {
             if (!parseDuration(child, qos.duration)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse LatencyBudgetQosPolicy duration\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse LatencyBudgetQosPolicy duration\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown LatencyBudgetQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown LatencyBudgetQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1194,12 +1194,12 @@ bool DDSXMLRepo::parseOwnershipQosPolicy(XMLElement* element, OwnershipQosPolicy
                 } else if (strcmp(kind, "EXCLUSIVE_OWNERSHIP_QOS") == 0) {
                     qos.kind = EXCLUSIVE_OWNERSHIP_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid OwnershipQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid OwnershipQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown OwnershipQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown OwnershipQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1216,11 +1216,11 @@ bool DDSXMLRepo::parseOwnershipStrengthQosPolicy(XMLElement* element, OwnershipS
         if (strcmp(nodeName, "value") == 0) {
             XMLError ret = child->QueryIntText((int*)&qos.value);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse OwnershipStrengthQosPolicy value\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse OwnershipStrengthQosPolicy value\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown OwnershipStrengthQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown OwnershipStrengthQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1244,17 +1244,17 @@ bool DDSXMLRepo::parseLivelinessQosPolicy(XMLElement* element, LivelinessQosPoli
                 } else if (strcmp(kind, "MANUAL_BY_TOPIC_LIVELINESS_QOS") == 0) {
                     qos.kind = MANUAL_BY_TOPIC_LIVELINESS_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid LivelinessQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid LivelinessQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else if (strcmp(nodeName, "lease_duration") == 0) {
             if (!parseDuration(child, qos.lease_duration)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse LivelinessQosPolicy lease_duration\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse LivelinessQosPolicy lease_duration\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown LivelinessQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown LivelinessQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1270,11 +1270,11 @@ bool DDSXMLRepo::parseTimeBasedFilterQosPolicy(XMLElement* element, TimeBasedFil
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "minimum_separation") == 0) {
             if (!parseDuration(child, qos.minimum_separation)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TimeBasedFilterQosPolicy minimum_separation\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TimeBasedFilterQosPolicy minimum_separation\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown TimeBasedFilterQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown TimeBasedFilterQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1292,13 +1292,13 @@ bool DDSXMLRepo::parsePartitionQosPolicy(XMLElement* element, PartitionQosPolicy
             for (XMLElement* item = child->FirstChildElement(); item; item = item->NextSiblingElement()) {
                 const char *itemName = item->Name();
                 if (strcmp(itemName, "element") != 0) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Unknown PartitionQosPolicy name element %s\n", item->GetLineNum(), itemName);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown PartitionQosPolicy name element %s\n", item->GetLineNum(), itemName);
                     return false;
                 }
                 qos.name.push_back(std::string(item->GetText()));
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown PartitionQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown PartitionQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1320,17 +1320,17 @@ bool DDSXMLRepo::parseReliabilityQosPolicy(XMLElement* element, ReliabilityQosPo
                 } else if (strcmp(kind, "RELIABLE_RELIABILITY_QOS") == 0) {
                     qos.kind = RELIABLE_RELIABILITY_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid ReliabilityQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid ReliabilityQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else if (strcmp(nodeName, "max_blocking_time") == 0) {
             if (!parseDuration(child, qos.max_blocking_time)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ReliabilityQosPolicy max_blocking_time\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ReliabilityQosPolicy max_blocking_time\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown ReliabilityQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown ReliabilityQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1352,12 +1352,12 @@ bool DDSXMLRepo::parseDestinationOrderQosPolicy(XMLElement* element, Destination
                 } else if (strcmp(kind, "BY_SOURCE_TIMESTAMP_DESTINATIONORDER_QOS") == 0) {
                     qos.kind = BY_SOURCE_TIMESTAMP_DESTINATIONORDER_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid DestinationOrderQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid DestinationOrderQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown DestinationOrderQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DestinationOrderQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1379,18 +1379,18 @@ bool DDSXMLRepo::parseHistoryQosPolicy(XMLElement* element, HistoryQosPolicy& qo
                 } else if (strcmp(kind, "KEEP_ALL_HISTORY_QOS") == 0) {
                     qos.kind = KEEP_ALL_HISTORY_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid HistoryQosPolicy kind: %s\n", child->GetLineNum(), kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid HistoryQosPolicy kind: %s\n", child->GetLineNum(), kind);
                     return false;
                 }
             }
         } else if (strcmp(nodeName, "depth") == 0) {
             XMLError ret = child->QueryIntText((int*)&qos.depth);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse HistoryQosPolicy depth\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse HistoryQosPolicy depth\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown HistoryQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown HistoryQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1406,21 +1406,21 @@ bool DDSXMLRepo::parseResourceLimitsQosPolicy(XMLElement* element, ResourceLimit
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "max_samples") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_samples)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_samples\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_samples\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "max_instances") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_instances)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_instances\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_instances\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "max_samples_per_instance") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_samples_per_instance)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_samples_per_instance\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ResourceLimitsQosPolicy max_samples_per_instance\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown ResourceLimitsQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown ResourceLimitsQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1437,11 +1437,11 @@ bool DDSXMLRepo::parseEntityFactoryQosPolicy(XMLElement* element, EntityFactoryQ
         if (strcmp(nodeName, "autoenable_created_entities") == 0) {
             XMLError ret = child->QueryBoolText(&qos.autoenable_created_entities);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse EntityFactoryQosPolicy autoenable_created_entities\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse EntityFactoryQosPolicy autoenable_created_entities\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown EntityFactoryQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown EntityFactoryQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1458,11 +1458,11 @@ bool DDSXMLRepo::parseWriterDataLifecycleQosPolicy(XMLElement* element, WriterDa
         if (strcmp(nodeName, "autodispose_unregistered_instances") == 0) {
             XMLError ret = child->QueryBoolText(&qos.autodispose_unregistered_instances);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse WriterDataLifecycleQosPolicy autodispose_unregistered_instances\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse WriterDataLifecycleQosPolicy autodispose_unregistered_instances\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown WriterDataLifecycleQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown WriterDataLifecycleQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1478,16 +1478,16 @@ bool DDSXMLRepo::parseReaderDataLifecycleQosPolicy(XMLElement* element, ReaderDa
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "autopurge_nowriter_samples_delay") == 0) {
             if (!parseDuration(child, qos.autopurge_nowriter_samples_delay)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ReaderDataLifecycleQosPolicy autopurge_nowriter_samples_delay\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ReaderDataLifecycleQosPolicy autopurge_nowriter_samples_delay\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "autopurge_disposed_samples_delay") == 0) {
             if (!parseDuration(child, qos.autopurge_disposed_samples_delay)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse ReaderDataLifecycleQosPolicy autopurge_disposed_samples_delay\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse ReaderDataLifecycleQosPolicy autopurge_disposed_samples_delay\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown ReaderDataLifecycleQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown ReaderDataLifecycleQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1505,12 +1505,12 @@ bool DDSXMLRepo::parseTopicDataQosPolicy(XMLElement* element, TopicDataQosPolicy
             const char* value = child->GetText();
             if (value) {
                 if (!parseBase64Binary(child, qos.value)) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TopicDataQosPolicy value\n", child->GetLineNum());
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TopicDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown TopicDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown TopicDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1528,12 +1528,12 @@ bool DDSXMLRepo::parseGroupDataQosPolicy(XMLElement* element, GroupDataQosPolicy
             const char* value = child->GetText();
             if (value) {
                 if (!parseBase64Binary(child, qos.value)) {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse GroupDataQosPolicy value\n", child->GetLineNum());
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse GroupDataQosPolicy value\n", child->GetLineNum());
                     return false;
                 }
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown GroupDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown GroupDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1550,11 +1550,11 @@ bool DDSXMLRepo::parseTransportPriorityQosPolicy(XMLElement* element, TransportP
         if (strcmp(nodeName, "value") == 0) {
             XMLError ret = child->QueryIntText((int*)&qos.value);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse TransportPriorityQosPolicy value\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse TransportPriorityQosPolicy value\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown TransportPriorityQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown TransportPriorityQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1570,11 +1570,11 @@ bool DDSXMLRepo::parseLifespanQosPolicy(XMLElement* element, LifespanQosPolicy& 
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "duration") == 0) {
             if (!parseDuration(child, qos.duration)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse LifespanQosPolicy duration\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse LifespanQosPolicy duration\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown LifespanQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown LifespanQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
@@ -1590,7 +1590,7 @@ bool DDSXMLRepo::parseDurabilityServiceQosPolicy(XMLElement* element, Durability
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "service_cleanup_delay") == 0) {
             if (!parseDuration(child, qos.service_cleanup_delay)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy service_cleanup_delay\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy service_cleanup_delay\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "history_kind") == 0) {
@@ -1601,33 +1601,33 @@ bool DDSXMLRepo::parseDurabilityServiceQosPolicy(XMLElement* element, Durability
                 } else if (strcmp(history_kind, "KEEP_ALL_HISTORY_QOS") == 0) {
                     qos.history_kind = KEEP_ALL_HISTORY_QOS;
                 } else {
-                    AGILOG(AGILOG_ERROR, "Line[%d] Invalid DurabilityServiceQosPolicy history_kind: %s\n", child->GetLineNum(), history_kind);
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid DurabilityServiceQosPolicy history_kind: %s\n", child->GetLineNum(), history_kind);
                     return false;
                 }
             }
         } else if (strcmp(nodeName, "history_depth") == 0) {
             XMLError ret = child->QueryIntText((int*)&qos.history_depth);
             if (ret != XML_SUCCESS) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy history_depth\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy history_depth\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "max_samples") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_samples)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_samples\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_samples\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "max_instances") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_instances)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_instances\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_instances\n", child->GetLineNum());
                 return false;
             }
         } else if (strcmp(nodeName, "max_samples_per_instance") == 0) {
             if (!parsePositiveIntegerUnlimited(child, qos.max_samples_per_instance)) {
-                AGILOG(AGILOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_samples_per_instance\n", child->GetLineNum());
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DurabilityServiceQosPolicy max_samples_per_instance\n", child->GetLineNum());
                 return false;
             }
         } else {
-            AGILOG(AGILOG_ERROR, "Line[%d] Unknown DurabilityServiceQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DurabilityServiceQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }

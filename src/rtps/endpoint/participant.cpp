@@ -241,7 +241,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		itor->second->GetFlowController()->UnregisterWriter(itor->second);
 		writers_.erase(itor);
 	} else {
-		AGILOG(AGILOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -268,7 +268,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		}
 		readers_.erase(itor);
 	} else {
-		AGILOG(AGILOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -284,7 +284,7 @@ std::shared_ptr<Writer> Participant::GetWriter(const EntityId_t & EntityID)
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 	
 	if (0 == writers_.count(EntityID)) {
-		AGILOG(AGILOG_ERROR, "EntityID not exist");
+		TRAVODDS_LOG(LOG_ERROR, "EntityID not exist");
 		return nullptr;
 	}
 		
@@ -628,7 +628,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 {
     DataWriterImpl* dw = writer->GetRelatedDataWriter();
     if (nullptr == dw) {
-		AGILOG(AGILOG_ERROR, "datawriter is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "datawriter is nullptr");
         return;
     }
     const PublicationBuiltinTopicData& pubData = dw->GetBuiltinTopicData();
@@ -650,7 +650,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 	if ((0x02 == writer->GetGuid().entityId.entityKind  &&  subData.remoteReaderGuid.entityId.entityKind  != 0x07)
 		|| (0x03 == writer->GetGuid().entityId.entityKind  && subData.remoteReaderGuid.entityId.entityKind != 0x04)) {
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		AGILOG(AGILOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
+		TRAVODDS_LOG(LOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
 
 		return;
 	}
@@ -727,7 +727,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	if ((0x02 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x07) 
 		|| (0x03 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x04)) {
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		AGILOG(AGILOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
+		TRAVODDS_LOG(LOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
 		return;
 	}
 
@@ -745,7 +745,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (fulReader) {
 			fulReader->MatchedWriterAdd(proxy);
 		} else {
-			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 	else {
@@ -757,7 +757,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (lessReader) {
 			lessReader->MatchedWriterAdd(proxy);
 		} else {
-			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 
@@ -859,7 +859,7 @@ int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter>
 			locatorList.push_back(itor);
 		} else {
 			/* 异常处理 */
-			AGILOG(AGILOG_ERROR, "CreateReceiverResources Err")
+			TRAVODDS_LOG(LOG_ERROR, "CreateReceiverResources Err")
 		}
 	}
 	return static_cast<int32_t>(locatorList.size());
@@ -980,7 +980,7 @@ ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubDat
 
 	auto itor = remoteWriters_.find(guid);
 	if (itor == remoteWriters_.end()) {
-		AGILOG(AGILOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	pubData = itor->second.ddsPublicationData;
@@ -1012,7 +1012,7 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 
 	auto itor = remoteReaders_.find(guid);
 	if (itor == remoteReaders_.end()) {
-		AGILOG(AGILOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	subData = itor->second.ddsSubscriptionData;
