@@ -7,7 +7,7 @@
 #include <thread>
 #include <chrono>
 
-USING_AGIDDS_NAMESPACE;
+USING_AGIDDS_NAMESPACE
 
 std::unique_ptr<PersistenceService> g_persistence_service;
 
@@ -74,15 +74,15 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
-        // 注册HelloWorld类型到持久化服务的DomainParticipant
-        std::cout << "Registering HelloWorld type..." << std::endl;
+        // 直接使用 AGIROS DDS 的类型注册机制
+        std::cout << "Registering HelloWorld type using AGIROS mechanism..." << std::endl;
         const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
         ReturnCode_t register_ret = participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
         if (register_ret != RETCODE_OK) {
-            std::cerr << "Failed to register HelloWorld type" << std::endl;
+            std::cerr << "Failed to register HelloWorld type, error code: " << register_ret << std::endl;
             return -1;
         }
-        std::cout << "HelloWorld type registered successfully" << std::endl;
+        std::cout << "HelloWorld type registered successfully with AGIROS DDS" << std::endl;
         
         // 创建增强配置
         PersistenceConfig config;

@@ -49,7 +49,7 @@ static int publisher_shutdown(DomainParticipant* participant)
 			status = -1;
 		}
 
-		retcode = DomainParticipantFactory::get_instance()->delete_participant(participant);
+			DomainParticipantFactory::get_instance()->delete_participant(participant);
 		if (retcode != RETCODE_OK) {
 			fprintf(stderr, "delete_participant error %d\n", retcode);
 			status = -1;
@@ -72,7 +72,7 @@ extern "C" int publisher_main()
 	HelloWorld instance;
 	InstanceHandle_t instance_handle = HANDLE_NIL;
 
-	participant = DomainParticipantFactory::get_instance()->
+	participant = TheParticipantFactory->
 		create_participant(0, PARTICIPANT_QOS_DEFAULT, NULL, STATUS_MASK_NONE);
 	if (participant == NULL) {
 		fprintf(stderr, "create_participant error\n");
@@ -145,7 +145,7 @@ extern "C" int subscriber_main()
 	const char* type_name = NULL;
 	ReturnCode_t retcode;
 
-	participant = DomainParticipantFactory::get_instance()->
+	participant = TheParticipantFactory->
 		create_participant(0, PARTICIPANT_QOS_DEFAULT, NULL, STATUS_MASK_NONE);
 	if (participant == NULL) {
 		fprintf(stderr, "create_participant error\n");
@@ -198,7 +198,7 @@ extern "C" int subscriber_main()
 	if (participant != NULL) {
 		participant->delete_contained_entities();
 	}
-	DomainParticipantFactory::get_instance()->delete_participant(participant);
+	TheParticipantFactory->delete_participant(participant);
 	delete reader_listener;
 	return 0;
 }
