@@ -265,6 +265,16 @@ bool TransientHandler::store_data(const ::std::string& topic_name,
     if (config_.enable_database_storage) {
         sqlite3* db = service_->get_database();
         if (db != nullptr) {
+            // 首先确保topic存在
+            const char* insert_topic_sql = "INSERT OR IGNORE INTO topics (topic_name, type_name) VALUES (?, ?)";
+            sqlite3_stmt* topic_stmt;
+            if (sqlite3_prepare_v2(db, insert_topic_sql, -1, &topic_stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_text(topic_stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
+                sqlite3_bind_text(topic_stmt, 2, type_name.c_str(), -1, SQLITE_STATIC);
+                sqlite3_step(topic_stmt);
+                sqlite3_finalize(topic_stmt);
+            }
+            
             const char* insert_sql = R"(
                 INSERT OR REPLACE INTO persistent_data 
                 (topic_id, instance_id, sequence_number, source_timestamp, reception_timestamp, 
@@ -420,6 +430,16 @@ bool PersistentHandler::store_data(const ::std::string& topic_name,
     // 主要存储到数据库
     sqlite3* db = service_->get_database();
     if (db != nullptr) {
+        // 首先确保topic存在
+        const char* insert_topic_sql = "INSERT OR IGNORE INTO topics (topic_name, type_name) VALUES (?, ?)";
+        sqlite3_stmt* topic_stmt;
+        if (sqlite3_prepare_v2(db, insert_topic_sql, -1, &topic_stmt, nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(topic_stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(topic_stmt, 2, type_name.c_str(), -1, SQLITE_STATIC);
+            sqlite3_step(topic_stmt);
+            sqlite3_finalize(topic_stmt);
+        }
+        
         const char* insert_sql = R"(
             INSERT OR REPLACE INTO persistent_data 
             (topic_id, instance_id, sequence_number, source_timestamp, reception_timestamp, 
