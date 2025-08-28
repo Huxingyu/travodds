@@ -6,10 +6,13 @@
 #include <signal.h>
 #include <thread>
 #include <chrono>
+#include <atomic>
+#include <unistd.h>
 
 USING_AGIDDS_NAMESPACE
 
 std::unique_ptr<PersistenceService> g_persistence_service;
+std::atomic<bool> g_running{true};
 
 // 简单的Qt回调示例实现
 class ConsoleUICallback : public IPersistenceUICallback {
@@ -43,10 +46,15 @@ public:
 
 void signal_handler(int signal) {
     std::cout << "\nReceived signal " << signal << ", shutting down..." << std::endl;
+    g_running = false;
     if (g_persistence_service) {
         g_persistence_service->stop();
+        g_persistence_service.reset();
     }
-    exit(0);
+    
+    // 直接退出，避免在主线程中再次清理
+    std::cout << "Graceful shutdown completed." << std::endl;
+    _exit(0);
 }
 
 int main(int argc, char* argv[]) {
@@ -124,8 +132,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Press Ctrl+C to stop..." << std::endl;
         
         // 主循环 - 定期显示增强的统计信息
-        while (true) {
+        while (g_running) {
             std::this_thread::sleep_for(std::chrono::seconds(30));
+            
+            if (!g_running) break;  // 再次检查以便快速退出
             
             // 获取网络拓扑
             auto topology = g_persistence_service->get_network_topology();
@@ -166,6 +176,18 @@ int main(int argc, char* argv[]) {
             }
             
             std::cout << "===============================" << std::endl;
+        }
+        
+        // 优雅关闭
+        std::cout << "Shutting down gracefully..." << std::endl;
+        if (g_persistence_service) {
+            g_persistence_service->stop();
+            g_persistence_service.reset();
+        }
+        
+        // 清理DDS参与者
+        if (participant) {
+            TheParticipantFactory->delete_participant(participant);
         }
         
     } catch (const std::exception& e) {

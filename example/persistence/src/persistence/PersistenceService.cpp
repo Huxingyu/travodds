@@ -776,6 +776,7 @@ bool PersistenceService::create_enhanced_tables() {
             reception_timestamp INTEGER NOT NULL,
             data_content BLOB NOT NULL,
             data_size INTEGER NOT NULL,
+            durability_kind INTEGER NOT NULL,
             is_disposed BOOLEAN DEFAULT 0,
             is_compressed BOOLEAN DEFAULT 0,
             qos_info TEXT,
@@ -836,12 +837,15 @@ bool PersistenceService::create_enhanced_tables() {
     )";
     
     char* error_msg = nullptr;
+    std::cout << "Executing SQL to create tables..." << std::endl;
     int rc = sqlite3_exec(db_, create_tables_sql, nullptr, nullptr, &error_msg);
     if (rc != SQLITE_OK) {
         std::cerr << "SQL error creating tables: " << error_msg << std::endl;
         sqlite3_free(error_msg);
         return false;
     }
+    
+    std::cout << "Tables created successfully" << std::endl;
     
     return true;
 }
@@ -885,8 +889,10 @@ void PersistenceService::discovery_loop() {
             std::cerr << "Discovery loop error: " << e.what() << std::endl;
         }
         
-        // 等待5秒后再次检查
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        // 短暂等待以便快速响应退出信号
+        for (int i = 0; i < 50 && running_; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
     
     std::cout << "Discovery loop stopped" << std::endl;
@@ -1252,8 +1258,15 @@ void PersistenceService::cleanup_loop() {
     while (running_) {
         cleanup_expired_data();
         
-        // 使用配置的清理间隔
-        std::this_thread::sleep_for(config_.cleanup_interval);
+        // 使用可中断的等待替代长时间睡眠
+        auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(config_.cleanup_interval);
+        auto sleep_time = std::chrono::milliseconds(100);  // 每次睡眠100ms
+        auto total_sleep = std::chrono::milliseconds(0);
+        
+        while (running_ && total_sleep < interval_ms) {
+            std::this_thread::sleep_for(sleep_time);
+            total_sleep += sleep_time;
+        }
     }
 }
 
