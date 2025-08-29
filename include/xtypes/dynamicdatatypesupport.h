@@ -53,7 +53,7 @@ private:
     unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, TRAVODDS::MemberId id, const std::string& name, unsigned int currentAlignment);
     int serialize_member(DynamicData* dynamicData, TRAVODDS::CdrSerializer* cdr, DynamicType* type, TRAVODDS::MemberId id, const std::string& name, int endian);
 private:
-
+    /** @brief 关联的数据类型描述 */
     DynamicType* type_;
 };
 

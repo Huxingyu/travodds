@@ -671,7 +671,7 @@ bool DataWriterImpl::LifespanTimeout()
 		}
 		else {
 			// 最早的报文缓存已过期，删除该报文。
-			writer_->GetWriterCache()->RemoveChange(earliestChange);
+			writer_->GetWriterCache()->RemoveChange(earliestChange->sequenceNumber);
 			earliestChange = writer_->GetWriterCache()->GetMinSourceTimespace();
 		}
 	}

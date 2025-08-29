@@ -281,7 +281,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
             return RETCODE_ERROR;
         }
 #endif
-		newRecvSocket->bind(local_endpoint);
+		newRecvSocket->bind(GetReciveEndpoint(rAddr.port));
 		receiveSocketMap_.insert(std::pair<uint16_t, std::shared_ptr<asio::ip::udp::socket>>(rAddr.port, newRecvSocket));
 		return RETCODE_OK;
 	}
@@ -290,6 +290,11 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 		if (e.code() == asio::error::address_in_use) {
 			return RETCODE_PORT_IN_USE;
 		}
+#ifdef _WIN32
+		if (e.code().value() == WSAEACCES) {
+			return RETCODE_PORT_IN_USE;
+		}
+#endif
         //std::cerr << "Bind error: " << e.what() << std::endl;
 		return RETCODE_ERROR;
 	}
@@ -313,7 +318,7 @@ ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 		try {
 			socke->set_option(option);
 		}
-		catch (const std::exception& e) {
+		catch (const std::system_error& e) {
 			static_cast<void>(e);
 			TRAVODDS_LOG(LOG_ERROR, "Err[%s]", e.what());
 			//std::cerr << "Error: " << e.what() << std::endl;
@@ -425,6 +430,10 @@ asio::ip::udp::endpoint MessageTransmitterUDPv4::GetEndpoint(const AsioLocator& 
 	}
 	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v4>(), locator.port);
 }
+asio::ip::udp::endpoint MessageTransmitterUDPv4::GetReciveEndpoint(const uint32_t port)
+{
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("0.0.0.0"), port);
+}
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv4::GetSocketInit()
 {
 	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());
@@ -448,6 +457,10 @@ asio::ip::udp::endpoint MessageTransmitterUDPv6::GetEndpoint(const AsioLocator& 
 		return asio::ip::udp::endpoint(asio::ip::udp::v6(), locator.port);
 	}
 	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v6>(), locator.port);
+}
+asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_t port)
+{
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("::"), port);
 }
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv6::GetSocketInit()
 {

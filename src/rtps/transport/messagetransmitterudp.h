@@ -129,6 +129,7 @@ private:
 	virtual asio::ip::multicast::join_group GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc) = 0;
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) = 0;
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive = false) = 0;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) = 0;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() = 0;
 
 
@@ -195,6 +196,7 @@ private:
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
 
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 
@@ -207,6 +209,7 @@ private:
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
 
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 

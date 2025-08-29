@@ -68,26 +68,23 @@ bool HistoryCache::AddChange(std::shared_ptr<CacheChange> change)
 	return true;
 }
 
-bool HistoryCache::RemoveChange(std::shared_ptr<CacheChange> change)
+bool HistoryCache::RemoveChange(const SequenceNumber_t& seqNum)
 {
-	if (nullptr == change) {
-		return false;
-	}
-
-	changeMutex_.lock();
-	cacheChanges_.erase(change->sequenceNumber);
-
-	auto itor = instanceChanges_.find(change->instanceHandle);
-	if (itor != instanceChanges_.end()) {
-		for (auto cache = itor->second.cacheChanges.begin(); cache != itor->second.cacheChanges.end(); cache++) {
-			if (cache->get() == change.get()) {
-				//RemoveSampleCounters(change->sampleInfo.sample_state, itor->second.viewState, itor->second.instanceState);
-				itor->second.cacheChanges.erase(cache);
-				break;
-			}
+	{
+		std::lock_guard<std::mutex> lock(changeMutex_);
+		auto change = cacheChanges_.find(seqNum);
+		if (change == cacheChanges_.end()) {
+			return false;
 		}
+		auto itor = instanceChanges_.find(change->second->instanceHandle);
+		if (itor != instanceChanges_.end()) {
+			auto& cacheChanges = itor->second.cacheChanges;
+			std::remove_if(cacheChanges.begin(), cacheChanges.end(), [&change](const auto& cachedPtr) {
+				return cachedPtr.get() == change->second.get();
+				});
+		}
+		cacheChanges_.erase(change);
 	}
-	changeMutex_.unlock();
 
 	changeVar_.notify_all();
 
@@ -100,8 +97,9 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 
 	changeMutex_.lock();
 
-	if (cacheChanges_.end() != cacheChanges_.find(seqNum)) {
-		pCacheChange = cacheChanges_[seqNum];
+	auto itor = cacheChanges_.find(seqNum);
+	if (cacheChanges_.end() != itor) {
+		pCacheChange = itor->second;
 	}
 		
 	changeMutex_.unlock();

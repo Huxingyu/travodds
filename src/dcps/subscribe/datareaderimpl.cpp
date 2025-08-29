@@ -846,7 +846,7 @@ bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 	//如果已过期，将其从历史记录中删除，并返回false，以避免通知监听器。
 	if (expirationTime < currentTime)
 	{
-		reader_->GetReaderCache()->RemoveChange(cache);
+		reader_->GetReaderCache()->RemoveChange(cache->sequenceNumber);
 		return false;
 	}
 
@@ -887,7 +887,7 @@ bool DataReaderImpl::LifespanTimeout()
 		}
 		else {
 			// 最早的报文缓存已过期，删除该报文。
-			reader_->GetReaderCache()->RemoveChange(earliestChange);
+			reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
 			earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
 		}
 	}

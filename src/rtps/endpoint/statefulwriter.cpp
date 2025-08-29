@@ -110,7 +110,7 @@ bool StatefulWriter::IsAckedByAll(SequenceNumber_t changeSeqNum)
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
-	for (auto readerProxy : matchedReaders_) {
+	for (const auto& readerProxy : matchedReaders_) {
 		if (false == readerProxy.second->IsAcked(changeSeqNum)) {
 			return false;
 		}
@@ -526,15 +526,12 @@ void StatefulWriter::RemoveAllAckedData()
 {
 	auto seq = writerCache_->GetSeqNumMin();
 	bool remove = true;
-	while (seq != SequenceNumber_t{0, 1}) {
-		IsAckedByAll(seq);
-		if (IsAckedByAll(seq)) {
-			writerCache_->RemoveChange(writerCache_->GetChange(seq));
-		}
-		else {
+	while (IsAckedByAll(seq)) {
+		writerCache_->RemoveChange(seq);
+		seq = writerCache_->GetSeqNumMin();
+		if (seq == SequenceNumber_t{ 0, 1 }) {
 			break;
 		}
-		seq = writerCache_->GetSeqNumMin();
 	}
 }
 

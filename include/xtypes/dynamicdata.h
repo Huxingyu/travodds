@@ -392,8 +392,7 @@ private:
     ReturnCode_t initialize_values();
 
 private:
-
-    /** @brief 只读属性，该DynamicData关联的类型 */
+    /** @brief 只读属性，该DynamicData关联的类型  */
 
     DynamicType& type_;
 

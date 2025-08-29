@@ -222,11 +222,11 @@ public:
 	/**
 	 * @brief 删除发送报文请求。
 	 *
-	 * @param [in] change 发送报文请求。
+	 * @param [in] seqNum 发送报文请求序号。
 	 *
 	 * @return 删除成功则返回true，否则返回false。
 	 */
-	bool RemoveChange(std::shared_ptr<CacheChange> change);
+	bool RemoveChange(const SequenceNumber_t& seqNum);
 
 	/**
 	 * @brief 根据报文发送序号获取报文发送请求。
