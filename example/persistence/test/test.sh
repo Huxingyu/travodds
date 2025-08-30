@@ -1,60 +1,173 @@
 #!/bin/bash
 
-# 持久化服务功能测试脚本
+echo "=== TravoDDS 持久化策略完整测试脚本 ==="
 
-cd /home/wangshuo/Agiros-DDS/travodds/example/persistence/build
+# 设置工作目录
+WORK_DIR="/home/wangshuo/Agiros-DDS/travodds/example/persistence/build"
+cd "$WORK_DIR"
 
-echo "=== 启动持久化服务测试 ==="
+# 清理之前的文件
+echo "清理之前的测试文件..."
+rm -f *.db* *.log
+killall -9 persistence_service_app 2>/dev/null
+sleep 2
 
-# 1. 清理旧的数据库
-echo "清理旧数据..."
-rm -f enhanced_persistence.db persistence.db
-
-# 2. 启动持久化服务
-echo "启动持久化服务..."
-./persistence_service_app &
+echo "1. 启动持久化服务..."
+nohup ./persistence_service_app > persistence_service.log 2>&1 &
 PERSISTENCE_PID=$!
-sleep 3
+echo "持久化服务 PID: $PERSISTENCE_PID"
+sleep 8
 
-# 3. 发布一些数据
-echo "发布测试数据..."
-echo "pub" | timeout 8s ./persistent_hello_world &
-PUB_PID=$!
-sleep 10
+# 检查持久化服务是否正常启动
+if ! kill -0 $PERSISTENCE_PID 2>/dev/null; then
+    echo "❌ 错误: 持久化服务启动失败"
+    cat persistence_service.log
+    exit 1
+fi
+echo "✅ 持久化服务启动成功"
 
-# 4. 检查数据库是否有数据
-echo "检查数据库..."
-if [ -f "enhanced_persistence.db" ]; then
-    echo "数据库文件已创建"
-    sqlite3 enhanced_persistence.db ".tables" > tables.txt
-    echo "数据库表:"
-    cat tables.txt
+echo ""
+echo "2. 测试四种持久化策略的发布者..."
+
+strategies=("volatile:VOLATILE" "transient_local:TRANSIENT_LOCAL" "transient:TRANSIENT" "persistent:PERSISTENT")
+
+for strategy_pair in "${strategies[@]}"; do
+    IFS=':' read -r strategy_name strategy_display <<< "$strategy_pair"
     
-    # 检查数据记录
-    if sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM persistent_data;" 2>/dev/null; then
-        RECORD_COUNT=$(sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM persistent_data;" 2>/dev/null || echo "0")
-        echo "数据库记录数: $RECORD_COUNT"
-        
-        if [ "$RECORD_COUNT" -gt 0 ]; then
-            echo "显示前5条记录:"
-            sqlite3 enhanced_persistence.db "SELECT data_id, topic_id, instance_id, data_size, durability_kind FROM persistent_data LIMIT 5;" 2>/dev/null || echo "查询失败"
-        fi
+    echo "2.${#strategies[@]} 测试 $strategy_display 策略..."
+    
+    # 运行发布者并等待完成
+    timeout 15s ./persistent_hello_world pub "$strategy_name" > "${strategy_name}_pub.log" 2>&1
+    exit_code=$?
+    
+    if [ $exit_code -eq 0 ] || [ $exit_code -eq 124 ]; then
+        success_count=$(grep -c "发送成功" "${strategy_name}_pub.log" 2>/dev/null || echo "0")
+        echo "    ✅ $strategy_display 发布者完成，发送了 $success_count 条消息"
     else
-        echo "persistent_data表不存在或查询失败"
+        echo "    ❌ $strategy_display 发布者运行失败 (退出码: $exit_code)"
+        echo "    日志内容:"
+        head -5 "${strategy_name}_pub.log" | sed 's/^/      /'
+    fi
+    
+    # 等待数据处理
+    sleep 2
+done
+
+echo ""
+echo "3. 等待所有数据处理完成..."
+sleep 5
+
+echo ""
+echo "4. 检查数据库状态..."
+if [ -f enhanced_persistence.db ]; then
+    echo "✅ 数据库文件存在"
+    
+    echo "4.1 检查注册的主题:"
+    sqlite3 enhanced_persistence.db "SELECT topic_name, type_name, durability_kind, total_samples FROM topics;" | while read line; do
+        echo "    $line"
+    done
+    
+    echo "4.2 检查样本总数:"
+    sample_count=$(sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM dds_samples;" 2>/dev/null || echo "0")
+    echo "    数据库中的样本总数: $sample_count"
+    
+    if [ "$sample_count" -gt 0 ]; then
+        echo "4.3 按主题统计数据:"
+        sqlite3 enhanced_persistence.db "SELECT topic_name, COUNT(*) FROM dds_samples GROUP BY topic_name;" | while read line; do
+            echo "    $line"
+        done
+        
+        echo "4.4 最新的几条样本数据:"
+        sqlite3 enhanced_persistence.db "SELECT topic_name, substr(serialized_data, 1, 50) || '...', source_timestamp FROM dds_samples ORDER BY source_timestamp DESC LIMIT 3;" | while read line; do
+            echo "    $line"
+        done
     fi
 else
-    echo "数据库文件未创建"
+    echo "❌ 数据库文件不存在"
 fi
 
-# 5. 启动订阅者测试历史数据
-echo "启动订阅者测试历史数据..."
-echo "sub" | timeout 8s ./persistent_hello_world &
-SUB_PID=$!
-sleep 10
+echo ""
+echo "5. 测试历史数据恢复..."
 
-# 6. 清理进程
-echo "清理测试进程..."
-kill $PERSISTENCE_PID $PUB_PID $SUB_PID 2>/dev/null
-wait 2>/dev/null
+echo "5.1 测试 PERSISTENT 策略订阅者 (应该接收历史数据):"
+timeout 12s ./persistent_hello_world sub persistent > persistent_sub.log 2>&1 &
+sleep 13
 
+received_count=$(grep -c "Received data" persistent_sub.log 2>/dev/null || echo "0")
+echo "    接收到 $received_count 条历史消息"
+
+if [ "$received_count" -gt 0 ]; then
+    echo "    示例消息:"
+    grep "Received data" persistent_sub.log | head -2 | sed 's/^/      /'
+fi
+
+echo "5.2 测试 TRANSIENT 策略订阅者:"
+timeout 8s ./persistent_hello_world sub transient > transient_sub.log 2>&1 &
+sleep 9
+
+received_count=$(grep -c "Received data" transient_sub.log 2>/dev/null || echo "0")
+echo "    接收到 $received_count 条历史消息"
+
+echo ""
+echo "6. 运行综合测试 (test_publisher)..."
+timeout 30s ./test_publisher > test_publisher.log 2>&1
+test_exit_code=$?
+
+if [ $test_exit_code -eq 0 ] || [ $test_exit_code -eq 124 ]; then
+    writer_count=$(grep -c "成功创建.*DataWriter" test_publisher.log 2>/dev/null || echo "0")
+    reader_count=$(grep -c "成功创建.*DataReader" test_publisher.log 2>/dev/null || echo "0")
+    received_count=$(grep -c "接收到数据" test_publisher.log 2>/dev/null || echo "0")
+    
+    echo "✅ test_publisher 运行完成"
+    echo "    创建的 DataWriter: $writer_count 个"
+    echo "    创建的 DataReader: $reader_count 个"
+    echo "    接收的消息: $received_count 条"
+else
+    echo "❌ test_publisher 运行异常 (退出码: $test_exit_code)"
+fi
+
+echo ""
+echo "7. 最终状态检查..."
+
+echo "7.1 持久化服务状态:"
+if kill -0 $PERSISTENCE_PID 2>/dev/null; then
+    echo "    ✅ 持久化服务正在运行"
+    
+    # 显示最新统计
+    echo "    最新统计信息:"
+    tail -30 persistence_service.log | grep -A 10 "Persistence Statistics" | tail -10 | sed 's/^/      /'
+else
+    echo "    ❌ 持久化服务已停止"
+fi
+
+echo "7.2 最终数据库状态:"
+if [ -f enhanced_persistence.db ]; then
+    final_sample_count=$(sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM dds_samples;" 2>/dev/null || echo "0")
+    topic_count=$(sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM topics;" 2>/dev/null || echo "0")
+    echo "    数据库样本总数: $final_sample_count"
+    echo "    注册的主题数量: $topic_count"
+    
+    db_size=$(ls -lh enhanced_persistence.db | awk '{print $5}')
+    echo "    数据库文件大小: $db_size"
+fi
+
+echo ""
+echo "8. 清理..."
+if kill -0 $PERSISTENCE_PID 2>/dev/null; then
+    echo "停止持久化服务..."
+    kill $PERSISTENCE_PID
+    sleep 3
+    if kill -0 $PERSISTENCE_PID 2>/dev/null; then
+        kill -9 $PERSISTENCE_PID 2>/dev/null
+    fi
+fi
+
+echo ""
 echo "=== 测试完成 ==="
+echo "📊 测试总结:"
+echo "  持久化服务: $(kill -0 $PERSISTENCE_PID 2>/dev/null && echo '运行正常' || echo '已停止')"
+echo "  数据库文件: $([ -f enhanced_persistence.db ] && echo '已创建' || echo '未创建')"
+echo "  样本数据: $(sqlite3 enhanced_persistence.db "SELECT COUNT(*) FROM dds_samples;" 2>/dev/null || echo "0") 条"
+echo ""
+echo "📁 生成的文件:"
+ls -la *.log *.db* 2>/dev/null | sed 's/^/  /'

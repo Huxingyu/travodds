@@ -30,6 +30,17 @@ DurabilityQosPolicyKind get_strategy_from_string(const std::string& strategy_str
 	return VOLATILE_DURABILITY_QOS; // 默认值
 }
 
+// 获取与持久化服务匹配的Topic名称
+std::string get_topic_name(DurabilityQosPolicyKind kind) {
+	switch (kind) {
+		case VOLATILE_DURABILITY_QOS: return "TopicVolatile";
+		case TRANSIENT_LOCAL_DURABILITY_QOS: return "TopicTransientLocal";
+		case TRANSIENT_DURABILITY_QOS: return "TopicTransient";
+		case PERSISTENT_DURABILITY_QOS: return "TopicPersistent";
+		default: return "TopicVolatile";
+	}
+}
+
 // 显示帮助信息
 void show_usage(const char* program_name) {
 	std::cout << "用法: " << program_name << " <mode> <strategy>" << std::endl;
@@ -134,8 +145,8 @@ extern "C" int publisher_main(DurabilityQosPolicyKind strategy)
 	type_name = HelloWorldTypeSupport::get_instance()->get_typename();
 	participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
 	
-	// 根据策略创建不同的Topic名称
-	std::string topic_name = "HelloWorldTopic_" + std::string(strategy_name);
+	// 根据策略创建对应的Topic名称
+	std::string topic_name = get_topic_name(strategy);
 	topic = participant->create_topic(
 		topic_name.c_str(),
 		type_name, TOPIC_QOS_DEFAULT, NULL,
@@ -216,7 +227,7 @@ extern "C" int subscriber_main(DurabilityQosPolicyKind strategy)
 	participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
 	
 	// 根据策略创建对应的Topic名称
-	std::string topic_name = "HelloWorldTopic_" + std::string(strategy_name);
+	std::string topic_name = get_topic_name(strategy);
 	topic = participant->create_topic(
 		topic_name.c_str(),
 		type_name, TOPIC_QOS_DEFAULT, NULL,
