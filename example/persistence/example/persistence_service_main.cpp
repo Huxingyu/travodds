@@ -48,7 +48,7 @@ void signal_handler(int signal) {
     std::cout << "\nReceived signal " << signal << ", shutting down..." << std::endl;
     g_running = false;
     if (g_persistence_service) {
-        g_persistence_service->stop();
+        g_persistence_service->shutdown();
         g_persistence_service.reset();
     }
     
@@ -59,8 +59,8 @@ void signal_handler(int signal) {
 
 int main(int argc, char* argv[]) {
     // 设置信号处理
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
+    signal(SIGINT, signal_handler);// 处理 Ctrl+C 中断信号
+    signal(SIGTERM, signal_handler);// 处理终止信号
     
     std::cout << "Enhanced TravoDDS Persistence Service" << std::endl;
     std::cout << "=====================================" << std::endl;
@@ -82,106 +82,94 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
-        // 直接使用 AGIROS DDS 的类型注册机制
-        std::cout << "Registering HelloWorld type using AGIROS mechanism..." << std::endl;
+        // 注册topic类型
+        std::cout << "Registering HelloWorld type ..." << std::endl;
         const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
         ReturnCode_t register_ret = participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
         if (register_ret != RETCODE_OK) {
             std::cerr << "Failed to register HelloWorld type, error code: " << register_ret << std::endl;
             return -1;
         }
-        std::cout << "HelloWorld type registered successfully with AGIROS DDS" << std::endl;
+        std::cout << "HelloWorld type registered successfully" << std::endl;
         
-        // 创建增强配置
+        // 创建持久化服务配置信息
         PersistenceConfig config;
-        config.db_path = "enhanced_persistence.db";
-        config.cleanup_interval = std::chrono::seconds(180);  // 3分钟清理一次
+        config.database_path = "enhanced_persistence.db";
         config.data_retention = std::chrono::hours(48);       // 48小时数据保留
         config.max_samples_per_topic = 5000;                 // 每个Topic最大5000样本
-        config.max_db_size_mb = 512;                          // 最大512MB数据库
-        config.enable_compression = true;                     // 启用压缩
+        config.memory_cache_size_mb = 100;                    // 100MB内存缓存
         config.enable_statistics = true;                     // 启用统计
-        config.worker_threads = 3;                           // 3个工作线程
+        config.worker_thread_count = 3;                       // 3个工作线程
         
         if (argc > 2) {
-            config.db_path = argv[2];
+            config.database_path = argv[2];
         }
         
-        std::cout << "Initializing enhanced persistence service with configuration:" << std::endl;
-        std::cout << "- Database: " << config.db_path << std::endl;
-        std::cout << "- Cleanup interval: " << config.cleanup_interval.count() << " seconds" << std::endl;
+        std::cout << "Initializing persistence service with configuration:" << std::endl;
+        std::cout << "- Database: " << config.database_path << std::endl;
         std::cout << "- Data retention: " << config.data_retention.count() << " hours" << std::endl;
-        std::cout << "- Compression: " << (config.enable_compression ? "enabled" : "disabled") << std::endl;
-        std::cout << "- Worker threads: " << config.worker_threads << std::endl;
+        std::cout << "- Max samples per topic: " << config.max_samples_per_topic << std::endl;
+        std::cout << "- Memory cache size: " << config.memory_cache_size_mb << " MB" << std::endl;
+        std::cout << "- Worker threads: " << config.worker_thread_count << std::endl;
         
-        g_persistence_service = std::make_unique<PersistenceService>(participant, config);
+        g_persistence_service = std::make_unique<PersistenceService>(config);
+        // 使用shared_ptr包装原始指针
+        std::shared_ptr<DomainParticipant> participant_ptr(participant);
+        g_persistence_service->set_domain_participant(participant_ptr);
         
         // 设置UI回调
         auto ui_callback = std::make_shared<ConsoleUICallback>();
         g_persistence_service->set_ui_callback(ui_callback);
         
         // 启动服务
-        ReturnCode_t ret = g_persistence_service->start();
-        if (ret != RETCODE_OK) {
-            std::cerr << "Failed to start persistence service" << std::endl;
+        bool success = g_persistence_service->initialize();
+        if (!success) {
+            std::cerr << "Failed to initialize persistence service" << std::endl;
             return -1;
         }
+        
+        // 通知持久化服务已注册的主题类型(手动注册四种不同策略的topic)
+        // 注意：在实际生产环境中，应该使用自动发现机制
+        g_persistence_service->notify_writer_created("TopicVolatile", type_name, VOLATILE_DURABILITY_QOS);
+        g_persistence_service->notify_reader_created("TopicVolatile", type_name, VOLATILE_DURABILITY_QOS);
+        
+        g_persistence_service->notify_writer_created("TopicTransientLocal", type_name, TRANSIENT_LOCAL_DURABILITY_QOS);
+        g_persistence_service->notify_reader_created("TopicTransientLocal", type_name, TRANSIENT_LOCAL_DURABILITY_QOS);
+        
+        g_persistence_service->notify_writer_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
+        g_persistence_service->notify_reader_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
+        
+        g_persistence_service->notify_writer_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
+        g_persistence_service->notify_reader_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
         
         std::cout << "Enhanced persistence service started successfully!" << std::endl;
         std::cout << "Features: Statistics tracking, UI callbacks, compression, configurable cleanup" << std::endl;
         std::cout << "Press Ctrl+C to stop..." << std::endl;
         
-        // 主循环 - 定期显示增强的统计信息
+        // 主循环 - 定期显示统计信息
         while (g_running) {
             std::this_thread::sleep_for(std::chrono::seconds(30));
             
             if (!g_running) break;  // 再次检查以便快速退出
             
-            // 获取网络拓扑
-            auto topology = g_persistence_service->get_network_topology();
+            // 获取统计信息
             auto stats = g_persistence_service->get_statistics();
-            auto active_topics = g_persistence_service->get_active_topics();
             
-            std::cout << "\n=== Enhanced Network Status ===" << std::endl;
-            std::cout << "Participants: " << topology.participants.size() << std::endl;
-            std::cout << "DataWriters: " << topology.writers.size() << std::endl;
-            std::cout << "DataReaders: " << topology.readers.size() << std::endl;
-            
-            // 显示持久化DataWriter
-            int persistent_writers = 0;
-            for (const auto& writer : topology.writers) {
-                if (writer.durability.kind == TRANSIENT_DURABILITY_QOS || 
-                    writer.durability.kind == PERSISTENT_DURABILITY_QOS) {
-                    persistent_writers++;
-                }
-            }
-            std::cout << "Persistent Writers: " << persistent_writers << std::endl;
-            
-            // 显示增强的统计信息
+            // 显示统计信息
             std::cout << "\n=== Persistence Statistics ===" << std::endl;
-            std::cout << "Samples Stored: " << stats.total_samples_stored.load() << std::endl;
-            std::cout << "Samples Served: " << stats.total_samples_served.load() << std::endl;
-            std::cout << "Bytes Stored: " << stats.total_bytes_stored.load() << std::endl;
-            std::cout << "Bytes Served: " << stats.total_bytes_served.load() << std::endl;
-            std::cout << "Active Topics: " << active_topics.size() << std::endl;
-            std::cout << "Uptime: " << std::fixed << std::setprecision(1) 
-                     << stats.get_uptime_seconds() << " seconds" << std::endl;
-            
-            // 显示活跃的主题列表
-            if (!active_topics.empty()) {
-                std::cout << "\n=== Active Topics ===" << std::endl;
-                for (const auto& topic : active_topics) {
-                    std::cout << "- " << topic << std::endl;
-                }
+            for (const auto& [key, value] : stats) {
+                std::cout << key << ": " << value << std::endl;
             }
+            
+            std::cout << "Service Status: " << (g_persistence_service->is_running() ? "Running" : "Stopped") << std::endl;
             
             std::cout << "===============================" << std::endl;
         }
         
-        // 优雅关闭
+        // 关闭持久化服务
         std::cout << "Shutting down gracefully..." << std::endl;
         if (g_persistence_service) {
-            g_persistence_service->stop();
+            g_persistence_service->shutdown();
             g_persistence_service.reset();
         }
         

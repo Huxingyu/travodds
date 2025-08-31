@@ -11,7 +11,11 @@ find_package(SQLite3 REQUIRED)
 
 # 持久化服务库
 add_library(persistence_service STATIC
-    src/persistence/PersistenceService.cpp
+    src/PersistenceService.cpp
+    src/MemoryCache.cpp
+    src/DatabaseManager.cpp
+    src/DurabilityHandlers.cpp
+    src/PersistenceTypes.cpp
 )
 
 target_include_directories(persistence_service 
@@ -45,7 +49,7 @@ target_link_libraries(persistence_service_app
 
 # 持久化Hello World示例
 add_executable(persistent_hello_world 
-    persistent_hello_world.cpp
+    example/persistent_hello_world.cpp
     ../cpp/hello_world/HelloWorld.cpp
     ../cpp/hello_world/HelloWorldTypeSupport.cpp
 )
@@ -57,6 +61,25 @@ target_include_directories(persistent_hello_world
 )
 
 target_link_libraries(persistent_hello_world 
+    PRIVATE 
+    TRAVODDS::TRAVODDS
+    pthread
+)
+
+# 测试发布者 - 用于测试自动发现
+add_executable(test_publisher
+    example/test_publisher.cpp
+    ../cpp/hello_world/HelloWorld.cpp
+    ../cpp/hello_world/HelloWorldTypeSupport.cpp
+)
+
+target_include_directories(test_publisher 
+    PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/hello_world
+)
+
+target_link_libraries(test_publisher 
     PRIVATE 
     TRAVODDS::TRAVODDS
     pthread
