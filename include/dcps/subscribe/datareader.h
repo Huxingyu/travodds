@@ -305,10 +305,10 @@ public:
     /**
      * 从DataReader访问数据样本的集合。
      *
-     * 此操作从DataReader访问数据值的集合。该行为与read相同，只是返回的所有样本都属于句柄为handle的单个指定实例。
+     * 此操作从DataReader访问数据值的集合。该行为与read相同，只是返回的所有样本都属于句柄为a_handle的单个指定实例。
      *
      * 成功完成后，数据收集将包含所有属于同一实例的样本。
-     * 相应的SampleInfo验证SimpleInfo::instance_handle == handle。
+     * 相应的SampleInfo验证SimpleInfo::instance_handle == a_handle。
      *
      * 此操作在语义上等同于read操作，但在构建集合时除外。
      * DataReader将检查样本是否属于指定的实例，否则它不会将样本放在返回的集合中。
@@ -433,7 +433,7 @@ public:
     virtual ReturnCode_t take_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask samole_states, InstanceStateMask instance_states) = 0;
 
     /**
-     * 此操作通过DataReader访问数据值集合。其行为与 read_next_instance类似，但返回的所有样本均符合特定条件。
+     * 此操作通过DataReader访问数据值集合。其行为与@ref read_next_instance类似，但返回的所有样本均符合特定条件。
      * 具体而言，成功时返回的所有样本均属于同一实例，且该实例满足以下两个条件：
      * (a) instance_handle大于或等于previous_handle；
      * (b) 在所有具有指定ReadCondition评估为真的样本的实例中，该实例是“最小”的一个。
@@ -516,7 +516,7 @@ public:
     /**
      * 此操作可用于获取与instance_handle对应的实例键值。该操作仅会填充键值持有者实例中的键值字段。
      *
-     * 如果InstanceHandle_t类型的handle不对应于DataReader所知的现有数据对象，则此操作可能会返回BAD_PARAMETER。
+     * 如果InstanceHandle_t类型的a_handle不对应于DataReader所知的现有数据对象，则此操作可能会返回BAD_PARAMETER。
      * 若实现无法验证无效的句柄，则此情况下的结果将是不确定的。
      *
      * @param [in,out] key_holder
@@ -598,7 +598,7 @@ public:
     virtual ReturnCode_t get_requested_incompatible_qos_status(RequestedIncompatibleQosStatus& status) = 0;
 
     /**
-     * @brief 获取样本丢失状态。
+     * @brief 获取SAMPLE_LOST状态。
      *
      * @param [out] status 返回包含通信状态的SampleLostStatus对象。
      *
@@ -607,7 +607,7 @@ public:
     virtual ReturnCode_t get_sample_lost_status(SampleLostStatus& status) const = 0;
 
     /**
-     * @brief 获取被拒收通信状态
+     * @brief 获取SAMPLE_REJECTED通信状态
      *
      * @param [out] status 返回包含通信状态的SampleRejectedStatus对象。
      *
@@ -662,7 +662,7 @@ public:
      * @brief 在与DataWriter匹配关联的发布者中检索。
      *
      * @param [out] publication_data 发布信息数据结构。
-     * @param [in] publication_handle 发布的InstanceHandle_t。
+     * @param publication_handle 发布的InstanceHandle_t。
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_matched_publication_data(PublicationBuiltinTopicData& publication_data, const InstanceHandle_t& publication_handle) const = 0;

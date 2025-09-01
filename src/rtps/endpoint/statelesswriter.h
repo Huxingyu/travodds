@@ -51,7 +51,7 @@ public:
 	 *
 	 * @param [in] locator  远端Reader通信信息。
 	 */
-	void ReaderLocatorAdd(Locator_t& locator, const GUID_t& guid = GUID_UNKNOWN);
+	void ReaderLocatorAdd(Locator_t& locator);
 
 	/**
 	 * @brief 本地删除与当前Writer匹配的远端Reader通信信息。

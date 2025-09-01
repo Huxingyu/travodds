@@ -84,10 +84,6 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 	if (datareader_) {
 		datareader_->SetLastinstanceHandle(cache);
-		/* wangyi Lifespan 超期判断，超期过滤数据 */
-		if (!datareader_->CheckLifespan(cache)) {
-			return RETCODE_LIFESPAN_TIMEOUT;
-		}
 		datareader_->OnDataAvaible();
 	}
 	
@@ -184,10 +180,6 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 
 		if (datareader_) {
 			datareader_->SetLastinstanceHandle(dataFragCache);
-			/* wangyi Lifespan 超期判断，超期过滤数据 */
-			if (!datareader_->CheckLifespan(dataFragCache)) {
-				return RETCODE_LIFESPAN_TIMEOUT;
-			}
 			datareader_->OnDataAvaible();
 		}
 	}

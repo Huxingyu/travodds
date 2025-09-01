@@ -17,14 +17,9 @@
 #include "dcps/base/retcode.h"
 #include "dcps/base/status.h"
 #include "cdr/agicdr.h"
-
 AGIDDS_NAMESPACE_BEGIN
 
-class DDS_DLL TypeObject {
-public:
-	virtual const std::pair<std::string, uint8_t>& get_type_descriptor() = 0;
-	virtual const std::vector<std::tuple<std::string, uint8_t, std::vector<int32_t>>>& get_members() = 0;
-};
+class TypeObject;
 
 typedef SequenceData<SerializedBuffer> SerializedBufferSeq;
 

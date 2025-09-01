@@ -1,33 +1,6 @@
 #include "qos/qospolicycheck.h"
 #include "common/log/logger.h" 
-#include "rtps/endpoint/participant.h"
 USING_AGIDDS_NAMESPACE
-
-/* 危险正则表达式检测，防止恶意输入！ */
-bool QosPolicyCheck::IsDangerousPattern(const std::string& pattern)
-{
-	// 检测指数级复杂度的正则
-	if (pattern.find("(a+)+") != std::string::npos ||
-		pattern.find("(.*)*") != std::string::npos) {
-		return true;
-	}
-
-	// 检测深层嵌套
-	int depth = 0;
-	for (char c : pattern) {
-		if (c == '(') depth++;
-		else if (c == ')') depth--;
-		if (depth > 10) return true;
-	}
-
-	// 检测长重复模式
-	if (pattern.find("{1000}") != std::string::npos) {
-		return true;
-	}
-
-	return false;
-}
-
 ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantFactoryQos& qos)
 {
 	/* yuguxu 所包含QoS无规范限制 */
@@ -36,72 +9,24 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantFactoryQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantQos& qos)
 {
-	if (qos.user_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error user_data.value out of resources");
-		return RETCODE_OUT_OF_RESOURCES;
-	}
+	/* yuguxu 所包含QoS无规范限制 */
 	return RETCODE_OK;
 }
 
 ReturnCode_t QosPolicyCheck::CheckQos(const PublisherQos& qos)
 {
-	if (qos.partition.name.size() > PARTITON_SIZE_MAX) {
-		AGILOG(AGILOG_ERROR, "Error partition.name size out of resources, max length %d.", PARTITON_SIZE_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
-	for (const auto& it : qos.partition.name) {
-		if (it.size() > BYTE_ORDER_LENGTH_MAX) {
-			AGILOG(AGILOG_ERROR, "Error partition.name string out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-			return RETCODE_OUT_OF_RESOURCES;
-		}
-		/* wangyi 添加对字符检测 */
-		/* 禁止控制字符 */
-		for (char c : it) {
-			if (iscntrl(static_cast<unsigned char>(c))) {
-				AGILOG(AGILOG_ERROR, "Error partition.name : The partition name contains control characters.");
-				return RETCODE_OUT_OF_RESOURCES;
-			}
-		}
-
-		/* 检查危险模式 */ 
-		if (Participant::IsRegexPattern(it) && IsDangerousPattern(it)) {
-			AGILOG(AGILOG_ERROR, "Error partition.name : Potential dangerous regular expression patterns.");
-			return RETCODE_OUT_OF_RESOURCES;
-		}
-	}
-	if (qos.group_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error group_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
+	/* yuguxu 所包含QoS无规范限制 */
 	return RETCODE_OK;
 }
 
 ReturnCode_t QosPolicyCheck::CheckQos(const SubscriberQos& qos)
 {
-	if (qos.partition.name.size() > PARTITON_SIZE_MAX) {
-		AGILOG(AGILOG_ERROR, "Error partition.name size out of resources, max length %d.", PARTITON_SIZE_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
-	for (const auto& it : qos.partition.name) {
-		if (it.size() > BYTE_ORDER_LENGTH_MAX) {
-			AGILOG(AGILOG_ERROR, "Error partition.name string out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-			return RETCODE_OUT_OF_RESOURCES;
-		}
-	}
-	if (qos.group_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error group_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
+	/* yuguxu 所包含QoS无规范限制 */
 	return RETCODE_OK;
 }
 
 ReturnCode_t QosPolicyCheck::CheckQos(const TopicQos& qos)
 {
-	if (qos.topic_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error topic_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
-
 	ReturnCode_t ret = RETCODE_OK;
 	/* HISTORY, RESOURCE_LIMITS */
 	ret = CheckHistoryAndResourcueLimits(qos.history, qos.resource_limits);
@@ -114,10 +39,6 @@ ReturnCode_t QosPolicyCheck::CheckQos(const TopicQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 {
-	if (qos.user_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error user_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
 	ReturnCode_t ret = RETCODE_OK;
 	/* HISTORY, RESOURCE_LIMITS */
 	ret = CheckHistoryAndResourcueLimits(qos.history, qos.resource_limits);
@@ -131,10 +52,6 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DataReaderQos& qos)
 {
-	if (qos.user_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
-		AGILOG(AGILOG_ERROR, "Error user_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
-		return RETCODE_OUT_OF_RESOURCES;
-	}
 	ReturnCode_t ret = RETCODE_OK;
 	/* HISTORY, RESOURCE_LIMITS */
 	ret = CheckHistoryAndResourcueLimits(qos.history,qos.resource_limits);
