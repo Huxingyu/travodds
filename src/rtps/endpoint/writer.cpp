@@ -192,8 +192,3 @@ FlowController* Writer::GetFlowController()
 	return flowController_;
 }
 
-std::shared_ptr<HistoryCache> Writer::GetWriterCache()
-{
-	return writerCache_;
-}
-

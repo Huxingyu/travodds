@@ -92,11 +92,9 @@ public:
 	 * @return 已全部确认返回true，否则返回false。
 	 */
 	virtual bool IsAckedByAll(SequenceNumber_t changeSeqNum);
-
-	/**
-	 * @brief Data报文封装控制及发送控制函数。
+	/*@brief Data报文封装控制及发送控制函数。
 	 *
-	 * @param [in] change	  Data报文发送请求句柄。
+	 * @param[in] change	  Data报文发送请求句柄。
 	 *
 	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */

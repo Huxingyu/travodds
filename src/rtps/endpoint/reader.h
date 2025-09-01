@@ -259,13 +259,6 @@ public:
 	 */
 	bool GetMatchedPublicationData(PublicationBuiltinTopicData& publicationData, const InstanceHandle_t& remotehandle) const;
 
-	/**
-	 * @brief 获取数据读者缓冲区。
-	 *
-	 * @return 返回数据读者缓冲区指针。
-	 */
-	std::shared_ptr<HistoryCache> GetReaderCache();
-
 private:
 
 	/*****************************************/

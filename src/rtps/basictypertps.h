@@ -655,7 +655,6 @@ struct SequenceNumber_t {
 const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
 const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
 const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
-const SequenceNumber_t SEQUENCENUMBER_FIRST = { 0, 1 };
 // #define SEQUENCENUMBER_UNKNOWN {-1,0}
 // #define SEQUENCENUMBER_INVALID {-2,0}
 

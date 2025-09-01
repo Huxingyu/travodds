@@ -12,12 +12,9 @@
 #ifndef AGIDDS_DCPS_PUBLISH_DATAWRITERIMPL_H
 #define AGIDDS_DCPS_PUBLISH_DATAWRITERIMPL_H
 
-#include <map>
-
 #include "dcps/publish/datawriter.h"
 #include "dcps/domain/domainentityimpl.h"
 #include "dcps/topic/typesupport.h"
-#include "dcps/sql/ddssqlfilter.h"
 #include "rtps/historycache/historycache.h"
 
 AGIDDS_NAMESPACE_BEGIN
@@ -150,7 +147,7 @@ public:
 	ReturnCode_t unregister_instance_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp);
 
 	/**
-	 * @brief 此函数可用于检索与instance_handle对应的实例键值。
+	 * @brief 此函数可用于检索与instance_handle对应的实例密钥。
 	 * 该函数将仅填充在key_holder实例内形成键的字段。
 	 *
 	 * 如果InstanceHandle_t句柄与DataWriter已知的现有数据对象不对应，
@@ -420,11 +417,6 @@ public:
 	void DeadlineTimeout();
 
 	/**
-	 * @brief 删除过期样本的方法，在lifespan Qos相关定时器超时执行函数。
-	 */
-	bool LifespanTimeout();
-
-	/**
 	 * @brief 注册实例。
 	 *
 	 * @param [in]  instance_data    用户报文指针。
@@ -454,22 +446,6 @@ public:
 	 */
 	ReturnCode_t DeleteSerializedBuffer(SerializedBuffer* buffer);
 
-	/**
-	 * @brief 添加Reader过滤器。
-	 *
-	 * @param [in] readerGuid 读者的GUID。
-	 * @param [in] filterInfo 过滤器信息。
-	 */
-	bool AddReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo);
-
-	/**
-	 * @brief 移除Reader过滤器。
-	 *
-	 * @param [in] readerGuid 读者的GUID。
-	 * 
-	 */
-	void RemoveReaderFilter(const GUID_t& readerGuid);
-
 private:
 
     TopicImpl* topic_ = nullptr;
@@ -478,17 +454,11 @@ private:
     PublisherImpl* pub_ = nullptr;
 	/* 相关联的RTPS对象 */
 	std::shared_ptr<Writer>  writer_;
-	
-	std::map<GUID_t, DDSSQL::DDSSQLFilter> readerFilters_;
-
 	/* 相关的数据类型支持的对象  */
 	std::unique_ptr<DataWriterStatusManager> statusMgr_;
 	std::shared_ptr<Timer> deadlineTimer_;
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
-	/* wangyi lifespan 定时器 */
-	std::shared_ptr<Timer> lifespanTimer_;
-
     PublicationBuiltinTopicData builtinData_;
 
 	std::shared_ptr<MemoryPool> memoryPool_;

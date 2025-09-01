@@ -24,10 +24,6 @@ DomainParticipantFactoryImpl::DomainParticipantFactoryImpl()
 
 DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t domain_id, const DomainParticipantQos& qos, DomainParticipantListener* listener, const StatusMask& mask)
 {
-    if (domain_id > DOMAIN_ID_MAX) {
-		AGILOG(AGILOG_ERROR, "DomainId_t is Err, should 0 <= domain_id <= 232 ");
-		return nullptr;
-    }
 	const DomainParticipantQos& qosT = (&qos == &PARTICIPANT_QOS_DEFAULT) ? defaultParticipantQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
 		AGILOG(AGILOG_ERROR, "CheckQos Err");

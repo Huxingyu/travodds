@@ -279,12 +279,6 @@ public:
 	 */
 	std::shared_ptr<LivelinessManager> GetLivelinessManager();
 
-	static bool IsRegexPattern(const std::string& str);
-
-	bool RegexPartitionMatch(const std::string& pubName, const std::string& subName);
-
-	bool RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns);
-
 
 	/**
 	 * @brief 判断本地Writer的信息是否与远端Reader匹配，匹配则存储到远端Reader存储容器中。

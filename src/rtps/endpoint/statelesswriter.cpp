@@ -23,14 +23,14 @@ StatelessWriter::~StatelessWriter()
 void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
 	for (auto locator : subData.unicastLocatorList) {
-		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
+		ReaderLocatorAdd(locator);
 	}
 
 	for (auto locator : subData.multicastLocatorList) {
-		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
+		ReaderLocatorAdd(locator);
 	}
 }
-void StatelessWriter::ReaderLocatorAdd(Locator_t & locator, const GUID_t& guid)
+void StatelessWriter::ReaderLocatorAdd(Locator_t & locator)
 {
 	if (0 != readerLocators_.count(locator)) {
 		return;
@@ -38,9 +38,6 @@ void StatelessWriter::ReaderLocatorAdd(Locator_t & locator, const GUID_t& guid)
 
 	std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(locator);
 	readerLocator->SetHistoryCache(writerCache_);
-	if (guid != GUID_UNKNOWN) {
-		readerLocator->SetRemoteGuid(guid);
-	}
 	readerLocators_[locator] = readerLocator;
 }
 
@@ -120,10 +117,8 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
 			/* 发送数据 */
 			for (auto& readerlocator : readerLocators_) {
-				if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
-					continue;
-				}
-				LocatorVec dstLocators { readerlocator.first };
+				LocatorVec dstLocators;
+				dstLocators.push_back(readerlocator.first);
 				if (flowControl) {
 					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
 				} else {
@@ -164,10 +159,8 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		MessageProcessor::EncapsulateMessageHeader(*change->serializedBuffer, shift, guid_.prefix);
 
 		for (auto& readerlocator : readerLocators_) {
-			if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
-				continue;
-			}
-			LocatorVec dstLocators{ readerlocator.first };
+			LocatorVec dstLocators;
+			dstLocators.push_back(readerlocator.first);
 			participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 		}
 			

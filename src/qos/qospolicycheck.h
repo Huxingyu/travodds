@@ -291,7 +291,6 @@ public:
 	 */
 	static void CheckQosMatchRule(const DataWriterQos& dwQos, const DataReaderQos& drQos, std::set<QosPolicyId_t>& qosPolicyId);
 
-	static bool IsDangerousPattern(const std::string& pattern);
 };
 AGIDDS_NAMESPACE_END
 

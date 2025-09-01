@@ -189,7 +189,7 @@ public:
      * get_default_datawriter_qos获取的值将与上次成功调用set_default_datawriter_qos时指定的值集匹配，
      * 否则，如果从未进行调用，则为默认值。
      *
-     * @param [out] qos 对当前默认WriterQos的引用。
+     * @param [in] qos 对当前默认WriterQos的引用。
      * 
      * @return RETCODE_OK
      */

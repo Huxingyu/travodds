@@ -39,10 +39,3 @@ ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq
 	AGILOG(AGILOG_ERROR, "SIZE ERR");
     return RETCODE_ERROR;
 }
-
-bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, TypeObject* typeObject)
-{
-    DDSSQL::DDSSQLFilter filter(typeObject);
-    ReturnCode_t ret = filter.InputSQL(filter_expression, expression_parameters);
-    return ret == RETCODE_OK ? true : false;
-}

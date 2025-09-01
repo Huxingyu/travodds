@@ -62,7 +62,6 @@ bool HistoryCache::AddChange(std::shared_ptr<CacheChange> change)
 	ins.cacheChanges.push_back(change);
 	//AddSampleCounters(change->sampleInfo.sample_state, 
 	//	ins.viewState, ins.instanceState);
-
 	changeMutex_.unlock();
 
 	return true;
@@ -110,35 +109,11 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 
 }
 
-std::shared_ptr<CacheChange> HistoryCache::GetMinSourceTimespace()
-{
-	std::shared_ptr<CacheChange> MinSourceTimespaceCache = nullptr;
-
-	for (auto itor = instanceChanges_.begin(); itor != instanceChanges_.end();itor++) {
-		if (itor->second.cacheChanges.empty()) continue;
-
-		// 在当前 vector 中查找最小值
-		auto it = std::min_element(itor->second.cacheChanges.begin(), itor->second.cacheChanges.end(),
-			[](const auto& a, const auto& b) {
-			if (!a) return false;  // 确保 a 有效
-			if (!b) return true;   // b 无效时 a 总是更小
-			return a->sourceTimespace < b->sourceTimespace;
-		});
-
-		// 更新最小值
-		if (*it && (!MinSourceTimespaceCache || (*it)->sourceTimespace < MinSourceTimespaceCache->sourceTimespace)) {
-			MinSourceTimespaceCache = *it;
-		}
-	}
-
-	return MinSourceTimespaceCache;
-}
-
 SequenceNumber_t HistoryCache::GetSeqNumMin()
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	if (0 == cacheChanges_.size()) {
-		return SEQUENCENUMBER_FIRST;
+		return SequenceNumber_t{0,1};
 	}
 
 	return cacheChanges_.begin()->first;
