@@ -95,7 +95,7 @@ auto PersistentHandler::get_historical_data_range(const std::string& topic_name,
 
 void PersistentHandler::cleanup_expired_data() {
     // PERSISTENT策略：可以选择不清理数据，或根据配置清理很老的数据
-    std::cout << "[PersistentHandler] 持久化数据保留，不执行过期清理" << std::endl;
+    //std::cout << "[PersistentHandler] 持久化数据保留，不执行过期清理" << std::endl;
 }
 
 AGIDDS_NAMESPACE_END

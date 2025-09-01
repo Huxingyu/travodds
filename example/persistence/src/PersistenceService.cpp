@@ -274,76 +274,49 @@ void PersistenceService::setup_discovery_listeners() {
     }
     
     try {
-        // 创建用于发现的订阅者
-        discovery_subscriber_ = participant_->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        // 尝试获取内置订阅者 (由DDS系统提供)
+        discovery_subscriber_ = const_cast<Subscriber*>(participant_->get_builtin_subscriber());
         if (!discovery_subscriber_) {
-            std::cerr << "[PersistenceService] Failed to create discovery subscriber" << std::endl;
+            std::cout << "[PersistenceService] 内置订阅者不可用，将依赖手动注册机制" << std::endl;
+            std::cout << "[PersistenceService] 自动发现将在AgirosDDS完善内置机制后启用" << std::endl;
             return;
         }
         
-        // 1. 订阅DCPSPublication内置主题来发现DataWriter
-        auto* pub_topic = participant_->create_topic(
-            "DCPSPublication", 
-            "DDS::PublicationBuiltinTopicData", 
-            TOPIC_QOS_DEFAULT, 
-            nullptr, 
-            STATUS_MASK_NONE
-        );
+        std::cout << "[PersistenceService] Got builtin subscriber for discovery" << std::endl;
         
-        if (pub_topic) {
-            DataReaderQos pub_reader_qos = DATAREADER_QOS_DEFAULT;
-            pub_reader_qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
-            pub_reader_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
-            
-            auto* pub_reader = discovery_subscriber_->create_datareader(
-                pub_topic, pub_reader_qos, nullptr, STATUS_MASK_NONE
-            );
-            
-            if (pub_reader) {
-                publication_reader_ = std::shared_ptr<DataReader>(pub_reader);
-                std::cout << "[PersistenceService] Successfully created DCPSPublication reader" << std::endl;
-            } else {
-                std::cerr << "[PersistenceService] Failed to create DCPSPublication reader" << std::endl;
-            }
+        // 1. 查找DCPSPublication内置DataReader (应该已经存在)
+        auto* pub_reader = discovery_subscriber_->lookup_datareader("DCPSPublication");
+        if (pub_reader) {
+            publication_reader_ = std::shared_ptr<DataReader>(pub_reader);
+            std::cout << "[PersistenceService] Found DCPSPublication builtin reader" << std::endl;
+        } else {
+            std::cerr << "[PersistenceService] DCPSPublication builtin reader not found" << std::endl;
         }
         
-        // 2. 订阅DCPSSubscription内置主题来发现DataReader
-        auto* sub_topic = participant_->create_topic(
-            "DCPSSubscription", 
-            "DDS::SubscriptionBuiltinTopicData", 
-            TOPIC_QOS_DEFAULT, 
-            nullptr, 
-            STATUS_MASK_NONE
-        );
-        
-        if (sub_topic) {
-            DataReaderQos sub_reader_qos = DATAREADER_QOS_DEFAULT;
-            sub_reader_qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
-            sub_reader_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
-            
-            auto* sub_reader = discovery_subscriber_->create_datareader(
-                sub_topic, sub_reader_qos, nullptr, STATUS_MASK_NONE
-            );
-            
-            if (sub_reader) {
-                subscription_reader_ = std::shared_ptr<DataReader>(sub_reader);
-                std::cout << "[PersistenceService] Successfully created DCPSSubscription reader" << std::endl;
-            } else {
-                std::cerr << "[PersistenceService] Failed to create DCPSSubscription reader" << std::endl;
-            }
+        // 2. 查找DCPSSubscription内置DataReader (应该已经存在)
+        auto* sub_reader = discovery_subscriber_->lookup_datareader("DCPSSubscription");
+        if (sub_reader) {
+            subscription_reader_ = std::shared_ptr<DataReader>(sub_reader);
+            std::cout << "[PersistenceService] Found DCPSSubscription builtin reader" << std::endl;
+        } else {
+            std::cerr << "[PersistenceService] DCPSSubscription builtin reader not found" << std::endl;
         }
         
         std::cout << "[PersistenceService] Discovery setup completed, starting discovery thread..." << std::endl;
         
+        // 只有在获取到内置DataReader时才启动发现线程
+        if (publication_reader_ || subscription_reader_) {
+            discovery_running_ = true;
+            discovery_thread_ = std::thread(&PersistenceService::discovery_thread_main, this);
+            std::cout << "[PersistenceService] Discovery monitoring started (using automatic discovery)" << std::endl;
+        } else {
+            std::cout << "[PersistenceService] 跳过自动发现线程启动，使用手动注册模式" << std::endl;
+        }
+        
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception in setup_discovery_listeners: " << e.what() << std::endl;
+        std::cout << "[PersistenceService] 自动发现初始化失败，回退到手动注册模式" << std::endl;
     }
-    
-    // 启动发现监听线程
-    discovery_running_ = true;
-    discovery_thread_ = std::thread(&PersistenceService::discovery_thread_main, this);
-    
-    std::cout << "[PersistenceService] Discovery monitoring started (using automatic discovery)" << std::endl;
 }
 
 void PersistenceService::discovery_thread_main() {
@@ -366,19 +339,88 @@ void PersistenceService::discovery_thread_main() {
 }
 
 void PersistenceService::check_publication_data() {
-    if (!participant_) return;
+    if (!participant_ || !publication_reader_) return;
     
-    // 简化的发现检查 - 目前通过外部通知实现
-    // 未来可以通过内置主题DataReader实现真正的自动发现
-    // 这里只是保持发现线程运行状态
+    try {
+        // 尝试从DCPSPublication内置主题读取数据
+        SequenceData<PublicationBuiltinTopicData> data_seq;
+        SampleInfoSeq info_seq;
+        
+        ReturnCode_t ret = publication_reader_->take(
+            data_seq, info_seq, LENGTH_UNLIMITED,
+            ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE
+        );
+        
+        if (ret == RETCODE_OK) {
+            for (int i = 0; i < data_seq.length(); ++i) {
+                if (info_seq[i].valid_data) {
+                    const auto& pub_data = data_seq[i];
+                    
+                    std::cout << "[PersistenceService] Writer detected: Topic=" 
+                              << pub_data.topic_name 
+                              << ", Durability=" << static_cast<int>(pub_data.durability.kind);
+                    
+                    if (pub_data.durability.kind == VOLATILE_DURABILITY_QOS || 
+                        pub_data.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS) {
+                        std::cout << " (持久化服务不处理)" << std::endl;
+                    } else {
+                        std::cout << " (持久化服务处理)" << std::endl;
+                        // 调用已有的发现处理逻辑
+                        on_publication_discovered(pub_data.topic_name, 
+                                                 pub_data.type_name, 
+                                                 pub_data.durability.kind);
+                    }
+                }
+            }
+            publication_reader_->return_loan(data_seq, info_seq);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[PersistenceService] Error checking publication data: " << e.what() << std::endl;
+    }
 }
 
 void PersistenceService::check_subscription_data() {
-    if (!participant_) return;
+    if (!participant_ || !subscription_reader_) return;
     
-    // 简化的发现检查 - 目前通过外部通知实现
-    // 未来可以通过内置主题DataReader实现真正的自动发现
-    // 这里只是保持发现线程运行状态
+    try {
+        // 尝试从DCPSSubscription内置主题读取数据
+        SequenceData<SubscriptionBuiltinTopicData> data_seq;
+        SampleInfoSeq info_seq;
+        
+        ReturnCode_t ret = subscription_reader_->take(
+            data_seq, info_seq, LENGTH_UNLIMITED,
+            ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE
+        );
+        
+        if (ret == RETCODE_OK) {
+            for (int i = 0; i < data_seq.length(); ++i) {
+                if (info_seq[i].valid_data) {
+                    const auto& sub_data = data_seq[i];
+                    
+                    std::cout << "[PersistenceService] Reader detected: Topic=" 
+                              << sub_data.topic_name 
+                              << ", Durability=" << static_cast<int>(sub_data.durability.kind);
+                    
+                    if (sub_data.durability.kind == VOLATILE_DURABILITY_QOS) {
+                        std::cout << " (VOLATILE - 持久化服务不处理)" << std::endl;
+                    } else if (sub_data.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS) {
+                        std::cout << " (TRANSIENT_LOCAL - DataWriter本地管理)" << std::endl;
+                        if (ui_callback_) {
+                            ui_callback_->on_reader_discovered(sub_data.topic_name, sub_data.type_name);
+                        }
+                    } else {
+                        std::cout << " (持久化服务处理)" << std::endl;
+                        if (ui_callback_) {
+                            ui_callback_->on_reader_discovered(sub_data.topic_name, sub_data.type_name);
+                        }
+                    }
+                }
+            }
+            subscription_reader_->return_loan(data_seq, info_seq);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[PersistenceService] Error checking subscription data: " << e.what() << std::endl;
+    }
 }
 
 void PersistenceService::on_publication_discovered(const std::string& topic_name, 

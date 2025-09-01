@@ -128,21 +128,27 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
-        // 通知持久化服务已注册的主题类型(手动注册四种不同策略的topic)
-        // 注意：在实际生产环境中，应该使用自动发现机制
-        g_persistence_service->notify_writer_created("TopicVolatile", type_name, VOLATILE_DURABILITY_QOS);
-        g_persistence_service->notify_reader_created("TopicVolatile", type_name, VOLATILE_DURABILITY_QOS);
+        // ===============================================================
+        // 临时手动注册机制 (当AgirosDDS内置发现完善后可移除)
+        // ===============================================================
+        std::cout << "\n[Manual Registration] 开始手动注册Topic..." << std::endl;
+        std::cout << "[Manual Registration] 注意: 这是临时方案，未来将使用自动发现机制" << std::endl;
         
-        g_persistence_service->notify_writer_created("TopicTransientLocal", type_name, TRANSIENT_LOCAL_DURABILITY_QOS);
-        g_persistence_service->notify_reader_created("TopicTransientLocal", type_name, TRANSIENT_LOCAL_DURABILITY_QOS);
-        
+        // 手动注册需要持久化服务处理的Topic类型
+        // 注意：只注册TRANSIENT和PERSISTENT策略，VOLATILE和TRANSIENT_LOCAL由服务自动忽略
         g_persistence_service->notify_writer_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
         g_persistence_service->notify_reader_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
         
         g_persistence_service->notify_writer_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
         g_persistence_service->notify_reader_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
         
-        std::cout << "Enhanced persistence service started successfully!" << std::endl;
+        std::cout << "[Manual Registration] 手动注册完成，持久化服务现在可以处理:" << std::endl;
+        std::cout << "[Manual Registration]   - TopicTransient (TRANSIENT策略)" << std::endl;
+        std::cout << "[Manual Registration]   - TopicPersistent (PERSISTENT策略)" << std::endl;
+        std::cout << "[Manual Registration] 自动发现线程同时在后台运行，准备就绪后将自动接管" << std::endl;
+        // ===============================================================
+        
+        std::cout << "\nEnhanced persistence service started successfully!" << std::endl;
         std::cout << "Features: Statistics tracking, UI callbacks, compression, configurable cleanup" << std::endl;
         std::cout << "Press Ctrl+C to stop..." << std::endl;
         
