@@ -13,7 +13,7 @@
 #ifndef DYNAMIC_TYPE_H
 #define DYNAMIC_TYPE_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictypemember.h"
 #include "xtypes/typedescriptor.h"
 #include <string>
@@ -22,7 +22,7 @@
 #include <memory>
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief DynamicType类表示根据类型系统定义的特定类型。
@@ -30,7 +30,7 @@ AGIDDS_NAMESPACE_BEGIN
  * @details DynamicType对象具有引用语义，因为预计存在大量对它们的引用（例如，在每个从给定DynamicType创建的DynamicData对象中）。
  *          然而，该类型仍然提供操作以允许按值复制和比较。
  */
-class DynamicType {
+class DDS_DLL DynamicType {
 public:
     /** @brief  关联的类型描述。 */
     TypeDescriptor descriptor_;
@@ -192,6 +192,6 @@ private:
     std::atomic<int> ref_count_;  
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_H

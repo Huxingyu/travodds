@@ -13,7 +13,7 @@
 #include "xtypes/memberdescriptor.h"
 #include "xtypes/dynamictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 MemberDescriptor::MemberDescriptor()
     : id_(0), index_(0), type_(nullptr), default_label_(false) {
@@ -67,4 +67,4 @@ bool MemberDescriptor::is_consistent() const {
     return true;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

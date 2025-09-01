@@ -14,10 +14,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "common/log/logger.h"
-#include "cdr/agicdr.h"
+#include "cdr/travoddscdr.h"
 #include "cdr/md5.h"
 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length) 
 {
@@ -33,7 +33,7 @@ SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length)
     // 看总体的空间是否足够
     uint32_t curTotalSpace = bufferTotalSpace();
     if (curTotalSpace < length) {
-        AGILOG(AGILOG_ERROR, "AGIDDSCdrSerializer", "Not enough space to write data, need %u, but only %u", length, curTotalSpace);
+        TRAVODDS_LOG(LOG_ERROR, "AGIDDSCdrSerializer", "Not enough space to write data, need %u, but only %u", length, curTotalSpace);
         return NULL;
     }
     // 总体空间足够，依次写入
@@ -73,7 +73,7 @@ SerializedBuffer* SerializedBuffer::readData(char* data, uint32_t length)
     // 看总体的长度是否足够
     uint32_t curTotalLength = bufferTotalLength();
     if (curTotalLength < length) {
-        AGILOG(AGILOG_ERROR, "AGIDDSCdrSerializer", "Not enough length to read data, need %u, but only %u", length, curTotalLength);
+        TRAVODDS_LOG(LOG_ERROR, "AGIDDSCdrSerializer", "Not enough length to read data, need %u, but only %u", length, curTotalLength);
         return NULL;
     }
     // 总体长度足够，依次读取
@@ -99,7 +99,7 @@ SerializedBuffer* SerializedBuffer::readData(char* data, uint32_t length)
     return curBuffer;
 }
 
-bool AGIDDSCdrSerializer::isLittleEndian() const
+bool CdrSerializer::isLittleEndian() const
 {
     union agicdr_endian_test {
         uint32_t i;
@@ -110,7 +110,7 @@ bool AGIDDSCdrSerializer::isLittleEndian() const
     return test.c[0] == 1;
 }
 
-uint32_t AGIDDSCdrSerializer::getRemainingSpace() const
+uint32_t CdrSerializer::getRemainingSpace() const
 {
     uint32_t remainingSpace = 0;
     SerializedBuffer* current = curProcessMsgBlock_;
@@ -121,7 +121,7 @@ uint32_t AGIDDSCdrSerializer::getRemainingSpace() const
     return remainingSpace;
 }
 
-AGIDDSCdrSerializer::AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEndian)
+CdrSerializer::CdrSerializer(SerializedBuffer* buffer, bool littleEndian)
     : tgaMsgBlock_(buffer),
     curProcessMsgBlock_(buffer), 
     totalSpace_(0), 
@@ -136,17 +136,76 @@ AGIDDSCdrSerializer::AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEn
     }
 }
 
-bool AGIDDSCdrSerializer::serializeLongDouble(LongDouble value) 
+bool CdrSerializer::convertUft32ToUtf16(const wchar_t utf32Value, uint16_t* utf16Value)
 {
-    uint32_t ldSize = sizeof(long double);
-    static char s_padData[16] = { 0 };
-    // 填充0
-    if (useLittleEndian_ == isLittleEndian()) {
-        bool ret = serializeBaseTypeArray(s_padData, 16 - ldSize);
-        if (!ret) {
+    uint32_t codePoint = static_cast<uint32_t>(utf32Value);
+    if (codePoint < 0x10000) {
+        utf16Value[0] = static_cast<uint16_t>(codePoint);
+    } else if (codePoint <= 0x10FFFF) {
+        // 转换为surrogate pair
+        codePoint -= 0x10000;
+        utf16Value[0] = static_cast<uint16_t>((codePoint >> 10) + 0xD800);
+        utf16Value[1] = static_cast<uint16_t>((codePoint & 0x3FF) + 0xDC00);
+    } else {
+        TRAVODDS_LOG(LOG_ERROR, "Invalid wchar_t value: %u\n", codePoint);
+        return false;
+    }
+    return true;
+}
+
+bool CdrSerializer::serializeBaseType(wchar_t value) 
+{
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return serializeBaseType<uint16_t>(static_cast<uint16_t>(value));
+    } else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        uint16_t utf16Value[2] = {0, 0};
+        if (!convertUft32ToUtf16(value, utf16Value)) {
             return false;
         }
-        return serializeBaseType(static_cast<double>(value.ld));
+        // 当前仅考虑utf16与uft32编码相同的宽字符
+        return serializeBaseType<uint16_t>(utf16Value[0]);
+    } else {
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrSerializer::serializeBaseTypeArray(const wchar_t* value, uint32_t length) 
+{
+    if (length == 0) {
+        return true;
+    }
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return serializeBaseTypeArray<uint16_t>(reinterpret_cast<const uint16_t*>(value), length);
+    } else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        for (uint32_t i = 0; i < length; i++) {
+            if (!serializeBaseType(value[i])) {
+                TRAVODDS_LOG(LOG_ERROR, "serialize wchar_t array index[%u] failed.\n", i);
+                return false;
+            }
+        }
+        return true;
+    } else {
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrSerializer::serializeLongDouble(LongDouble value) 
+{
+    uint32_t ldSize = sizeof(long double);
+    static char s_alignedData[8] = { 0 };
+    // 16字节按照8字节对齐
+    uint32_t offset = (~index_ + 1) & (8 - 1);
+    index_ += offset;
+    SerializedBuffer* retBuffer = curProcessMsgBlock_->writeData(s_alignedData, offset);
+    // 填充0
+    if (useLittleEndian_ == isLittleEndian()) {
+        return serializeBaseTypeArray(value.c, sizeof(LongDouble));
     } else {
         // 交换value.c的字节序
         LongDouble tmpValue = value;
@@ -158,7 +217,7 @@ bool AGIDDSCdrSerializer::serializeLongDouble(LongDouble value)
     }
 }
 
-bool AGIDDSCdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint32_t length) 
+bool CdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint32_t length) 
 {
     for (uint32_t i = 0; i < length; ++i) {
         if (!serializeLongDouble(value[i])) {
@@ -168,7 +227,7 @@ bool AGIDDSCdrSerializer::serializeLongDoubleArray(const LongDouble* value, uint
     return true;
 }
 
-bool AGIDDSCdrSerializer::serializeString(const char* value, uint32_t length)
+bool CdrSerializer::serializeString(const char* value, uint32_t length)
 {
     if (!serializeBaseType<uint32_t>(length)) {
         return false;
@@ -179,29 +238,29 @@ bool AGIDDSCdrSerializer::serializeString(const char* value, uint32_t length)
     return true;
 }
 
-bool AGIDDSCdrSerializer::serializeString(const std::string& value)
+bool CdrSerializer::serializeString(const std::string& value)
 {
     return serializeString(value.c_str(), static_cast<uint32_t>(value.size() + 1));
 }
 
-bool AGIDDSCdrSerializer::serializeWString(const wchar_t* value, uint32_t length)
+bool CdrSerializer::serializeWString(const wchar_t* value, uint32_t length)
 {
     if (!serializeBaseType<uint32_t>(length)) {
         return false;
     }
-    if (!serializeBaseTypeArray<wchar_t>(value, length)) {
+    if (!serializeBaseTypeArray(value, length)) {
         return false;
     }
     return true;
 }
 
-bool AGIDDSCdrSerializer::serializeWString(const std::wstring& value)
+bool CdrSerializer::serializeWString(const std::wstring& value)
 {
     // 协议说wstring不应该包含null字符，所以这里不加1
     return serializeWString(value.c_str(), static_cast<uint32_t>(value.size()));
 }
 
-bool AGIDDSCdrSerializer::getKeyHash(char* keyHash, bool forceMd5)
+bool CdrSerializer::getKeyHash(char* keyHash, bool forceMd5)
 {
 	MD5 md5;
 	SerializedBuffer* current = tgaMsgBlock_;
@@ -214,7 +273,7 @@ bool AGIDDSCdrSerializer::getKeyHash(char* keyHash, bool forceMd5)
 	return true;
 }
 
-uint32_t AGIDDSCdrSerializer::getBaseTypeSize(uint32_t typeSize, uint32_t currentAlignment)
+uint32_t CdrSerializer::getBaseTypeSize(uint32_t typeSize, uint32_t currentAlignment)
 {
     uint32_t initialAlignment = currentAlignment;
     // 16字节的按照8字节对齐
@@ -222,7 +281,7 @@ uint32_t AGIDDSCdrSerializer::getBaseTypeSize(uint32_t typeSize, uint32_t curren
     return currentAlignment - initialAlignment;
 }
 
-uint32_t AGIDDSCdrSerializer::getBaseTypeArraySize(uint32_t typeSize, uint32_t length, uint32_t currentAlignment)
+uint32_t CdrSerializer::getBaseTypeArraySize(uint32_t typeSize, uint32_t length, uint32_t currentAlignment)
 {
     if (length == 0) {
         return 0;
@@ -234,7 +293,7 @@ uint32_t AGIDDSCdrSerializer::getBaseTypeArraySize(uint32_t typeSize, uint32_t l
     return currentAlignment - initialAlignment;
 }
 
-uint32_t AGIDDSCdrSerializer::getStringSize(uint32_t length, uint32_t currentAlignment)
+uint32_t CdrSerializer::getStringSize(uint32_t length, uint32_t currentAlignment)
 {
     uint32_t initialAlignment = currentAlignment;
     currentAlignment += ((~currentAlignment + 1) & 3) + 4;
@@ -242,7 +301,7 @@ uint32_t AGIDDSCdrSerializer::getStringSize(uint32_t length, uint32_t currentAli
     return currentAlignment - initialAlignment;
 }
 
-uint32_t AGIDDSCdrSerializer::getWStringSize(uint32_t length, uint32_t currentAlignment)
+uint32_t CdrSerializer::getWStringSize(uint32_t length, uint32_t currentAlignment)
 {
     uint32_t initialAlignment = currentAlignment;
     currentAlignment += ((~currentAlignment + 1) & 3) + 4;
@@ -250,7 +309,7 @@ uint32_t AGIDDSCdrSerializer::getWStringSize(uint32_t length, uint32_t currentAl
     return currentAlignment - initialAlignment;
 }
 
-char* AGIDDSCdrSerializer::serializeParameterHeader(bool useExtended, bool mustUnderstand, uint32_t memberId)
+char* CdrSerializer::serializeParameterHeader(bool useExtended, bool mustUnderstand, uint32_t memberId)
 {
     char* lenBlock = nullptr;
     unsigned short tmpShort = 0;
@@ -287,7 +346,7 @@ char* AGIDDSCdrSerializer::serializeParameterHeader(bool useExtended, bool mustU
     return lenBlock;
 }
 
-void AGIDDSCdrSerializer::parameterLenSerialize(char* lenAddr, uint32_t length, unsigned short lengthSize)
+void CdrSerializer::parameterLenSerialize(char* lenAddr, uint32_t length, unsigned short lengthSize)
 {
     uint32_t actualLen = length;
     uint32_t offset = (actualLen & 3) == 0 ? 0 : (4 - (actualLen & 3));
@@ -310,12 +369,12 @@ void AGIDDSCdrSerializer::parameterLenSerialize(char* lenAddr, uint32_t length, 
     }
 }
 
-void AGIDDSCdrSerializer::aheadWriterPosition(uint32_t length)
+void CdrSerializer::aheadWriterPosition(uint32_t length)
 {
     curProcessMsgBlock_->writer_position += length;
 }
 
-AGIDDSCdrDeserializer::AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool littleEndian)
+CdrDeserializer::CdrDeserializer(SerializedBuffer* buffer, bool littleEndian)
     : tgaMsgBlock_(buffer),
       curProcessMsgBlock_(buffer),
       totalRemains_(0),
@@ -329,7 +388,67 @@ AGIDDSCdrDeserializer::AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool litt
     }
 }
 
-bool AGIDDSCdrDeserializer::isLittleEndian() const
+bool CdrDeserializer::convertUft16ToUtf32(const uint16_t utf16Value, wchar_t& utf32Value)
+{
+    // 当前仅考虑utf16编码和utf32编码相同的情况
+    utf32Value = static_cast<uint32_t>(utf16Value);
+    return true;
+}
+
+bool CdrDeserializer::deserializeBaseType(wchar_t& value)
+{
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        uint16_t int16Val;
+        if (deserializeBaseType<uint16_t>(int16Val)) {
+            value = static_cast<wchar_t>(int16Val);
+            return true;
+        }
+        return false;
+    }
+    else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，反序列化后转化为utf32
+        uint16_t int16Val;
+        if (!deserializeBaseType<uint16_t>(int16Val)) {
+            return false;
+        }
+        if (!convertUft16ToUtf32(int16Val, value)) {
+            return false;
+        }
+        return true;
+    }
+    else {
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrDeserializer::deserializeBaseTypeArray(wchar_t* value, uint32_t length)
+{
+    if (length == 0) {
+        return true;
+    }
+    if (sizeof(wchar_t) == 2) {
+        // 如果是utf16编码，如windows，直接序列化
+        return deserializeBaseTypeArray<uint16_t>(reinterpret_cast<uint16_t*>(value), length);
+    }
+    else if (sizeof(wchar_t) == 4) {
+        // 如果是utf32编码，如linux，转化为utf16编码后序列化
+        for (uint32_t i = 0; i < length; i++) {
+            if (!deserializeBaseType(value[i])) {
+                TRAVODDS_LOG(LOG_ERROR, "deserialize wchar_t array index[%u] failed.\n", i);
+                return false;
+            }
+        }
+        return true;
+    }
+    else {
+        TRAVODDS_LOG(LOG_ERROR, "Unsupported wchar_t size: %zu\n", sizeof(wchar_t));
+        return false;
+    }
+}
+
+bool CdrDeserializer::isLittleEndian() const
 {
     union agicdr_endian_test {
         uint32_t i;
@@ -340,7 +459,7 @@ bool AGIDDSCdrDeserializer::isLittleEndian() const
     return (test.c[0] == 1);
 }
 
-bool AGIDDSCdrDeserializer::deserializeString(char* value, uint32_t length)
+bool CdrDeserializer::deserializeString(char* value, uint32_t length)
 {
     uint32_t strLen = 0;
     if (!deserializeBaseType<uint32_t>(strLen)) {
@@ -359,7 +478,7 @@ bool AGIDDSCdrDeserializer::deserializeString(char* value, uint32_t length)
     return true;
 }
 
-bool AGIDDSCdrDeserializer::deserializeString(std::string& value)
+bool CdrDeserializer::deserializeString(std::string& value)
 {
     uint32_t strLen = 0;
     if (!deserializeBaseType<uint32_t>(strLen)) {
@@ -376,25 +495,25 @@ bool AGIDDSCdrDeserializer::deserializeString(std::string& value)
     return true;
 }
 
-bool AGIDDSCdrDeserializer::deserializeWString(std::wstring& value)
+bool CdrDeserializer::deserializeWString(std::wstring& value)
 {
     uint32_t strLen = 0;
     if (!deserializeBaseType<uint32_t>(strLen)) {
         return false;
     }
     value.resize(strLen);
-    if (!deserializeBaseTypeArray<wchar_t>(&value[0], strLen)) {
+    if (!deserializeBaseTypeArray(&value[0], strLen)) {
         return false;
     }
     return true;
 }
 
-uint32_t AGIDDSCdrDeserializer::getBufferLength() const
+uint32_t CdrDeserializer::getBufferLength() const
 {
     return totalRemains_;
 }
 
-bool AGIDDSCdrDeserializer::deserializeParameterHeader(uint32_t& memberId, uint32_t& length,
+bool CdrDeserializer::deserializeParameterHeader(uint32_t& memberId, uint32_t& length,
     bool& useExtended, bool& mustUnderstand)
 {
     unsigned short pid = 0;
@@ -429,7 +548,7 @@ bool AGIDDSCdrDeserializer::deserializeParameterHeader(uint32_t& memberId, uint3
     return true;
 }
 
-bool AGIDDSCdrDeserializer::aheadReaderPosition(uint32_t beginIndex, uint32_t length)
+bool CdrDeserializer::aheadReaderPosition(uint32_t beginIndex, uint32_t length)
 {
     uint32_t readLen = beginIndex - totalRemains_;
     if (readLen > length) {

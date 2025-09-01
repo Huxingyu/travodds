@@ -1,6 +1,6 @@
 #include "rtps/transport/locator.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 AsioLocator::AsioLocator(const Locator_t& loc)
 	: Locator_t(loc)
 {

@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
-#define AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
+#ifndef TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H
+#define TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H
 
 #include "dcps/topic/multitopic.h"
 #include "dcps/topic/topicdescriptionimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief MultiTopicImpl类h是MultiTopic子类， 是 DDS (Data Distribution Service) 中的一个高级特性，
  * 它允许订阅者通过单个 DataReader 接收来自多个 Topic 的数据，并对这些数据进行过滤、组合或转换。
@@ -68,5 +68,5 @@ private:
     std::string subscriptionExpression_;
     StringSeq expressionParameters_;
 };
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H

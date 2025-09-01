@@ -13,7 +13,7 @@
 #ifndef DYNAMIC_TYPE_BUILDER_H
 #define DYNAMIC_TYPE_BUILDER_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictype.h"
 #include "xtypes/annotationdescriptor.h"
 #include "xtypes/memberdescriptor.h"
@@ -22,14 +22,14 @@
 #include <vector>
 #include <memory>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief DynamicTypeBuilder类表示根据类型系统定义的特定类型的过渡状态。
  * 
  * @details 它用于实例化具体的DynamicType对象。
  */
-class DynamicTypeBuilder {
+class DDS_DLL DynamicTypeBuilder {
     friend class DynamicTypeBuilderFactoryImpl;
 public:
     /**
@@ -207,6 +207,6 @@ private:
     TypeDescriptor descriptor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_BUILDER_H

@@ -59,6 +59,6 @@ install -d %{buildroot}%{Installprefix}/lib
 
 # 开发包文件列表（头文件、符号链接等）
 %files devel
-%{Installprefix}/include/
+%{Installprefix}/include/travodds/
 %{Installprefix}/lib/libtravodds.so
 %{Installprefix}/share/travodds/cmake/

@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_COMMON_SYS_SYSINFO_H
-#define AGIDDS_COMMON_SYS_SYSINFO_H
+#ifndef TRAVODDS_COMMON_SYS_SYSINFO_H
+#define TRAVODDS_COMMON_SYS_SYSINFO_H
 
 #include "type/basictype.h"
 #include "rtps/basictypertps.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace SysInfo {
 	/**
@@ -116,5 +116,5 @@ namespace SysInfo {
 
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

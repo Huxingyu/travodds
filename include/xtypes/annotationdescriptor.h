@@ -13,11 +13,11 @@
 #ifndef ANNOTATION_DESCRIPTOR_H
 #define ANNOTATION_DESCRIPTOR_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include <string>
 #include <map>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DynamicType;
 
@@ -27,7 +27,7 @@ class DynamicType;
  * @brief AnnotationDescriptor将注释的状态打包在一起，并将其应用于某些元素。该类对象具有值语义，允许它们被深度复制和比较。
  */
 
-class AnnotationDescriptor {
+class DDS_DLL AnnotationDescriptor {
 public:
     /** @brief type属性包含对注释类型的引用，该注释类型描述了此描述符的实例。 */
     DynamicType* type_;
@@ -87,6 +87,6 @@ public:
     bool is_consistent() const;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // ANNOTATION_DESCRIPTOR_H

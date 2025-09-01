@@ -13,14 +13,14 @@
 #ifndef DYNAMIC_TYPE_MEMBER_H
 #define DYNAMIC_TYPE_MEMBER_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/base/retcode.h"
 #include "xtypes/annotationdescriptor.h"
 #include "xtypes/memberdescriptor.h"
 #include <string>
 #include <map>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief DynamicTypeMember表示类型的“成员”，具有引用语义。
@@ -37,7 +37,7 @@ AGIDDS_NAMESPACE_BEGIN
  *          ALIAS_TYPE | 行为与别名的基础类型相同。
  *          其他类型 | 不被视为具有成员。
  */
-class DynamicTypeMember {
+class DDS_DLL DynamicTypeMember {
 public:
     /**
      * @brief 获取所有应用于此成员的注释
@@ -103,6 +103,6 @@ private:
     MemberDescriptor descriptor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPE_MEMBER_H

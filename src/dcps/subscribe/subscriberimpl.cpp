@@ -6,7 +6,7 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/discovery/discovery.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 SubscriberImpl::SubscriberImpl(const SubscriberQos& qos, SubscriberListener* a_listener, StatusMask mask, DomainParticipantImpl* a_participant)
     : DomainEntityImpl(mask), qos_(qos), listener_(a_listener), participant_(a_participant)
@@ -36,12 +36,12 @@ ReturnCode_t SubscriberImpl::set_qos(const SubscriberQos& qos)
     if (&qos != &SUBSCRIBER_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 	qos_ = qosTemp;
@@ -75,24 +75,24 @@ const SubscriberListener* SubscriberImpl::get_listener() const
 DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const DataReaderQos& qos, DataReaderListener* a_listener, const StatusMask& mask)
 {
     if (!a_topic || a_topic->get_participant() != get_participant()) {
-		AGILOG(AGILOG_ERROR, "topic is nullptr || topic and subscriber not same domainparticipant");
+		TRAVODDS_LOG(LOG_ERROR, "topic is nullptr || topic and subscriber not same domainparticipant");
         return nullptr;
     }
 	const DataReaderQos& qosT = (&qos == &DATAREADER_QOS_DEFAULT) ? defaultDatareaderQos_ : qos;
 	if (RETCODE_OK != QosPolicyCheck::CheckQos(qosT)) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err");
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
 	TypeSupport* typeSupport = participant_->find_type(a_topic->get_type_name());
 	if (nullptr == typeSupport) {
-		AGILOG(AGILOG_ERROR, "typeSupport[%s] is nullptr", a_topic->get_type_name());
+		TRAVODDS_LOG(LOG_ERROR, "typeSupport[%s] is nullptr", a_topic->get_type_name());
 		return nullptr;
 	}
 	DataReader* reader = nullptr;
 	std::unique_ptr<DataReaderImpl> datareaderPtr = std::make_unique<DataReaderImpl>(a_topic, qosT, a_listener, mask, this, typeSupport);
 
 	if (!datareaderPtr.get()) {
-		AGILOG(AGILOG_ERROR, "create datareader[%s] fail", a_topic->get_type_name());
+		TRAVODDS_LOG(LOG_ERROR, "create datareader[%s] fail", a_topic->get_type_name());
 		return nullptr;
 	}
     GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_READER);
@@ -106,7 +106,7 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 		if (RETCODE_OK != reader->enable()) {
 			delete_datareader(reader);
 			reader = nullptr;
-			AGILOG(AGILOG_ERROR, "enable Err");
+			TRAVODDS_LOG(LOG_ERROR, "enable Err");
 			return nullptr;
 		}
 	}
@@ -119,11 +119,11 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
 {
     if (!a_dataReader) {
-		AGILOG(AGILOG_ERROR, "datareader is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "datareader is nullptr");
         return RETCODE_BAD_PARAMETER;
     }
     if (this != a_dataReader->get_subscriber()) {
-		AGILOG(AGILOG_ERROR, "subscriber donot contain the dateader");
+		TRAVODDS_LOG(LOG_ERROR, "subscriber donot contain the dateader");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = a_dataReader->get_instance_handle();
@@ -135,11 +135,11 @@ ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
     std::lock_guard<std::mutex> lock(mtxReaders_);
     auto it = readerHandles_.find(handle);
     if (it == readerHandles_.end()) {
-		AGILOG(AGILOG_ERROR, "subscriber cant find the dateader");
+		TRAVODDS_LOG(LOG_ERROR, "subscriber cant find the dateader");
         return RETCODE_ERROR;
     }
     if (!it->second->Empty()) {
-		AGILOG(AGILOG_ERROR, "the dateader is used");
+		TRAVODDS_LOG(LOG_ERROR, "the dateader is used");
         return RETCODE_PRECONDITION_NOT_MET;
     }
     readerHandles_.erase(handle);
@@ -163,13 +163,13 @@ DataReader *SubscriberImpl::lookup_datareader(const std::string& topic_name) con
 
 ReturnCode_t SubscriberImpl::begin_access()
 {
-	AGILOG(AGILOG_ERROR, "subscriber not spupport interface");
+	TRAVODDS_LOG(LOG_ERROR, "subscriber not spupport interface");
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t SubscriberImpl::end_access()
 {
-	AGILOG(AGILOG_ERROR, "subscriber not spupport interface");
+	TRAVODDS_LOG(LOG_ERROR, "subscriber not spupport interface");
     return RETCODE_UNSUPPORTED;
 }
 
@@ -223,7 +223,7 @@ ReturnCode_t SubscriberImpl::delete_contained_entities()
 		discovery->RemoveSubscriptionData(handle);
 
 		if (RETCODE_OK != datareader->delete_contained_entities()) {
-			AGILOG(AGILOG_ERROR, "delete_contained_entities Err")
+			TRAVODDS_LOG(LOG_ERROR, "delete_contained_entities Err")
 			return RETCODE_PRECONDITION_NOT_MET;
 		}
 	}
@@ -241,7 +241,7 @@ ReturnCode_t SubscriberImpl::set_default_datareader_qos(const DataReaderQos& qos
     }
     ReturnCode_t ret = QosPolicyCheck::CheckQos(qos);
     if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "CheckQos Err ret = %d", ret)
+		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d", ret)
         return ret;
     }
     defaultDatareaderQos_ = qos;
@@ -275,7 +275,7 @@ ReturnCode_t SubscriberImpl::enable()
 		return RETCODE_OK;
 	}
 	if (!participant_->IsEnable()) {
-		AGILOG(AGILOG_ERROR, "IsEnable Err")
+		TRAVODDS_LOG(LOG_ERROR, "IsEnable Err")
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 	{

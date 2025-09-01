@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_LISTENER_DOMAINPARTICIPANTLISTENER_H
-#define AGIDDS_DCPS_LISTENER_DOMAINPARTICIPANTLISTENER_H
+#ifndef TRAVODDS_DCPS_LISTENER_DOMAINPARTICIPANTLISTENER_H
+#define TRAVODDS_DCPS_LISTENER_DOMAINPARTICIPANTLISTENER_H
 
 #include "dcps/listener/publisherlistener.h"
 #include "dcps/listener/subscriberlistener.h"
 #include "dcps/listener/topiclistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief 类DomainParticipantListener重写对某些事件的行为。
  *
@@ -25,5 +25,5 @@ class DomainParticipantListener : virtual public PublisherListener, virtual publ
 
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

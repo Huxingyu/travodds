@@ -6,7 +6,7 @@
 #include "common/log/logger.h"
 #include <iomanip>
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 using namespace std::chrono;
 
 // 线程安全的时间间隔计算器
@@ -84,7 +84,7 @@ bool LivelinessAssert::RemoveWriter(GUID_t guid)
 
     auto writer = writers_.find(guid);
     if (writer == writers_.end()) {
-		AGILOG(AGILOG_ERROR, "guid is not exit");
+		TRAVODDS_LOG(LOG_ERROR, "guid is not exit");
         return false;
     }
 
@@ -122,7 +122,7 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
 		auto itStatus = writers_.find(guid);
 
 		if (itStatus == writers_.end()) {
-			AGILOG(AGILOG_ERROR, "guid is not exit");
+			TRAVODDS_LOG(LOG_ERROR, "guid is not exit");
 			return false;
 		}
 
@@ -147,7 +147,7 @@ bool LivelinessAssert::GetWriterLiveLinessKind(GUID_t guid, LivelinessQosPolicyK
 	std::unique_lock<std::mutex> lock(mutex_);
 
 	if (0 == writers_.count(guid)) {
-		AGILOG(AGILOG_ERROR, "guid is not exit");
+		TRAVODDS_LOG(LOG_ERROR, "guid is not exit");
 		return false;
 	}
 

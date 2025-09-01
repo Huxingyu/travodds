@@ -10,12 +10,12 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLMANAGER_H
-#define AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLMANAGER_H
+#ifndef TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLMANAGER_H
+#define TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLMANAGER_H
 
 #include "rtps/flowcontrol/flowcontroller.h"	
 #include "rtps/flowcontrol/flowcontrolscheduler.h"	
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Participant;
 
@@ -34,6 +34,6 @@ private:
 
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

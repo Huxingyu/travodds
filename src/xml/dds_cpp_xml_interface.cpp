@@ -14,7 +14,7 @@
 #include "xml/dds_xml_repo.h"
 #include "common/log/logger.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef _XML_INTERFACE_CPP
 
@@ -38,7 +38,7 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant_with_profile
     DomainParticipantQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_participant_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup participant qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup participant qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_participant(domain_id, qos, listener, mask);
@@ -59,7 +59,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_default_participant_qos_with_prof
     DomainParticipantQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_participant_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup participant  qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup participant  qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_participant_qos(qos);
@@ -120,7 +120,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos_with_profile(
     DomainParticipantFactoryQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_participant_factory_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup participant factory qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup participant factory qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -133,7 +133,7 @@ ReturnCode_t DomainParticipantImpl::set_default_publisher_qos_with_profile(
     PublisherQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_publisher_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_publisher_qos(qos);
@@ -146,7 +146,7 @@ ReturnCode_t DomainParticipantImpl::set_default_subscriber_qos_with_profile(
     SubscriberQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_subscriber_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_subscriber_qos(qos);
@@ -159,7 +159,7 @@ ReturnCode_t DomainParticipantImpl::set_default_topic_qos_with_profile(
     TopicQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_topic_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_topic_qos(qos);
@@ -174,7 +174,7 @@ Publisher* DomainParticipantImpl::create_publisher_with_qos_profile(
     PublisherQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_publisher_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_publisher(qos, listener, mask);
@@ -189,7 +189,7 @@ Subscriber* DomainParticipantImpl::create_subscriber_with_qos_profile(
     SubscriberQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_subscriber_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_subscriber(qos, listener, mask);
@@ -206,7 +206,7 @@ Topic* DomainParticipantImpl::create_topic_with_qos_profile(
     TopicQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_topic_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_topic(topic_name, type_name, qos, listener, mask);
@@ -219,7 +219,7 @@ ReturnCode_t DomainParticipantImpl::set_qos_with_profile(
     DomainParticipantQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_participant_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup participant qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup participant qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -232,7 +232,7 @@ ReturnCode_t PublisherImpl::set_qos_with_profile(
     PublisherQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_publisher_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup publisher qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -248,7 +248,7 @@ DataWriter* PublisherImpl::create_datawriter_with_qos_profile(
     DataWriterQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datawriter_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_datawriter(topic, qos, listener, mask); // Assuming nullptr for Topic* as it's not provided
@@ -261,7 +261,7 @@ ReturnCode_t PublisherImpl::set_default_datawriter_qos_with_profile(
     DataWriterQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datawriter_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_datawriter_qos(qos);
@@ -274,7 +274,7 @@ ReturnCode_t SubscriberImpl::set_qos_with_profile(
     SubscriberQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_subscriber_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup subscriber qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -290,7 +290,7 @@ DataReader* SubscriberImpl::create_datareader_with_qos_profile(
     DataReaderQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datareader_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
         return nullptr;
     }
     return create_datareader(topic, qos, listener, mask); // Assuming nullptr for TopicDescription* as it's not provided
@@ -303,7 +303,7 @@ ReturnCode_t SubscriberImpl::set_default_datareader_qos_with_profile(
     DataReaderQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datareader_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_default_datareader_qos(qos);
@@ -316,7 +316,7 @@ ReturnCode_t DataWriterImpl::set_qos_with_profile(
     DataWriterQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datawriter_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datawriter qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -329,7 +329,7 @@ ReturnCode_t DataReaderImpl::set_qos_with_profile(
     DataReaderQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_datareader_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup datareader qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
@@ -342,12 +342,12 @@ ReturnCode_t TopicImpl::set_qos_with_profile(
     TopicQos qos;
     ReturnCode_t ret = g_xmlRepo.lookup_topic_qos(library_name ? library_name : "", profile_name ? profile_name : "", qos_name ? qos_name : "", qos);
     if (ret != RETCODE_OK) {
-        AGILOG(AGILOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to lookup topic qos %s %s %s.\n", library_name, profile_name, qos_name);
         return ret;
     }
     return set_qos(qos);
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif //_XML_INTERFACE_CPP

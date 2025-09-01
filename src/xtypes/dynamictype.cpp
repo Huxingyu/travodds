@@ -12,7 +12,7 @@
 
 #include "xtypes/dynamictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicType::DynamicType(const TypeDescriptor &descriptor)
     : descriptor_(descriptor), ref_count_(0) {
@@ -111,4 +111,4 @@ void DynamicType::decrement_ref_count() { ref_count_--; }
 
 int DynamicType::get_ref_count() const { return ref_count_.load(); }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

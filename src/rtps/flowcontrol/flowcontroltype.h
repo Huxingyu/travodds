@@ -10,13 +10,13 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLTYPE_H
-#define AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLTYPE_H
+#ifndef TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLTYPE_H
+#define TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLTYPE_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "rtps/messages/cdrmessage_t.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 enum class FlowControllerKind : uint8_t {
 	// 完全同步,阻塞发送线程，直到接收线程处理完数据，策略调度无效
@@ -47,6 +47,6 @@ struct FlowControllerConfig {
 
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

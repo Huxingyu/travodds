@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_DISCOVERY_SPDP_H
-#define AGIDDS_RTPS_DISCOVERY_SPDP_H
+#ifndef TRAVODDS_RTPS_DISCOVERY_SPDP_H
+#define TRAVODDS_RTPS_DISCOVERY_SPDP_H
 
 #include "rtps/endpoint/participant.h"
 #include "rtps/endpoint/statelesswriter.h"
@@ -20,7 +20,7 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Discovery;
 
@@ -195,6 +195,6 @@ private:
 	std::shared_ptr<Timer> timer_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_DISCOVERY_SPDP_H
+#endif // !TRAVODDS_RTPS_DISCOVERY_SPDP_H

@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H
-#define AGIDDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H
+#ifndef TRAVODDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H
+#define TRAVODDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H
 
 #include "dcps/condition/readconditionimpl.h"
 #include "dcps/condition/querycondition.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class QueryConditionImpl : public virtual QueryCondition, public  ReadConditionImpl {
 public:
@@ -58,5 +58,5 @@ private:
     StringSeq queryParameters_;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_CONDITION_QUERYCONDITIONIMPL_H

@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
-#define AGIDDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
+#define TRAVODDS_DCPS_SUBSCRIBE_DATAREADERIMPL_H
 
 #include "dcps/subscribe/datareader.h"
 #include "dcps/domain/domainentityimpl.h"
@@ -19,7 +19,7 @@
 
 class SerializedBuffer;
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Reader;
 class SubscriberImpl;
@@ -828,6 +828,20 @@ public:
 	 */
 	void DeadlineTimeout();
 
+	/**
+	 * @brief 检测新到达数据是否超期，超期则过滤。
+	 *
+	 * @param [in]  cache 新的用户报文。
+	 *
+	 * @return 检测未超期返回true，否则返回false。
+	 */
+	bool CheckLifespan(const std::shared_ptr<CacheChange>& cache);
+
+	/**
+	 * @brief 删除过期样本的方法，在lifespan Qos相关定时器超时执行函数。
+	 */
+	bool LifespanTimeout();
+
 	 /**
 	  * @brief 更新活跃度更改情况。
 	  *
@@ -874,12 +888,15 @@ private:
 	/* 当前deadline计时器所属实例 */
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
+	/* wangyi lifespan 定时器 */
+	std::shared_ptr<Timer> lifespanTimer_;
 	SubscriptionBuiltinTopicData builtinData_;
+	ContentFilterProperty_t contentFilter_;
 protected:
 	TypeSupport* typeSupport_ = nullptr;
     std::shared_ptr<HistoryCache> history_;
 
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // !DATA_READER_IMPL_H

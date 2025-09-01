@@ -1,6 +1,6 @@
 #include "rtps/flowcontrol/flowcontrolmanager.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 FlowControlManager::FlowControlManager(Participant* participant)
 	: participant_(participant)

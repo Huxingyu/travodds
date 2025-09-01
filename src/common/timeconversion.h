@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <math.h>
 #include "type/basictype.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace Conversion {
 	/**
@@ -173,5 +173,5 @@ namespace Conversion {
 	}
 
 }
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 

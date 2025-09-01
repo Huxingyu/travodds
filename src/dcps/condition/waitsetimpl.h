@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_WAITSETIMPL_H
-#define AGIDDS_DCPS_CONDITION_WAITSETIMPL_H
+#ifndef TRAVODDS_DCPS_CONDITION_WAITSETIMPL_H
+#define TRAVODDS_DCPS_CONDITION_WAITSETIMPL_H
 
 #include <condition_variable>
 #include "dcps/condition/conditionimpl.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class GuardConditionImpl;
 
@@ -93,5 +93,5 @@ private:
 	std::vector<ConditionImpl*> conditions_;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_CONDITION_WAITSETIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_CONDITION_WAITSETIMPL_H

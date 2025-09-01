@@ -5,7 +5,7 @@
 #include "common/log/logger.h"
 #include "waitsetimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WaitSetImpl::~WaitSetImpl()
 {
@@ -30,7 +30,7 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 		} else if (dynamic_cast<ConditionImpl*>(cond) != nullptr) {
 			condImpl = dynamic_cast<ConditionImpl*>(cond);
 		} else {
-			AGILOG(AGILOG_ERROR, "Condition type is not supported in WaitSetImpl.");
+			TRAVODDS_LOG(LOG_ERROR, "Condition type is not supported in WaitSetImpl.");
 			return RETCODE_BAD_PARAMETER;
 		}
 		for (const auto& it : conditions_) {

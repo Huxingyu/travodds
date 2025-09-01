@@ -9,17 +9,24 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
-#define AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
+#ifndef TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
+#define TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "dcps/base/retcode.h"
 #include "dcps/base/status.h"
-#include "cdr/agicdr.h"
-AGIDDS_NAMESPACE_BEGIN
+#include "cdr/travoddscdr.h"
+
+TRAVODDS_NAMESPACE_BEGIN
 
 class TypeObject;
+
+//class DDS_DLL TypeObject {
+//public:
+//	virtual const std::pair<std::string, uint8_t>& get_type_descriptor() = 0;
+//	virtual const std::vector<std::tuple<std::string, uint8_t, std::vector<int32_t>>>& get_members() = 0;
+//};
 
 typedef SequenceData<SerializedBuffer> SerializedBufferSeq;
 
@@ -65,7 +72,7 @@ public:
 	 * @param endian 报文字节序 0：大端字节序 1 ： 小端字节序
 	 * @return int32_t 表示序列化操作成功的状态码。
 	 */
-	virtual int32_t serialize_data(void* data, AGIDDSCdrSerializer* cdr, int32_t endian) = 0;
+	virtual int32_t serialize_data(void* data, CdrSerializer* cdr, int32_t endian) = 0;
 
 	/**
 	 * @brief 反序列化数据的函数。
@@ -73,7 +80,7 @@ public:
 	 * @param endian 报文字节序 0：大端字节序 1 ： 小端字节序
 	 * @return void* 指向反序列化的数据类型的指针。
 	 */
-	virtual int32_t deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int32_t endian) = 0;
+	virtual int32_t deserialize_data(void* data, CdrDeserializer* cdr, int32_t endian) = 0;
 
 	/**
 	 * @brief 获取数据类型的类型对象的函数。
@@ -91,7 +98,7 @@ public:
 	 *
 	 * @return ReturnCode_t 表示操作结果的状态码。
 	 */
-	virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) = 0;
+	virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) = 0;
 
 	/**
 	 * @brief 数据类型是否包含key。
@@ -119,6 +126,6 @@ public:
 		return byte[0];
 	}
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // ! AGIDDS_DCPS_TOPIC_TYPESUPPORT_H
+#endif // ! TRAVODDS_DCPS_TOPIC_TYPESUPPORT_H

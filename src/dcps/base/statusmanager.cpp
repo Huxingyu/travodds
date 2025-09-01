@@ -4,7 +4,7 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "dcps/condition/statusconditionimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 DataWriterStatusManager::DataWriterStatusManager(DataWriterImpl* writer)
 	: writer_(writer),

@@ -9,14 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_WRITER_H
-#define AGIDDS_RTPS_ENDPOINT_WRITER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_WRITER_H
+#define TRAVODDS_RTPS_ENDPOINT_WRITER_H
 
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
-
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class FlowController;
 class DataWriterImpl;
@@ -228,6 +227,13 @@ public:
 
 	void SetFlowController(FlowController* controller);
 	FlowController* GetFlowController ();
+
+	/**
+	 * @brief 获取数据写者缓冲区。
+	 *
+	 * @return 返回数据写者缓冲区指针。
+	 */
+	std::shared_ptr<HistoryCache> GetWriterCache();
 protected:
 
 	bool pushMode_ = true;
@@ -243,6 +249,6 @@ protected:
 	FlowController* flowController_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

@@ -1,7 +1,7 @@
 #include "dcps/condition/waitset.h"
 #include "dcps/condition/waitsetimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WaitSet::WaitSet()
 	: impl_(new WaitSetImpl)

@@ -15,12 +15,12 @@
 
 #include "dcps/topic/typesupport.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DomainParticipant;
 class DynamicType;
 
-class DynamicTypeSupport : public TypeSupport {   
+class DDS_DLL DynamicTypeSupport : public TypeSupport {   
 public:
     /**
      * @brief   创建并返回一个新的DynamicTypeSupport对象，该对象能够将给定类型注册到DomainParticipant。
@@ -45,6 +45,6 @@ public:
     static ReturnCode_t delete_type_support(DynamicTypeSupport *type_support);
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_TYPESUPPORT_H

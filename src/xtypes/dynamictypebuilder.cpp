@@ -15,7 +15,7 @@
 #include "xtypes/dynamictypemember.h"
 #include "xtypes/typedescriptor.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 DynamicTypeBuilder::DynamicTypeBuilder(const TypeDescriptor &descriptor)
     : descriptor_(descriptor) {}
@@ -141,4 +141,4 @@ bool DynamicTypeBuilder::equals(const DynamicTypeBuilder &other) const {
     return true;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

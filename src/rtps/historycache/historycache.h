@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
-#define AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#ifndef TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#define TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
 
 #include "rtps/basictypertps.h"
 #include "rtps/messages/parameter.h"
@@ -20,7 +20,7 @@
 #include "common/memory/memorypool.h"
 #include <atomic>
 #include <condition_variable>
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 
@@ -117,6 +117,8 @@ public:
 	int32_t fragmentTatolNum;
 	/* 所有的数据分片数据序号，收到一个分片数据，删除分片序号 */
 	std::set<int32_t> fragmentSeq;
+	/* 需要过滤的订阅者 */
+	std::set<GUID_t> filterReaders_;
 
 	/**
 	 * @brief 构造函数。
@@ -220,11 +222,11 @@ public:
 	/**
 	 * @brief 删除发送报文请求。
 	 *
-	 * @param [in] change 发送报文请求。
+	 * @param [in] seqNum 发送报文请求序号。
 	 *
 	 * @return 删除成功则返回true，否则返回false。
 	 */
-	bool RemoveChange(std::shared_ptr<CacheChange> change);
+	bool RemoveChange(const SequenceNumber_t& seqNum);
 
 	/**
 	 * @brief 根据报文发送序号获取报文发送请求。
@@ -234,6 +236,13 @@ public:
 	 * @return 返回报文发送请求。
 	 */
 	std::shared_ptr<CacheChange> GetChange(const SequenceNumber_t& seqNum);
+
+	/**
+	 * @brief 根据报文源时间戳获取报文源时间戳最小的报文缓存。
+	 *
+	 * @return 返回报文缓存。
+	 */
+	std::shared_ptr<CacheChange> GetMinSourceTimespace();
 
 	/**
 	 * @brief 从保存数据的容器中获取报文序号最小值。
@@ -483,9 +492,14 @@ private:
 
 	std::condition_variable changeVar_;
 
+	/* wangyi lifespanQos 添加，要到期的数据 */
+	std::shared_ptr<CacheChange> MinSourceTimespaceCache_ = nullptr;
+	/* 互斥锁，互斥访问MinSourceTimespaceCache_  */
+	std::mutex  MinSourceTimespaceCacheMutex_;
+
 	friend class Reader;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#endif // !TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H

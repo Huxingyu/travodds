@@ -1,6 +1,6 @@
 #include "dcps/topic/multitopicimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 MultiTopicImpl::MultiTopicImpl(const std::string& name, const std::string& type_name, const std::string& subscription_expression, const StringSeq& expression_parameters, DomainParticipantImpl* participant)
     : TopicDescriptionImpl(name, type_name, participant), subscriptionExpression_(subscription_expression), expressionParameters_(expression_parameters)
