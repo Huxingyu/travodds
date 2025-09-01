@@ -92,7 +92,7 @@ public:
      *
      * @param [in] qos 发布者的QoS
      * @param [in] listenerer 指向监听器的指针。
-     * @param [in] mask StatusMask位掩码。
+     * @param [in] mask StatusMask位掩码，用于指定哪些特定事件会触发监听器的回调。
      *
      * @return 指向已创建发布者的指针。
      */

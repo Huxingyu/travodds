@@ -87,7 +87,12 @@ public:
 	Locator_t GetLocator();
 
 	//bool sendData();
+
+	void SetRemoteGuid(const GUID_t& guid);
+
+	const GUID_t& GetRemoteGuid();
 private:
+	GUID_t remoteGuid_;
 	SequenceNumber_t highestSentChangeSN_;
 	SeqNumberVec requestedChanges_;
 	Locator_t locator_;

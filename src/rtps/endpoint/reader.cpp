@@ -268,11 +268,13 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 
 	}
 
+	/* TODO wangyi 暂时以接收时间为源时间戳 */
+	Time_t::now(cache->sourceTimespace);//获取当前时间
+
 	//wangyi time_based_filter 过滤判断
 	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
 		//wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数
-		Duration_t ltime;
-		Duration_t::now(ltime);//获取当前时间
+		Duration_t ltime = Conversion::TimeToDuration(cache->sourceTimespace);
 		Duration_t costTime = ltime - lastTime_;
 		if (costTime < qos_.time_based_filter.minimum_separation) {
 			return RETCODE_TIME_BASED_FILTER;
@@ -384,4 +386,9 @@ bool Reader::GetMatchedPublicationData(PublicationBuiltinTopicData& publicationD
 		return true;
 	}
 	return false;
+}
+
+std::shared_ptr<HistoryCache> Reader::GetReaderCache()
+{
+	return readerCache_;
 }

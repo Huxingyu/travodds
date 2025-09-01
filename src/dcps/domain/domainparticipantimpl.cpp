@@ -3,6 +3,7 @@
 #include "dcps/publish/publisherimpl.h"
 #include "dcps/subscribe/subscriberimpl.h"
 #include "dcps/topic/topicimpl.h"
+#include "dcps/sql/ddssqlfilter.h"
 #include "qos/qospolicycheck.h"
 #include "rtps/endpoint/participant.h"
 #include "rtps/discovery/discovery.h"
@@ -187,6 +188,14 @@ ReturnCode_t DomainParticipantImpl::delete_subscriber(Subscriber*& subscriber)
 
 Topic* DomainParticipantImpl::create_topic(const std::string& topic_name, const std::string& type_name, const TopicQos& qos, TopicListener* listener, const StatusMask& mask)
 {
+    if (topic_name.empty() || type_name.empty()) {
+        AGILOG(AGILOG_ERROR, "topic_name or type_name is empty");
+		return nullptr;
+    }
+    if (topic_name.size() > BYTE_ORDER_LENGTH_MAX || type_name.size() > BYTE_ORDER_LENGTH_MAX) {
+        AGILOG(AGILOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+		return nullptr;
+    }
     auto it = typeSupports_.find(type_name);
     if (it == typeSupports_.end()) {
 		AGILOG(AGILOG_ERROR, "type_name[%s] not registed", type_name.c_str());
@@ -249,11 +258,25 @@ ReturnCode_t DomainParticipantImpl::delete_topic(Topic*& topic)
 
 ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const std::string& name, Topic* related_topic, const std::string& filter_expression, const StringSeq& expression_parameters)
 {
-    ContentFilteredTopic* fit = nullptr;
+    if (name.empty() || name.size() > BYTE_ORDER_LENGTH_MAX) {
+        AGILOG(AGILOG_ERROR, "name is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+		return nullptr;
+    }
+    if (expression_parameters.size() > EXPRESSION_PARAMETERS_MAX) {
+        AGILOG(AGILOG_ERROR, "expression_parameters size is over max, max size is %d", EXPRESSION_PARAMETERS_MAX);
+        return nullptr;
+	}
+
     if (nullptr == related_topic || this != related_topic->get_participant()) {
 		AGILOG(AGILOG_ERROR, "related_topic error");
-        return fit;
+        return nullptr;
     }
+    std::string typeName = related_topic->get_type_name();
+
+    if (!ContentFilteredTopicImpl::ValidFilterExpression(filter_expression, expression_parameters, typeSupports_.find(typeName)->second->get_typeobject())) {
+        return nullptr;
+    }
+    ContentFilteredTopic* fit = nullptr;
     std::lock_guard<std::mutex> lock(mtxTopics_);
 
     if (topics_.find(name) != topics_.end()) {
@@ -302,6 +325,14 @@ ReturnCode_t DomainParticipantImpl::delete_contentfilteredtopic(ContentFilteredT
 
 MultiTopic* DomainParticipantImpl::create_multitopic(const std::string& name, const std::string& type_name, const std::string& subscription_expression, const StringSeq& expression_parameters)
 {
+    if (name.empty() || type_name.empty()) {
+        AGILOG(AGILOG_ERROR, "topic_name or type_name is empty");
+        return nullptr;
+    }
+    if (name.size() > BYTE_ORDER_LENGTH_MAX || type_name.size() > BYTE_ORDER_LENGTH_MAX) {
+        AGILOG(AGILOG_ERROR, "topic_name or type_name length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
+        return nullptr;
+    }
     auto it = typeSupports_.find(type_name);
     if (it == typeSupports_.end()) {
 		AGILOG(AGILOG_ERROR, "type_name[%s] not regist", type_name.c_str());
@@ -675,8 +706,8 @@ TypeSupport* DomainParticipantImpl::find_type(const std::string& typeName)
 
 ReturnCode_t DomainParticipantImpl::registe_type(const std::string& typeName, TypeSupport* typeSupport)
 {
-    if (typeName.empty()) {
-		AGILOG(AGILOG_ERROR, "typeName is empty");
+    if (typeName.empty() || typeName.size() > BYTE_ORDER_LENGTH_MAX) {
+		AGILOG(AGILOG_ERROR, "typeName is empty or length is too long, max length is %d", BYTE_ORDER_LENGTH_MAX);
         return RETCODE_BAD_PARAMETER;
     }
     std::lock_guard<std::mutex> lock(mtxTypes_);
@@ -709,10 +740,6 @@ ReturnCode_t DomainParticipantImpl::enable()
 		AGILOG(AGILOG_ERROR, "CheckQos Err ret = %d ");
 		return ret;
 	}
-	/* yuguxu 预留 DomainParticipant 资源申请
-	 *
-	 * 待实现
-	 */
 	if (qos_.entity_factory.autoenable_created_entities) {
 		/* topic 优先enble */
 		{
