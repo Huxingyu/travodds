@@ -78,11 +78,11 @@ option(APPEND_PROJECT_NAME_TO_INSTALL
 
 set(BIN_INSTALL_DIR bin/ CACHE PATH "Installation directory for binaries")
 set(_include_dir "include/")
-set(INCLUDE_INSTALL_DIR "${_include_dir}/${PROJECT_NAME}/" CACHE PATH "Installation directory for C++ headers")
+set(INCLUDE_INSTALL_DIR "${_include_dir}" CACHE PATH "Installation directory for C++ headers")
 unset(_include_dir)
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}/ CACHE PATH "Installation directory for libraries")
 if(APPEND_PROJECT_NAME_TO_INSTALL)
-#  string(APPEND INCLUDE_INSTALL_DIR "/${PROJECT_NAME}/")
+  string(APPEND INCLUDE_INSTALL_DIR "/${PROJECT_NAME}/")
   string(APPEND LIB_INSTALL_DIR "/${PROJECT_NAME}/")
 endif()
 set(DATA_INSTALL_DIR share/ CACHE PATH "Installation directory for data")
