@@ -10,6 +10,8 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/transport/ipcontainer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/flowcontrol/flowcontrolmanager.h"
+#include "rtps/flowcontrol/flowratelimitedmanager.h"
 #include "common/log/logger.h"
 #include <random>
 #include <regex>
@@ -19,7 +21,7 @@
 #include <unistd.h>
 #endif // if defined(_WIN32)
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 // Participant::Participant(const DomainParticipantImpl* domainImpl)
 // 	:domainImpl_(domainImpl)
@@ -35,7 +37,9 @@ Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
 	: domainId_(id), readerId_(0), writerId_(0), nextId_(0),
 	  protocolVersion_(PROTOCOLVERSION),
 	  vendorId_(VENDORID_PROSIMA),
-	  threadPool_(threadPool)
+	  threadPool_(threadPool),
+	  flowControlManager_(nullptr),
+	  flowRateLimitedManager_(nullptr)
 {
 	GenerateGuidPrefix(domainId_, domainId_);
 	guid_.entityId = ENTITYID_PARTICIPANT;
@@ -61,17 +65,17 @@ ReturnCode_t Participant::Init()
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
-
+	
 	messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
 	//messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
 
 	std::vector<InfoIP_t> localIps;
-	IpContainer::GetInfoIPs(localIps,true);
+	IpContainer::GetInfoIPs(localIps);
 	int32_t participantid = 0;
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
 	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
-
+	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
 
 
 	for (auto& ip : localIps) {
@@ -89,14 +93,8 @@ ReturnCode_t Participant::Init()
 		ipLoc.port = spdpPort;
 		metatrafficUnicastLocatorList_.push_back(ipLoc);
 	}
-	//Locator_t localAddress;
-	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
-	return RETCODE_OK;
-}
 
-ReturnCode_t Participant::InitNetwork()
-{
-	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
+
 	for (auto& messageTransmitter : messageTransmitters_) {
 		Locator_t unicastAddress;
 		//网络传输模块对象初始化发送地址、接收地址
@@ -133,10 +131,12 @@ ReturnCode_t Participant::InitNetwork()
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
 		}
 	}
+	FlowParameters flowParameters;
+	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
+	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	return RETCODE_OK;
 }
-
-std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key)
+std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig)
 {
 	std::shared_ptr<Writer> writerPtr;
 	std::shared_ptr<Endpoint> endpointPtr;
@@ -150,6 +150,10 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	} else {
 		writerPtr = std::make_shared<StatefulWriter>(dwQos, guid, kind);
 	}
+	FlowController* controller = flowControlManager_->GetFlowController(flowConfig);
+	writerPtr->SetFlowController(controller);
+	controller->RegisterWriter(writerPtr);
+
 	endpointPtr = writerPtr;
 	endpointPtr->SetParticipant(this);
 
@@ -234,9 +238,10 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 			itor->second->GetGuid().entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER) {
 			livelinessManager_->RemoveLivelinessWriter(itor->second);
 		}
+		itor->second->GetFlowController()->UnregisterWriter(itor->second);
 		writers_.erase(itor);
 	} else {
-		AGILOG(AGILOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -263,7 +268,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		}
 		readers_.erase(itor);
 	} else {
-		AGILOG(AGILOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -279,7 +284,7 @@ std::shared_ptr<Writer> Participant::GetWriter(const EntityId_t & EntityID)
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 	
 	if (0 == writers_.count(EntityID)) {
-		AGILOG(AGILOG_ERROR, "EntityID not exist");
+		TRAVODDS_LOG(LOG_ERROR, "EntityID not exist");
 		return nullptr;
 	}
 		
@@ -290,7 +295,7 @@ std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 {
 	std::unique_lock<std::mutex> lock(mtxReaders_);
 	if (0 == readers_.count(EntityID)) {
-		AGILOG(AGILOG_ERROR, "EntityID not exist");
+		//AGILOG(AGILOG_ERROR, "EntityID not exist");
 		return nullptr;
 	}
 
@@ -448,6 +453,8 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteReaderGuid);
 		writer->GetRelatedDataWriter()->OnPublicationMatched(handle,false);
+
+		writer->GetRelatedDataWriter()->RemoveReaderFilter(guid);
 	}
 
 	remoteReaders_.erase(itor);
@@ -621,7 +628,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 {
     DataWriterImpl* dw = writer->GetRelatedDataWriter();
     if (nullptr == dw) {
-		AGILOG(AGILOG_ERROR, "datawriter is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "datawriter is nullptr");
         return;
     }
     const PublicationBuiltinTopicData& pubData = dw->GetBuiltinTopicData();
@@ -643,7 +650,7 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 	if ((0x02 == writer->GetGuid().entityId.entityKind  &&  subData.remoteReaderGuid.entityId.entityKind  != 0x07)
 		|| (0x03 == writer->GetGuid().entityId.entityKind  && subData.remoteReaderGuid.entityId.entityKind != 0x04)) {
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		AGILOG(AGILOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
+		TRAVODDS_LOG(LOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
 
 		return;
 	}
@@ -653,6 +660,14 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 	if (!ret) {
 		writer->GetRelatedDataWriter()->OnOfferedIncompatibleQos(qosSeq);
 		return;
+	}
+
+	// yuguxu 主题数据过滤器
+	if (subData.contentFilter.contentFilteredTopicName.size() > 0 &&
+		subData.contentFilter.relatedTopicName == pubData.topic_name &&
+		subData.contentFilter.filterClassName == SQL_FILTER_NAME &&
+		subData.contentFilter.filterExpression.size() > 0) {
+		dw->AddReaderFilter(subData.remoteReaderGuid, subData.contentFilter);
 	}
 
 	writer->MatchedReaderAdd(subData);
@@ -692,10 +707,16 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	if (pubData.ddsPublicationData.topic_name != subData.topic_name) {
 		return;
 	}
-
+	const ContentFilteredTopicImpl* cfTopic = dynamic_cast<const ContentFilteredTopicImpl*>(reader->GetRelatedDataReader()->get_topicdescription());
 	const TopicImpl* topicImpl = dynamic_cast<const TopicImpl*>(reader->GetRelatedDataReader()->get_topicdescription());
-	if (nullptr == topicImpl)
+	if(nullptr != cfTopic) {
+		topicImpl = dynamic_cast<const TopicImpl*>(cfTopic->get_related_topic());
+	}
+
+	if (nullptr == topicImpl) {
 		return;
+	}
+
 
 	if(pubData.ddsPublicationData.type_name != subData.type_name)
 	{
@@ -706,7 +727,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	if ((0x02 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x07) 
 		|| (0x03 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x04)) {
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		AGILOG(AGILOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
+		TRAVODDS_LOG(LOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
 		return;
 	}
 
@@ -724,7 +745,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (fulReader) {
 			fulReader->MatchedWriterAdd(proxy);
 		} else {
-			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 	else {
@@ -736,7 +757,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		if (lessReader) {
 			lessReader->MatchedWriterAdd(proxy);
 		} else {
-			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err")
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
 		}
 	}
 
@@ -770,9 +791,15 @@ std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmit
 }
 void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length)
 {
-	for(auto& transmitter : messageTransmitters_) {
-		transmitter->MessageSend(destinationList,message,length);
+	for (auto& transmitter : messageTransmitters_) {
+		transmitter->MessageSend(destinationList, message, length);
 	}	
+}
+void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+{
+	if (flowRateLimitedManager_) {
+		flowRateLimitedManager_->MessageSend(destinationList, message, length);
+	}
 }
 LocatorVec Participant::GetDefaultUnicastLocators()
 {
@@ -820,7 +847,7 @@ int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter>
 			continue;
 		}
 		ret = messageTransmitter->ReceiveAddrAdd(itor);
-		if (RETCODE_PORT_IN_USE == ret && applyMutation) {
+		if (RETCODE_OK != ret && applyMutation) {
 			/* 限制重新尝试次数 */
 			uint32_t tries = 100u;
 			for (uint32_t i = 0; RETCODE_PORT_IN_USE == ret && i < tries; i++) {
@@ -832,7 +859,7 @@ int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter>
 			locatorList.push_back(itor);
 		} else {
 			/* 异常处理 */
-			AGILOG(AGILOG_ERROR, "CreateReceiverResources Err")
+			TRAVODDS_LOG(LOG_ERROR, "CreateReceiverResources Err")
 		}
 	}
 	return static_cast<int32_t>(locatorList.size());
@@ -920,27 +947,26 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 	//TODO 分区匹配
 	bool ret = true;
 	if (0 != pubData.partition.name.size()  || 0 != subData.partition.name.size()) {
-		ret = false;
+		ret = RegexPartitionsMatch(pubData.partition.name, subData.partition.name);
 	}
-	for (auto pubName : pubData.partition.name) {
-		if (ret) {
-			/* 已经匹配成功 */
-			break;
-		}
-		for (auto subName : subData.partition.name) {
-			std::regex pubRegex(pubName);
-			std::regex subRegex(subName);
-			if (std::regex_match(subName, pubRegex)) {
-				ret = true;
-				break;
-			}
-			if (std::regex_match(pubName, subRegex)) {
-				ret = true;
-				break;
-			}
-
-		}
-	}
+	//for (auto pubName : pubData.partition.name) {
+	//	if (ret) {
+	//		/* 已经匹配成功 */
+	//		break;
+	//	}
+	//	for (auto subName : subData.partition.name) {
+	//		std::regex pubRegex(pubName);
+	//		std::regex subRegex(subName);
+	//		if (std::regex_match(subName, pubRegex)) {
+	//			ret = true;
+	//			break;
+	//		}
+	//		if (std::regex_match(pubName, subRegex)) {
+	//			ret = true;
+	//			break;
+	//		}
+	//	}
+	//}
 	if (!ret) {
 		qosSeq.insert(PARTITION_QOS_POLICY_ID);
 	}
@@ -954,7 +980,7 @@ ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubDat
 
 	auto itor = remoteWriters_.find(guid);
 	if (itor == remoteWriters_.end()) {
-		AGILOG(AGILOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	pubData = itor->second.ddsPublicationData;
@@ -986,7 +1012,7 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 
 	auto itor = remoteReaders_.find(guid);
 	if (itor == remoteReaders_.end()) {
-		AGILOG(AGILOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	subData = itor->second.ddsSubscriptionData;
@@ -1012,4 +1038,69 @@ void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& 
 std::shared_ptr<LivelinessManager> Participant::GetLivelinessManager()
 {
 	return livelinessManager_;
+}
+
+/* 检查字符串是否包含正则元字符 */ 
+bool Participant::IsRegexPattern(const std::string& str)
+{
+	/* 检测正则元字符 */
+	static const std::vector<std::string> regexIndicators = {
+		".*", ".+", ".?", "\\d", "\\w", "\\s",
+		"^", "$", "|", "(", ")", "[", "]", "{", "}"
+	};
+
+	for (const auto& indicator : regexIndicators) {
+		if (str.find(indicator) != std::string::npos) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/* 分区匹配检测函数 */
+bool Participant::RegexPartitionMatch(const std::string& pubName,const std::string& subName)
+{
+	bool pubIsRegex = IsRegexPattern(pubName);
+	bool subIsRegex = IsRegexPattern(subName);
+
+	/* 规则1: 双方都是正则模式 -> 不匹配 */
+	if (pubIsRegex && subIsRegex) {
+		return false;
+	}
+
+	try {
+		/* 规则2: 发布者是正则，订阅者是具体名称 */
+		if (pubIsRegex && !subIsRegex) {
+			std::regex pubPattern(pubName);
+			return std::regex_match(subName, pubPattern);
+		}
+
+		/* 规则3: 订阅者是正则，发布者是具体名称 */
+		if (!pubIsRegex && subIsRegex) {
+			std::regex subPattern(subName);
+			return std::regex_match(pubName, subPattern);
+		}
+
+		/* 规则4: 双方都是具体名称 */
+		return pubName == subName;
+	}
+	catch (const std::regex_error& e) {
+		std::cerr << "正则表达式错误: " << e.what()
+			<< " 模式: " << (pubIsRegex ? pubName : subName)
+			<< std::endl;
+		return false;
+	}
+}
+
+/* 分区列表匹配 */
+bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const StringSeq& subPatterns)
+{
+	for (const auto& subPattern : subPatterns) {
+		for (const auto& pubPartition : pubPartitions) {
+			if (RegexPartitionMatch(pubPartition, subPattern)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }

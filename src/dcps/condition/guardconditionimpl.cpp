@@ -1,6 +1,6 @@
 #include "dcps/condition/guardconditionimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 GuardConditionImpl::GuardConditionImpl(GuardCondition* guard)
     : guard_(guard) {

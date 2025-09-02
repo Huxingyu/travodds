@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
-#define AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
+#define TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
 
 #include "rtps/endpoint/rtpsentity.h"
 #include "rtps/endpoint/reader.h"
-
-AGIDDS_NAMESPACE_BEGIN
+#include "rtps/flowcontrol/flowcontroltype.h"
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 class Reader;
@@ -25,6 +25,8 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class FlowControlManager;
+class FlowRateLimitedManager;
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -82,7 +84,7 @@ public:
 	 *
 	 * @return 创建出的的发布端映射Writer指针。
 	 */
-    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const GUID_t& guid, bool key);
+    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig = FlowControllerConfig());
 
 	/**
 	 * @brief 创建发布端在rtps层映射Reader。
@@ -284,6 +286,12 @@ public:
 	 */
 	std::shared_ptr<LivelinessManager> GetLivelinessManager();
 
+	static bool IsRegexPattern(const std::string& str);
+
+	bool RegexPartitionMatch(const std::string& pubName, const std::string& subName);
+
+	bool RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns);
+
 
 	/**
 	 * @brief 判断本地Writer的信息是否与远端Reader匹配，匹配则存储到远端Reader存储容器中。
@@ -309,6 +317,8 @@ public:
 	std::vector<std::shared_ptr<MessageTransmitter>> GetMessageTransmitters();
 
 	void TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length);
+
+	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
 
 	/**
 	 * @brief 获取默认单播定位器。
@@ -433,6 +443,9 @@ private:
 
 
 	// const DomainParticipantImpl* const domainImpl_ ;
+    std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
+
+    std::unique_ptr<FlowControlManager> flowControlManager_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	
@@ -468,6 +481,6 @@ private:
 	mutable std::mutex mtxMatchEntitys_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

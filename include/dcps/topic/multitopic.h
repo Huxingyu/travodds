@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_MULTITOPIC_H
-#define AGIDDS_DCPS_TOPIC_MULTITOPIC_H
+#ifndef TRAVODDS_DCPS_TOPIC_MULTITOPIC_H
+#define TRAVODDS_DCPS_TOPIC_MULTITOPIC_H
 
 #include "dcps/topic/topicdescription.h"
 #include "dcps/base/retcode.h"
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief MultiTopic 是 DDS (Data Distribution Service) 中的一个高级特性，
  * 它允许订阅者通过单个 DataReader 接收来自多个 Topic 的数据，并对这些数据进行过滤、组合或转换。
@@ -55,5 +55,5 @@ public:
     virtual ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters) = 0;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_TOPIC_MULTITOPIC_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_TOPIC_MULTITOPIC_H

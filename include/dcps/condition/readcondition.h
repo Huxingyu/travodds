@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_READCONDITION_H
-#define AGIDDS_DCPS_CONDITION_READCONDITION_H
+#ifndef TRAVODDS_DCPS_CONDITION_READCONDITION_H
+#define TRAVODDS_DCPS_CONDITION_READCONDITION_H
 
 #include "dcps/condition/condition.h"
 #include "dcps/subscribe/states.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DataReader;
 /**
@@ -62,5 +62,5 @@ public:
 	virtual const InstanceStateMask& get_instance_state_mask() const = 0;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_CONDITION_READCONDITION_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_CONDITION_READCONDITION_H

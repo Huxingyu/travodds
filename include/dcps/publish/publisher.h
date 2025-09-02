@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_PUBLISH_PUBLISHER_H
-#define AGIDDS_DCPS_PUBLISH_PUBLISHER_H
+#ifndef TRAVODDS_DCPS_PUBLISH_PUBLISHER_H
+#define TRAVODDS_DCPS_PUBLISH_PUBLISHER_H
 
 #include "dcps/publish/datawriter.h"
 #include "dcps/listener/publisherlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DomainParticipant;
 /**
@@ -189,7 +189,7 @@ public:
      * get_default_datawriter_qos获取的值将与上次成功调用set_default_datawriter_qos时指定的值集匹配，
      * 否则，如果从未进行调用，则为默认值。
      *
-     * @param [in] qos 对当前默认WriterQos的引用。
+     * @param [out] qos 对当前默认WriterQos的引用。
      * 
      * @return RETCODE_OK
      */
@@ -257,5 +257,5 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_PUBLISH_PUBLISHER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_PUBLISH_PUBLISHER_H

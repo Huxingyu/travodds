@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H
-#define AGIDDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H
+#ifndef TRAVODDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H
+#define TRAVODDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H
 
 #include "dcps/condition/conditionimpl.h"
 #include "dcps/condition/statuscondition.h"
 #include "dcps/base/status.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 /**
  * @brief StatusConditionImpl类是StatusCondition类的子类和具体功能实现类，是与每个实体关联的特定条件。
  *
@@ -99,5 +99,5 @@ private:
 	StatusMask enabledMask_;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_CONDITION_STATUSCONDITIONIMPL_H

@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_MESSAGES_PARAMETER_H
-#define AGIDDS_RTPS_MESSAGES_PARAMETER_H
+#ifndef TRAVODDS_RTPS_MESSAGES_PARAMETER_H
+#define TRAVODDS_RTPS_MESSAGES_PARAMETER_H
 
 #include "type/basictype.h"
 #include "qos/qos.h"
 #include "rtps/discovery/discoverydata.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 enum ParameterId : uint16_t {
 	/* rtps v2.5 Table 9.18*/
@@ -444,7 +444,7 @@ inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str)
 	WriterUInt32(msg, size);
 	if (size != 0) {
 		memcpy(msg + 4, str.data(), str.size());
-		memset(msg + 4 + str.size(), 0,1);
+		msg[4 + str.size()] = 0;
 	}
 	return 4u + (size + 3u) & ~3u;
 }
@@ -763,7 +763,6 @@ inline void Parameter<ContentFilterProperty_t>::writerMsg(octet* msg)
 {
 	uint32_t inOffset = 0;
 	inOffset += WriterString(msg, parameter_.contentFilteredTopicName);
-	inOffset += WriterString(msg + inOffset, parameter_.contentFilteredTopicName);
 	inOffset += WriterString(msg + inOffset, parameter_.relatedTopicName);
 	inOffset += WriterString(msg + inOffset, parameter_.filterClassName);
 	inOffset += WriterString(msg + inOffset, parameter_.filterExpression);
@@ -1203,6 +1202,6 @@ inline bool ParameterList::GetParameter(const ParameterId& pid, Parameter_t& par
 	return false;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

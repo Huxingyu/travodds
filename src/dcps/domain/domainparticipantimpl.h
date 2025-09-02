@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTIMPL_H
-#define AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTIMPL_H
+#ifndef TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTIMPL_H
+#define TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTIMPL_H
 
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/base/entityimpl.h"
@@ -23,7 +23,7 @@
 #include "common/threads/threadpool.h"
 #include <condition_variable>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Participant;
 class Discovery;
@@ -92,7 +92,7 @@ public:
      *
      * @param [in] qos 发布者的QoS
      * @param [in] listenerer 指向监听器的指针。
-     * @param [in] mask StatusMask位掩码。
+     * @param [in] mask StatusMask位掩码，用于指定哪些特定事件会触发监听器的回调。
      *
      * @return 指向已创建发布者的指针。
      */
@@ -711,5 +711,5 @@ private:
     std::map<InstanceHandle_t, std::unique_ptr<PublisherImpl>> pubHandles_;
 
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

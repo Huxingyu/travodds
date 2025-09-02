@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TOPICIMPL_H
-#define AGIDDS_DCPS_TOPIC_TOPICIMPL_H
+#ifndef TRAVODDS_DCPS_TOPIC_TOPICIMPL_H
+#define TRAVODDS_DCPS_TOPIC_TOPICIMPL_H
 
 #include "dcps/topic/topic.h"
 #include "dcps/topic/topicdescriptionimpl.h"
 #include "dcps/domain/domainentityimpl.h"
 #include "dcps/base/statusmanager.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class DomainParticipantImpl;
 /**
  * @brief TopicImpl类是Topic类子类及功能实现类，表示发布和订阅都绑定到单个数据类型的实际情况。
@@ -123,5 +123,5 @@ private:
     TopicListener* listener_ = nullptr;
 	std::unique_ptr<TopicStatusManager> statusMgr_;
 };
-AGIDDS_NAMESPACE_END    
-#endif // !AGIDDS_DCPS_TOPIC_TOPICIMPL_H
+TRAVODDS_NAMESPACE_END    
+#endif // !TRAVODDS_DCPS_TOPIC_TOPICIMPL_H

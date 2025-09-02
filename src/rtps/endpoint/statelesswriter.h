@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_STATELESSWRITER_H
-#define AGIDDS_RTPS_ENDPOINT_STATELESSWRITER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_STATELESSWRITER_H
+#define TRAVODDS_RTPS_ENDPOINT_STATELESSWRITER_H
 
 #include  "rtps/endpoint/writer.h"
 #include  "rtps/endpoint/readerlocator.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class Timer;
 
 /**
@@ -51,7 +51,7 @@ public:
 	 *
 	 * @param [in] locator  远端Reader通信信息。
 	 */
-	void ReaderLocatorAdd(Locator_t& locator);
+	void ReaderLocatorAdd(Locator_t& locator, const GUID_t& guid = GUID_UNKNOWN);
 
 	/**
 	 * @brief 本地删除与当前Writer匹配的远端Reader通信信息。
@@ -64,15 +64,14 @@ public:
 	 * @brief 对未发送的请求信息进行重整操作。
 	 */
 	void UnsentChangesReset();
-
 	/**
-	 * @brief Data报文封装控制及发送控制函数。
-	 *
-	 * @param [in] change	  Data报文发送请求句柄。
-	 *
-	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change);
+     * @brief Data报文封装控制及发送控制函数。
+     *
+     * @param [in] change	  Data报文发送请求句柄。
+     *
+     * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+     */
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
 
 	/**
 	 * @brief 设置重发数据周期，创建定时器用于周期性发送history中的数据。
@@ -117,6 +116,6 @@ private:
 	std::shared_ptr<Timer> timer_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_ENDPOINT_STATELESSWRITER_H
+#endif // !TRAVODDS_RTPS_ENDPOINT_STATELESSWRITER_H

@@ -4,7 +4,7 @@
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "common/log/logger.h"
 #include "common/sys/sysinfo.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Discovery::Discovery(DomainParticipantImpl* domainParticipant, std::shared_ptr<ThreadPool> threadPool)
 	: domainParticipant_(domainParticipant),

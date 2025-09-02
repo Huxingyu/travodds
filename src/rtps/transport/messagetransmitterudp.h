@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
-#define AGIDDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
+#ifndef TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
+#define TRAVODDS_RTPS_TRANSPORT_MESSAGETRANSMITTERUDP_H
 
 #include "type/basictype.h"
 #include "rtps/transport/messagetransmitter.h"
 #include "rtps/transport/locator.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 using _SEND_SOCKET_MAP = std::map<uint32_t, std::map<uint32_t, std::shared_ptr<asio::ip::udp::socket>>>;
 using _RECV_SOCKET_MAP = std::map<uint16_t, std::shared_ptr<asio::ip::udp::socket>>;
@@ -129,6 +129,7 @@ private:
 	virtual asio::ip::multicast::join_group GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc) = 0;
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) = 0;
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive = false) = 0;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) = 0;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() = 0;
 
 
@@ -181,6 +182,7 @@ private:
 
 	/* 保护socket，防止并发使用 */
 	std::mutex mtxSendSocket_;
+
 	friend MessageTransmitterUDPv4;
 	friend MessageTransmitterUDPv6;
 };
@@ -194,6 +196,7 @@ private:
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
 
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 
@@ -206,9 +209,10 @@ private:
 	virtual asio::ip::multicast::outbound_interface GetOutboundInterfaceOption(const AsioLocator& locator) override;
 
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
+	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

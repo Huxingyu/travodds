@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_CONDITIONIMPL_H
-#define AGIDDS_DCPS_CONDITION_CONDITIONIMPL_H
+#ifndef TRAVODDS_DCPS_CONDITION_CONDITIONIMPL_H
+#define TRAVODDS_DCPS_CONDITION_CONDITIONIMPL_H
 
 #include <atomic>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 #include "dcps/condition/condition.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class WaitSetImpl;
 
 /**
@@ -82,6 +82,6 @@ private:
 	std::vector<WaitSetImpl*> waitSets_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // !CONDITION_IMPL_H

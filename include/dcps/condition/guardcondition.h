@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_GUARDCONDITION_H
-#define AGIDDS_DCPS_CONDITION_GUARDCONDITION_H
+#ifndef TRAVODDS_DCPS_CONDITION_GUARDCONDITION_H
+#define TRAVODDS_DCPS_CONDITION_GUARDCONDITION_H
 
 #include "dcps/condition/condition.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class GuardConditionImpl;
 class WaitSetImpl;
 /**
@@ -59,5 +59,5 @@ private:
 	friend class WaitSetImpl;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif

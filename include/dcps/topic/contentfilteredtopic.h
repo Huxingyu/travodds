@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
-#define AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
+#ifndef TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
+#define TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
 
 #include "dcps/topic/topicdescription.h"
 #include "dcps/base/retcode.h"
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Topic;
 /**
@@ -73,5 +73,5 @@ public:
     virtual ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters) = 0;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif // !CONTENT_FILTERED_TOPIC_H

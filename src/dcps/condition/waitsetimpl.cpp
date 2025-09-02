@@ -5,7 +5,7 @@
 #include "common/log/logger.h"
 #include "waitsetimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WaitSetImpl::~WaitSetImpl()
 {
@@ -21,11 +21,7 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 	ConditionImpl* condImpl = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(mtx_);
-		for (const auto& it : conditions_) {
-			if (&condition == it) {
-				return RETCODE_OK;
-			}
-		}
+
 		Condition* cond = const_cast<Condition*>(&condition);
 
 		GuardConditionImpl* guard  = IsGuardCondition(cond);
@@ -34,8 +30,13 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 		} else if (dynamic_cast<ConditionImpl*>(cond) != nullptr) {
 			condImpl = dynamic_cast<ConditionImpl*>(cond);
 		} else {
-			AGILOG(AGILOG_ERROR, "Condition type is not supported in WaitSetImpl.");
+			TRAVODDS_LOG(LOG_ERROR, "Condition type is not supported in WaitSetImpl.");
 			return RETCODE_BAD_PARAMETER;
+		}
+		for (const auto& it : conditions_) {
+			if (condImpl == it) {
+				return RETCODE_OK;
+			}
 		}
 		conditions_.emplace_back(condImpl);
 	}
@@ -98,7 +99,7 @@ ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) cons
 	std::lock_guard<std::mutex> lock(mtx_);
 	attached_conditions.reserve(conditions_.size());
 	for (auto& it : conditions_) {
-		Condition* guard = IsGuardConditionImpl(nullptr);
+		Condition* guard = IsGuardConditionImpl(it);
 		if (nullptr != guard) {
 			attached_conditions.emplace_back(guard);
 			continue;

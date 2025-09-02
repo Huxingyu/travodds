@@ -9,11 +9,11 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_STATES_H
-#define AGIDDS_DCPS_SUBSCRIBE_STATES_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_STATES_H
+#define TRAVODDS_DCPS_SUBSCRIBE_STATES_H
 
-#include "agidds_dll.h"
-AGIDDS_NAMESPACE_BEGIN
+#include "travodds_dll.h"
+TRAVODDS_NAMESPACE_BEGIN
 
 // Sample states to support reads
 enum SampleStateKind : uint16_t {
@@ -45,5 +45,5 @@ using InstanceStateMask = uint16_t;
 const  InstanceStateMask 	ANY_INSTANCE_STATE = 0xffff;
 const  InstanceStateMask 	NOT_ALIVE_INSTANCE_STATE = 0x006;
 
-AGIDDS_NAMESPACE_END
-#endif // ! AGIDDS_DCPS_SUBSCRIBE_STATES_H
+TRAVODDS_NAMESPACE_END
+#endif // ! TRAVODDS_DCPS_SUBSCRIBE_STATES_H

@@ -21,7 +21,7 @@
 
 using namespace tinyxml2;
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef _XML_INTERFACE_CPP
 
@@ -687,7 +687,7 @@ private:
      }
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif //_XML_INTERFACE_CPP
 

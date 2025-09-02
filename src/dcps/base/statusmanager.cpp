@@ -4,7 +4,7 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "dcps/condition/statusconditionimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 DataWriterStatusManager::DataWriterStatusManager(DataWriterImpl* writer)
 	: writer_(writer),
@@ -231,7 +231,7 @@ ReturnCode_t DataWriterStatusManager::GetPublicationMatchedStatus(PublicationMat
 	std::lock_guard<std::mutex> lock(mtx_);
 
 	status = publicationMatchedStatus_;
-	publicationMatchedStatus_.total_count = 0;
+	publicationMatchedStatus_.total_count_change = 0;
 	publicationMatchedStatus_.current_count_change = 0;
 	condition_->set_status(PUBLICATION_MATCHED_STATUS, false);
 	return RETCODE_OK;

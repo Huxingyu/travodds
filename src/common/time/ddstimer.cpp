@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 TimerManager::TimerManager()
 {

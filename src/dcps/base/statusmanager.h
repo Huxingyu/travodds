@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_BASE_STATUSMANAGER_H
-#define AGIDDS_DCPS_BASE_STATUSMANAGER_H
+#ifndef TRAVODDS_DCPS_BASE_STATUSMANAGER_H
+#define TRAVODDS_DCPS_BASE_STATUSMANAGER_H
 
 #include "type/basictype.h"
 #include "dcps/base/retcode.h"
@@ -18,7 +18,7 @@
 #include "dcps/listener/domainparticipantlistener.h"
 #include "dcps/listener/datawriterlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DataWriterImpl;
 class PublisherImpl;
@@ -310,5 +310,5 @@ private:
 	std::mutex mtx_;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_BASE_STATUSMANAGER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_BASE_STATUSMANAGER_H

@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_WRITERPROXY_H
-#define AGIDDS_RTPS_ENDPOINT_WRITERPROXY_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_WRITERPROXY_H
+#define TRAVODDS_RTPS_ENDPOINT_WRITERPROXY_H
 
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
@@ -18,7 +18,7 @@
 #include "rtps/messages/cdrmessage_t.h"
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * WriterProxy类,保存特定Writer相对于远端DataReader的状态。
@@ -231,6 +231,6 @@ private:
 
 using WriterProxyMap = std::map<GUID_t, std::shared_ptr<WriterProxy>>;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_ENDPOINT_WRITERPROXY_H
+#endif // !TRAVODDS_RTPS_ENDPOINT_WRITERPROXY_H
