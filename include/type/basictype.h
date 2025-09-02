@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_TYPE_BASICTYPE_H
-#define AGIDDS_TYPE_BASICTYPE_H
+#ifndef TRAVODDS_TYPE_BASICTYPE_H
+#define TRAVODDS_TYPE_BASICTYPE_H
 
 #include <cstdint>
 #include <array>
@@ -24,7 +24,7 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "numericconstants.h"
 #include "common/sequence/sequence.h"
 #include "dcps/subscribe/states.h"
@@ -34,7 +34,7 @@
 #define PRINTF_ERROR() printf("fun[%s] line[%d]\n",__func__, __LINE__);
 
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 
 /* 待实现的数据类型 */
@@ -296,6 +296,21 @@ struct Duration_t {
 		return (this->sec != other.sec) || (this->nanosec != other.nanosec);
 	}
 
+	Duration_t operator + (const Duration_t& other) const {
+		Duration_t result;
+
+		// 计算秒差
+		result.sec = this->sec + other.sec;
+		result.nanosec = this->nanosec + other.nanosec;
+
+		if (result.nanosec >= 1000000000) {
+			result.sec += static_cast<int32_t>(result.nanosec / 1000000000);
+			result.nanosec %= 1000000000;
+		}
+
+		return result;
+	}
+
 	Duration_t operator - (const Duration_t& other) const {
 		Duration_t result;
 
@@ -457,6 +472,6 @@ struct SampleInfo {
 
 using SampleInfoSeq = SequenceData<SampleInfo>;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

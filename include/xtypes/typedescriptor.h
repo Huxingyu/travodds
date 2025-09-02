@@ -13,13 +13,13 @@
 #ifndef TYPE_DESCRIPTOR_H
 #define TYPE_DESCRIPTOR_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/base/retcode.h"
 #include "xtypes/typekind.h"
 #include <string>
 #include <vector>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DynamicType;
 
@@ -28,7 +28,7 @@ class DynamicType;
  * 
  * @brief TypeDescriptor将类型的状态打包在一起。TypeDescriptor对象具有值语义，允许它们被深度复制和比较。
  */
-class TypeDescriptor {
+class DDS_DLL TypeDescriptor {
 public:
     /** @brief  类型。 */
     TypeKind kind_;
@@ -94,6 +94,6 @@ public:
     unsigned int get_bound_count() const;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // TYPE_DESCRIPTOR_H

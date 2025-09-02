@@ -1,7 +1,7 @@
 #include "rtps/endpoint/writerproxy.h"
 #include "common/log/logger.h"
 #include  <algorithm>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WriterProxy::WriterProxy(const GUID_t& writerGuid, const GUID_t& groupGuid, 
 	const LocatorSeq& unicastLocatorList, const LocatorSeq& multicastLocatorList)
@@ -196,7 +196,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 
 
 	if (hbFragCount_.load() >= hbFragMsg.count) {
-		AGILOG(AGILOG_ERROR, "hbFragCount_[%d] > hbFragCount_.count[%d]", hbFragCount_.load(), hbFragMsg.count);
+		TRAVODDS_LOG(LOG_ERROR, "hbFragCount_[%d] > hbFragCount_.count[%d]", hbFragCount_.load(), hbFragMsg.count);
 		return RETCODE_RECEIVE_DUPLICATE;
 	}
 	hbCount_ = hbFragMsg.count;
@@ -253,7 +253,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag)
 {
 	if (nullptr == cache) {
-		AGILOG(AGILOG_ERROR, "cache is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "cache is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -353,7 +353,7 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 
 	cache = changeInfo->second.cache;
 	if (!cache) {
-		AGILOG(AGILOG_ERROR, "cache is nullptr", seq.low);
+		TRAVODDS_LOG(LOG_ERROR, "cache is nullptr", seq.low);
 		return ret;
 	}
 

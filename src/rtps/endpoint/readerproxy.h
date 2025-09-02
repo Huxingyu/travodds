@@ -17,7 +17,7 @@
 
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class Writer;
 
 /**
@@ -233,4 +233,4 @@ private:
 	//std::map<SequenceNumber_t, ChangeForReader>  changeForReaders_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

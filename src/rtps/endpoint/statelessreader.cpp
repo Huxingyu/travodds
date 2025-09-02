@@ -4,7 +4,7 @@
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 StatelessReader::StatelessReader(const DataReaderQos & qos, const GUID_t & guid, const TopicKind_t& kind)
@@ -84,6 +84,10 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 	if (datareader_) {
 		datareader_->SetLastinstanceHandle(cache);
+		/* wangyi Lifespan 超期判断，超期过滤数据 */
+		if (!datareader_->CheckLifespan(cache)) {
+			return RETCODE_LIFESPAN_TIMEOUT;
+		}
 		datareader_->OnDataAvaible();
 	}
 	
@@ -160,7 +164,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		//TODO  
 		/* 重复接收分片数据 */
 		// std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		AGILOG(AGILOG_ERROR, "recv repeat dataFrg");
+		TRAVODDS_LOG(LOG_ERROR, "recv repeat dataFrg");
 	}
 
 	if (itor->second->fragmentSeq.empty()) {
@@ -180,6 +184,10 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 
 		if (datareader_) {
 			datareader_->SetLastinstanceHandle(dataFragCache);
+			/* wangyi Lifespan 超期判断，超期过滤数据 */
+			if (!datareader_->CheckLifespan(dataFragCache)) {
+				return RETCODE_LIFESPAN_TIMEOUT;
+			}
 			datareader_->OnDataAvaible();
 		}
 	}
@@ -227,7 +235,7 @@ void StatelessReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerData)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 }
@@ -252,7 +260,7 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 	matchWriters_.erase(writerGuid);
@@ -262,7 +270,7 @@ std::shared_ptr<WriterProxy> StatelessReader::MatchedWriterLookup(GUID_t writerG
 {
 	auto itor = matchWriters_.find(writerGuid);
 	if (itor == matchWriters_.end()) {
-		AGILOG(AGILOG_ERROR, "writerGuid not match");
+		TRAVODDS_LOG(LOG_ERROR, "writerGuid not match");
 		return nullptr;
 	}
 	return itor->second;
@@ -282,7 +290,7 @@ void StatelessReader::AssertWriterLiveliness(const GUID_t& guid)
 		}
 		else {
 			/* TODO 日志 "Finite liveliness lease duration but LivelinessManager not enabled"); */
-			AGILOG(AGILOG_ERROR, "Finite liveliness lease duration but LivelinessManager not enabled");
+			TRAVODDS_LOG(LOG_ERROR, "Finite liveliness lease duration but LivelinessManager not enabled");
 		}
 	}
 }

@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_STATELESSREADER_H
-#define AGIDDS_RTPS_ENDPOINT_STATELESSREADER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_STATELESSREADER_H
+#define TRAVODDS_RTPS_ENDPOINT_STATELESSREADER_H
 
 #include "rtps/endpoint/reader.h"
 #include "rtps/endpoint/writerproxy.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 //struct RemoteWriterData {
 //	GUID_t writerGuid;
@@ -151,6 +151,6 @@ private:
 	std::map<GUID_t, std::shared_ptr<CacheChange>> dataFragCaches_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_ENDPOINT_STATELESSREADER_H
+#endif // !TRAVODDS_RTPS_ENDPOINT_STATELESSREADER_H

@@ -13,7 +13,7 @@
 #ifndef DYNAMIC_DATA_H
 #define DYNAMIC_DATA_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictype.h"
 #include "xtypes/memberdescriptor.h"
 #include "type/basictype.h"
@@ -22,7 +22,7 @@
 #include <map>
 #include <vector>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 typedef std::vector<class DynamicData*> DynamicDataSeq;
 
@@ -31,7 +31,7 @@ typedef std::vector<class DynamicData*> DynamicDataSeq;
  * 
  * @details DynamicData对象具有引用语义；然而，有一个equals操作允许它们进行深度比较。
  */
-class DynamicData {
+class DDS_DLL DynamicData {
 public:
     /**
      * @brief 构造函数
@@ -146,12 +146,12 @@ public:
      */
     DynamicType& get_type() const;
 
-    typedef std::vector<long>                   Int32Seq;    
-    typedef std::vector<unsigned long>          UInt32Seq;    
+    typedef std::vector<int32_t>                Int32Seq;    
+    typedef std::vector<uint32_t>               UInt32Seq;    
     typedef std::vector<short>                  Int16Seq;    
     typedef std::vector<unsigned short>         UInt16Seq;    
-    typedef std::vector<long long>              Int64Seq;    
-    typedef std::vector<unsigned long long>     UInt64Seq;    
+    typedef std::vector<int64_t>                Int64Seq;    
+    typedef std::vector<uint64_t>               UInt64Seq;    
     typedef std::vector<float>                  Float32Seq;    
     typedef std::vector<double>                 Float64Seq;    
     typedef std::vector<long double>            Float128Seq;    
@@ -290,10 +290,10 @@ public:
         octet byte_value;
         short int16_value;
         unsigned short uint16_value;
-        long int32_value;
-        unsigned long uint32_value;
-        long long int64_value;
-        unsigned long long uint64_value;
+        int32_t int32_value;
+        uint32_t uint32_value;
+        int64_t int64_value;
+        uint64_t uint64_value;
         float float32_value;
         double float64_value;
         long double float128_value;
@@ -323,18 +323,18 @@ public:
         DynamicDataSeq complex_values;
     };
 
-    ReturnCode_t get_int32_value(long& value, MemberId id);
-    ReturnCode_t set_int32_value(MemberId id, long value);
-    ReturnCode_t get_uint32_value(unsigned long& value, MemberId id);
-    ReturnCode_t set_uint32_value(MemberId id, unsigned long value);
+    ReturnCode_t get_int32_value(int32_t& value, MemberId id);
+    ReturnCode_t set_int32_value(MemberId id, int32_t value);
+    ReturnCode_t get_uint32_value(uint32_t& value, MemberId id);
+    ReturnCode_t set_uint32_value(MemberId id, uint32_t value);
     ReturnCode_t get_int16_value(short& value, MemberId id);
     ReturnCode_t set_int16_value(MemberId id, short value);
     ReturnCode_t get_uint16_value(unsigned short& value, MemberId id);
     ReturnCode_t set_uint16_value(MemberId id, unsigned short value);
-    ReturnCode_t get_int64_value(long long& value, MemberId id);
-    ReturnCode_t set_int64_value(MemberId id, long long value);
-    ReturnCode_t get_uint64_value(unsigned long long& value, MemberId id);
-    ReturnCode_t set_uint64_value(MemberId id, unsigned long long value);
+    ReturnCode_t get_int64_value(int64_t& value, MemberId id);
+    ReturnCode_t set_int64_value(MemberId id, int64_t value);
+    ReturnCode_t get_uint64_value(uint64_t& value, MemberId id);
+    ReturnCode_t set_uint64_value(MemberId id, uint64_t value);
     ReturnCode_t get_float32_value(float& value, MemberId id);
     ReturnCode_t set_float32_value(MemberId id, float value);
     ReturnCode_t get_float64_value(double& value, MemberId id);
@@ -392,7 +392,7 @@ private:
     ReturnCode_t initialize_values();
 
 private:
-    /** @brief 只读属性，该DynamicData关联的类型。*/
+    /** @brief 只读属性，该DynamicData关联的类型  */
 
     DynamicType& type_;
 
@@ -424,6 +424,6 @@ private:
     std::map<MemberId, MemberDescriptor> descriptor_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_DATA_H

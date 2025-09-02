@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
-#define AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
+#define TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
 
 #include "rtps/endpoint/rtpsentity.h"
 #include "rtps/endpoint/reader.h"
 #include "rtps/flowcontrol/flowcontroltype.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 class Reader;
@@ -279,6 +279,12 @@ public:
 	 */
 	std::shared_ptr<LivelinessManager> GetLivelinessManager();
 
+	static bool IsRegexPattern(const std::string& str);
+
+	bool RegexPartitionMatch(const std::string& pubName, const std::string& subName);
+
+	bool RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns);
+
 
 	/**
 	 * @brief 判断本地Writer的信息是否与远端Reader匹配，匹配则存储到远端Reader存储容器中。
@@ -468,6 +474,6 @@ private:
 	mutable std::mutex mtxMatchEntitys_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

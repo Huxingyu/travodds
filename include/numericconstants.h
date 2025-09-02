@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_NUMERIC_CONSTANTS_H
-#define AGIDDS_NUMERIC_CONSTANTS_H
+#ifndef TRAVODDS_NUMERIC_CONSTANTS_H
+#define TRAVODDS_NUMERIC_CONSTANTS_H
 
 #include <cstdint>  
 #include <cstddef>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace SubMessageFlag {
 	constexpr uint8_t NONE_FLAG                      = 0x00; // 无标志位
@@ -117,7 +117,7 @@ inline bool IsLittleEndian() {
 #endif
 
 constexpr uint32_t CDR_ENDIANNESS_LEN = 4; // 大小端信息的空间 B(字节)
-//子报文固定长度
+// 子报文固定长度
 constexpr uint16_t SUB_MESSAGE_LEN_PAD = 0;
 constexpr uint16_t SUB_MESSAGE_LEN_GAP = 10;
 constexpr uint16_t SUB_MESSAGE_LEN_INFO_TS = 8;
@@ -132,5 +132,18 @@ constexpr int32_t DATAFRAG_DELAY_NUM = 20;
 constexpr int32_t DATAFRAG_DELAY_NUM = 100;
 #endif
 
-AGIDDS_NAMESPACE_END
+constexpr uint32_t DOMAIN_ID_MAX = 232; // 域ID最大值
+
+// 对报文中string字段或者byte序列的长度限制
+constexpr uint32_t BYTE_ORDER_LENGTH_MAX = 255;
+// 对分区最大限制
+constexpr uint32_t PARTITON_SIZE_MAX = 10;
+
+// 表达式参数最大限制
+constexpr uint32_t EXPRESSION_PARAMETERS_MAX = 100; 
+
+constexpr const char* const SQL_FILTER_NAME = "DDSSQL";
+
+TRAVODDS_NAMESPACE_END
+
 #endif

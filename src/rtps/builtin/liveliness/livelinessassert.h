@@ -7,7 +7,7 @@
 #include <common/time/ddstimer.h>
 #include "rtps/builtin/liveliness/livelinesstatus.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class LivelinessManager;
 
@@ -117,4 +117,4 @@ private:
     LivelinessManager* livelinessManager_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

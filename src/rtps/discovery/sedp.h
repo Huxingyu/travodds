@@ -9,16 +9,16 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_DISCOVERY_SEDP_H
-#define AGIDDS_RTPS_DISCOVERY_SEDP_H
+#ifndef TRAVODDS_RTPS_DISCOVERY_SEDP_H
+#define TRAVODDS_RTPS_DISCOVERY_SEDP_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "rtps/discovery/discoverydata.h"
 #include "rtps/endpoint/statefulwriter.h"
 #include "rtps/endpoint/statefulreader.h"
 #include "rtps/endpoint/participant.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Spdp;
 /**
@@ -151,6 +151,6 @@ private:
 	std::shared_ptr<MemoryPool> memoryPool_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_DISCOVERY_SEDP_H
+#endif // !TRAVODDS_RTPS_DISCOVERY_SEDP_H

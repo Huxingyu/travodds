@@ -13,9 +13,9 @@
 #ifndef TYPE_KIND_H
 #define TYPE_KIND_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN 
+TRAVODDS_NAMESPACE_BEGIN 
 
 /**
  * @brief 枚举类型 TypeKind
@@ -55,6 +55,6 @@ const MemberId MEMBER_ID_INVALID = 0xFFFFFFFF;
 const MemberId MEMBER_ID_MAP_KEY = 0xFFFFFFFE;
 const MemberId MEMBER_ID_MAP_VALUE = 0xFFFFFFFD;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // TYPE_KIND_H

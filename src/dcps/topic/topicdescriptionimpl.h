@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H
-#define AGIDDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H
+#ifndef TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H
+#define TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H
 
 #include "dcps/topic/topicdescription.h"
 #include <string>
 #include <atomic>
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class DomainParticipantImpl;
 /**
  * @brief TopicDescriptionImplTopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
@@ -82,5 +82,5 @@ protected:
     /* 引用计数 */
     std::atomic_size_t refs_;
 };
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTIONIMPL_H

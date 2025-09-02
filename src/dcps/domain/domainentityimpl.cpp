@@ -1,5 +1,5 @@
 #include "dcps/domain/domainentityimpl.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 DomainEntityImpl::DomainEntityImpl(const StatusMask& mask)
 	: EntityImpl(mask)
 {

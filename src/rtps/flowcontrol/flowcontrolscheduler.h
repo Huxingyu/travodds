@@ -10,13 +10,13 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLSCHEDULER_H
-#define AGIDDS_RTPS_FLOWCONTROL_FLOWCONTROLSCHEDULER_H
+#ifndef TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLSCHEDULER_H
+#define TRAVODDS_RTPS_FLOWCONTROL_FLOWCONTROLSCHEDULER_H
 
 #include "rtps/flowcontrol/flowcontroltype.h"
 #include "rtps/basictypertps.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class ThreadPool;
 class CacheChange;
 class Writer;
@@ -51,6 +51,6 @@ public:
 	virtual void ReSendData(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy) override;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

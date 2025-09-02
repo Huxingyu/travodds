@@ -18,7 +18,7 @@
 #include "dcps/subscribe/datareaderimpl.h"
 #include "rtps/builtin/liveliness/livelinessassert.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief LivelinessManager类，实现规范中描述的Liveliness Qos管理功能。
@@ -263,4 +263,4 @@ private:
 	std::mutex writerMutex_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

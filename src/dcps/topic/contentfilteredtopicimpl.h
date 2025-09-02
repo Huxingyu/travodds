@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H
-#define AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H
+#ifndef TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H
+#define TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H
 
 #include "dcps/topic/contentfilteredtopic.h"
 #include "dcps/topic/topicdescriptionimpl.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class TopicImpl;
-
+class TypeObject;
 /**
  * @brief ContentFilteredTopicImpl类，TopicDescription的具体实现，允许基于内容的订阅。
  */
@@ -81,11 +81,14 @@ public:
      *         RETCODE_BAD_PARAMETER  表达式参数与当前filterexpression不匹配。
      */
     ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters);
+
+public:
+    static bool ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, TypeObject* typeObject);
 private:
 
     TopicImpl* relatedTopic_ = nullptr;
     std::string filterExpression_;
     StringSeq expressionParameters_;
 };
-AGIDDS_NAMESPACE_END
-#endif //!AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif //!TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H

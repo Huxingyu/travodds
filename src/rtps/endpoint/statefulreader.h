@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_STATEFULREADER_H
-#define AGIDDS_RTPS_ENDPOINT_STATEFULREADER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_STATEFULREADER_H
+#define TRAVODDS_RTPS_ENDPOINT_STATEFULREADER_H
 
 #include "rtps/endpoint/reader.h"
 #include "rtps/endpoint/writerproxy.h"
 #include "rtps/messages/cdrmessage_t.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * StatefulReader类,Reader类的子类，管理可靠传输模式下从其匹配的Writer接收数据。
@@ -178,6 +178,6 @@ private:
 	WriterProxyMap matchedWriters_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

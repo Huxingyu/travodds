@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_COMMON_SEQUENCE_SEQUENCEBASE_H
-#define AGIDDS_COMMON_SEQUENCE_SEQUENCEBASE_H
+#ifndef TRAVODDS_COMMON_SEQUENCE_SEQUENCEBASE_H
+#define TRAVODDS_COMMON_SEQUENCE_SEQUENCEBASE_H
 
 #include <stdint.h>
 #include <type_traits>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
 /**
  * @brief SequenceBase类,Sequence序列基类。

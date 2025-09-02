@@ -13,13 +13,13 @@
 #ifndef MEMBER_DESCRIPTOR_H
 #define MEMBER_DESCRIPTOR_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/typekind.h"
 #include "dcps/base/retcode.h"
 #include <string>
 #include <vector>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DynamicType;
 
@@ -28,7 +28,7 @@ class DynamicType;
  * 
  * @details MemberDescriptor对象具有值语义，允许它们被深度复制和比较。
  */
-class MemberDescriptor {
+class DDS_DLL MemberDescriptor {
 public:
     /**
      * @brief 成员ID
@@ -105,6 +105,6 @@ public:
     bool is_consistent() const;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // MEMBER_DESCRIPTOR_H

@@ -9,7 +9,7 @@
 #include "dcps/base/retcode.h"
 #include "qos/qos.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 enum WriterStatus
 {
     NOTASSERTED = 0,
@@ -58,4 +58,4 @@ struct LivelinesStatus
     std::chrono::steady_clock::time_point time_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

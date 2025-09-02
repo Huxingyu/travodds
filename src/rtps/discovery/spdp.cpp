@@ -9,7 +9,7 @@
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Spdp::Spdp(Participant* participant, Discovery* discovery)
 	: participant_(participant), discovery_(discovery),
@@ -48,7 +48,7 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
     std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, guid, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
-		AGILOG(AGILOG_ERROR, "writer is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "writer is nullptr");
 		return;
 	}
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
@@ -95,7 +95,7 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
     std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, guid, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
-		AGILOG(AGILOG_ERROR, "reader is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "reader is nullptr");
 		return;
 	}
 	reader_ = std::dynamic_pointer_cast<StatelessReader>(reader);
@@ -142,7 +142,7 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 int Spdp::GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data)
 {
 	if (0 == remoteParticipantData_.count(key)) {
-		AGILOG(AGILOG_ERROR, "key not exist");
+		TRAVODDS_LOG(LOG_ERROR, "key not exist");
 		return RETCODE_ERROR;
 	}
 
@@ -194,7 +194,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, buffer, handle, time);
 	if (nullptr == cacheChange) {
-		AGILOG(AGILOG_ERROR, "create newChange Err");
+		TRAVODDS_LOG(LOG_ERROR, "create newChange Err");
 		return ;
 	}
 
@@ -202,7 +202,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
-		AGILOG(AGILOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
 }
@@ -295,7 +295,7 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
 	if (0 == remoteParticipantStatus_.count(key)) {
-		AGILOG(AGILOG_ERROR, "guid not exist");
+		TRAVODDS_LOG(LOG_ERROR, "guid not exist");
 		return;
 	}
 		

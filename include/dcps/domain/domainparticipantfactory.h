@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
-#define AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+#ifndef TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+#define TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
 
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/listener/domainparticipantlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #define TheParticipantFactory  DomainParticipantFactory::get_instance()
 
@@ -27,12 +27,12 @@ public:
     virtual ~DomainParticipantFactory() = default;
 
     /**
-     * @brief 创建参与者。
+     * @brief 创建域参与者，并绑定参数中的QoS和监听器。创建完成的域参与者可用于后续对发布者和订阅者等进行管理。
      *
      * @param [in] domain_id 域id。
      * @param [in] qos       DomainParticipantQos参考。
      * @param [in] listener  域参与者监听器指针。
-     * @param [in] mask      StatusMask位掩码参考。
+     * @param [in] mask      StatusMask位掩码参考，用于指定哪些特定事件会触发监听器的回调。
      * 
      * @return DomainParticipant指针（如果未创建，则为nullptr）。
      */
@@ -87,7 +87,7 @@ public:
      * 检索到的值get_default_participant_qos将与上次成功调用
      * set_default_Participatnt_qos时指定的值集匹配，否则，如果从未进行调用，则为默认值。
      *
-     * @param [in] qos 返回qos的DomainParticipantQos。
+     * @param [out] qos 返回qos的DomainParticipantQos。
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_default_participant_qos(DomainParticipantQos& qos) const = 0;
@@ -111,7 +111,7 @@ public:
     /**
      * @brief 此函数返回DomainParticipantFactory QoS策略的值。
      *
-     * @param [in] qos 返回qos的DomaParticipantFactoryQos引用
+     * @param [out] qos 返回qos的DomaParticipantFactoryQos引用
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_qos(DomainParticipantFactoryQos& qos) const = 0;
@@ -364,5 +364,5 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H

@@ -13,14 +13,14 @@
 #ifndef DYNAMIC_DATA_TYPESUPPORT_H
 #define DYNAMIC_DATA_TYPESUPPORT_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "xtypes/dynamictype.h"
 #include "xtypes/dynamicdata.h"
 #include "dcps/topic/typesupport.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
-class DynamicDataTypeSupport : public AGIDDS::TypeSupport {
+class DDS_DLL DynamicDataTypeSupport : public TRAVODDS::TypeSupport {
 public:
     DynamicDataTypeSupport(DynamicType* type);
     
@@ -34,29 +34,29 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) override;
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) override;
+    virtual int serialize_data(void* data, TRAVODDS::CdrSerializer* cdr, int endian) override;
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) override;
+    virtual int deserialize_data(void* data, TRAVODDS::CdrDeserializer* cdr, int endian) override;
 
-    virtual AGIDDS::TypeObject* get_typeobject() override;
+    virtual TRAVODDS::TypeObject* get_typeobject() override;
 
-    virtual AGIDDS::ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual TRAVODDS::ReturnCode_t get_instancehandle(void* data, TRAVODDS::CdrSerializer* cdr, TRAVODDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;
 
-    virtual int MakeKey(const void* data, AGIDDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
+    virtual int MakeKey(const void* data, TRAVODDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
-    int serialize_key(void* data, AGIDDSCdrSerializer* cdr, int endian);
+    int serialize_key(void* data, TRAVODDS::CdrSerializer* cdr, int endian);
 private:
-    unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, AGIDDS::MemberId id, const std::string& name, unsigned int currentAlignment);
-    int serialize_member(DynamicData* dynamicData, AGIDDSCdrSerializer* cdr, DynamicType* type, AGIDDS::MemberId id, const std::string& name, int endian);
+    unsigned int get_member_serialize_size(DynamicData* dynamicData, DynamicType* type, TRAVODDS::MemberId id, const std::string& name, unsigned int currentAlignment);
+    int serialize_member(DynamicData* dynamicData, TRAVODDS::CdrSerializer* cdr, DynamicType* type, TRAVODDS::MemberId id, const std::string& name, int endian);
 private:
-    /** @brief 关联的数据类型描述。*/
+    /** @brief 关联的数据类型描述 */
     DynamicType* type_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif // DYNAMIC_DATA_TYPESUPPORT_H

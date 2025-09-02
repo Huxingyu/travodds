@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_BASE_ENTITY_H
-#define AGIDDS_DCPS_BASE_ENTITY_H
+#ifndef TRAVODDS_DCPS_BASE_ENTITY_H
+#define TRAVODDS_DCPS_BASE_ENTITY_H
 
 #include "dcps/condition/statuscondition.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief Entity类是支持QoS策略、监听器和状态条件的所有对象的抽象基类。
@@ -85,5 +85,5 @@ public:
     virtual void* get_object_data() = 0;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // ! AGIDDS_DCPS_BASE_ENTITY_H
+TRAVODDS_NAMESPACE_END
+#endif // ! TRAVODDS_DCPS_BASE_ENTITY_H

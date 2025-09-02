@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_TRANSPORT_LOCATOR_H
-#define AGIDDS_RTPS_TRANSPORT_LOCATOR_H
+#ifndef TRAVODDS_RTPS_TRANSPORT_LOCATOR_H
+#define TRAVODDS_RTPS_TRANSPORT_LOCATOR_H
 
 #include <asio.hpp>
 #include "rtps/basictypertps.h"
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 
 class AsioLocator : public Locator_t
@@ -92,6 +92,6 @@ inline asio::ip::address_v6 AsioLocator::GetAddress() const
 	return asio::ip::address_v6(bytes);
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

@@ -13,7 +13,7 @@
 #include <limits.h>
 #endif
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 using namespace SysInfo;
 
 std::string SysInfo::GetHostname()

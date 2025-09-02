@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_BASICTYPERTPS_H
-#define AGIDDS_RTPS_BASICTYPERTPS_H
+#ifndef TRAVODDS_RTPS_BASICTYPERTPS_H
+#define TRAVODDS_RTPS_BASICTYPERTPS_H
 
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // rtps entity attribute
 
@@ -655,6 +655,7 @@ struct SequenceNumber_t {
 const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
 const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
 const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
+const SequenceNumber_t SEQUENCENUMBER_FIRST = { 0, 1 };
 // #define SEQUENCENUMBER_UNKNOWN {-1,0}
 // #define SEQUENCENUMBER_INVALID {-2,0}
 
@@ -933,6 +934,6 @@ struct LocatorUDPv4_t
     PARTICIPANTID_GAIN * (uint32_t)ulParticipantId
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // ! AGIDDS_RTPS_BASICTYPERTPS_H
+#endif // ! TRAVODDS_RTPS_BASICTYPERTPS_H
