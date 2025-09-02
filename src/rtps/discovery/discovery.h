@@ -130,6 +130,13 @@ public:
 	 */
 	bool FindIgnoredParticipants(GUID_t guid);
 
+	/**
+	 * @brief 获取内置订阅者，用于自动发现功能。
+	 *
+	 * @return 内置订阅者指针，如果未初始化则返回nullptr。
+	 */
+	std::shared_ptr<SubscriberImpl> GetBuiltinSubscriber() const;
+
 private:
 	DomainParticipantImpl* domainParticipant_;
 	// 内置发布者、订阅者

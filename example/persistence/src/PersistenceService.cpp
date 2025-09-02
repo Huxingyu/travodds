@@ -274,17 +274,16 @@ void PersistenceService::setup_discovery_listeners() {
     }
     
     try {
-        // 尝试获取内置订阅者 (由DDS系统提供)
+        // 尝试获取内置订阅者 
         discovery_subscriber_ = const_cast<Subscriber*>(participant_->get_builtin_subscriber());
         if (!discovery_subscriber_) {
-            std::cout << "[PersistenceService] 内置订阅者不可用，将依赖手动注册机制" << std::endl;
-            std::cout << "[PersistenceService] 自动发现将在AgirosDDS完善内置机制后启用" << std::endl;
+            std::cout << "[PersistenceService] 内置订阅者不可用" << std::endl;
             return;
         }
         
         std::cout << "[PersistenceService] Got builtin subscriber for discovery" << std::endl;
         
-        // 1. 查找DCPSPublication内置DataReader (应该已经存在)
+        // 1. 查找DCPSPublication内置DataReader 
         auto* pub_reader = discovery_subscriber_->lookup_datareader("DCPSPublication");
         if (pub_reader) {
             publication_reader_ = std::shared_ptr<DataReader>(pub_reader);
@@ -293,7 +292,7 @@ void PersistenceService::setup_discovery_listeners() {
             std::cerr << "[PersistenceService] DCPSPublication builtin reader not found" << std::endl;
         }
         
-        // 2. 查找DCPSSubscription内置DataReader (应该已经存在)
+        // 2. 查找DCPSSubscription内置DataReader
         auto* sub_reader = discovery_subscriber_->lookup_datareader("DCPSSubscription");
         if (sub_reader) {
             subscription_reader_ = std::shared_ptr<DataReader>(sub_reader);
@@ -310,12 +309,12 @@ void PersistenceService::setup_discovery_listeners() {
             discovery_thread_ = std::thread(&PersistenceService::discovery_thread_main, this);
             std::cout << "[PersistenceService] Discovery monitoring started (using automatic discovery)" << std::endl;
         } else {
-            std::cout << "[PersistenceService] 跳过自动发现线程启动，使用手动注册模式" << std::endl;
+            std::cout << "[PersistenceService] 跳过自动发现线程启动失败" << std::endl;
         }
         
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception in setup_discovery_listeners: " << e.what() << std::endl;
-        std::cout << "[PersistenceService] 自动发现初始化失败，回退到手动注册模式" << std::endl;
+        std::cout << "[PersistenceService] 自动发现初始化失败" << std::endl;
     }
 }
 

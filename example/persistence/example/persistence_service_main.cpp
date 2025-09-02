@@ -82,6 +82,15 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
+        // 明确启用DomainParticipant以确保自动发现功能可用
+        std::cout << "Enabling DomainParticipant for automatic discovery..." << std::endl;
+        ReturnCode_t enable_ret = participant->enable();
+        if (enable_ret != RETCODE_OK) {
+            std::cerr << "Failed to enable DomainParticipant, error code: " << enable_ret << std::endl;
+            return -1;
+        }
+        std::cout << "DomainParticipant enabled successfully" << std::endl;
+        
         // 注册topic类型
         std::cout << "Registering HelloWorld type ..." << std::endl;
         const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
@@ -128,26 +137,7 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
-        // ===============================================================
-        // 临时手动注册机制 (当AgirosDDS内置发现完善后可移除)
-        // ===============================================================
-        std::cout << "\n[Manual Registration] 开始手动注册Topic..." << std::endl;
-        std::cout << "[Manual Registration] 注意: 这是临时方案，未来将使用自动发现机制" << std::endl;
-        
-        // 手动注册需要持久化服务处理的Topic类型
-        // 注意：只注册TRANSIENT和PERSISTENT策略，VOLATILE和TRANSIENT_LOCAL由服务自动忽略
-        g_persistence_service->notify_writer_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
-        g_persistence_service->notify_reader_created("TopicTransient", type_name, TRANSIENT_DURABILITY_QOS);
-        
-        g_persistence_service->notify_writer_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
-        g_persistence_service->notify_reader_created("TopicPersistent", type_name, PERSISTENT_DURABILITY_QOS);
-        
-        std::cout << "[Manual Registration] 手动注册完成，持久化服务现在可以处理:" << std::endl;
-        std::cout << "[Manual Registration]   - TopicTransient (TRANSIENT策略)" << std::endl;
-        std::cout << "[Manual Registration]   - TopicPersistent (PERSISTENT策略)" << std::endl;
-        std::cout << "[Manual Registration] 自动发现线程同时在后台运行，准备就绪后将自动接管" << std::endl;
-        // ===============================================================
-        
+ 
         std::cout << "\nEnhanced persistence service started successfully!" << std::endl;
         std::cout << "Features: Statistics tracking, UI callbacks, compression, configurable cleanup" << std::endl;
         std::cout << "Press Ctrl+C to stop..." << std::endl;

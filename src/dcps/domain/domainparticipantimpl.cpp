@@ -391,7 +391,20 @@ TopicDescription* DomainParticipantImpl::lookup_topicdescription(const std::stri
 
 const Subscriber* DomainParticipantImpl::get_builtin_subscriber() const
 {
-	AGILOG(AGILOG_ERROR, "domainparticipant not support interface");
+    std::cout << "[DomainParticipantImpl] get_builtin_subscriber() called" << std::endl;
+    std::cout << "[DomainParticipantImpl] discovery_ is " << (discovery_ ? "available" : "null") << std::endl;
+    
+    // 尝试从Discovery获取内置订阅者
+    if (discovery_) {
+        builtinSubscriber_ = discovery_->GetBuiltinSubscriber();
+        std::cout << "[DomainParticipantImpl] builtinSubscriber_ from discovery is " << (builtinSubscriber_ ? "available" : "null") << std::endl;
+        if (builtinSubscriber_) {
+            return builtinSubscriber_.get();
+        }
+    }
+    
+    // 如果Discovery未初始化或内置订阅者不可用，返回nullptr
+    AGILOG(AGILOG_ERROR, "domainparticipant builtin subscriber not available");
     return nullptr;
 }
 

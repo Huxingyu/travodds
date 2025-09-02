@@ -37,6 +37,9 @@ public:
 
     DataReader* lookup_datareader(const std::string& topic_name) const;
 
+    // 为内置DataReader添加注册方法
+    void register_builtin_datareader(std::shared_ptr<DataReaderImpl> reader);
+
     ReturnCode_t begin_access();
 
     ReturnCode_t end_access();
@@ -90,6 +93,13 @@ private:
     SubscriberQos qos_;
     SubscriberListener* listener_ = nullptr;
     std::map<InstanceHandle_t, std::unique_ptr<DataReaderImpl>> readerHandles_;
+    
+    // 专门用于存储内置DataReader的指针映射
+    std::map<InstanceHandle_t, DataReaderImpl*> builtin_readers_;
+    
+    // 存储内置DataReader的shared_ptr以确保对象生命周期
+    std::map<InstanceHandle_t, std::shared_ptr<DataReaderImpl>> builtin_reader_shared_ptrs_;
+    
 	mutable std::mutex mtxReaders_;
 	DomainParticipantImpl* participant_;
     DataReaderQos defaultDatareaderQos_;

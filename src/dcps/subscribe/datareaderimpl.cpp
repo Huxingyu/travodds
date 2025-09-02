@@ -168,7 +168,13 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		// RETCODE_NO_DATA 是正常情况，不应该作为错误记录
+		if (ret == RETCODE_NO_DATA) {
+			// 静默处理 - 没有数据是正常的，特别是在自动发现轮询时
+			return ret;
+		} else {
+			AGILOG(AGILOG_ERROR, "ReadOrTake ret = %d", ret);
+		}
 		return ret;
 	}
 

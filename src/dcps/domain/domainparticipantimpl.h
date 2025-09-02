@@ -214,6 +214,9 @@ private:
     std::shared_ptr<Discovery> discovery_;
     /* 与participant_和discovery_共用一个线程池 */
     std::shared_ptr<ThreadPool> threadPool_;
+    
+    /* 内置订阅者，用于自动发现 */
+    mutable std::shared_ptr<SubscriberImpl> builtinSubscriber_;
 
     std::map<InstanceHandle_t, std::shared_ptr<TopicImpl>> topicHandles_;
     std::map<std::string, std::shared_ptr<MultiTopicImpl>> multiTopics_;
