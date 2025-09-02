@@ -69,7 +69,7 @@ DataWriterImpl::~DataWriterImpl()
 	topic_->Dereference();
 
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 }
@@ -139,7 +139,7 @@ ReturnCode_t DataWriterImpl::get_qos(DataWriterQos& qos) const
 ReturnCode_t DataWriterImpl::set_listener(DataWriterListener* listener, const StatusMask& mask)
 {
 	if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
 	}
 	listener_ = listener;
