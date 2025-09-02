@@ -159,6 +159,7 @@ set(PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/dcps
     ${PROJECT_SOURCE_DIR}/include/qos
     ${PROJECT_SOURCE_DIR}/include/type
+    ${PROJECT_SOURCE_DIR}/include/xtypes
     )
 install(DIRECTORY ${PUBLIC_HEADERS}
     DESTINATION ${INCLUDE_INSTALL_DIR}
