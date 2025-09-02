@@ -75,8 +75,6 @@ ReturnCode_t Participant::Init()
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
 	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
-	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
-
 
 	for (auto& ip : localIps) {
 		Locator_t ipLoc;
@@ -93,8 +91,18 @@ ReturnCode_t Participant::Init()
 		ipLoc.port = spdpPort;
 		metatrafficUnicastLocatorList_.push_back(ipLoc);
 	}
+	//Locator_t localAddress;
+	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
 
+	FlowParameters flowParameters;
+	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
+	flowControlManager_ = std::make_unique<FlowControlManager>(this);
+	return RETCODE_OK;
+}
 
+ReturnCode_t Participant::InitNetwork()
+{
+	uint32_t multicPort = SPDP_WELL_KNOWN_MULTICAST_PORT(domainId_);
 	for (auto& messageTransmitter : messageTransmitters_) {
 		Locator_t unicastAddress;
 		//网络传输模块对象初始化发送地址、接收地址
@@ -131,9 +139,7 @@ ReturnCode_t Participant::Init()
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
 		}
 	}
-	FlowParameters flowParameters;
-	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
-	flowControlManager_ = std::make_unique<FlowControlManager>(this);
+
 	return RETCODE_OK;
 }
 std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const DataWriterQos & dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig)
@@ -847,10 +853,10 @@ int32_t Participant::CreateReceiverResources(std::shared_ptr<MessageTransmitter>
 			continue;
 		}
 		ret = messageTransmitter->ReceiveAddrAdd(itor);
-		if (RETCODE_OK != ret && applyMutation) {
+		if (RETCODE_PORT_IN_USE == ret && applyMutation) {
 			/* 限制重新尝试次数 */
 			uint32_t tries = 100u;
-			for (uint32_t i = 0; RETCODE_OK != ret && i < tries; i++) {
+			for (uint32_t i = 0; RETCODE_PORT_IN_USE == ret && i < tries; i++) {
 				itor.port += PARTICIPANTID_GAIN;
 				ret = messageTransmitter->ReceiveAddrAdd(itor);
 			}

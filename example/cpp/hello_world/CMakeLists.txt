@@ -44,7 +44,6 @@ add_executable(${PROJECT_NAME} ${HELLO_WORLD_SOURCES_CPP} ${HELLO_WORLD_HEADERS_
 #     _DDS_STATIC_LIB
 #     )
 target_include_directories(${PROJECT_NAME} PRIVATE ${TRAVODDS_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PRIVATE /mnt/d/travodds/travodds/include)
 
 #target_link_libraries(${PROJECT_NAME} PRIVATE TRAVODDS::TRAVODDS_STATIC)
 target_link_libraries(${PROJECT_NAME} PRIVATE TRAVODDS::TRAVODDS)
