@@ -96,9 +96,20 @@ target_compile_options(${LIB_TARGET_NAME} PRIVATE -fPIC)
 target_link_libraries(${LIB_TARGET_NAME} 
     PRIVATE
     pthread 
-    rt
-    dl
     )
+    
+# 仅在真正的Linux环境下链接rt和dl库
+# 检查编译器ID和目标平台来确保是原生Linux环境
+if(UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT CMAKE_CROSSCOMPILING)
+    # 进一步检查确保不是MinGW
+    if(NOT CMAKE_CXX_COMPILER MATCHES "mingw" AND NOT CMAKE_CXX_COMPILER MATCHES "w64")
+        target_link_libraries(${LIB_TARGET_NAME} 
+            PRIVATE
+            rt
+            dl
+            )
+    endif()
+endif()
 endif()
 
 if(MSVC OR MSVC_IDE)
