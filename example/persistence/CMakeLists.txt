@@ -6,7 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找依赖
-find_package(TRAVODDS 1 REQUIRED)
+# find_package(TRAVODDS 1 REQUIRED)
+# 直接使用本地构建的库
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../build/src)
 find_package(SQLite3 REQUIRED)
 
 # 持久化服务库
@@ -25,7 +28,7 @@ target_include_directories(persistence_service
 
 target_link_libraries(persistence_service 
     PUBLIC 
-    TRAVODDS::TRAVODDS
+    travoddsd
     SQLite::SQLite3
     pthread
 )
@@ -62,7 +65,7 @@ target_include_directories(persistent_hello_world
 
 target_link_libraries(persistent_hello_world 
     PRIVATE 
-    TRAVODDS::TRAVODDS
+    travoddsd
     pthread
 )
 
@@ -81,6 +84,6 @@ target_include_directories(test_publisher
 
 target_link_libraries(test_publisher 
     PRIVATE 
-    TRAVODDS::TRAVODDS
+    travodds
     pthread
 )
