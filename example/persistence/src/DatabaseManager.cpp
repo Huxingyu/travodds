@@ -421,12 +421,9 @@ bool DatabaseManager::store_data(const StoredData& data) {
         // 绑定参数
         sqlite3_bind_text(stmt, 1, data.topic_name.c_str(), -1, SQLITE_STATIC);
         
-        // TODO: 实际实现中需要从DDS GUID中提取这些信息
-        // 这里使用placeholder数据
-        std::string guid_prefix = "guid_prefix_placeholder";
-        std::string guid_entity = "guid_entity_placeholder";
-        sqlite3_bind_blob(stmt, 2, guid_prefix.data(), guid_prefix.size(), SQLITE_STATIC);
-        sqlite3_bind_blob(stmt, 3, guid_entity.data(), guid_entity.size(), SQLITE_STATIC);
+        // 使用真实的Writer GUID数据（修复生产环境致命问题）
+        sqlite3_bind_blob(stmt, 2, data.writer_guid.prefix.value, sizeof(data.writer_guid.prefix.value), SQLITE_STATIC);
+        sqlite3_bind_blob(stmt, 3, data.writer_guid.entityId.entityKey, sizeof(data.writer_guid.entityId.entityKey), SQLITE_STATIC);
         
         // 序列号分解为高低位
         sqlite3_bind_int64(stmt, 4, static_cast<int64_t>(data.sequence_number >> 32));

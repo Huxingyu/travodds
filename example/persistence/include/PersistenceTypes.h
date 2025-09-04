@@ -11,6 +11,7 @@
 #include "dcps/publish/datawriter.h"
 #include "type/basictype.h"
 #include "type/builtintopicdata.h"
+#include "../../../src/rtps/basictypertps.h"  // 为了使用GUID_t
 
 AGIDDS_NAMESPACE_BEGIN
 
@@ -25,6 +26,7 @@ struct StoredData {
     uint64_t sequence_number;     // 序列号，便于排序
     bool is_disposed = false;     // 是否被dispose
     DurabilityQosPolicyKind durability_kind; // 持久化策略类型
+    GUID_t writer_guid;          // 数据来源的Writer GUID，用于区分不同的数据源
     
     // 为Qt显示提供的便利方法
     [[nodiscard]] auto to_string() const -> std::string {
