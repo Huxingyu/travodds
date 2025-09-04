@@ -1,5 +1,6 @@
 #include "rtps/messages/parameter.h"
 #include "common/log/logger.h"
+#include <iostream>
 USING_AGIDDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(PL_DEFAULT_ENDIAN)
@@ -76,7 +77,10 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessK
 	}
 	//PID_TOPIC_NAME : string
 	if (!pubData.topic_name.empty()) {
+		std::cout << "[DEBUG] AddParameter TOPIC_NAME: '" << pubData.topic_name << "' (length: " << pubData.topic_name.length() << ")" << std::endl;
 		AddParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
+	} else {
+		std::cout << "[DEBUG] AddParameter TOPIC_NAME: EMPTY!" << std::endl;
 	}
 	//PID_TYPE_NAME : string
 	if (!pubData.type_name.empty()) {
@@ -207,7 +211,7 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
 	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
-	/* wangyi fastdds ÊÊÅä Ìí¼Ó¹ýÂË */
+	/* wangyi fastdds ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ó¹ï¿½ï¿½ï¿½ */
 	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
 		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
 	}
@@ -999,7 +1003,7 @@ uint32_t ParameterList::ReaderString(const octet* msg, std::string& str)
 		str.resize(size);
 		std::copy(msg + 4, msg + 4 + size, str.begin());
 	}
-	return 4u + (size + 3u) & ~3u;
+	return 4u + ((size + 3u) & ~3u);
 }
 
 uint32_t ParameterList::ReaderLocator(const octet* msg, Locator_t& loc)
