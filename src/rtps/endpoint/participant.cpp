@@ -73,10 +73,24 @@ ReturnCode_t Participant::Init()
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
 
+	// 选择第一个非回环的IPv4地址
+	bool foundValidIP = false;
 	for (auto ip : localIps) {
-		if (ip.type == IPV4) {
+		if (ip.type == IPV4 && ip.name != "127.0.0.1" && 
+		    ip.name.find("10.255.255") == std::string::npos) {  // 排除特殊回环地址
 			memcpy(unicastAddress.address, ip.address, 16);
+			foundValidIP = true;
 			break;
+		}
+	}
+	
+	if (!foundValidIP) {
+		// 如果没有找到合适的IPv4地址，回退到默认的回环处理
+		for (auto ip : localIps) {
+			if (ip.type == IPV4) {
+				memcpy(unicastAddress.address, ip.address, 16);
+				break;
+			}
 		}
 	}
 

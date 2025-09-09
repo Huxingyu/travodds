@@ -63,6 +63,10 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		asio::ip::multicast::hops multicast_ttl_option(64);
 		NewSendSocket->set_option(multicast_ttl_option);
 
+		// 设置多播回环 - 允许同一机器上的进程接收自己发送的多播数据
+		asio::ip::multicast::enable_loopback loopback_option(true);
+		NewSendSocket->set_option(loopback_option);
+
 		// 设置 IP_TTL
 		asio::ip::unicast::hops unicast_ttl_option(63);
 		NewSendSocket->set_option(unicast_ttl_option);
@@ -103,6 +107,11 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 			// 绑定socket到本地端点
 			NewSendSocket->open(local_endpoint.protocol());
 		}
+		
+		// 为多播发送设置回环选项
+		asio::ip::multicast::enable_loopback send_loopback_option(true);
+		NewSendSocket->set_option(send_loopback_option);
+		
 		NewSendSocket->bind(local_endpoint);
 
 		if (0 == src.port) {
@@ -276,6 +285,10 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 			/* 端口复用 */
 			asio::socket_base::reuse_address option_reuse_address(true);
 			newRecvSocket->set_option(option_reuse_address);
+			
+			// 设置多播回环 - 允许接收同一机器上发送的多播数据
+			asio::ip::multicast::enable_loopback loopback_option(true);
+			newRecvSocket->set_option(loopback_option);
         } else {
 			// Windows：禁止其他进程复用（关键！）
 #ifdef _WIN32
