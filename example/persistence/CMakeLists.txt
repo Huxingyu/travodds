@@ -8,7 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 查找依赖
 # find_package(TRAVODDS 1 REQUIRED)
 # 直接使用本地构建的库
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../build/src)
 find_package(SQLite3 REQUIRED)
 

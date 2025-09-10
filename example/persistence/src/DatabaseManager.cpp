@@ -166,16 +166,25 @@ bool DatabaseManager::recover_corrupted_database() {
 }
 
 bool DatabaseManager::create_tables() {
-    // 核心数据表：dds_samples - 只存储PERSISTENT策略的数据
+    // 核心数据表：dds_samples - 生产级持久化服务数据表
     const std::string dds_samples_table = R"(
         CREATE TABLE IF NOT EXISTS dds_samples (
             topic_name TEXT NOT NULL,
+            type_name TEXT NOT NULL,
             writer_guid_prefix BLOB NOT NULL,
             writer_guid_entity BLOB NOT NULL,  
             sequence_number_high INTEGER NOT NULL,
             sequence_number_low INTEGER NOT NULL,
             instance_handle_hash BLOB NOT NULL,
-            sample_status INTEGER NOT NULL DEFAULT 0,
+            publication_handle_hash BLOB NOT NULL,
+            sample_state INTEGER NOT NULL DEFAULT 0,
+            view_state INTEGER NOT NULL DEFAULT 0,
+            instance_state INTEGER NOT NULL DEFAULT 0,
+            disposed_generation_count INTEGER NOT NULL DEFAULT 0,
+            no_writers_generation_count INTEGER NOT NULL DEFAULT 0,
+            valid_data INTEGER NOT NULL DEFAULT 1,
+            durability_kind INTEGER NOT NULL,
+            reliability_kind INTEGER NOT NULL DEFAULT 0,
             source_timestamp INTEGER NOT NULL,
             reception_timestamp INTEGER NOT NULL,
             serialized_data BLOB NOT NULL,
@@ -404,11 +413,13 @@ bool DatabaseManager::store_data(const StoredData& data) {
         // 插入样本数据到dds_samples表
         const char* insert_sql = R"(
             INSERT OR REPLACE INTO dds_samples (
-                topic_name, writer_guid_prefix, writer_guid_entity,
+                topic_name, type_name, writer_guid_prefix, writer_guid_entity,
                 sequence_number_high, sequence_number_low, instance_handle_hash,
-                sample_status, source_timestamp, reception_timestamp,
+                publication_handle_hash, sample_state, view_state, instance_state,
+                disposed_generation_count, no_writers_generation_count, valid_data,
+                durability_kind, reliability_kind, source_timestamp, reception_timestamp,
                 serialized_data, data_size
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         )";
         
         sqlite3_stmt* stmt = nullptr;
@@ -420,32 +431,46 @@ bool DatabaseManager::store_data(const StoredData& data) {
         
         // 绑定参数
         sqlite3_bind_text(stmt, 1, data.topic_name.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, data.type_name.c_str(), -1, SQLITE_STATIC);
         
         // 使用真实的Writer GUID数据（修复生产环境致命问题）
-        sqlite3_bind_blob(stmt, 2, data.writer_guid.prefix.value, sizeof(data.writer_guid.prefix.value), SQLITE_STATIC);
-        sqlite3_bind_blob(stmt, 3, data.writer_guid.entityId.entityKey, sizeof(data.writer_guid.entityId.entityKey), SQLITE_STATIC);
+        sqlite3_bind_blob(stmt, 3, data.writer_guid.prefix.value, sizeof(data.writer_guid.prefix.value), SQLITE_STATIC);
+        sqlite3_bind_blob(stmt, 4, data.writer_guid.entityId.entityKey, sizeof(data.writer_guid.entityId.entityKey), SQLITE_STATIC);
         
         // 序列号分解为高低位
-        sqlite3_bind_int64(stmt, 4, static_cast<int64_t>(data.sequence_number >> 32));
-        sqlite3_bind_int64(stmt, 5, static_cast<int64_t>(data.sequence_number & 0xFFFFFFFF));
+        sqlite3_bind_int64(stmt, 5, static_cast<int64_t>(data.sequence_number >> 32));
+        sqlite3_bind_int64(stmt, 6, static_cast<int64_t>(data.sequence_number & 0xFFFFFFFF));
         
         // 实例句柄哈希
-        sqlite3_bind_blob(stmt, 6, data.instance_id.data(), data.instance_id.size(), SQLITE_STATIC);
+        sqlite3_bind_blob(stmt, 7, data.instance_id.data(), data.instance_id.size(), SQLITE_STATIC);
         
-        // 样本状态
-        sqlite3_bind_int(stmt, 7, data.is_disposed ? 1 : 0);
+        // Publication句柄哈希（从SampleInfo获取）
+        sqlite3_bind_blob(stmt, 8, data.sample_info.publication_handle.keyHash.value, 
+                         data.sample_info.publication_handle.keyHash.length, SQLITE_STATIC);
+        
+        // SampleInfo状态字段
+        sqlite3_bind_int(stmt, 9, static_cast<int>(data.sample_info.sample_state));
+        sqlite3_bind_int(stmt, 10, static_cast<int>(data.sample_info.view_state));
+        sqlite3_bind_int(stmt, 11, static_cast<int>(data.sample_info.instance_state));
+        sqlite3_bind_int(stmt, 12, data.sample_info.disposed_generation_count);
+        sqlite3_bind_int(stmt, 13, data.sample_info.no_writers_generation_count);
+        sqlite3_bind_int(stmt, 14, data.sample_info.valid_data ? 1 : 0);
+        
+        // QoS策略
+        sqlite3_bind_int(stmt, 15, static_cast<int>(data.durability_kind));
+        sqlite3_bind_int(stmt, 16, 0); // reliability_kind - 待实现
         
         // 时间戳转换为微秒
         int64_t source_timestamp_us = data.storage_time.ToNs() / 1000;
         int64_t reception_timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
             
-        sqlite3_bind_int64(stmt, 8, source_timestamp_us);
-        sqlite3_bind_int64(stmt, 9, reception_timestamp_us);
+        sqlite3_bind_int64(stmt, 17, source_timestamp_us);
+        sqlite3_bind_int64(stmt, 18, reception_timestamp_us);
         
         // 序列化数据
-        sqlite3_bind_blob(stmt, 10, data.data.data(), data.data.size(), SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 11, static_cast<int>(data.data.size()));
+        sqlite3_bind_blob(stmt, 19, data.data.data(), data.data.size(), SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 20, static_cast<int>(data.data.size()));
         
         result = sqlite3_step(stmt);
         sqlite3_finalize(stmt);
@@ -476,14 +501,15 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
     }
     
     try {
-        // 从新的dds_samples表读取PERSISTENT数据
+        // 从新的dds_samples表读取PERSISTENT数据 - 生产级查询
         const char* select_sql = R"(
-            SELECT s.topic_name, t.type_name, s.instance_handle_hash, s.serialized_data,
+            SELECT s.topic_name, s.type_name, s.instance_handle_hash, s.serialized_data,
                    s.source_timestamp, s.sequence_number_high, s.sequence_number_low,
-                   s.sample_status, t.durability_kind
+                   s.sample_state, s.view_state, s.instance_state,
+                   s.disposed_generation_count, s.no_writers_generation_count, s.valid_data,
+                   s.durability_kind, s.reliability_kind, s.publication_handle_hash
             FROM dds_samples s
-            JOIN topics t ON s.topic_name = t.topic_name
-            WHERE s.topic_name = ? AND t.durability_kind = ?
+            WHERE s.topic_name = ? AND s.durability_kind = ?
             ORDER BY s.sequence_number_high, s.sequence_number_low
         )";
         
@@ -528,13 +554,29 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
             uint64_t seq_low = static_cast<uint64_t>(sqlite3_column_int64(stmt, 6));
             data.sequence_number = (seq_high << 32) | seq_low;
             
-            data.is_disposed = sqlite3_column_int(stmt, 7) != 0;
-            data.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt, 8));
+            // 恢复完整的SampleInfo - 生产级持久化服务必备
+            data.sample_info.sample_state = static_cast<SampleStateKind>(sqlite3_column_int(stmt, 7));
+            data.sample_info.view_state = static_cast<ViewStateKind>(sqlite3_column_int(stmt, 8));
+            data.sample_info.instance_state = static_cast<InstanceStateKind>(sqlite3_column_int(stmt, 9));
+            data.sample_info.disposed_generation_count = sqlite3_column_int(stmt, 10);
+            data.sample_info.no_writers_generation_count = sqlite3_column_int(stmt, 11);
+            data.sample_info.valid_data = sqlite3_column_int(stmt, 12) != 0;
+            data.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt, 13));
             
-            // 设置默认的样本状态
-            data.sample_info.sample_state = READ_SAMPLE_STATE;
-            data.sample_info.view_state = NEW_VIEW_STATE;
-            data.sample_info.instance_state = ALIVE_INSTANCE_STATE;
+            // Publication句柄恢复
+            const void* pub_handle_data = sqlite3_column_blob(stmt, 15);
+            int pub_handle_size = sqlite3_column_bytes(stmt, 15);
+            if (pub_handle_data != nullptr && pub_handle_size > 0) {
+                memcpy(data.sample_info.publication_handle.keyHash.value, pub_handle_data, 
+                       std::min(pub_handle_size, static_cast<int>(sizeof(data.sample_info.publication_handle.keyHash.value))));
+                data.sample_info.publication_handle.keyHash.length = pub_handle_size;
+            }
+            
+            // 设置时间戳
+            data.sample_info.source_timestamp = data.storage_time;
+            
+            // 根据存储的状态判断是否disposed
+            data.is_disposed = (data.sample_info.instance_state == NOT_ALIVE_DISPOSED_INSTANCE_STATE);
             
             result.push_back(data);
         }
@@ -791,6 +833,391 @@ bool DatabaseManager::update_topic_stats(const std::string& topic_name, size_t d
     sqlite3_finalize(stmt);
     
     return result == SQLITE_DONE;
+}
+
+// ===== DataWriter/DataReader 管理方法 =====
+
+bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
+                                         const std::string& topic_name,
+                                         const std::string& type_name,
+                                         DurabilityQosPolicyKind durability_kind,
+                                         ReliabilityQosPolicyKind reliability_kind) {
+    if (!db_) {
+        std::cerr << "[DatabaseManager] Database not initialized" << std::endl;
+        return false;
+    }
+    
+    // 首先确保topics表中有相应的记录
+    if (!insert_or_update_topic(topic_name, type_name, durability_kind)) {
+        std::cerr << "[DatabaseManager] Failed to ensure topic exists: " << topic_name << std::endl;
+        return false;
+    }
+    
+    auto prefix_blob = builtin_key_to_guid_prefix(key);
+    auto entity_blob = builtin_key_to_guid_entity(key);
+    
+    std::cout << "[DatabaseManager] Registering DataWriter - topic: " << topic_name 
+              << ", prefix_size: " << prefix_blob.size() 
+              << ", entity_size: " << entity_blob.size() << std::endl;
+    
+    // 调试：打印BLOB内容
+    std::cout << "[DatabaseManager] Key values: ";
+    for (int i = 0; i < 4; ++i) {
+        std::cout << "key[" << i << "]=" << key.value[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "[DatabaseManager] Prefix BLOB: ";
+    for (size_t i = 0; i < prefix_blob.size(); ++i) {
+        printf("%02x ", prefix_blob[i]);
+    }
+    std::cout << std::endl;
+    
+    std::cout << "[DatabaseManager] Entity BLOB: ";
+    for (size_t i = 0; i < entity_blob.size(); ++i) {
+        printf("%02x ", entity_blob[i]);
+    }
+    std::cout << std::endl;
+    
+    const char* sql = R"(
+        INSERT OR REPLACE INTO datawriters 
+        (writer_guid_prefix, writer_guid_entity, topic_name, type_name, 
+         durability_kind, reliability_kind, discovered_at, last_seen, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    )";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
+        return false;
+    }
+    
+    int64_t current_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    sqlite3_bind_blob(stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, topic_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, type_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 5, static_cast<int>(durability_kind));
+    sqlite3_bind_int(stmt, 6, static_cast<int>(reliability_kind));
+    sqlite3_bind_int64(stmt, 7, current_time);
+    sqlite3_bind_int64(stmt, 8, current_time);
+    
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if (result != SQLITE_DONE) {
+        std::cerr << "[DatabaseManager] Failed to execute statement: " << sqlite3_errmsg(db_) 
+                  << ", result code: " << result << std::endl;
+        return false;
+    }
+    
+    std::cout << "[DatabaseManager] DataWriter registered successfully" << std::endl;
+    return true;
+}
+
+bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
+                                         const std::string& topic_name,
+                                         const std::string& type_name,
+                                         DurabilityQosPolicyKind durability_kind,
+                                         ReliabilityQosPolicyKind reliability_kind) {
+    if (!db_) {
+        return false;
+    }
+    
+    // 首先确保topics表中有相应的记录
+    if (!insert_or_update_topic(topic_name, type_name, durability_kind)) {
+        std::cerr << "[DatabaseManager] Failed to ensure topic exists: " << topic_name << std::endl;
+        return false;
+    }
+    
+    auto prefix_blob = builtin_key_to_guid_prefix(key);
+    auto entity_blob = builtin_key_to_guid_entity(key);
+    
+    const char* sql = R"(
+        INSERT OR REPLACE INTO datareaders 
+        (reader_guid_prefix, reader_guid_entity, topic_name, type_name, 
+         durability_kind, reliability_kind, discovered_at, last_seen, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    )";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        return false;
+    }
+    
+    int64_t current_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    sqlite3_bind_blob(stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, topic_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, type_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 5, static_cast<int>(durability_kind));
+    sqlite3_bind_int(stmt, 6, static_cast<int>(reliability_kind));
+    sqlite3_bind_int64(stmt, 7, current_time);
+    sqlite3_bind_int64(stmt, 8, current_time);
+    
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    return result == SQLITE_DONE;
+}
+
+bool DatabaseManager::update_entity_activity(const BuiltinTopicKey_t& key, bool is_writer) {
+    if (!db_) {
+        return false;
+    }
+    
+    auto prefix_blob = builtin_key_to_guid_prefix(key);
+    auto entity_blob = builtin_key_to_guid_entity(key);
+    
+    const char* sql = is_writer ? 
+        "UPDATE datawriters SET last_seen = ?, is_active = 1 WHERE writer_guid_prefix = ? AND writer_guid_entity = ?" :
+        "UPDATE datareaders SET last_seen = ?, is_active = 1 WHERE reader_guid_prefix = ? AND reader_guid_entity = ?";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        return false;
+    }
+    
+    int64_t current_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    sqlite3_bind_int64(stmt, 1, current_time);
+    sqlite3_bind_blob(stmt, 2, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 3, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+    
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    return result == SQLITE_DONE;
+}
+
+bool DatabaseManager::mark_entity_inactive(const BuiltinTopicKey_t& key, bool is_writer) {
+    if (!db_) {
+        return false;
+    }
+    
+    auto prefix_blob = builtin_key_to_guid_prefix(key);
+    auto entity_blob = builtin_key_to_guid_entity(key);
+    
+    const char* sql = is_writer ? 
+        "UPDATE datawriters SET is_active = 0 WHERE writer_guid_prefix = ? AND writer_guid_entity = ?" :
+        "UPDATE datareaders SET is_active = 0 WHERE reader_guid_prefix = ? AND reader_guid_entity = ?";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        return false;
+    }
+    
+    sqlite3_bind_blob(stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+    
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    return result == SQLITE_DONE;
+}
+
+auto DatabaseManager::get_active_datawriters(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t> {
+    std::vector<BuiltinTopicKey_t> result;
+    if (!db_) {
+        return result;
+    }
+    
+    const char* sql = R"(
+        SELECT writer_guid_prefix, writer_guid_entity 
+        FROM datawriters 
+        WHERE topic_name = ? AND is_active = 1
+    )";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        return result;
+    }
+    
+    sqlite3_bind_text(stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
+    
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const void* prefix_data = sqlite3_column_blob(stmt, 0);
+        int prefix_size = sqlite3_column_bytes(stmt, 0);
+        const void* entity_data = sqlite3_column_blob(stmt, 1);
+        int entity_size = sqlite3_column_bytes(stmt, 1);
+        
+        if (prefix_size >= 12 && entity_size >= 4) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_data), 
+                                          static_cast<const uint8_t*>(prefix_data) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_data),
+                                          static_cast<const uint8_t*>(entity_data) + entity_size);
+            
+            BuiltinTopicKey_t key = guid_to_builtin_key(prefix_vec, entity_vec);
+            result.push_back(key);
+        }
+    }
+    
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+auto DatabaseManager::get_active_datareaders(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t> {
+    std::vector<BuiltinTopicKey_t> result;
+    if (!db_) {
+        return result;
+    }
+    
+    const char* sql = R"(
+        SELECT reader_guid_prefix, reader_guid_entity 
+        FROM datareaders 
+        WHERE topic_name = ? AND is_active = 1
+    )";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        return result;
+    }
+    
+    sqlite3_bind_text(stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
+    
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const void* prefix_data = sqlite3_column_blob(stmt, 0);
+        int prefix_size = sqlite3_column_bytes(stmt, 0);
+        const void* entity_data = sqlite3_column_blob(stmt, 1);
+        int entity_size = sqlite3_column_bytes(stmt, 1);
+        
+        if (prefix_size >= 12 && entity_size >= 4) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_data), 
+                                          static_cast<const uint8_t*>(prefix_data) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_data),
+                                          static_cast<const uint8_t*>(entity_data) + entity_size);
+            
+            BuiltinTopicKey_t key = guid_to_builtin_key(prefix_vec, entity_vec);
+            result.push_back(key);
+        }
+    }
+    
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool DatabaseManager::is_datawriter_active(const BuiltinTopicKey_t& key) {
+    if (!db_) {
+        return false;
+    }
+    
+    auto prefix_blob = builtin_key_to_guid_prefix(key);
+    auto entity_blob = builtin_key_to_guid_entity(key);
+    
+    const char* sql = R"(
+        SELECT is_active FROM datawriters 
+        WHERE writer_guid_prefix = ? AND writer_guid_entity = ?
+    )";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        return false;
+    }
+    
+    sqlite3_bind_blob(stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+    
+    bool is_active = false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        is_active = sqlite3_column_int(stmt, 0) == 1;
+    }
+    
+    sqlite3_finalize(stmt);
+    return is_active;
+}
+
+bool DatabaseManager::cleanup_inactive_entities(std::chrono::minutes inactive_threshold) {
+    if (!db_) {
+        return false;
+    }
+    
+    int64_t threshold_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch() - inactive_threshold).count();
+    
+    // 清理DataWriter
+    const char* writer_sql = "UPDATE datawriters SET is_active = 0 WHERE last_seen < ?";
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(db_, writer_sql, -1, &stmt, nullptr);
+    if (result == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, threshold_time);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+    
+    // 清理DataReader
+    const char* reader_sql = "UPDATE datareaders SET is_active = 0 WHERE last_seen < ?";
+    result = sqlite3_prepare_v2(db_, reader_sql, -1, &stmt, nullptr);
+    if (result == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, threshold_time);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+    
+    return true;
+}
+
+// ===== GUID转换辅助方法 =====
+
+auto DatabaseManager::builtin_key_to_guid_prefix(const BuiltinTopicKey_t& key) -> std::vector<uint8_t> {
+    std::vector<uint8_t> prefix(12);
+    
+    // BuiltinTopicKey_t包含4个32位值，我们使用前3个来构造12字节的GUID prefix
+    for (int i = 0; i < 3; ++i) {
+        uint32_t value = key.value[i];
+        prefix[i * 4 + 0] = static_cast<uint8_t>((value >> 24) & 0xFF);
+        prefix[i * 4 + 1] = static_cast<uint8_t>((value >> 16) & 0xFF);
+        prefix[i * 4 + 2] = static_cast<uint8_t>((value >> 8) & 0xFF);
+        prefix[i * 4 + 3] = static_cast<uint8_t>(value & 0xFF);
+    }
+    
+    return prefix;
+}
+
+auto DatabaseManager::builtin_key_to_guid_entity(const BuiltinTopicKey_t& key) -> std::vector<uint8_t> {
+    std::vector<uint8_t> entity(4);
+    
+    // 使用第4个值作为EntityId
+    uint32_t value = key.value[3];
+    entity[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
+    entity[1] = static_cast<uint8_t>((value >> 16) & 0xFF);
+    entity[2] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    entity[3] = static_cast<uint8_t>(value & 0xFF);
+    
+    return entity;
+}
+
+auto DatabaseManager::guid_to_builtin_key(const std::vector<uint8_t>& prefix, const std::vector<uint8_t>& entity) -> BuiltinTopicKey_t {
+    BuiltinTopicKey_t key;
+    
+    // 从12字节prefix重建前3个值
+    for (int i = 0; i < 3 && (i * 4 + 3) < prefix.size(); ++i) {
+        key.value[i] = (static_cast<uint32_t>(prefix[i * 4 + 0]) << 24) |
+                      (static_cast<uint32_t>(prefix[i * 4 + 1]) << 16) |
+                      (static_cast<uint32_t>(prefix[i * 4 + 2]) << 8) |
+                      static_cast<uint32_t>(prefix[i * 4 + 3]);
+    }
+    
+    // 从4字节entity重建第4个值
+    if (entity.size() >= 4) {
+        key.value[3] = (static_cast<uint32_t>(entity[0]) << 24) |
+                      (static_cast<uint32_t>(entity[1]) << 16) |
+                      (static_cast<uint32_t>(entity[2]) << 8) |
+                      static_cast<uint32_t>(entity[3]);
+    }
+    
+    return key;
 }
 
 AGIDDS_NAMESPACE_END

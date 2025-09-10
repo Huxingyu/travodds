@@ -67,12 +67,21 @@ auto main() -> int {
         return -1;
     }
     
-    // 创建主题
-    Topic* topic = participant->create_topic("TestDurabilityStrategies", "HelloWorld", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    // 创建主题 - 使用与持久化服务兼容的topic名称
+    std::cout << "Creating topics for each durability strategy..." << std::endl;
     
-    if (topic == nullptr) {
-        std::cerr << "Failed to create Topic" << std::endl;
-        return -1;
+    // 为每种策略创建单独的topic
+    std::vector<Topic*> topics;
+    const std::vector<std::string> topic_names = {"TopicTransientLocal", "TopicTransient", "TopicPersistent"};
+    
+    for (size_t i = 0; i < topic_names.size(); ++i) {
+        Topic* topic = participant->create_topic(topic_names[i].c_str(), "HelloWorld", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        if (topic == nullptr) {
+            std::cerr << "Failed to create Topic: " << topic_names[i] << std::endl;
+            return -1;
+        }
+        topics.push_back(topic);
+        std::cout << "✓ Created topic: " << topic_names[i] << std::endl;
     }
     
     // 创建Publisher和Subscriber
@@ -104,26 +113,32 @@ auto main() -> int {
     std::cout << "\n=== 创建三种策略的DataWriter ===" << std::endl;
     
     // 创建三种策略的DataWriter
-    for (const auto& strategy : strategies) {
+    for (size_t strategy_idx = 0; strategy_idx < strategies.size() && strategy_idx < topics.size(); ++strategy_idx) {
+        const auto& strategy = strategies[strategy_idx];
+        Topic* current_topic = topics[strategy_idx];
+        
         DataWriterQos writer_qos;
         publisher->get_default_datawriter_qos(writer_qos);
         writer_qos.durability.kind = strategy.kind;
         writer_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
         
-        DataWriter* writer = publisher->create_datawriter(topic, writer_qos, nullptr, STATUS_MASK_NONE);
+        DataWriter* writer = publisher->create_datawriter(current_topic, writer_qos, nullptr, STATUS_MASK_NONE);
         if (writer == nullptr) {
             std::cerr << "Failed to create " << strategy.name << " DataWriter" << std::endl;
             continue;
         }
         
         writers.push_back(writer);
-        std::cout << "✓ 成功创建 " << strategy.name << " DataWriter" << std::endl;
+        std::cout << "✓ 成功创建 " << strategy.name << " DataWriter for topic: " << topic_names[strategy_idx] << std::endl;
     }
     
     std::cout << "\n=== 创建三种策略的DataReader ===" << std::endl;
     
     // 创建三种策略的DataReader
-    for (const auto& strategy : strategies) {
+    for (size_t strategy_idx = 0; strategy_idx < strategies.size() && strategy_idx < topics.size(); ++strategy_idx) {
+        const auto& strategy = strategies[strategy_idx];
+        Topic* current_topic = topics[strategy_idx];
+        
         DataReaderQos reader_qos;
         subscriber->get_default_datareader_qos(reader_qos);
         reader_qos.durability.kind = strategy.kind;
@@ -132,7 +147,7 @@ auto main() -> int {
         // 创建监听器
         auto listener = std::make_unique<TestDataReaderListener>(strategy.name);
         
-        DataReader* reader = subscriber->create_datareader(topic, reader_qos, listener.get(), STATUS_MASK_ALL);
+        DataReader* reader = subscriber->create_datareader(current_topic, reader_qos, listener.get(), STATUS_MASK_ALL);
         if (reader == nullptr) {
             std::cerr << "Failed to create " << strategy.name << " DataReader" << std::endl;
             continue;
@@ -140,12 +155,13 @@ auto main() -> int {
         
         readers.push_back(reader);
         listeners.push_back(std::move(listener));
-        std::cout << "✓ 成功创建 " << strategy.name << " DataReader" << std::endl;
+        std::cout << "✓ 成功创建 " << strategy.name << " DataReader for topic: " << topic_names[strategy_idx] << std::endl;
     }
     
     // 等待一段时间让DDS发现完成
     std::cout << "\n=== 等待DDS发现完成 ===" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::cout << "等待持久化服务发现DataWriter..." << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(8));  // 增加等待时间确保持久化服务发现
     
     std::cout << "\n=== 开始发布数据 ===" << std::endl;
     
@@ -197,7 +213,10 @@ auto main() -> int {
     std::vector<std::unique_ptr<TestDataReaderListener>> history_listeners;
     std::vector<DataReader*> history_readers;
     
-    for (const auto& strategy : strategies) {
+    for (size_t strategy_idx = 0; strategy_idx < strategies.size() && strategy_idx < topics.size(); ++strategy_idx) {
+        const auto& strategy = strategies[strategy_idx];
+        Topic* current_topic = topics[strategy_idx];
+        
         DataReaderQos reader_qos;
         subscriber->get_default_datareader_qos(reader_qos);
         reader_qos.durability.kind = strategy.kind;
@@ -205,11 +224,11 @@ auto main() -> int {
         
         auto listener = std::make_unique<TestDataReaderListener>(strategy.name + "_HISTORY");
         
-        DataReader* reader = subscriber->create_datareader(topic, reader_qos, listener.get(), STATUS_MASK_ALL);
+        DataReader* reader = subscriber->create_datareader(current_topic, reader_qos, listener.get(), STATUS_MASK_ALL);
         if (reader != nullptr) {
             history_readers.push_back(reader);
             history_listeners.push_back(std::move(listener));
-            std::cout << "✓ 创建历史数据测试的 " << strategy.name << " DataReader" << std::endl;
+            std::cout << "✓ 创建历史数据测试的 " << strategy.name << " DataReader for topic: " << topic_names[strategy_idx] << std::endl;
         }
     }
     

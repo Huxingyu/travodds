@@ -158,7 +158,6 @@ void SubscriberImpl::register_builtin_datareader(std::shared_ptr<DataReaderImpl>
         // 同时将共享指针存储在单独的映射中以确保对象生命周期
         builtin_reader_shared_ptrs_[handle] = reader;
         
-        std::cout << "[SubscriberImpl] Registered builtin DataReader successfully" << std::endl;
     }
 }
 

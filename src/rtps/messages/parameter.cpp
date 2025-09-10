@@ -77,11 +77,8 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessK
 	}
 	//PID_TOPIC_NAME : string
 	if (!pubData.topic_name.empty()) {
-		std::cout << "[DEBUG] AddParameter TOPIC_NAME: '" << pubData.topic_name << "' (length: " << pubData.topic_name.length() << ")" << std::endl;
 		AddParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
-	} else {
-		std::cout << "[DEBUG] AddParameter TOPIC_NAME: EMPTY!" << std::endl;
-	}
+	} 
 	//PID_TYPE_NAME : string
 	if (!pubData.type_name.empty()) {
 		AddParameter(ParameterId::PID_TYPE_NAME, pubData.type_name);

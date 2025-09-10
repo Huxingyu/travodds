@@ -122,8 +122,15 @@ int main(int argc, char* argv[]) {
         std::cout << "- Worker threads: " << config.worker_thread_count << std::endl;
         
         g_persistence_service = std::make_unique<PersistenceService>(config);
-        // 使用shared_ptr包装原始指针
-        std::shared_ptr<DomainParticipant> participant_ptr(participant);
+        
+        // 使用自定义删除器创建shared_ptr，确保正确的生命周期管理
+        auto participant_deleter = [](DomainParticipant* participant_ptr) {
+            if (participant_ptr != nullptr) {
+                TheParticipantFactory->delete_participant(participant_ptr);
+                std::cout << "[Cleanup] DomainParticipant correctly deleted by custom deleter" << std::endl;
+            }
+        };
+        std::shared_ptr<DomainParticipant> participant_ptr(participant, participant_deleter);
         g_persistence_service->set_domain_participant(participant_ptr);
         
         // 设置UI回调
@@ -169,10 +176,8 @@ int main(int argc, char* argv[]) {
             g_persistence_service.reset();
         }
         
-        // 清理DDS参与者
-        if (participant) {
-            TheParticipantFactory->delete_participant(participant);
-        }
+        // DomainParticipant 将通过 shared_ptr 的自定义删除器自动清理
+        // 不再需要手动删除
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

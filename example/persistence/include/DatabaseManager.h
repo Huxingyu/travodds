@@ -58,6 +58,28 @@ public:
     bool cleanup_old_data(std::chrono::hours retention_time);
     bool cleanup_topic_data(const std::string& topic_name);
     
+    // DataWriter/DataReader 管理
+    bool register_datawriter(const BuiltinTopicKey_t& key,
+                            const std::string& topic_name,
+                            const std::string& type_name,
+                            DurabilityQosPolicyKind durability_kind,
+                            ReliabilityQosPolicyKind reliability_kind);
+    
+    bool register_datareader(const BuiltinTopicKey_t& key,
+                           const std::string& topic_name,
+                           const std::string& type_name,
+                           DurabilityQosPolicyKind durability_kind,
+                           ReliabilityQosPolicyKind reliability_kind);
+    
+    bool update_entity_activity(const BuiltinTopicKey_t& key, bool is_writer);
+    bool mark_entity_inactive(const BuiltinTopicKey_t& key, bool is_writer);
+    
+    auto get_active_datawriters(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
+    auto get_active_datareaders(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
+    
+    bool is_datawriter_active(const BuiltinTopicKey_t& key);
+    bool cleanup_inactive_entities(std::chrono::minutes inactive_threshold);
+    
     // 统计信息
     auto get_database_stats() -> std::map<std::string, int64_t>;
     bool is_initialized() const { return db_ != nullptr; }
@@ -74,6 +96,11 @@ private:
     // 辅助方法
     static auto time_to_microseconds(const Time_t& time) -> int64_t;
     static auto microseconds_to_time(int64_t microseconds) -> Time_t;
+    
+    // GUID和BuiltinTopicKey转换辅助方法
+    static auto builtin_key_to_guid_prefix(const BuiltinTopicKey_t& key) -> std::vector<uint8_t>;
+    static auto builtin_key_to_guid_entity(const BuiltinTopicKey_t& key) -> std::vector<uint8_t>;
+    static auto guid_to_builtin_key(const std::vector<uint8_t>& prefix, const std::vector<uint8_t>& entity) -> BuiltinTopicKey_t;
 };
 
 AGIDDS_NAMESPACE_END
