@@ -9,15 +9,15 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_READER_H
-#define AGIDDS_RTPS_ENDPOINT_READER_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_READER_H
+#define TRAVODDS_RTPS_ENDPOINT_READER_H
 
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
 #include "common/time/ddstimer.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class ReaderListener {
 public:
@@ -175,7 +175,7 @@ public:
 	 *
 	 * @return 生成的CacheChange指针。
 	 */
-	std::shared_ptr<CacheChange> new_change(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,InstanceHandle_t pubHandle,Time_t sourceTimespace);
+	std::shared_ptr<CacheChange> new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t& handle, const InstanceHandle_t& pubHandle, const Time_t& sourceTimespace);
 
 	/**
 	 * @brief 设置Reader监听者。
@@ -242,9 +242,29 @@ public:
 	 */
 	virtual bool MatchedWriterIsMatched(GUID_t writerGuid) = 0;
 
+	/**
+	 * @brief 获取与当前数据写者匹配的发布者实例句柄。
+	 *
+	 * @param [in] publication_handles 发布者实例句柄列表。
+	 */
     void GetMatchedPublications(InstanceHandleSeq& publication_handles) const;
 
-	void OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state);
+	/**
+	 * @brief 根据与当前数据写者匹配的发布者实例句柄获取其配置参数。
+	 *
+	 * @param [in] subscriptionData 发布者实例句柄对应的发布者通信配置参数。
+	 * @param [in] remotehandle     远端发布者实例句柄。
+	 *
+	 * @return 获取成功返回true，否则返回false。
+	 */
+	bool GetMatchedPublicationData(PublicationBuiltinTopicData& publicationData, const InstanceHandle_t& remotehandle) const;
+
+	/**
+	 * @brief 获取数据读者缓冲区。
+	 *
+	 * @return 返回数据读者缓冲区指针。
+	 */
+	std::shared_ptr<HistoryCache> GetReaderCache();
 
 private:
 
@@ -291,7 +311,7 @@ protected:
 	/* 接收到的数据信息的最新的数据序号  */
 	SequenceNumber_t lastSequenceNumber_;
 
-	std::map<InstanceHandle_t, SampleInfo> statusCache_;
+	//std::map<InstanceHandle_t, SampleInfo> statusCache_;
 
 	ReaderListener* readerListener_;
 	
@@ -307,6 +327,6 @@ protected:
 	friend class DataReaderImpl;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

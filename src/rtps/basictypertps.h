@@ -9,12 +9,12 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_BASICTYPERTPS_H
-#define AGIDDS_RTPS_BASICTYPERTPS_H
+#ifndef TRAVODDS_RTPS_BASICTYPERTPS_H
+#define TRAVODDS_RTPS_BASICTYPERTPS_H
 
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // rtps entity attribute
 
@@ -458,6 +458,7 @@ namespace Conversion {
 	inline InstanceHandle_t ToInstanceHandle(const BuiltinTopicKey_t& key) {
 		InstanceHandle_t handle;
 		memcpy(handle.keyHash.value, &key, sizeof(GUID_t));
+		handle.isValid = true;
 		return handle;
 	}
 	/**
@@ -654,6 +655,7 @@ struct SequenceNumber_t {
 const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
 const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
 const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
+const SequenceNumber_t SEQUENCENUMBER_FIRST = { 0, 1 };
 // #define SEQUENCENUMBER_UNKNOWN {-1,0}
 // #define SEQUENCENUMBER_INVALID {-2,0}
 
@@ -669,11 +671,13 @@ using FragmentNumber_t = uint32_t;
 
 #define LOCATOR_ADDRESS_INVALID {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-
-const int32_t LOCATOR_KIND_INVALID = -1;
-const int32_t LOCATOR_KIND_RESERVED = 0;
-const int32_t LOCATOR_KIND_UDPv4 = 1;
-const int32_t LOCATOR_KIND_UDPv6 = 2;
+enum LocatorKind : int32_t
+{
+	LOCATOR_KIND_INVALID = -1,
+	LOCATOR_KIND_RESERVED = 0,
+	LOCATOR_KIND_UDPv4 = 1,
+	LOCATOR_KIND_UDPv6 = 2
+};
 const uint32_t LOCATOR_PORT_INVALID = 0;
 
 struct Locator_t {
@@ -820,12 +824,6 @@ struct ContentFilterInfo_t {
 	FilterSignatureSequence filterSignatures;
 };
 
-struct Property_t {
-	std::string name;
-	std::string value;
-};
-using PropertySeq = Sequence<Property_t>;
-
 using EntityName_t = std::string;
 
 using ParameterId_t = uint16_t;
@@ -936,6 +934,6 @@ struct LocatorUDPv4_t
     PARTICIPANTID_GAIN * (uint32_t)ulParticipantId
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // ! AGIDDS_RTPS_BASICTYPERTPS_H
+#endif // ! TRAVODDS_RTPS_BASICTYPERTPS_H

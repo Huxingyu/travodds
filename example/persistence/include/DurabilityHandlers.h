@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // 前向声明
 class PersistenceService;
@@ -54,4 +54,4 @@ public:
     void cleanup_expired_data() override;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

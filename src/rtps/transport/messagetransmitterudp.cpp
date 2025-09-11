@@ -1,14 +1,12 @@
 #include "rtps/transport/messagetransmitterudp.h"
 #include "rtps/messages/messageprocessor.h"
-#include "rtps/transport/locator.h"
 #include "common/log/logger.h"
 #include <iostream>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext())
 {
-	kind_ = LOCATOR_KIND_UDPv4;
 }
 
 MessageTransmitterUDP::~MessageTransmitterUDP()
@@ -31,20 +29,19 @@ MessageTransmitterUDP::~MessageTransmitterUDP()
 
 ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
 {
-	UDPv4Locator src(source);
-
-	if (!src.Valid()) {
-		return RETCODE_OK;
+	if (source.kind != destination.kind || source.kind != kind_) {
+		return RETCODE_ERROR;
 	}
-	const uint32_t uiAddress = src.GetUIAddressV4();
+	AsioLocator src(source);
+
+	const uint32_t uiAddress = src.GetUIAddress();
 	/*  端口号为0时 只进行ip地址判断是否已创建 */
 	if (0 == src.port) {
 		/* 该发送IP的地址和优先级已创建发送socket，直接返回 */
 		if (0 != sendSocketMap_.count(uiAddress) && 0 != sendSocketMap_[uiAddress].count(priority)) {
 			return RETCODE_OK;
-		}
-	}
-	else {
+		} 
+	} else {
 		/* 该发送IP+端口号已创建发送socket，直接返回 */
 		if (sendPortSocketMap_.count(src) != 0) {
 			return RETCODE_OK;
@@ -53,7 +50,7 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 
 	try {
 		// IPPROTO_UDP
-		std::shared_ptr<asio::ip::udp::socket> NewSendSocket = std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());//AF_INET, SOCK_DGRAM
+		std::shared_ptr<asio::ip::udp::socket> NewSendSocket = GetSocketInit(); //AF_INET/AF_INET6, SOCK_DGRAM;
 
 		// 设置 SO_REUSEADDR
 		asio::socket_base::reuse_address reuse_option(true);
@@ -93,14 +90,12 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		NewSendSocket->set_option(tos_option);
 
 		/* 既不指定发送ip也不指定发送端口号时，不进行绑定操作，由系统自动选择 */
-		if (0 == src.port && 0 == uiAddress) {
+		if (0 == src.port && src.Empty()) {
 			sendSocketMap_[uiAddress][priority] = NewSendSocket;
-
 			return RETCODE_OK;
 		}
-		asio::ip::address_v4 address = src.GetAddressV4();
-		/* 发送socket绑定发送地址, 端口号设置为0 让系统自动分配, */
-		asio::ip::udp::endpoint local_endpoint(address, src.port);
+		/* 绑定发送socket到本地端点，使用指定的IP地址和端口号 */
+		asio::ip::udp::endpoint local_endpoint = GetEndpoint(src);
 
 		// 检查 socket 是否已经打开
 		if (!NewSendSocket->is_open()) {
@@ -113,18 +108,18 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		NewSendSocket->set_option(send_loopback_option);
 		
 		NewSendSocket->bind(local_endpoint);
-
 		if (0 == src.port) {
 			sendSocketMap_[uiAddress][priority] = std::move(NewSendSocket);
-		}
-		else {
+		} else {
 			sendPortSocketMap_.insert(std::pair<Locator_t, std::shared_ptr<asio::ip::udp::socket>>(src, NewSendSocket));
 		}
+
+
 	}
 	catch (std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Exception: " << e.what() << std::endl;
-		AGILOG(AGILOG_ERROR, "ioContext Err e[%s]", e.what());
+		TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
@@ -132,14 +127,13 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 
 ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t destination1, char* message, uint32_t length, uint16_t priority)
 {
+	if (source1.kind != destination1.kind || source1.kind != kind_) {
+		return RETCODE_ERROR;
+	}
 	char* pMsg = message;
 	uint32_t uiMsgLen = length;
-	UDPv4Locator src(source1);
-	UDPv4Locator dest(destination1);
-
-	if (!src.Valid() || !dest.Valid()) {
-		return RETCODE_OK;
-	}
+	AsioLocator src(source1);
+	AsioLocator dest(destination1);
 
 	/* 判断收发地址是否相同，0表示本地程序之间进行发送 */
 	if (0 == memcmp(src.address, dest.address, sizeof(src.address))) {
@@ -150,57 +144,48 @@ ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t des
 			return RETCODE_OK;
 		}
 	}
-
 	/* 目的地址 */
-	asio::ip::address_v4 address = dest.GetAddressV4();
-	asio::ip::udp::endpoint target_endpoint(address, dest.port);
+	asio::ip::udp::endpoint target_endpoint = GetEndpoint(dest);
 	/* 查找对应的发送socket */
-	std::shared_ptr<asio::ip::udp::socket> SendSocket = 0;
-
-
+	std::shared_ptr<asio::ip::udp::socket> SendSocket = nullptr;
 	if (0 == src.port) {
-		SendSocket = sendSocketMap_[src.GetUIAddressV4()][priority];
-	}
-	else {
+		SendSocket = sendSocketMap_[src.GetUIAddress()][priority];
+	} else {
 		SendSocket = sendPortSocketMap_[src];
 	}
 
-	if (NULL == SendSocket.get()) {
-		AGILOG(AGILOG_ERROR, "SendSocket is nullptr");
+	if (nullptr == SendSocket) {
+		TRAVODDS_LOG(LOG_ERROR, "SendSocket is nullptr");
 		return RETCODE_ERROR;
 	}
 
 	mtxSendSocket_.lock();
 	/* 发送组播数据且未指定发送地址时，每个网卡都需要发送组播数据 */
-	if (0xE0 == (dest.address[12] & 0xE0) && 0 == src.GetUIAddressV4()) {
+	if (dest.IsMulticast() && src.Empty()) {
 		for (auto& itor : unicastLocatorList_) {
 			try {
-				UDPv4Locator it(itor);
-				asio::ip::address_v4 local_interface = it.GetAddressV4();
-				asio::ip::multicast::outbound_interface option(local_interface);
+				asio::ip::multicast::outbound_interface option = GetOutboundInterfaceOption(AsioLocator(itor));
 				SendSocket->set_option(option);
 
 				// 发送数据到目标端点
 				SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);
 			}
-			catch (const std::exception& e) {
+			catch (asio::system_error& e) {
 				static_cast<void>(e);
-				//std::cerr << "Error: " << e.what() << std::endl;
-				AGILOG(AGILOG_ERROR, "send_to error", e.what());
+				//std::cerr << "Error: " << e.what() << ":" << e.code()<<std::endl;
+				//AGILOG(AGILOG_ERROR, "send_to error", e.what());
 				continue;
 			}
 		}
 	}
 	else {
 		try {
-			asio::error_code ec;
-			SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint, 0, ec);
-			asio::detail::throw_error(ec, "send_to"); 
+			SendSocket->send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);
 		}
 		catch (const std::exception& e) {
 			static_cast<void>(e);
 			mtxSendSocket_.unlock();
-			AGILOG(AGILOG_ERROR, "send_to error", e.what());
+			//AGILOG(AGILOG_ERROR, "send_to error", e.what());
 			return RETCODE_ERROR;
 		}
 	}
@@ -216,6 +201,9 @@ ReturnCode_t MessageTransmitterUDP::SendMultiMessage(Locator_t source, Locator_t
 
 ReturnCode_t MessageTransmitterUDP::ReceiveAddrAdd(Locator_t receiveAddr)
 {
+	if (receiveAddr.kind != kind_) {
+		return RETCODE_ERROR;
+	}
 	ReturnCode_t ret;
 	/* 创建接收socket */
 	ret = AddRecvSocket(receiveAddr);
@@ -238,11 +226,14 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrAdd(Locator_t receiveAddr)
 
 ReturnCode_t MessageTransmitterUDP::ReceiveAddrRemove(Locator_t receiveAddr)
 {
+	if (receiveAddr.kind != kind_) {
+		return RETCODE_ERROR;
+	}
 	ReturnCode_t ret;
 	/*  只退组，不删除socket */
 	ret = DropMemberShip(receiveAddr);
 	if (RETCODE_OK != ret) {
-		AGILOG(AGILOG_ERROR, "DropMemberShip error, ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "DropMemberShip error, ret = %d", ret);
 		return ret;
 	}
 
@@ -251,11 +242,7 @@ ReturnCode_t MessageTransmitterUDP::ReceiveAddrRemove(Locator_t receiveAddr)
 
 ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 {
-	UDPv4Locator rAddr(receiveAddr);
-	if (!rAddr.Valid()) {
-		AGILOG(AGILOG_ERROR, "rAddr not valid");
-		return RETCODE_ERROR;
-	}
+	AsioLocator rAddr(receiveAddr);
 
 	/* 端口号已存在 */
 	if (receiveSocketMap_.count(rAddr.port) > 0) {
@@ -264,16 +251,9 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 
 	try {
 		// 创建一个UDP监听socket
-		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());//AF_INET, SOCK_DGRAM
-
+		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = GetSocketInit();
 		// 监听的本地端点，使用系统自动分配的端口
-		asio::ip::udp::endpoint local_endpoint;
-		if (rAddr.GetAddressV4().is_multicast()) {
-			local_endpoint = asio::ip::udp::endpoint(asio::ip::udp::v4(), rAddr.port);
-
-		} else {
-			local_endpoint = asio::ip::udp::endpoint(rAddr.GetAddressV4(), rAddr.port);
-		}
+		asio::ip::udp::endpoint local_endpoint = GetEndpoint(rAddr, true);
 
 		// 检查 socket 是否已经打开
 		if (!newRecvSocket->is_open()) {
@@ -281,7 +261,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 			newRecvSocket->open(local_endpoint.protocol());
 		}
 
-		if (rAddr.GetAddressV4().is_multicast()) {
+		if (rAddr.IsMulticast()) {
 			/* 端口复用 */
 			asio::socket_base::reuse_address option_reuse_address(true);
 			newRecvSocket->set_option(option_reuse_address);
@@ -314,16 +294,20 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
             return RETCODE_ERROR;
         }
 #endif
- 		newRecvSocket->bind(local_endpoint);
-
+		newRecvSocket->bind(GetReciveEndpoint(rAddr.port));
 		receiveSocketMap_.insert(std::pair<uint16_t, std::shared_ptr<asio::ip::udp::socket>>(rAddr.port, newRecvSocket));
 		return RETCODE_OK;
 	}
 	catch (asio::system_error& e) {
-		//AGILOG(AGILOG_ERROR, "Err[%s] [%d]", e.what(), e.code());
+		//AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
 		if (e.code() == asio::error::address_in_use) {
 			return RETCODE_PORT_IN_USE;
 		}
+#ifdef _WIN32
+		if (e.code().value() == WSAEACCES) {
+			return RETCODE_PORT_IN_USE;
+		}
+#endif
         //std::cerr << "Bind error: " << e.what() << std::endl;
 		return RETCODE_ERROR;
 	}
@@ -331,34 +315,31 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 
 ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 {
-	UDPv4Locator rAddr(receiveAddr);
-	asio::ip::address_v4 multicast_address = rAddr.GetAddressV4();
+	AsioLocator rAddr(receiveAddr);
 	/* 判断接收地址是否是组播地址，非组播直接返回 */
-	if (!multicast_address.is_multicast()) {
+	if (!rAddr.IsMulticast()) {
 		return RETCODE_OK;
 	}
 
 	std::shared_ptr<asio::ip::udp::socket> socke = receiveSocketMap_[rAddr.port];
 
-
 	/* 根据DomainParticipant中的IP地址进行加组  */
 	for (auto& itor : unicastLocatorList_) {
-		UDPv4Locator it(itor);
-		if (!it.Valid()) {
-			continue;
-		}
-		try {
-			asio::ip::address_v4 interface_address = it.GetAddressV4();
-			asio::ip::multicast::join_group option(multicast_address, interface_address);
-			socke->set_option(option);
 
+		AsioLocator it(itor);
+		asio::ip::multicast::join_group option = GetJoinGroupOption(rAddr, it);
+		try {
+			socke->set_option(option);
 		}
-		catch (const std::exception& e) {
+		catch (const std::system_error& e) {
 			static_cast<void>(e);
-			AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
+			TRAVODDS_LOG(LOG_ERROR, "Err[%s]", e.what());
 			//std::cerr << "Error: " << e.what() << std::endl;
 			continue;
 		}
+		//printf("netcard ip : %d.%d.%d.%d add membership : %d.%d.%d.%d sucess !\n",
+		//	itor.address[12], itor.address[13], itor.address[14], itor.address[15],
+		//	rAddr.address[12], rAddr.address[13], rAddr.address[14], rAddr.address[15]);
 	}
 
 	return RETCODE_OK;
@@ -366,23 +347,21 @@ ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)
 
 ReturnCode_t MessageTransmitterUDP::DropMemberShip(Locator_t receiveAddr)
 {
-	UDPv4Locator rAddr(receiveAddr);
-	asio::ip::address_v4 multicast_address = rAddr.GetAddressV4();
+	AsioLocator rAddr(receiveAddr);
 	/* 判断接收地址是否是组播地址，非组播直接返回 */
-	if (!multicast_address.is_multicast()) {
+	if (!rAddr.IsMulticast()) {
 		return RETCODE_OK;
 	}
 
 	/* 退出组播组，因为该socket可能还同时加入其它组播组，不能关闭该socket */
 	try {
-		asio::ip::multicast::leave_group option(multicast_address);
+		asio::ip::multicast::leave_group option = GetLeaveGroupOption(rAddr);
 		receiveSocketMap_[rAddr.port]->set_option(option);
-
 	}
 	catch (const std::exception& e) {
 		static_cast<void>(e);
 		//std::cerr << "Error: " << e.what() << std::endl;
-		AGILOG(AGILOG_ERROR, "Err[%s]", e.what());
+		TRAVODDS_LOG(LOG_ERROR, "Err[%s]", e.what());
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
@@ -423,16 +402,84 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 		flagNum_.fetch_sub(1);
 		return;
 	}
+
 	std::shared_ptr<asio::ip::udp::endpoint> sender_endpoint = std::make_shared<asio::ip::udp::endpoint>();
 	socket->async_receive_from(asio::buffer(buffer, MAXSIZE), *sender_endpoint,
 		[this, buffer, socket, sender_endpoint](const std::error_code& ec, std::size_t bytes_transferred) {
+			ReturnCode_t ret = RETCODE_OK;
 			if (!ec) {
 				InterpretMessage(buffer, bytes_transferred);
-			}
+			} 
 			receivePool_->releaseBuffer(const_cast<char*&>(buffer));
 			flagNum_.fetch_sub(1);
 			if (IsRun()) {
 				AsyncReceive(socket);
 			}
 		});
+}
+
+MessageTransmitterUDPv4::MessageTransmitterUDPv4(std::shared_ptr<MessageProcessor> messageProcessor)
+	: MessageTransmitterUDP(messageProcessor)
+{
+	kind_ = LOCATOR_KIND_UDPv4;
+}
+
+asio::ip::multicast::leave_group MessageTransmitterUDPv4::GetLeaveGroupOption(const AsioLocator& locator)
+{
+	return asio::ip::multicast::leave_group(locator.GetAddress<asio::ip::address_v4>());;
+}
+asio::ip::multicast::join_group MessageTransmitterUDPv4::GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc)
+{
+	return asio::ip::multicast::join_group(multicastLoc.GetAddress<asio::ip::address_v4>(), interfaceLoc.GetAddress<asio::ip::address_v4>());
+}
+asio::ip::multicast::outbound_interface MessageTransmitterUDPv4::GetOutboundInterfaceOption(const AsioLocator& locator)
+{
+	return asio::ip::multicast::outbound_interface(locator.GetAddress<asio::ip::address_v4>());
+}
+asio::ip::udp::endpoint MessageTransmitterUDPv4::GetEndpoint(const AsioLocator& locator, bool recive)
+{
+	if (locator.IsMulticast() && recive) {
+		return asio::ip::udp::endpoint(asio::ip::udp::v4(), locator.port);
+	}
+	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v4>(), locator.port);
+}
+asio::ip::udp::endpoint MessageTransmitterUDPv4::GetReciveEndpoint(const uint32_t port)
+{
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("0.0.0.0"), port);
+}
+std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv4::GetSocketInit()
+{
+	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());
+}
+MessageTransmitterUDPv6::MessageTransmitterUDPv6(std::shared_ptr<MessageProcessor> messageProcessor)
+	: MessageTransmitterUDP(messageProcessor)
+{
+	kind_ = LOCATOR_KIND_UDPv6;
+}
+asio::ip::multicast::leave_group MessageTransmitterUDPv6::GetLeaveGroupOption(const AsioLocator& locator)
+{
+	return asio::ip::multicast::leave_group(locator.GetAddress<asio::ip::address_v6>());;
+}
+asio::ip::multicast::join_group MessageTransmitterUDPv6::GetJoinGroupOption(const AsioLocator& multicastLoc, const AsioLocator& interfaceLoc)
+{
+	return asio::ip::multicast::join_group(multicastLoc.GetAddress<asio::ip::address_v6>(), interfaceLoc.GetUIAddress());
+}
+asio::ip::udp::endpoint MessageTransmitterUDPv6::GetEndpoint(const AsioLocator& locator, bool recive)
+{
+	if (locator.IsMulticast() && recive) {
+		return asio::ip::udp::endpoint(asio::ip::udp::v6(), locator.port);
+	}
+	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v6>(), locator.port);
+}
+asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_t port)
+{
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("::"), port);
+}
+std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv6::GetSocketInit()
+{
+	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v6());
+}
+asio::ip::multicast::outbound_interface MessageTransmitterUDPv6::GetOutboundInterfaceOption(const AsioLocator& locator)
+{
+	return asio::ip::multicast::outbound_interface(locator.GetUIAddress());
 }

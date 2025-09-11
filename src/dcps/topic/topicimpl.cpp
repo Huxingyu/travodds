@@ -3,7 +3,7 @@
 #include "qos/qospolicycheck.h"
 #include "rtps/endpoint/participant.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 TopicImpl::TopicImpl(const std::string& name, const std::string& type_name, const TopicQos& qos, TopicListener* listener, StatusMask mask, DomainParticipant* participant)
@@ -20,7 +20,7 @@ TopicImpl::TopicImpl(const std::string& name, const std::string& type_name, cons
 TopicImpl::~TopicImpl()
 {
     if (listener_) {
-        delete listener_;
+        //delete listener_;
         listener_ = nullptr;
     }
 
@@ -35,13 +35,13 @@ ReturnCode_t TopicImpl::set_qos(const TopicQos& qos)
     if (&qos != &TOPIC_QOS_DEFAULT) {
         ReturnCode_t ret = QosPolicyCheck::CheckQos(qosTemp);
         if (RETCODE_OK != ret) {
-			AGILOG(AGILOG_ERROR, "CheckQos Err");
+			TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
             return ret;
         }
     }
 
     if (!QosPolicyCheck::CanQosBeUpdated(qos_, qosTemp)) {
-		AGILOG(AGILOG_ERROR, "CanQosBeUpdated Err");
+		TRAVODDS_LOG(LOG_ERROR, "CanQosBeUpdated Err");
         return RETCODE_IMMUTABLE_POLICY;
     }
 
@@ -61,7 +61,7 @@ ReturnCode_t TopicImpl::set_listener(TopicListener* listener, const StatusMask& 
 {
 	//TODO 线程安全 //
     if (listener_) {
-		delete listener_;
+		//delete listener_;
 		listener_ = nullptr;
     }
 	listener_ = listener;
@@ -91,7 +91,7 @@ ReturnCode_t TopicImpl::enable()
 		return RETCODE_OK;
 	}
 	if (!participant_->IsEnable()) {
-		AGILOG(AGILOG_ERROR, "IsEnable Err");
+		TRAVODDS_LOG(LOG_ERROR, "IsEnable Err");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
 	enable_ = true;

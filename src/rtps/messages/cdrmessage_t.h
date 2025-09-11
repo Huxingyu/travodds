@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_MESSAGES_CDRMESSAGE_T_H
-#define AGIDDS_RTPS_MESSAGES_CDRMESSAGE_T_H
+#ifndef TRAVODDS_RTPS_MESSAGES_CDRMESSAGE_T_H
+#define TRAVODDS_RTPS_MESSAGES_CDRMESSAGE_T_H
 #include "rtps/basictypertps.h"
 #include "rtps/messages/parameter.h"
 #include "dcps/topic/typesupport.h"
@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <bitset>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #define RTPSMESSAGE_DEFAULT_SIZE 10500
 
@@ -359,6 +359,6 @@ struct GapSubMessage_t {
 };
 
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

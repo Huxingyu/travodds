@@ -13,7 +13,7 @@
 #include "type/builtintopicdata.h"
 #include "../../../src/rtps/basictypertps.h"  // 为了使用GUID_t
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // 存储的数据项结构
 struct StoredData {
@@ -44,4 +44,4 @@ struct MemoryCacheItem {
         : data(std::move(stored_data)), timestamp(std::chrono::steady_clock::now()) {}
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

@@ -5,7 +5,7 @@
 #include <functional>
 #include <mutex>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief Qt可视化接口类
@@ -156,4 +156,4 @@ private:
     void update_network_info();
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

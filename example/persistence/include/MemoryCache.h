@@ -6,7 +6,7 @@
 #include <mutex>
 #include <chrono>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // 内存缓存管理器 - LRU策略
 class MemoryCache {
@@ -46,4 +46,4 @@ public:
     auto memory_usage() const -> size_t;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

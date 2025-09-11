@@ -9,14 +9,14 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_DISCOVERY_DISCOVERY_H
-#define AGIDDS_RTPS_DISCOVERY_DISCOVERY_H
+#ifndef TRAVODDS_RTPS_DISCOVERY_DISCOVERY_H
+#define TRAVODDS_RTPS_DISCOVERY_DISCOVERY_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "rtps/discovery/spdp.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class Timer;
 
 /**
@@ -170,5 +170,5 @@ private:
 	std::shared_ptr<ThreadPool> threadPool_;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_RTPS_DISCOVERY_DISCOVERY_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_RTPS_DISCOVERY_DISCOVERY_H

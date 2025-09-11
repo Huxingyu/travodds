@@ -1,7 +1,10 @@
 #ifndef MD5_H
 #define MD5_H
 
+#include "travodds_dll.h"
 #include <stdint.h>
+
+TRAVODDS_NAMESPACE_BEGIN
 
 class MD5 {
 public:
@@ -20,6 +23,8 @@ private:
 
     static const uint8_t PADDING[64];
 };
+
+TRAVODDS_NAMESPACE_END
 
 #endif
 

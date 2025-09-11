@@ -9,7 +9,7 @@
 #include <atomic>
 #include <unistd.h>
 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE;
 
 std::unique_ptr<PersistenceService> g_persistence_service;
 std::atomic<bool> g_running{true};
@@ -72,7 +72,6 @@ int main(int argc, char* argv[]) {
             domain_id = std::atoi(argv[1]);
         }
         
-        std::cout << "Creating DomainParticipant for domain " << domain_id << "..." << std::endl;
         
         DomainParticipant* participant = TheParticipantFactory->create_participant(
             domain_id, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -83,23 +82,19 @@ int main(int argc, char* argv[]) {
         }
         
         // 明确启用DomainParticipant以确保自动发现功能可用
-        std::cout << "Enabling DomainParticipant for automatic discovery..." << std::endl;
         ReturnCode_t enable_ret = participant->enable();
         if (enable_ret != RETCODE_OK) {
             std::cerr << "Failed to enable DomainParticipant, error code: " << enable_ret << std::endl;
             return -1;
         }
-        std::cout << "DomainParticipant enabled successfully" << std::endl;
         
         // 注册topic类型
-        std::cout << "Registering HelloWorld type ..." << std::endl;
         const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
         ReturnCode_t register_ret = participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
         if (register_ret != RETCODE_OK) {
             std::cerr << "Failed to register HelloWorld type, error code: " << register_ret << std::endl;
             return -1;
         }
-        std::cout << "HelloWorld type registered successfully" << std::endl;
         
         // 创建持久化服务配置信息
         PersistenceConfig config;
@@ -145,15 +140,14 @@ int main(int argc, char* argv[]) {
         }
         
  
-        std::cout << "\nEnhanced persistence service started successfully!" << std::endl;
-        std::cout << "Features: Statistics tracking, UI callbacks, compression, configurable cleanup" << std::endl;
+        std::cout << "\npersistence service started successfully!" << std::endl;
         std::cout << "Press Ctrl+C to stop..." << std::endl;
         
         // 主循环 - 定期显示统计信息
         while (g_running) {
             std::this_thread::sleep_for(std::chrono::seconds(30));
             
-            if (!g_running) break;  // 再次检查以便快速退出
+            if (!g_running) break;  
             
             // 获取统计信息
             auto stats = g_persistence_service->get_statistics();
@@ -177,7 +171,6 @@ int main(int argc, char* argv[]) {
         }
         
         // DomainParticipant 将通过 shared_ptr 的自定义删除器自动清理
-        // 不再需要手动删除
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

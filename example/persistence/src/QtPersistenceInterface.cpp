@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <chrono>
 
-USING_AGIDDS_NAMESPACE;
+TRAVODDS_NAMESPACE_BEGIN
 
 QtPersistenceInterface::QtPersistenceInterface(std::shared_ptr<PersistenceService> service)
     : persistence_service_(std::move(service))

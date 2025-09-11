@@ -21,7 +21,7 @@
 
 using namespace tinyxml2;
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef _XML_INTERFACE_CPP
 
@@ -34,7 +34,7 @@ public:
     /**
      * @brief 从指定的配置文件中加载Qos配置。
      * 
-     * @param xmlFilePath 
+     * @param [in] xmlFilePath 配置文件路径。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
      */
@@ -50,9 +50,9 @@ public:
     /**
      * @brief 获取域参与者工厂Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -66,9 +66,9 @@ public:
     /**
      * @brief 获取域参与者Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -82,9 +82,9 @@ public:
     /**
      * @brief 获取发布者Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -98,9 +98,9 @@ public:
     /**
      * @brief 获取订阅者Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -114,9 +114,9 @@ public:
     /**
      * @brief 获取数据写入者Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -131,9 +131,9 @@ public:
     /**
      * @brief 获取数据读取者Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -148,9 +148,9 @@ public:
     /**
      * @brief 获取主题Qos配置。
      * 
-     * @param library_name QoS库名称，允许为NULL，将转换为空字符串。 
-     * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
-     * @param qos_name QoS名称，允许为空，将转换为空字符串。
+     * @param [in] library_name QoS库名称，允许为NULL，将转换为空字符串。 
+     * @param [in] profile_name QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] qos_name QoS名称，允许为空，将转换为空字符串。
      * @param [in, out] qos 出口参数，获取到的Qos。
      * 
      * @return 成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -171,58 +171,408 @@ private:
     std::map<std::string, DataReaderQos> m_dataReaderQosMap;
     std::map<std::string, TopicQos> m_topicQosMap;
 private:
+    /**
+     * @brief 解析配置文件Qos标签获取主题Qos配置。
+     *
+     * @param [in] element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in] libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in] profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseQosProfile(XMLElement* element, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件DomainParticipantFactoryQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseDomainParticipantFactoryQosProfile(XMLElement* element, DomainParticipantFactoryQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件DomainParticipantQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseDomainParticipantQosProfile(XMLElement* element, DomainParticipantQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件PublisherQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parsePublisherQosProfile(XMLElement* element, PublisherQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件SubscriberQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseSubscriberQosProfile(XMLElement* element, SubscriberQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件DataWriterQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseDataWriterQosProfile(XMLElement* element, DataWriterQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件DataReaderQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseDataReaderQosProfile(XMLElement* element, DataReaderQos& qos, const std::string& libraryName, const std::string& profileName);
+    /**
+     * @brief 解析配置文件TopicQos标签获取Qos配置并将配置信息存储在对应Qos列表中。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     * @param [in]      libraryName QoS配置名称，允许为空，将转换为空字符串。
+     * @param [in]      profileName QoS名称，允许为空，将转换为空字符串。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     bool parseTopicQosProfile(XMLElement* element, TopicQos& qos, const std::string& libraryName, const std::string& profileName);
 
+    /**
+     * @brief 遍历配置文件DomainParticipantFactoryQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDomainParticipantFactoryQos(XMLElement* element, DomainParticipantFactoryQos& qos);
+    /**
+     * @brief 遍历配置文件DomainParticipantQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDomainParticipantQos(XMLElement* element, DomainParticipantQos& qos);
+    /**
+     * @brief 遍历配置文件PublisherQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parsePublisherQos(XMLElement* element, PublisherQos& qos);
+    /**
+     * @brief 遍历配置文件SubscriberQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseSubscriberQos(XMLElement* element, SubscriberQos& qos);
+    /**
+     * @brief 遍历配置文件DataWriterQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDataWriterQos(XMLElement* element, DataWriterQos& qos);
+    /**
+     * @brief 遍历配置文件DataReaderQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDataReaderQos(XMLElement* element, DataReaderQos& qos);
+    /**
+     * @brief 遍历配置文件TopicQos标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseTopicQos(XMLElement* element, TopicQos& qos);
 
+    /**
+     * @brief 遍历配置文件UserDataQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseUserDataQosPolicy(XMLElement* element, UserDataQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DurabilityQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDurabilityQosPolicy(XMLElement* element, DurabilityQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件PresentationQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parsePresentationQosPolicy(XMLElement* element, PresentationQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DeadlineQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDeadlineQosPolicy(XMLElement* element, DeadlineQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件LatencyBudgetQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseLatencyBudgetQosPolicy(XMLElement* element, LatencyBudgetQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件OwnershipQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseOwnershipQosPolicy(XMLElement* element, OwnershipQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件OwnershipStrengthQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseOwnershipStrengthQosPolicy(XMLElement* element, OwnershipStrengthQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件LivelinessQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseLivelinessQosPolicy(XMLElement* element, LivelinessQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件TimeBasedFilterQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseTimeBasedFilterQosPolicy(XMLElement* element, TimeBasedFilterQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件PartitionQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parsePartitionQosPolicy(XMLElement* element, PartitionQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件ReliabilityQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseReliabilityQosPolicy(XMLElement* element, ReliabilityQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DestinationOrderQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDestinationOrderQosPolicy(XMLElement* element, DestinationOrderQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件HistoryQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseHistoryQosPolicy(XMLElement* element, HistoryQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件ResourceLimitsQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseResourceLimitsQosPolicy(XMLElement* element, ResourceLimitsQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件EntityFactoryQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseEntityFactoryQosPolicy(XMLElement* element, EntityFactoryQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件WriterDataLifecycleQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseWriterDataLifecycleQosPolicy(XMLElement* element, WriterDataLifecycleQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件ReaderDataLifecycleQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseReaderDataLifecycleQosPolicy(XMLElement* element, ReaderDataLifecycleQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件TopicDataQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseTopicDataQosPolicy(XMLElement* element, TopicDataQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件GroupDataQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseGroupDataQosPolicy(XMLElement* element, GroupDataQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件TransportPriorityQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseTransportPriorityQosPolicy(XMLElement* element, TransportPriorityQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件LifespanQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseLifespanQosPolicy(XMLElement* element, LifespanQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DurabilityServiceQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDurabilityServiceQosPolicy(XMLElement* element, DurabilityServiceQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件Duration_t标签节点值获取。
+     *
+     * @param [in]      element     XML配置文件句柄。
+     * @param [in, out] duration    Duration_t格式时间值。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseDuration(XMLElement* element, Duration_t& duration);
+    /**
+     * @brief 遍历配置文件整数标签子节点值配置获取。
+     *
+     * @param [in]      element     XML配置文件句柄。
+     * @param [in, out] value       获取到的整数值。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parsePositiveIntegerUnlimited(XMLElement* element, int& value);
+    /**
+     * @brief 遍历配置文件base64编码的字符串和hex编码的字符串节点值获取。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] value       字符序列。
+     *
+     * @return 成功返回true，否则返回false。
+     */
     static bool parseBase64Binary(XMLElement* element, Sequence<octet>& value);
-    
+
+    /**
+     * @brief DomainParticipantFactoryQos初始化。
+     *
+     * @param [in, out] qos 要初始化的Qos。
+     */
      static void dpfQosDefault(DomainParticipantFactoryQos& qos) {
          qos.entity_factory.autoenable_created_entities = true;
      }
 
+     /**
+      * @brief DomainParticipantQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void dpQosDefault(DomainParticipantQos& qos) {
          qos.user_data.value.clear();
          qos.entity_factory.autoenable_created_entities = true;
      }
 
+     /**
+      * @brief PublisherQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void publisherQosDefault(PublisherQos& qos) {
          qos.presentation.access_scope = INSTANCE_PRESENTATION_QOS;
          qos.presentation.coherent_access = false;
@@ -232,6 +582,11 @@ private:
          qos.entity_factory.autoenable_created_entities = true;
      }
 
+     /**
+      * @brief SubscriberQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void subscriberQosDefault(SubscriberQos& qos) {
          qos.presentation.access_scope = INSTANCE_PRESENTATION_QOS;
          qos.presentation.coherent_access = false;
@@ -241,6 +596,11 @@ private:
          qos.entity_factory.autoenable_created_entities = true;
      }
 
+     /**
+      * @brief TopicQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void topicQosDefault(TopicQos& qos) {
          qos.topic_data.value.clear();
          qos.durability.kind = VOLATILE_DURABILITY_QOS;
@@ -267,6 +627,11 @@ private:
          qos.ownership.kind = SHARED_OWNERSHIP_QOS;
      }
 
+     /**
+      * @brief DataWriterQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void datawriterQosDefault(DataWriterQos& qos) {
          qos.durability.kind = VOLATILE_DURABILITY_QOS;
          qos.durability_service.service_cleanup_delay = TIME_ZERO;
@@ -295,6 +660,11 @@ private:
          qos.writer_data_lifecycle.autodispose_unregistered_instances = true;
      }
 
+     /**
+      * @brief DataReaderQos初始化。
+      *
+      * @param [in, out] qos 要初始化的Qos。
+      */
      static void datareaderQosDefault(DataReaderQos& qos) {
          qos.durability.kind = VOLATILE_DURABILITY_QOS;
          qos.deadline.period = TIME_INFINITE;
@@ -317,7 +687,7 @@ private:
      }
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif //_XML_INTERFACE_CPP
 

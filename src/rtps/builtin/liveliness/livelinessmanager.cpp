@@ -6,7 +6,7 @@
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
 #include <algorithm>
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 LivelinessManager::LivelinessManager(Participant* participant):participant_(participant)
 {
@@ -26,6 +26,13 @@ LivelinessManager::LivelinessManager(Participant* participant):participant_(part
 
 LivelinessManager::~LivelinessManager()
 {
+	if (autoTimer_) {
+		autoTimer_->Exit();
+	}
+	if (manualTimer_) {
+		manualTimer_->Exit();
+	}
+
 	if (ParticipantMessageDataWriter_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageDataWriter_->GetGuid());
 		participant_->DeleteWriter(handle);
@@ -87,7 +94,7 @@ bool LivelinessManager::AddLivelinessWriter(std::shared_ptr<Writer> writerPtr, c
 
 		if (!localWriterLivelinessManager_->AddWriter(LivelinesStatus(writerPtr->GetGuid(),qos))) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS AddWriter Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS AddWriter Err");
 		}
 	}
 	else if (qos.kind == MANUAL_BY_TOPIC_LIVELINESS_QOS) {
@@ -96,7 +103,7 @@ bool LivelinessManager::AddLivelinessWriter(std::shared_ptr<Writer> writerPtr, c
 
 		if (!localWriterLivelinessManager_->AddWriter(LivelinesStatus(writerPtr->GetGuid(),qos))) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS AddWriter Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS AddWriter Err");
 		}
 	}
 
@@ -113,7 +120,7 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 
 		if (!RemoveWriterMap(writerPtr->GetGuid(), automaticWriters_)) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "AUTOMATIC RemoveWriterMap Err");
+			TRAVODDS_LOG(LOG_ERROR, "AUTOMATIC RemoveWriterMap Err");
 			return false;
 		}
 
@@ -123,13 +130,13 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 
 		if (!RemoveWriterMap(writerPtr->GetGuid(), manualByParticipantWriters_)) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS RemoveWriterMap Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS RemoveWriterMap Err");
 			return false;
 		}
 
 		if (!localWriterLivelinessManager_->RemoveWriter(writerPtr->GetGuid())) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS RemoveWriter Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_PARTICIPANT_LIVELINESS_QOS RemoveWriter Err");
 		}
 
 		return UpdateTimer(MANUAL_BY_PARTICIPANT_LIVELINESS_QOS);
@@ -138,13 +145,13 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 
 		if (!RemoveWriterMap(writerPtr->GetGuid(), manualByTopicWriters_)){
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS RemoveWriterMap Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS RemoveWriterMap Err");
 			return false;
 		}
 
 		if (!localWriterLivelinessManager_->RemoveWriter(writerPtr->GetGuid())) {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS RemoveWriter Err");
+			TRAVODDS_LOG(LOG_ERROR, "MANUAL_BY_TOPIC_LIVELINESS_QOS RemoveWriter Err");
 		}
 		return true;
 	}
@@ -185,7 +192,7 @@ bool LivelinessManager::RemoveWriterMap(GUID_t guid, std::map<GUID_t, std::share
 	auto it = writers.find(guid);
 
 	if (it == writers.end()) {
-		AGILOG(AGILOG_ERROR, "guid is not exist");
+		TRAVODDS_LOG(LOG_ERROR, "guid is not exist");
 		return false;
 	}
 
@@ -249,7 +256,7 @@ bool LivelinessManager::RemoveLivelinessReader(std::shared_ptr<Reader> readerPtr
 	}
 
 	/* TODO 日志 */
-	AGILOG(AGILOG_ERROR, "guid is not exist");
+	TRAVODDS_LOG(LOG_ERROR, "guid is not exist");
 	return false;
 }
 
@@ -278,7 +285,7 @@ bool LivelinessManager::ParticipantLivelinessChecker()
  			return SendLivelinessMessage(manualHandle_);
 		}
 	}
-	AGILOG(AGILOG_ERROR, "manualByParticipantWriters_.size() <= 0", manualByParticipantWriters_.size());
+	//AGILOG(AGILOG_ERROR, "manualByParticipantWriters_.size() <= 0", manualByParticipantWriters_.size());
 	return false;
 }
 
@@ -303,7 +310,7 @@ bool LivelinessManager::SendLivelinessMessage(const InstanceHandle_t& instance)
 	
 	std::shared_ptr<CacheChange> cacheChange = ParticipantMessageDataWriter_->NewChange(ChangeKind_t::ALIVE, buffer, instance, time);
 	if (nullptr == cacheChange) {
-		AGILOG(AGILOG_ERROR, "create newChange Err");
+		TRAVODDS_LOG(LOG_ERROR, "create newChange Err");
 		return false;
 	}
 
@@ -315,7 +322,8 @@ void LivelinessManager::SetParticipantMessageDataWriter(std::shared_ptr<DataWrit
 {
 	DataWriterQos writerQos;
 	dataWriter->get_qos(writerQos);
-	std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,true, ENTITY_WRITER);
+    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, guid, true);
 	ParticipantMessageDataWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
 }
 
@@ -323,7 +331,8 @@ void LivelinessManager::SetParticipantMessageDataReader(std::shared_ptr<DataRead
 {
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
-	std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), readerQos, ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER, true, ENTITY_READER);
+	std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), readerQos, guid, true);
 	ParticipantMessageDataReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
 
 	reader->SetReaderListener(this);
@@ -361,7 +370,7 @@ void LivelinessManager::LiveLinessStatusChanged(const GUID_t& writerGuid, bool l
 
 void LivelinessManager::LocalStatusChanged(const GUID_t & writer, const LivelinessQosPolicy & livelinessQos, WriterStatus status)
 {
-	if (NOTALIVE == status) {
+	if (WriterStatus::LIVELINESSALIVE != status) {
 		return;
 	}
 		

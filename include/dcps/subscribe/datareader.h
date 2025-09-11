@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
-#define AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
+#ifndef TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H
+#define TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H
 #include "type/builtintopicdata.h"
 #include "dcps/listener/datareaderlistener.h"
 #include "dcps/domain/domainentity.h"
@@ -18,13 +18,13 @@
 #include "dcps/condition/readcondition.h"
 #include "dcps/condition/querycondition.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Subscriber;
 
 typedef SequenceBase DataSeq;
 /**
- * DataReader类，包含订阅者行为的实际实现。
+ * @brief DataReader类，包含数据读者行为的实际实现。
  */
 class DDS_DLL DataReader : public virtual  DomainEntity {
 public:
@@ -57,7 +57,7 @@ public:
      * 设置DataReaderListener。
      *
      * @param [in] listener 新的DataReaderListener指针。
-     * @param [in] mask 保存监听器响应的状态StatusMask对象.
+     * @param [in] mask 保存监听器响应的状态StatusMask位掩码.
      *
      * @return RETCODE_OK
      */
@@ -235,7 +235,7 @@ public:
      * @param [in,out] data_values     将返回接收到的数据样本的LoanableCollection对象。
      * @param [in,out] sample_infos    将返回接收到的样本信息的SampleInfoSeq对象。
      * @param [in]     max_samples     要返回的最大样本数。
-     * @param [in]     a_condition     返回data_values的ReadCondition必须通过验证
+     * @param [in]     readcondition   返回data_values的ReadCondition必须通过验证
      *
      * @return 任何标准返回代码。
      */
@@ -256,7 +256,7 @@ public:
      * @param [in,out] sample_infos    将返回接收到的样本信息的SampleInfoSeq对象。
      * @param [in]     max_samples     要返回的最大样本数。如果提供了特殊值LENGTH_UNLIMITED，
      *                                 则将按原样返回任意数量的样本。
-     * @param [in]     a_condition     返回data_values的ReadCondition必须通过验证
+     * @param [in]     readcondition   返回data_values的ReadCondition必须通过验证
      *
      * @return 任何标准返回代码。
      */
@@ -274,8 +274,8 @@ public:
      *
      * 如果DataReader中没有未读数据，则操作将返回RETCODE_NO_DATA，并且不会复制任何内容。
      *
-     * @param [out] data 存储样本的数据指针。
-     * @param [out] info 用于存储示例信息的SampleInfo指针。
+     * @param [out] data_value  存储样本的数据指针。
+     * @param [out] sample_info 用于存储示例信息的SampleInfo指针。
      *
      * @return 任何标准返回代码。
      */
@@ -295,8 +295,8 @@ public:
      *
      * 如果DataReader中没有未读数据，则操作将返回RETCODE_NO_DATA，并且不会复制任何内容。
      *
-     * @param [out] data 存储样本的数据指针。
-     * @param [out] info 用于存储示例信息的SampleInfo指针。
+     * @param [out] data_value  存储样本的数据指针。
+     * @param [out] sample_info 用于存储示例信息的SampleInfo指针。
      *
      * @return 任何标准返回代码。
      */
@@ -305,10 +305,10 @@ public:
     /**
      * 从DataReader访问数据样本的集合。
      *
-     * 此操作从DataReader访问数据值的集合。该行为与read相同，只是返回的所有样本都属于句柄为a_handle的单个指定实例。
+     * 此操作从DataReader访问数据值的集合。该行为与read相同，只是返回的所有样本都属于句柄为handle的单个指定实例。
      *
      * 成功完成后，数据收集将包含所有属于同一实例的样本。
-     * 相应的SampleInfo验证SimpleInfo::instance_handle == a_handle。
+     * 相应的SampleInfo验证SimpleInfo::instance_handle == handle。
      *
      * 此操作在语义上等同于read操作，但在构建集合时除外。
      * DataReader将检查样本是否属于指定的实例，否则它不会将样本放在返回的集合中。
@@ -322,10 +322,10 @@ public:
      * @param [in,out] sample_infos    将返回接收到的样本信息的SampleInfoSeq对象。
      * @param [in]     max_samples     要返回的最大样本数。如果提供了特殊值LENGTH_UNLIMITED，
                                        则将返回尽可能多的可用样本，最高可达read()在文档中描述的限制。
-     * @param [in]     a_handle        要返回样本的指定实例。该方法将失败如果句柄与DataReader已知
+     * @param [in]     handle          要返回样本的指定实例。该方法将失败如果句柄与DataReader已知
      *                                 的现有数据对象不对应，则返回RETCODE_BAD_DATAMETER。
      * @param [in]     sample_states   只有sample_state与其中之一匹配的数据样本才会被返回。
-     * @param [in]     view_states     只有view_state与其中之一匹配的数据样本才会被返回。
+     * @param [in]     samole_states   只有view_state与其中之一匹配的数据样本才会被返回。
      * @param [in]     instance_states 只有instance_state与其中之一匹配的数据样本才会被返回。
      *
      * @return 任何标准返回代码。
@@ -349,10 +349,10 @@ public:
      * @param [in,out] sample_infos    一个SampleInfoSeq对象，将返回接收到的样本信息。
      * @param [in]     max_samples     要返回的最大样本数量。如果提供了特殊值LENGTH_UNLIMITED，
      *                                 将返回尽可能多的可用样本，但不超过read()文档中所述的限制。
-     * @param [in]     a_handle        指定用于返回样本的实例。若该句柄与DataReader所识别的现有数据对象不匹配，
+     * @param [in]     handle          指定用于返回样本的实例。若该句柄与DataReader所识别的现有数据对象不匹配，
      *                                 则此方法将无法执行，返回RETCODE_BAD_PARAMETER。
      * @param [in]     sample_states   仅匹配这些选项之一的sample_state的数据样本将被返回。
-     * @param [in]     view_states     仅会返回与view_state的值之一相匹配的数据样本。
+     * @param [in]     samole_states   仅会返回与view_state的值之一相匹配的数据样本。
      * @param [in]     instance_states 仅会返回与instance_state匹配其中任一值的数据样本。
      *
      * @return 任何标准返回代码。
@@ -433,7 +433,7 @@ public:
     virtual ReturnCode_t take_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask samole_states, InstanceStateMask instance_states) = 0;
 
     /**
-     * 此操作通过DataReader访问数据值集合。其行为与@ref read_next_instance类似，但返回的所有样本均符合特定条件。
+     * 此操作通过DataReader访问数据值集合。其行为与 read_next_instance类似，但返回的所有样本均符合特定条件。
      * 具体而言，成功时返回的所有样本均属于同一实例，且该实例满足以下两个条件：
      * (a) instance_handle大于或等于previous_handle；
      * (b) 在所有具有指定ReadCondition评估为真的样本的实例中，该实例是“最小”的一个。
@@ -453,7 +453,7 @@ public:
      * @param [in]     max_samples     要返回的最大样本数量。如果提供了特殊值LENGTH_UNLIMITED，
      *                                 将返回尽可能多的可用样本，但不超过read()文档中所述的限制。
      * @param [in]     previous_handle 将返回值大于此值且拥有可用样本的“下一个最小”实例。
-     * @param [in]     a_condition     返回data_values的ReadCondition必须通过验证。
+     * @param [in]     readCondition     返回data_values的ReadCondition必须通过验证。
      *
      * @return 任何标准返回代码。
      */
@@ -479,7 +479,7 @@ public:
      * @param [in]     max_samples     要返回的最大样本数量。如果提供了特殊值LENGTH_UNLIMITED，
      *                                 将返回尽可能多的可用样本，但不超过read()文档中所述的限制。
      * @param [in]     previous_handle 将返回值大于此值且拥有可用样本的“下一个最小”实例。
-     * @param [in]     a_condition     返回data_values的ReadCondition必须通过验证。
+     * @param [in]     readCondition     返回data_values的ReadCondition必须通过验证。
      *
      * @return 任何标准返回代码。
      */
@@ -516,7 +516,7 @@ public:
     /**
      * 此操作可用于获取与instance_handle对应的实例键值。该操作仅会填充键值持有者实例中的键值字段。
      *
-     * 如果InstanceHandle_t类型的a_handle不对应于DataReader所知的现有数据对象，则此操作可能会返回BAD_PARAMETER。
+     * 如果InstanceHandle_t类型的handle不对应于DataReader所知的现有数据对象，则此操作可能会返回BAD_PARAMETER。
      * 若实现无法验证无效的句柄，则此情况下的结果将是不确定的。
      *
      * @param [in,out] key_holder
@@ -563,9 +563,9 @@ public:
     virtual QueryCondition* create_querycondition(SampleStateMask smaple_states, ViewStateMask  view_states, InstanceStateMask  instance_states, const std::string& query_expression, const StringSeq& query_parameters) = 0;
 
     /**
-     * @brief This operation deletes a ReadCondition attached to the DataReader.
+     * @brief 此操作删除附加到DataReader的ReadCondition类信息。
      *
-     * @param a_condition pointer to a ReadCondition belonging to the DataReader
+     * @param condition 指向属于DataReader的ReadCondition的指针。
      * @return RETCODE_OK
      */
     virtual ReturnCode_t delete_readcondition(ReadCondition* condition) = 0;
@@ -582,7 +582,9 @@ public:
     /**
      * @brief 获取请求的截止日期已错过状态。
      *
-     * @return 已错过截止日期状态。
+     * @param [out] status 返回RequestedDeadlineMissedStatus状态对象。
+     * 
+     * @return RETCODE_OK。
      */
     virtual ReturnCode_t get_requested_deadline_missed_status(RequestedDeadlineMissedStatus& status) = 0;
 
@@ -596,7 +598,7 @@ public:
     virtual ReturnCode_t get_requested_incompatible_qos_status(RequestedIncompatibleQosStatus& status) = 0;
 
     /**
-     * @brief 获取SAMPLE_LOST状态。
+     * @brief 获取样本丢失状态。
      *
      * @param [out] status 返回包含通信状态的SampleLostStatus对象。
      *
@@ -605,7 +607,7 @@ public:
     virtual ReturnCode_t get_sample_lost_status(SampleLostStatus& status) const = 0;
 
     /**
-     * @brief 获取SAMPLE_REJECTED通信状态
+     * @brief 获取被拒收通信状态
      *
      * @param [out] status 返回包含通信状态的SampleRejectedStatus对象。
      *
@@ -617,12 +619,13 @@ public:
      * @brief 返回订阅匹配状态。
      *
      * @param [out] status 订阅匹配状态结构。
+     * 
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_subscription_matched_status(SubscriptionMatchedStatus& status) const = 0;
 
     /**
-     * Get TopicDescription。
+     * 获取TopicDescription信息。
      *
      * @return TopicDescription指针。
      */
@@ -630,6 +633,7 @@ public:
 
     /**
      * @brief 获取Subscriber。
+     * 
      * @return Subscriber指针。
      */
     virtual const Subscriber* get_subscriber() const = 0;
@@ -658,7 +662,7 @@ public:
      * @brief 在与DataWriter匹配关联的发布者中检索。
      *
      * @param [out] publication_data 发布信息数据结构。
-     * @param publication_handle 发布的InstanceHandle_t。
+     * @param [in] publication_handle 发布的InstanceHandle_t。
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_matched_publication_data(PublicationBuiltinTopicData& publication_data, const InstanceHandle_t& publication_handle) const = 0;
@@ -668,8 +672,6 @@ public:
      *
      * @param [out] publication_handles 返回InstanceHandle_t的容器
      * @return RETCODE_OK
-     *
-     * @warning 尚未支持。当前返回RETCODE_UNSUPPORTED
      */
     virtual ReturnCode_t get_matched_publications(InstanceHandleSeq& publication_handles) const = 0;
 
@@ -682,7 +684,7 @@ public:
      * @param profile_name QoS配置名称，允许为空，将转换为空字符串。
      * @param qos_name QoS名称，允许为空，将转换为空字符串。
      * 
-     * @return 设置成功返回DDS_RETCODE_OK，否则返回DDS_RETCODE_ERROR。
+     * @return 设置成功返回RETCODE_OK，否则返回RETCODE_ERROR。
      */
     virtual ReturnCode_t set_qos_with_profile(
         const char* library_name, 
@@ -694,6 +696,6 @@ public:
 
 using DataReaderSeq = Sequence<DataReader*>;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_SUBSCRIBE_DATAREADER_H
+#endif // !TRAVODDS_DCPS_SUBSCRIBE_DATAREADER_H

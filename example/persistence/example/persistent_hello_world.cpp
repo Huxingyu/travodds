@@ -8,7 +8,7 @@
 #include "../../cpp/hello_world/HelloWorld.h"
 #include "../../cpp/hello_world/HelloWorldTypeSupport.h"
 
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE;
 
 // 获取策略名称字符串
 const char* get_strategy_name(DurabilityQosPolicyKind kind) {

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace {
     constexpr size_t MB_TO_BYTES = 1024 * 1024;
@@ -163,4 +163,4 @@ void MemoryCache::add_to_head(const std::shared_ptr<CacheNode>& node) {
     head_->next = node;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

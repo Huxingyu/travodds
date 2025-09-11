@@ -5,7 +5,7 @@
 #include <map>
 #include <cstdio>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace {
     constexpr int64_t MICROSECONDS_PER_SECOND = 1000000;
@@ -166,7 +166,7 @@ bool DatabaseManager::recover_corrupted_database() {
 }
 
 bool DatabaseManager::create_tables() {
-    // 核心数据表：dds_samples - 生产级持久化服务数据表
+    // 核心数据表：dds_samples 
     const std::string dds_samples_table = R"(
         CREATE TABLE IF NOT EXISTS dds_samples (
             topic_name TEXT NOT NULL,
@@ -1323,4 +1323,4 @@ auto DatabaseManager::guid_to_builtin_key(const std::vector<uint8_t>& prefix, co
     return key;
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

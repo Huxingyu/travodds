@@ -15,7 +15,7 @@
 #include <set>
 #include <chrono>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 PersistenceService::PersistenceService(const PersistenceConfig& config)
     : config_(config) {
@@ -76,7 +76,6 @@ void PersistenceService::shutdown() {
         return;
     }
     
-    std::cout << "[PersistenceService] Shutting down..." << std::endl;
     
     // 停止发现线程
     discovery_running_ = false;
@@ -347,7 +346,7 @@ void PersistenceService::on_publication_discovered(const std::string& topic_name
     std::cout << "[PersistenceService] Persistent Publication: " 
               << topic_name << " (" << durability_kind_to_string(durability) << ") Type: " << type_name << std::endl;
     
-    // 保存Topic信息 - 生产级持久化服务核心
+    // 保存Topic信息 
     {
         std::lock_guard<std::mutex> lock(topic_info_mutex_);
         TopicInfo& info = topic_info_map_[topic_name];
@@ -408,7 +407,7 @@ void PersistenceService::on_subscription_discovered(const std::string& topic_nam
     std::cout << "[PersistenceService] Persistent Subscription: " 
               << topic_name << " (" << durability_kind_to_string(durability) << ")" << std::endl;
     
-    // 保存Topic信息（如果还没有保存的话）
+    // 保存Topic信息
     {
         std::lock_guard<std::mutex> lock(topic_info_mutex_);
         if (topic_info_map_.find(topic_name) == topic_info_map_.end()) {
@@ -431,24 +430,20 @@ void PersistenceService::on_subscription_discovered(const std::string& topic_nam
         ui_callback_->on_reader_discovered(topic_name, type_name);
     }
     
-    // 根据DDS持久化服务规范：
     // 当发现新的Subscription时，需要确保有DataWriter可以发送历史数据
     // 如果还没有为此topic创建DataWriter，现在创建一个
     {
         std::lock_guard<std::mutex> lock(writers_mutex_);
         if (topic_writers_.find(topic_name) == topic_writers_.end()) {
             std::cout << "[PersistenceService] Creating DataWriter for historical data sending: " << topic_name << std::endl;
-            // 注意：这里需要释放锁，因为create_data_writer_for_topic内部会获取锁
         }
     }
     
     // 在锁外创建DataWriter以避免死锁
     if (topic_writers_.find(topic_name) == topic_writers_.end()) {
-        if (create_data_writer_for_topic(topic_name, type_name, durability)) {
-            std::cout << "[PersistenceService] Created DataWriter for historical data sending: " << topic_name << std::endl;
-        } else {
+        if (!create_data_writer_for_topic(topic_name, type_name, durability)) {
             std::cerr << "[PersistenceService] Failed to create DataWriter for topic: " << topic_name << std::endl;
-            return; // 如果无法创建DataWriter，就无法发送历史数据
+            return; 
         }
     }
     
@@ -512,7 +507,7 @@ auto PersistenceService::create_data_reader_for_topic(const std::string& topic_n
         topic_readers_[topic_name] = std::shared_ptr<DataReader>(reader);
         topic_durability_[topic_name] = durability;
         
-        // ✅ 记录自己创建的DataReader句柄，避免在发现时将其存入数据库
+        // 记录自己创建的DataReader句柄，避免在发现时将其存入数据库,后续可以替换为持久化服务自己独有的guid或Qos
         {
             std::lock_guard<std::mutex> entities_lock(own_entities_mutex_);
             own_datareader_handles_.insert(reader->get_instance_handle());
@@ -562,7 +557,7 @@ void PersistenceService::poll_data_readers() {
                     continue;
                 }
                 
-                // 获取topic的durability类型和真实的type_name
+                // 获取topic的durability类型和type_name
                 auto durability_it = topic_durability_.find(topic_name);
                 if (durability_it == topic_durability_.end()) {
                     std::cout << "[PersistenceService] Warning: No durability info for topic: " << topic_name << std::endl;
@@ -571,7 +566,7 @@ void PersistenceService::poll_data_readers() {
                 
                 DurabilityQosPolicyKind durability = durability_it->second;
                 
-                // 获取真实的type_name - 生产级持久化服务关键改进
+                // 获取type_name 
                 std::string real_type_name;
                 {
                     std::lock_guard<std::mutex> lock(topic_info_mutex_);
@@ -588,7 +583,7 @@ void PersistenceService::poll_data_readers() {
                 // 创建StoredData对象
                 StoredData stored_data;
                 stored_data.topic_name = topic_name;
-                stored_data.type_name = real_type_name; // 使用真实的type_name，不再硬编码
+                stored_data.type_name = real_type_name; 
                 stored_data.instance_id = "instance_" + std::to_string(reinterpret_cast<uintptr_t>(&sample_info.instance_handle));
                 stored_data.durability_kind = durability;
                 stored_data.is_disposed = (sample_info.instance_state == NOT_ALIVE_DISPOSED_INSTANCE_STATE);
@@ -677,7 +672,7 @@ auto PersistenceService::create_data_writer_for_topic(const std::string& topic_n
         // 保存writer信息（转换为shared_ptr）
         topic_writers_[topic_name] = std::shared_ptr<DataWriter>(writer);
         
-        // ✅ 记录自己创建的DataWriter句柄，避免在发现时将其存入数据库
+        //记录自己创建的DataWriter句柄，避免在发现时将其存入数据库
         {
             std::lock_guard<std::mutex> entities_lock(own_entities_mutex_);
             own_datawriter_handles_.insert(writer->get_instance_handle());
@@ -830,7 +825,7 @@ void PersistenceService::check_new_publications(std::set<std::string>& processed
             // 标记为已处理
             processed_publications.insert(handle_str);
             
-            // ✅ 检查是否是自己创建的DataWriter - 避免存储自己的实体
+            // 检查是否是自己创建的DataWriter - 避免存储自己的实体
             {
                 std::lock_guard<std::mutex> lock(own_entities_mutex_);
                 if (own_datawriter_handles_.find(handle) != own_datawriter_handles_.end()) {
@@ -892,7 +887,7 @@ void PersistenceService::check_new_subscriptions(std::set<std::string>& processe
             // 标记为已处理
             processed_subscriptions.insert(handle_str);
             
-            // ✅ 检查是否是自己创建的DataReader - 避免存储自己的实体
+            //检查是否是自己创建的DataReader - 避免存储自己的实体
             {
                 std::lock_guard<std::mutex> lock(own_entities_mutex_);
                 if (own_datareader_handles_.find(handle) != own_datareader_handles_.end()) {
@@ -1099,4 +1094,4 @@ bool PersistenceService::should_send_historical_data(const std::string& topic_na
     }
 }
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

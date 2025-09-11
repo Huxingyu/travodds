@@ -1,6 +1,8 @@
 #include "cdr/md5.h"
 #include <string.h>
 
+TRAVODDS_NAMESPACE_BEGIN
+
 #define F(x,y,z) ((x & y) | (~x & z))
 #define G(x,y,z) ((x & z) | (y & ~z))
 #define H(x,y,z) (x^y^z)
@@ -174,3 +176,4 @@ void MD5::transform(const uint8_t block[64]) {
     state[3] += d;
 }
 
+TRAVODDS_NAMESPACE_END

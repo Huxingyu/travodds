@@ -5,9 +5,11 @@
 #include "common/time/ddstimer.h"
 #include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
-#include <rtps/builtin/liveliness/livelinessmanager.h>
+#include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/flowcontrol/flowcontroller.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+#include <chrono>
+USING_TRAVODDS_NAMESPACE;
 
 StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
 	: Writer(qos, kind)
@@ -21,7 +23,9 @@ StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, con
 }
 
 StatefulWriter::~StatefulWriter() {
-
+	if (timer_) {
+		timer_->Exit();
+	}
 }
 void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
@@ -69,17 +73,33 @@ std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGu
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
-	return matchedReaders_[readerGuid];
+	auto itor = matchedReaders_.find(readerGuid);
+	if (itor == matchedReaders_.end()) {
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		return nullptr;
+	}
+	return itor->second;
 }
 
-bool StatefulWriter::WaitForAcknowledgments(const Duration_t & max_wait)
+ReturnCode_t StatefulWriter::WaitForAcknowledgments(const Duration_t & max_wait)
 {
-	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
+	{
+		std::lock_guard<std::mutex> lock(readerPorxyMutex_);
+		if (CheckAllAcked()) {
+			return RETCODE_OK;
+		}
+	}
+	std::chrono::nanoseconds maxW(max_wait.ToNs());
+	std::unique_lock<std::mutex> ackLock(allAckedMtx_);
+	auto result = condAllAcked_.wait_for(ackLock, maxW);
+	return result == std::cv_status::no_timeout ? RETCODE_OK : RETCODE_TIMEOUT;
+}
 
+bool StatefulWriter::CheckAllAcked()
+{
 	SequenceNumber_t sequenceNumber = writerCache_->GetSeqNumMax();
-	//TODO 超时机制待实现
-	for (auto reader : matchedReaders_) {
-		if (false == reader.second->IsAcked(sequenceNumber)) {
+	for (auto& reader : matchedReaders_) {
+		if (false == reader.second->IsAllAcked(sequenceNumber)) {
 			return false;
 		}
 	}
@@ -90,7 +110,7 @@ bool StatefulWriter::IsAckedByAll(SequenceNumber_t changeSeqNum)
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
-	for (auto readerProxy : matchedReaders_) {
+	for (const auto& readerProxy : matchedReaders_) {
 		if (false == readerProxy.second->IsAcked(changeSeqNum)) {
 			return false;
 		}
@@ -98,7 +118,7 @@ bool StatefulWriter::IsAckedByAll(SequenceNumber_t changeSeqNum)
 	return true;
 }
 
-ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change)
+ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
@@ -111,7 +131,7 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "messageTransmitter is nullptr");
 		}
 	}
 
@@ -119,7 +139,7 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 	for (auto& readerProxy : matchedReaders_) {
 		readerProxys.push_back(readerProxy.second);
 	}
-	DeliveryDataToReader(change, readerProxys);
+	DeliveryDataToReader(change, readerProxys, flowControl);
 
 	return RETCODE_OK;
 }
@@ -154,12 +174,12 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -167,6 +187,10 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 	if (RETCODE_RECEIVE_DUPLICATE == ret) {
 		// 返回RETCODE_RECEIVE_DUPLICATE，表示Ack报文接收重复，不处理
 		return RETCODE_OK;
+	} else if (RETCODE_OK == ret) {
+		if(CheckAllAcked()) {
+			condAllAcked_.notify_all();
+		}
 	}
 
 	if (qos_.durability.kind != TRANSIENT_LOCAL_DURABILITY_QOS) {
@@ -178,7 +202,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 	//返回值为1
 	if (RETCODE_REPEAT_REQUEXT == ret) {
 		// TODO 为RETCODE_REPEAT_REQUEXT，需要重传数据
-		ReSendData(proxy);
+		flowController_->ReSendData(this,proxy);
 	}
 	/* 需要强制回复一个HB报文 */
 	if (ackMsg.header.flags & !SubMessageFlag::FINAL_FLAG) {
@@ -198,12 +222,12 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_ERROR, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match readerproxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match readerproxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -213,7 +237,7 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 		return RETCODE_OK;
 	}
 
-	ReSendDataFrag(proxy, nackMsg);
+	flowController_->ReSendDataFrag(this, proxy, nackMsg);
 
 	//需要强制回复一个HBFrag报文
 	if (nackMsg.header.flags & SubMessageFlag::FINAL_FLAG) {
@@ -224,20 +248,13 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 	return RETCODE_OK;
 }
 
-ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys)
+ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, bool flowControl)
 {
 	if (nullptr == change || 0 == readerProxys.size()) {
 		return RETCODE_OK;
 	}
 
 	DataSubMessage_t dataSubMessage;
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-	srcLocators.push_back(srcLocator);
-	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	SerializedBuffer* buffer = change->serializedBuffer;
 	if (buffer->next) {
@@ -259,6 +276,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = change->sequenceNumber;
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
+		uint32_t sendFragCount = 0;
 		do {
 			/* 分片报文处理 */
 			uint32_t shift = 0;
@@ -272,7 +290,10 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			
 			LocatorVec dstLocators;
 			for (auto& reader : readerProxys) {
-
+				if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
+					SendGap({ change->sequenceNumber }, reader);
+					continue;
+				}
 				LocatorSeq& locators = reader->GetUnicastLocatorList();
 
 				dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
@@ -281,8 +302,17 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			std::sort(dstLocators.begin(), dstLocators.end());
 			dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
 
-			messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+			if (flowControl) {
+				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+			} else {
+				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+			}
 
+			/* TODO 添加延时 */
+			sendFragCount++;
+			if (0 == sendFragCount % DATAFRAG_DELAY_NUM) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 			buffer = buffer->next;
 		} while (buffer);
 
@@ -307,14 +337,6 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;
 
-		LocatorVec srcLocators;
-		Locator_t srcLocator;
-		srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-		srcLocators.push_back(srcLocator);
-		//TODO 发送报文
-		std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
 		uint32_t shift = 0;
 
 		MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
@@ -329,6 +351,10 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 		LocatorVec dstLocators;
 		for (auto& reader : readerProxys) {
+			if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
+				SendGap({ change->sequenceNumber }, reader);
+				continue;
+			}
 
 			LocatorSeq& locators = reader->GetUnicastLocatorList();
 
@@ -337,8 +363,11 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 		std::sort(dstLocators.begin(), dstLocators.end());
 		dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
-		messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-
+		if (flowControl) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+		} else {
+			participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+		}
 	}
 
 	return RETCODE_OK;
@@ -363,7 +392,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(bool liveliness)
 	HeartBeatSubMessage_t hbMsg;
 
 	for (auto& writerProxy : matchedReaders_) {
-		WriteHeartbeat(writerProxy.second, liveliness);
+		WriteHeartbeat(writerProxy.second, true,liveliness);
 	}
 	return RETCODE_OK;
 }
@@ -373,7 +402,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	//TODO 此函数可以发送HeartBeat报文,当时后续需要优化改进
 
 	if (!readerProxy) {
-		AGILOG(AGILOG_ERROR, "readerProxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "readerProxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -396,17 +425,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	LocatorSeq unicastList = readerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = readerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr");
-		return RETCODE_ERROR;
-	}
 	char data[1224] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -458,7 +476,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO 暂时屏蔽组播
 	// messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	
@@ -469,11 +487,11 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy)
 {
 	//TODO 
-	AGILOG(AGILOG_ERROR, " not support interface");
+	TRAVODDS_LOG(LOG_ERROR, " not support interface");
 	return RETCODE_UNSUPPORTED;
 }
 
-ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy)
+ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy, bool flowControl)
 {
 	SeqNumberVec gapVec;
 	SequenceNumber_t lastGapseq;
@@ -494,7 +512,7 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 			continue;
 		}
 
-		DeliveryDataToReader(change, readerProxys);
+		DeliveryDataToReader(change, readerProxys, flowControl);
 	}
 
 	SendGap(gapVec, readerProxy);
@@ -508,15 +526,12 @@ void StatefulWriter::RemoveAllAckedData()
 {
 	auto seq = writerCache_->GetSeqNumMin();
 	bool remove = true;
-	while (seq != SEQUENCENUMBER_UNKNOWN) {
-		IsAckedByAll(seq);
-		if (IsAckedByAll(seq)) {
-			writerCache_->RemoveChange(writerCache_->GetChange(seq));
-		}
-		else {
+	while (IsAckedByAll(seq)) {
+		writerCache_->RemoveChange(seq);
+		seq = writerCache_->GetSeqNumMin();
+		if (seq == SequenceNumber_t{ 0, 1 }) {
 			break;
 		}
-		seq = writerCache_->GetSeqNumMin();
 	}
 }
 
@@ -549,13 +564,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 		gapMsg.gapList.bitmap.size = s + 1;
 		gapMsg.gapList.bitmap.SetBit(s); 
 	}
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-	srcLocators.push_back(srcLocator);
-	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 	LocatorVec dstLocators = proxy->GetUnicastLocatorList();
 
@@ -571,23 +579,21 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	shift = 0;
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
 }
 
 /* 重传分片数据 */
-ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& datafrag)
+ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& datafrag, bool flowControl)
 {
 	ReturnCode_t ret = RETCODE_OK;
 
 	/* 找到对应的序号的数据 */
 	std::shared_ptr<CacheChange> cache =  writerCache_->GetChange(datafrag.writerSN);
 	if (cache) {
-		std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
 
 		DataFragSubMessage_t dataFragSubMessage;
 
-		if (0 != cache->inlineQos.size())
-		{
+		if (0 != cache->inlineQos.size()) {
 			dataFragSubMessage.header.flags |= SubMessageFlag::INLINE_QOS_FLAG;
 			dataFragSubMessage.inlineQos = cache->inlineQos;
 		}
@@ -604,30 +610,49 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
 
 		SerializedBuffer* buffer = cache->serializedBuffer;
-		LocatorVec srcLocators;
-		Locator_t srcLocator;
-		srcLocator.kind = LOCATOR_KIND_UDPv4;
-
-		srcLocators.push_back(srcLocator);
 		LocatorVec dstLocators = readerProxy->GetUnicastLocatorList();
-		int num = 0;
-		for (int32_t i = 1; i <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; i++, num) {
 
-			if (i == datafrag.fragmentNumberState.bitmapBase + num) {
+        for(uint32_t i = 1; i < datafrag.fragmentNumberState.bitmapBase; i++)
+        {
+            if(nullptr != buffer){
+                buffer = buffer->next;
+            }
+        }
 
-					if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
+        if(nullptr == buffer){
+            TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
+			return RETCODE_ERROR;
+        }
 
-					uint32_t shift = 0;
-					dataFragSubMessage.dataFrag.fragmentsInSubmessage = 1;
-					dataFragSubMessage.dataFrag.fragmentSize = DATAMESSAGE_LIMIT;
-					dataFragSubMessage.dataFrag.fragmentStartingNum = i;
-					dataFragSubMessage.dataFrag.sampleSize = cache->dataSize;
-					MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
+		/* TODO  */
+		int32_t fragSendCount = 0;
+		for (int32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
+			if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
 
-					MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
-					messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+		        if(nullptr == buffer){
+		            TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
+					return RETCODE_ERROR;
+		        }
+			
+				uint32_t shift = 0;
+				dataFragSubMessage.dataFrag.fragmentsInSubmessage = 1;
+				dataFragSubMessage.dataFrag.fragmentSize = DATAMESSAGE_LIMIT;
+				dataFragSubMessage.dataFrag.fragmentStartingNum = num + datafrag.fragmentNumberState.bitmapBase;
+				dataFragSubMessage.dataFrag.sampleSize = cache->dataSize;
+				MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
+				
+				MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
+				if (flowControl) {
+					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				} else {
+					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
 				}
-				num++;
+				
+				fragSendCount++;
+
+				if (0 == fragSendCount % DATAFRAG_DELAY_NUM) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				}
 			}
 			buffer = buffer->next;
 		}

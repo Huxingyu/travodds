@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_DISCOVERY_SPDP_H
-#define AGIDDS_RTPS_DISCOVERY_SPDP_H
+#ifndef TRAVODDS_RTPS_DISCOVERY_SPDP_H
+#define TRAVODDS_RTPS_DISCOVERY_SPDP_H
 
 #include "rtps/endpoint/participant.h"
 #include "rtps/endpoint/statelesswriter.h"
@@ -20,7 +20,7 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Discovery;
 
@@ -114,20 +114,63 @@ public:
 	 */
 	void CheckRemoteParticipantDuration();
 
+	/**
+	 * @brief 获取已过期参与者。
+	 *
+	 * @param [out] keys 已过期参与者键值集合。
+	 */
 	void GetOverdueParticipant(std::vector<BuiltinTopicKey_t>& keys);
 
+	/**
+	 * @brief 获取已发现的参与者。
+	 *
+	 * @param [out] keys 已发现参与者句柄集合。
+	 */
 	void GetDiscoveredParticipants(InstanceHandleSeq& participant_handles);
 
+	/**
+	 * @brief 根据参与者BuiltinTopicKey_t键值获取指定参与者配置信息。
+	 *
+	 * @param [in]  key  参与者键值。
+	 * @param [out] data 键值对应的参与者配置信息。
+	 * 
+	 * @return 获取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
 	int GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data);
 
+	/**
+	 * @brief 保存要忽略的参与者Guid到忽略的参与者集合中。
+	 *
+	 * @param [in]  guid  参与者Guid。
+	 */
 	void SetIgnoredParticipants(GUID_t guid);
 
+	/**
+	 * @brief 根据参与者Guid判断指定参与者是否已被忽略。
+	 *
+	 * @param [in]  guid  参与者Guid。
+	 *
+	 * @return 已被忽略返回true，否则返回false。
+	 */
 	bool FindIgnoredParticipants(GUID_t guid);
 
 private:
 
+	/**
+	 * @brief 解析DATA(p)报文获取远端参与者配置信息。
+	 *
+	 * @param [out]  data  解析获取的远端参与者配置信息。
+	 * @param [in]   buffer  DATA(p)报文指针。
+	 */
 	void TakeSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data, SerializedBuffer* buffer);
 
+	/**
+	 * @brief 远端参与者管理函数。
+	 *  判断当前远端参与者是否已添加到远端参与者管理容器中，未添加则执行添加操作，
+	 *  已添加则更新参与者发现报文接收时间。
+	 *
+	 * @param [in] data  远端参与者配置信息。
+	 */
 	void ReceiveSPDPdiscoveredParticipantData(const SPDPdiscoveredParticipantData& data);
 
 private:
@@ -152,6 +195,6 @@ private:
 	std::shared_ptr<Timer> timer_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_DISCOVERY_SPDP_H
+#endif // !TRAVODDS_RTPS_DISCOVERY_SPDP_H

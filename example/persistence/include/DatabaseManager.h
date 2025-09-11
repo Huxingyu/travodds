@@ -8,7 +8,7 @@
 #include <map>
 #include <sqlite3.h>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // 数据库配置结构
 struct DatabaseConfig {
@@ -103,4 +103,4 @@ private:
     static auto guid_to_builtin_key(const std::vector<uint8_t>& prefix, const std::vector<uint8_t>& entity) -> BuiltinTopicKey_t;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

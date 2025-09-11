@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/tao
 )
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../build/src)
 find_package(SQLite3 REQUIRED)

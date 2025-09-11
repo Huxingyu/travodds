@@ -15,7 +15,7 @@
 #include <vector>
 #include <algorithm>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 // 前向声明
 class DomainParticipant;
@@ -23,6 +23,7 @@ class DataReader;
 class DataReaderImpl;
 class DataWriter;
 class Subscriber;
+class Publisher;
 
 // Qt 可视化回调接口（便于后续Qt集成）
 class IPersistenceUICallback {
@@ -210,4 +211,6 @@ private:
     auto create_data_reader_for_topic(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability) -> bool;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
+
+

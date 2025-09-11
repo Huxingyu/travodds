@@ -9,17 +9,18 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
-#define AGIDDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
+#ifndef TRAVODDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
+#define TRAVODDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
 
 #include "qos/qos.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 struct ParticipantBuiltinTopicData
 {
 	BuiltinTopicKey_t 			key;
 	UserDataQosPolicy 			user_data;
+	PropertySeq                 sys_info;
 };
 
 struct TopicBuiltinTopicData {
@@ -83,5 +84,5 @@ struct SubscriptionBuiltinTopicData {
 	GroupDataQosPolicy 			group_data;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H

@@ -4,7 +4,7 @@
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 StatelessReader::StatelessReader(const DataReaderQos & qos, const GUID_t & guid, const TopicKind_t& kind)
@@ -84,6 +84,10 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 	if (datareader_) {
 		datareader_->SetLastinstanceHandle(cache);
+		/* wangyi Lifespan 超期判断，超期过滤数据 */
+		if (!datareader_->CheckLifespan(cache)) {
+			return RETCODE_LIFESPAN_TIMEOUT;
+		}
 		datareader_->OnDataAvaible();
 	}
 	
@@ -95,6 +99,8 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	/* wangyi 更新存活性 */
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	AssertWriterLiveliness(guid);
+
+
 	ChangeKind_t kind = ALIVE;
 	SerializedBuffer* buffer = nullptr;
 	InstanceHandle_t pubHandle;
@@ -118,7 +124,11 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		return RETCODE_ERROR;
 	}
 	auto itor = dataFragCaches_.find(guid);
-	if (itor == dataFragCaches_.end()) {
+	if (itor == dataFragCaches_.end() || itor->second->sequenceNumber < dataMsg.writerSN) {
+		if (itor != dataFragCaches_.end()) {
+			/* 收到新的分片数据,并且新的数据序号大于之前的数据，BEST_EFFORT 模式下删除旧数据 */
+			dataFragCaches_.erase(itor);
+		}
 		/* 申请空间 */
 		buffer = new SerializedBuffer();
 
@@ -140,57 +150,24 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			dataFragCache->fragmentSeq.insert(i);
 		}
 
-		dataFragCaches_.insert(std::make_pair(guid, dataFragCache));
+		itor = dataFragCaches_.emplace(guid, dataFragCache).first;
 	}
-	else if (itor->second->sequenceNumber < dataMsg.writerSN) {
-		/* 收到新的分片数据,并且新的数据序号大于之前的数据，BEST_EFFORT 模式下删除旧数据 */
-		//TODO
-	//	std::cout << "recv error " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		dataFragCaches_.erase(itor);
-		/* 重新 申请空间 */
-		buffer = new SerializedBuffer();
-
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
-		buffer->buffer = buffer->origin_buffer;
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
-
-		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
-
-		dataFragCache->sequenceNumber = dataMsg.writerSN;
-		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
-		dataFragCache->fraqmentSize = dataMsg.dataFrag.fragmentSize;
-		dataFragCache->fragmentTatolNum = dataMsg.dataFrag.sampleSize / dataMsg.dataFrag.fragmentSize;
-		if (0 != dataMsg.dataFrag.sampleSize % dataMsg.dataFrag.fragmentSize) {
-			dataFragCache->fragmentTatolNum += 1;
-		}
-
-		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
-			dataFragCache->fragmentSeq.insert(i);
-		}
-
-		dataFragCaches_.insert(std::make_pair(guid, dataFragCache));
-	}
-
-	itor = dataFragCaches_.find(guid);
-
 	/* 找到对应的SerializedBuffer */
 	buffer = itor->second->serializedBuffer;
-	uint32_t shift = 0;
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
-	if (0 != itor->second->fragmentSeq.count(dataMsg.dataFrag.fragmentStartingNum)) {
-		shift += (dataMsg.dataFrag.fragmentStartingNum - 1) * dataMsg.dataFrag.fragmentSize;
+	if (itor->second->fragmentSeq.erase(dataMsg.dataFrag.fragmentStartingNum) > 0) {
+		uint32_t shift = (dataMsg.dataFrag.fragmentStartingNum - 1) * dataMsg.dataFrag.fragmentSize;
 		memcpy(buffer->buffer + shift, data, len);
-		itor->second->fragmentSeq.erase(dataMsg.dataFrag.fragmentStartingNum);
 	}
 	else {
 		//TODO  
 		/* 重复接收分片数据 */
-		std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		AGILOG(AGILOG_ERROR, "recv repeat dataFrg");
+		// std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
+		TRAVODDS_LOG(LOG_ERROR, "recv repeat dataFrg");
 	}
 
-	if (0 == itor->second->fragmentSeq.size()) {
+	if (itor->second->fragmentSeq.empty()) {
 		std::shared_ptr<CacheChange> dataFragCache = itor->second;
 		dataFragCaches_.erase(itor);
 
@@ -207,6 +184,10 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 
 		if (datareader_) {
 			datareader_->SetLastinstanceHandle(dataFragCache);
+			/* wangyi Lifespan 超期判断，超期过滤数据 */
+			if (!datareader_->CheckLifespan(dataFragCache)) {
+				return RETCODE_LIFESPAN_TIMEOUT;
+			}
 			datareader_->OnDataAvaible();
 		}
 	}
@@ -254,7 +235,7 @@ void StatelessReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerData)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 }
@@ -279,7 +260,7 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 	matchWriters_.erase(writerGuid);
@@ -287,13 +268,12 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 
 std::shared_ptr<WriterProxy> StatelessReader::MatchedWriterLookup(GUID_t writerGuid)
 {
-	if (0 == matchWriters_.count(writerGuid)) {
-		AGILOG(AGILOG_ERROR, "writerGuid not match");
+	auto itor = matchWriters_.find(writerGuid);
+	if (itor == matchWriters_.end()) {
+		TRAVODDS_LOG(LOG_ERROR, "writerGuid not match");
 		return nullptr;
 	}
-		
-
-	return matchWriters_[writerGuid];
+	return itor->second;
 }
 
 /* wangyi */
@@ -310,7 +290,7 @@ void StatelessReader::AssertWriterLiveliness(const GUID_t& guid)
 		}
 		else {
 			/* TODO 日志 "Finite liveliness lease duration but LivelinessManager not enabled"); */
-			AGILOG(AGILOG_ERROR, "Finite liveliness lease duration but LivelinessManager not enabled");
+			TRAVODDS_LOG(LOG_ERROR, "Finite liveliness lease duration but LivelinessManager not enabled");
 		}
 	}
 }

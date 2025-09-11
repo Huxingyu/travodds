@@ -9,8 +9,8 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
-#define AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#ifndef TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#define TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
 
 #include "rtps/basictypertps.h"
 #include "rtps/messages/parameter.h"
@@ -20,7 +20,7 @@
 #include "common/memory/memorypool.h"
 #include <atomic>
 #include <condition_variable>
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 
@@ -117,6 +117,8 @@ public:
 	int32_t fragmentTatolNum;
 	/* 所有的数据分片数据序号，收到一个分片数据，删除分片序号 */
 	std::set<int32_t> fragmentSeq;
+	/* 需要过滤的订阅者 */
+	std::set<GUID_t> filterReaders_;
 
 	/**
 	 * @brief 构造函数。
@@ -220,11 +222,11 @@ public:
 	/**
 	 * @brief 删除发送报文请求。
 	 *
-	 * @param [in] change 发送报文请求。
+	 * @param [in] seqNum 发送报文请求序号。
 	 *
 	 * @return 删除成功则返回true，否则返回false。
 	 */
-	bool RemoveChange(std::shared_ptr<CacheChange> change);
+	bool RemoveChange(const SequenceNumber_t& seqNum);
 
 	/**
 	 * @brief 根据报文发送序号获取报文发送请求。
@@ -234,6 +236,13 @@ public:
 	 * @return 返回报文发送请求。
 	 */
 	std::shared_ptr<CacheChange> GetChange(const SequenceNumber_t& seqNum);
+
+	/**
+	 * @brief 根据报文源时间戳获取报文源时间戳最小的报文缓存。
+	 *
+	 * @return 返回报文缓存。
+	 */
+	std::shared_ptr<CacheChange> GetMinSourceTimespace();
 
 	/**
 	 * @brief 从保存数据的容器中获取报文序号最小值。
@@ -347,14 +356,45 @@ public:
 	 */
 	bool WriterWaitFor(const std::chrono::nanoseconds& time_out, Writer* pWriter, const InstanceHandle_t& handle, bool transientLocal);
 
-	SampleCounters GetSampleCounters();
+	/**
+	 * @brief 获取样本计数器。
+	 *
+	 * @param [in] trigger 触发器，用于触发ReadConditionImpl读取标志。
+	 *
+	 * @return 样本计数器对象。
+	 */
+	SampleCounters GetSampleCounters(bool trigger = true);
 
+	/**
+	 * @brief 获取下一个截止时间。
+	 *
+	 * @param [out] handle       通信实例句柄。
+	 * @param [out] nextDeadline 下一个截止时间。
+	 *
+	 * @return 获取成功返回true，获取失败返回false。
+	 */
 	bool GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextDeadline);
 
+	/**
+	 * @brief 重新设置实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] handle       通信实例句柄。
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout = false);
 
+	/**
+	 * @brief 重新设置所有实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
 
+	/**
+	 * @brief 重新设置所有实例句柄handle对应的截止时间。
+	 *
+	 * @param [in] nextDeadline 新的下一个截止日期。
+	 */
 	void RemoveRemoteWriter(const GUID_t& guid);
 
 private:
@@ -369,16 +409,59 @@ private:
 	 */
 	ReturnCode_t FindORAddKey(const InstanceHandle_t& handle, SerializedBuffer*& instace, std::map<InstanceHandle_t, CacheChangeVector>::iterator* vitOut);
 
+	/**
+	 * @brief 添加样本计数器。
+	 *
+	 * @param [in] sampleState   SampleStateKind位掩码。
+	 * @param [in] viewState     ViewStateKind位掩码。
+	 * @param [in] instanceState 实例句柄。
+	 */
 	void AddSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
 
+	/**
+	 * @brief 删除样本计数器。
+	 *
+	 * @param [in] sampleState   SampleStateKind位掩码。
+	 * @param [in] viewState     ViewStateKind位掩码。
+	 * @param [in] instanceState 实例句柄。
+	 */
 	void RemoveSampleCounters(const SampleStateKind& sampleState, const ViewStateKind& viewState, const InstanceStateKind& instanceState);
 
+	/**
+	 * @brief 更新样本实例句柄。
+	 *
+	 * @param [in] handle			 实例句柄。
+	 * @param [in] changeKind		 请求状态。
+	 * @param [in] writerGuid		 数据写者GUID。
+	 * @param [in] ownershipStrength 所有权强度。
+	 * @param [in] shared            是否为SHARED模式。
+	 * 
+	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_OUT_OF_RESOURCES
+	 */
 	ReturnCode_t UpdataSampleInstance(const InstanceHandle_t& handle, const ChangeKind_t& changeKind, const GUID_t& writerGuid, const int32_t ownershipStrength, bool shared);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state	新的SampleStateKind样本状态。
+	 * @param [in，out] cache	样本。
+	 */
 	void UpdateState(const SampleStateKind& state, const std::shared_ptr<CacheChange>& cache);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state		新的ViewStateKind样本状态。
+	 * @param [in，out] cacheChange	样本。
+	 */
 	void UpdateState(const ViewStateKind& state, CacheChangeVector& cacheChange);
 
+	/**
+	 * @brief 更新样本状态。
+	 *
+	 * @param [in]		state		新的InstanceStateKind样本状态。
+	 * @param [in，out] cacheChange	样本。
+	 */
 	void UpdateState(const InstanceStateKind& state, CacheChangeVector& cacheChange);
 
 private:
@@ -409,9 +492,14 @@ private:
 
 	std::condition_variable changeVar_;
 
+	/* wangyi lifespanQos 添加，要到期的数据 */
+	std::shared_ptr<CacheChange> MinSourceTimespaceCache_ = nullptr;
+	/* 互斥锁，互斥访问MinSourceTimespaceCache_  */
+	std::mutex  MinSourceTimespaceCacheMutex_;
+
 	friend class Reader;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
+#endif // !TRAVODDS_RTPS_HISTORYCACHE_HISTORYCACHE_H
