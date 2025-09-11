@@ -905,17 +905,59 @@ bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
     sqlite3_bind_int64(stmt, 7, current_time);
     sqlite3_bind_int64(stmt, 8, current_time);
     
+    // 开始显式事务
+    if (sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to begin transaction: " << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_finalize(stmt);
+        return false;
+    }
+    
     result = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
     if (result != SQLITE_DONE) {
         std::cerr << "[DatabaseManager] Failed to execute statement: " << sqlite3_errmsg(db_) 
                   << ", result code: " << result << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
-    std::cout << "[DatabaseManager] DataWriter registered successfully" << std::endl;
-    return true;
+    // 提交事务
+    if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to commit transaction: " << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    
+    // 验证数据是否真正插入
+    const char* verify_sql = "SELECT COUNT(*) FROM datawriters WHERE writer_guid_prefix = ? AND writer_guid_entity = ?";
+    sqlite3_stmt* verify_stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, verify_sql, -1, &verify_stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_blob(verify_stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+        sqlite3_bind_blob(verify_stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+        
+        if (sqlite3_step(verify_stmt) == SQLITE_ROW) {
+            int count = sqlite3_column_int(verify_stmt, 0);
+            std::cout << "[DatabaseManager] Verification: " << count << " DataWriter record(s) found" << std::endl;
+            sqlite3_finalize(verify_stmt);
+            
+            if (count > 0) {
+                std::cout << "[DatabaseManager] DataWriter registered successfully and verified" << std::endl;
+                return true;
+            } else {
+                std::cerr << "[DatabaseManager] DataWriter registration failed - no record found after insert" << std::endl;
+                return false;
+            }
+        } else {
+            std::cerr << "[DatabaseManager] Failed to verify DataWriter insertion" << std::endl;
+            sqlite3_finalize(verify_stmt);
+            return false;
+        }
+    } else {
+        std::cerr << "[DatabaseManager] Failed to prepare verification query" << std::endl;
+        std::cout << "[DatabaseManager] DataWriter registered successfully (verification skipped)" << std::endl;
+        return true;
+    }
 }
 
 bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
@@ -936,6 +978,18 @@ bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
     auto prefix_blob = builtin_key_to_guid_prefix(key);
     auto entity_blob = builtin_key_to_guid_entity(key);
     
+    // 开始事务
+    char* error_msg = nullptr;
+    int transaction_result = sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, &error_msg);
+    if (transaction_result != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to begin transaction for DataReader registration: " 
+                  << (error_msg ? error_msg : "Unknown error") << std::endl;
+        if (error_msg) {
+            sqlite3_free(error_msg);
+        }
+        return false;
+    }
+    
     const char* sql = R"(
         INSERT OR REPLACE INTO datareaders 
         (reader_guid_prefix, reader_guid_entity, topic_name, type_name, 
@@ -946,6 +1000,9 @@ bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
     sqlite3_stmt* stmt = nullptr;
     int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to prepare DataReader registration statement: " 
+                  << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
@@ -964,7 +1021,53 @@ bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
     result = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
-    return result == SQLITE_DONE;
+    if (result != SQLITE_DONE) {
+        std::cerr << "[DatabaseManager] Failed to execute DataReader registration: " 
+                  << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    
+    // 提交事务
+    transaction_result = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &error_msg);
+    if (transaction_result != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to commit DataReader registration transaction: " 
+                  << (error_msg ? error_msg : "Unknown error") << std::endl;
+        if (error_msg) {
+            sqlite3_free(error_msg);
+        }
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    
+    // 验证记录是否真的存在
+    const char* verify_sql = R"(
+        SELECT COUNT(*) FROM datareaders 
+        WHERE reader_guid_prefix = ? AND reader_guid_entity = ? AND topic_name = ?
+    )";
+    
+    sqlite3_stmt* verify_stmt = nullptr;
+    result = sqlite3_prepare_v2(db_, verify_sql, -1, &verify_stmt, nullptr);
+    if (result == SQLITE_OK) {
+        sqlite3_bind_blob(verify_stmt, 1, prefix_blob.data(), prefix_blob.size(), SQLITE_STATIC);
+        sqlite3_bind_blob(verify_stmt, 2, entity_blob.data(), entity_blob.size(), SQLITE_STATIC);
+        sqlite3_bind_text(verify_stmt, 3, topic_name.c_str(), -1, SQLITE_STATIC);
+        
+        if (sqlite3_step(verify_stmt) == SQLITE_ROW) {
+            int count = sqlite3_column_int(verify_stmt, 0);
+            std::cout << "[DatabaseManager] DataReader registration verification: " << count 
+                      << " records found for topic " << topic_name << std::endl;
+            sqlite3_finalize(verify_stmt);
+            return count > 0;
+        } else {
+            std::cerr << "[DatabaseManager] Failed to verify DataReader registration" << std::endl;
+        }
+        sqlite3_finalize(verify_stmt);
+    } else {
+        std::cerr << "[DatabaseManager] Failed to prepare verification query for DataReader" << std::endl;
+    }
+    
+    return true;
 }
 
 bool DatabaseManager::update_entity_activity(const BuiltinTopicKey_t& key, bool is_writer) {

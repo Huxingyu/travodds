@@ -408,9 +408,48 @@ void PersistenceService::on_subscription_discovered(const std::string& topic_nam
     std::cout << "[PersistenceService] Persistent Subscription: " 
               << topic_name << " (" << durability_kind_to_string(durability) << ")" << std::endl;
     
+    // 保存Topic信息（如果还没有保存的话）
+    {
+        std::lock_guard<std::mutex> lock(topic_info_mutex_);
+        if (topic_info_map_.find(topic_name) == topic_info_map_.end()) {
+            TopicInfo& info = topic_info_map_[topic_name];
+            info.topic_name = topic_name;
+            info.type_name = type_name;
+            info.durability_kind = durability;
+            info.reliability_kind = RELIABLE_RELIABILITY_QOS;
+            info.discovered_at = std::chrono::steady_clock::now();
+        }
+    }
+    
+    // 确保topic在数据库中注册
+    if (database_manager_) {
+        database_manager_->insert_or_update_topic(topic_name, type_name, durability);
+    }
+    
     // 通知UI回调
     if (ui_callback_) {
         ui_callback_->on_reader_discovered(topic_name, type_name);
+    }
+    
+    // 根据DDS持久化服务规范：
+    // 当发现新的Subscription时，需要确保有DataWriter可以发送历史数据
+    // 如果还没有为此topic创建DataWriter，现在创建一个
+    {
+        std::lock_guard<std::mutex> lock(writers_mutex_);
+        if (topic_writers_.find(topic_name) == topic_writers_.end()) {
+            std::cout << "[PersistenceService] Creating DataWriter for historical data sending: " << topic_name << std::endl;
+            // 注意：这里需要释放锁，因为create_data_writer_for_topic内部会获取锁
+        }
+    }
+    
+    // 在锁外创建DataWriter以避免死锁
+    if (topic_writers_.find(topic_name) == topic_writers_.end()) {
+        if (create_data_writer_for_topic(topic_name, type_name, durability)) {
+            std::cout << "[PersistenceService] Created DataWriter for historical data sending: " << topic_name << std::endl;
+        } else {
+            std::cerr << "[PersistenceService] Failed to create DataWriter for topic: " << topic_name << std::endl;
+            return; // 如果无法创建DataWriter，就无法发送历史数据
+        }
     }
     
     // 向新订阅者发送历史数据

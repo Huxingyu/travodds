@@ -59,9 +59,9 @@ void PersistentHandler::store_data(const StoredData& data) {
     }
     
     // 同时更新内存缓存以提高访问性能
-    auto& memory_cache = service_->get_memory_cache();
-    std::string cache_key = data.topic_name + "_" + data.instance_id + "_" + std::to_string(data.sequence_number);
-    memory_cache.put(cache_key, data);
+    // auto& memory_cache = service_->get_memory_cache();
+    // std::string cache_key = data.topic_name + "_" + data.instance_id + "_" + std::to_string(data.sequence_number);
+    // memory_cache.put(cache_key, data);
 }
 
 auto PersistentHandler::get_historical_data(const std::string& topic_name) -> std::vector<StoredData> {
@@ -72,13 +72,13 @@ auto PersistentHandler::get_historical_data(const std::string& topic_name) -> st
     auto persistent_data = db_manager.load_data(topic_name);
     
     // 更新缓存
-    if (!persistent_data.empty()) {
-        auto& memory_cache = service_->get_memory_cache();
-        for (const auto& data : persistent_data) {
-            std::string cache_key = data.topic_name + "_" + data.instance_id + "_" + std::to_string(data.sequence_number);
-            memory_cache.put(cache_key, data);
-        }
-    }
+    // if (!persistent_data.empty()) {
+    //     auto& memory_cache = service_->get_memory_cache();
+    //     for (const auto& data : persistent_data) {
+    //         std::string cache_key = data.topic_name + "_" + data.instance_id + "_" + std::to_string(data.sequence_number);
+    //         memory_cache.put(cache_key, data);
+    //     }
+    // }
     
     return persistent_data;
 }
