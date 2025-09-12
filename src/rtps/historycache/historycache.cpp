@@ -79,9 +79,12 @@ bool HistoryCache::RemoveChange(const SequenceNumber_t& seqNum)
 		auto itor = instanceChanges_.find(change->second->instanceHandle);
 		if (itor != instanceChanges_.end()) {
 			auto& cacheChanges = itor->second.cacheChanges;
-			std::remove_if(cacheChanges.begin(), cacheChanges.end(), [&change](const auto& cachedPtr) {
+			cacheChanges.erase(
+				std::remove_if(cacheChanges.begin(), cacheChanges.end(), [&change](const auto& cachedPtr) {
 				return cachedPtr.get() == change->second.get();
-				});
+				}),
+				cacheChanges.end()
+			);
 		}
 		cacheChanges_.erase(change);
 	}
