@@ -20,6 +20,28 @@ struct DatabaseConfig {
     int connection_timeout_ms = 30000;
 };
 
+// DataWriter信息结构体
+struct DataWriterInfo {
+    BuiltinTopicKey_t key;
+    std::string topic_name;
+    std::string type_name;
+    DurabilityQosPolicyKind durability_kind;
+    ReliabilityQosPolicyKind reliability_kind;
+    Time_t discovered_at;
+    Time_t last_seen;
+};
+
+// DataReader信息结构体
+struct DataReaderInfo {
+    BuiltinTopicKey_t key;
+    std::string topic_name;
+    std::string type_name;
+    DurabilityQosPolicyKind durability_kind;
+    ReliabilityQosPolicyKind reliability_kind;
+    Time_t discovered_at;
+    Time_t last_seen;
+};
+
 // 数据库管理器
 class DatabaseManager {
 public:
@@ -76,6 +98,12 @@ public:
     
     auto get_active_datawriters(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
     auto get_active_datareaders(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
+    
+    // 获取详细实体信息的新方法
+    auto get_active_datawriters_info() -> std::vector<DataWriterInfo>;
+    auto get_active_datareaders_info() -> std::vector<DataReaderInfo>;
+    auto get_topic_datawriters_info(const std::string& topic_name) -> std::vector<DataWriterInfo>;
+    auto get_topic_datareaders_info(const std::string& topic_name) -> std::vector<DataReaderInfo>;
     
     bool is_datawriter_active(const BuiltinTopicKey_t& key);
     bool cleanup_inactive_entities(std::chrono::minutes inactive_threshold);

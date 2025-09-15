@@ -2,6 +2,7 @@
 #include <sqlite3.h>
 #include <iostream>
 #include <chrono>
+#include <thread>
 #include <map>
 #include <cstdio>
 
@@ -109,7 +110,6 @@ void DatabaseManager::shutdown() {
     if (db_) {
         sqlite3_close(db_);
         db_ = nullptr;
-        std::cout << "[DatabaseManager] Database connection closed" << std::endl;
     }
 }
 
@@ -344,10 +344,7 @@ auto DatabaseManager::microseconds_to_time(int64_t microseconds) -> Time_t {
 bool DatabaseManager::insert_or_update_topic(const std::string& topic_name, 
                                             const std::string& type_name,
                                             DurabilityQosPolicyKind durability_kind) {
-    std::cout << "[DatabaseManager] Insert/update topic: " << topic_name << std::endl;
-    
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
         return false;
     }
     
@@ -361,7 +358,7 @@ bool DatabaseManager::insert_or_update_topic(const std::string& topic_name,
         sqlite3_stmt* stmt = nullptr;
         int result = sqlite3_prepare_v2(db_, insert_sql, -1, &stmt, nullptr);
         if (result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare topic insert statement: " << sqlite3_errmsg(db_) << std::endl;
+            std::cerr << "[DatabaseManager] Failed to prepare topic insert statement: " << sqlite3_errmsg(db_) << std::endl;
             return false;
         }
         
@@ -379,31 +376,24 @@ bool DatabaseManager::insert_or_update_topic(const std::string& topic_name,
         sqlite3_finalize(stmt);
         
         if (result == SQLITE_DONE) {
-            std::cout << "[DatabaseManager] Topic inserted/updated successfully: " << topic_name << std::endl;
             return true;
         }
-        std::cout << "[DatabaseManager] Failed to insert/update topic: " << sqlite3_errmsg(db_) << std::endl;
         return false;
         
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception during topic insert/update: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception during topic insert/update: " << e.what() << std::endl;
         return false;
     }
 }
 
 bool DatabaseManager::store_data(const StoredData& data) {
-    std::cout << "[DatabaseManager] Storing PERSISTENT data for topic: " << data.topic_name << std::endl;
-    
     if (!db_) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
         return false;
     }
     
     try {
         // 只有PERSISTENT策略的数据才写入数据库
         if (data.durability_kind != PERSISTENT_DURABILITY_QOS) {
-            std::cout << "[DatabaseManager] Skipping non-PERSISTENT data (durability=" 
-                      << static_cast<int>(data.durability_kind) << ")" << std::endl;
             return true; // 不是错误，只是不需要存储
         }
         
@@ -425,7 +415,6 @@ bool DatabaseManager::store_data(const StoredData& data) {
         sqlite3_stmt* stmt = nullptr;
         int result = sqlite3_prepare_v2(db_, insert_sql, -1, &stmt, nullptr);
         if (result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare insert statement: " << sqlite3_errmsg(db_) << std::endl;
             return false;
         }
         
@@ -478,16 +467,12 @@ bool DatabaseManager::store_data(const StoredData& data) {
         if (result == SQLITE_DONE) {
             // 更新topic统计
             update_topic_stats(data.topic_name, data.data.size());
-            
-            std::cout << "[DatabaseManager] PERSISTENT data stored successfully for topic: " << data.topic_name 
-                      << ", sequence: " << data.sequence_number << std::endl;
             return true;
         }
-        std::cout << "[DatabaseManager] Failed to store data: " << sqlite3_errmsg(db_) << std::endl;
         return false;
         
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception during data storage: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception during data storage: " << e.what() << std::endl;
         return false;
     }
 }
@@ -496,7 +481,6 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
     std::vector<StoredData> result;
     
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
         return result;
     }
     
@@ -516,7 +500,6 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
         sqlite3_stmt* stmt = nullptr;
         int query_result = sqlite3_prepare_v2(db_, select_sql, -1, &stmt, nullptr);
         if (query_result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare select statement: " << sqlite3_errmsg(db_) << std::endl;
             return result;
         }
         
@@ -583,10 +566,8 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
         
         sqlite3_finalize(stmt);
         
-        std::cout << "[DatabaseManager] Loaded " << result.size() << " PERSISTENT records for topic: " << topic_name << std::endl;
-        
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception loading data: " << e.what() << std::endl;
+        // 保留错误输出
     }
     
     return result;
@@ -598,7 +579,7 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
     std::vector<StoredData> result;
     
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
+        std::cerr << "[DatabaseManager] Database not initialized" << std::endl;
         return result;
     }
     
@@ -618,7 +599,7 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
         sqlite3_stmt* stmt = nullptr;
         int query_result = sqlite3_prepare_v2(db_, select_sql, -1, &stmt, nullptr);
         if (query_result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare range select statement: " << sqlite3_errmsg(db_) << std::endl;
+            std::cerr << "[DatabaseManager] Failed to prepare range select statement: " << sqlite3_errmsg(db_) << std::endl;
             return result;
         }
         
@@ -658,11 +639,8 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
         
         sqlite3_finalize(stmt);
         
-        std::cout << "[DatabaseManager] Loaded " << result.size() 
-                  << " records for topic: " << topic_name << " in time range" << std::endl;
-        
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception loading data range: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception loading data range: " << e.what() << std::endl;
     }
     
     return result;
@@ -670,7 +648,7 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
 
 bool DatabaseManager::cleanup_old_data(std::chrono::hours retention_time) {
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
+        std::cerr << "[DatabaseManager] Database not initialized" << std::endl;
         return false;
     }
     
@@ -684,32 +662,30 @@ bool DatabaseManager::cleanup_old_data(std::chrono::hours retention_time) {
         sqlite3_stmt* stmt = nullptr;
         int result = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
         if (result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare cleanup statement: " << sqlite3_errmsg(db_) << std::endl;
+            std::cerr << "[DatabaseManager] Failed to prepare cleanup statement: " << sqlite3_errmsg(db_) << std::endl;
             return false;
         }
         
         sqlite3_bind_int64(stmt, 1, cutoff_time);
         
         result = sqlite3_step(stmt);
-        int deleted_rows = sqlite3_changes(db_);
         sqlite3_finalize(stmt);
         
         if (result == SQLITE_DONE) {
-            std::cout << "[DatabaseManager] Cleaned up " << deleted_rows << " old records" << std::endl;
             return true;
         }
-        std::cout << "[DatabaseManager] Failed to cleanup old data: " << sqlite3_errmsg(db_) << std::endl;
+        std::cerr << "[DatabaseManager] Failed to cleanup old data: " << sqlite3_errmsg(db_) << std::endl;
         return false;
         
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception during cleanup: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception during cleanup: " << e.what() << std::endl;
         return false;
     }
 }
 
 bool DatabaseManager::cleanup_topic_data(const std::string& topic_name) {
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
+        std::cerr << "[DatabaseManager] Database not initialized" << std::endl;
         return false;
     }
     
@@ -719,26 +695,23 @@ bool DatabaseManager::cleanup_topic_data(const std::string& topic_name) {
         sqlite3_stmt* stmt = nullptr;
         int result = sqlite3_prepare_v2(db_, delete_sql, -1, &stmt, nullptr);
         if (result != SQLITE_OK) {
-            std::cout << "[DatabaseManager] Failed to prepare topic cleanup statement: " << sqlite3_errmsg(db_) << std::endl;
+            std::cerr << "[DatabaseManager] Failed to prepare topic cleanup statement: " << sqlite3_errmsg(db_) << std::endl;
             return false;
         }
         
         sqlite3_bind_text(stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
         
         result = sqlite3_step(stmt);
-        int deleted_rows = sqlite3_changes(db_);
         sqlite3_finalize(stmt);
         
         if (result == SQLITE_DONE) {
-            std::cout << "[DatabaseManager] Cleaned up " << deleted_rows 
-                      << " records for topic: " << topic_name << std::endl;
             return true;
         }
-        std::cout << "[DatabaseManager] Failed to cleanup topic data: " << sqlite3_errmsg(db_) << std::endl;
+        std::cerr << "[DatabaseManager] Failed to cleanup topic data: " << sqlite3_errmsg(db_) << std::endl;
         return false;
         
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception during topic cleanup: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception during topic cleanup: " << e.what() << std::endl;
         return false;
     }
 }
@@ -747,7 +720,7 @@ auto DatabaseManager::get_database_stats() -> std::map<std::string, int64_t> {
     std::map<std::string, int64_t> stats;
     
     if (db_ == nullptr) {
-        std::cout << "[DatabaseManager] Database not initialized" << std::endl;
+        std::cerr << "[DatabaseManager] Database not initialized" << std::endl;
         return stats;
     }
     
@@ -797,7 +770,7 @@ auto DatabaseManager::get_database_stats() -> std::map<std::string, int64_t> {
         }
         
     } catch (const std::exception& e) {
-        std::cout << "[DatabaseManager] Exception getting database stats: " << e.what() << std::endl;
+        std::cerr << "[DatabaseManager] Exception getting database stats: " << e.what() << std::endl;
     }
     
     return stats;
@@ -847,37 +820,21 @@ bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
         return false;
     }
     
+    // 开始一个大事务包装所有操作
+    if (sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "[DatabaseManager] Failed to begin transaction: " << sqlite3_errmsg(db_) << std::endl;
+        return false;
+    }
+    
     // 首先确保topics表中有相应的记录
     if (!insert_or_update_topic(topic_name, type_name, durability_kind)) {
         std::cerr << "[DatabaseManager] Failed to ensure topic exists: " << topic_name << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
     auto prefix_blob = builtin_key_to_guid_prefix(key);
     auto entity_blob = builtin_key_to_guid_entity(key);
-    
-    std::cout << "[DatabaseManager] Registering DataWriter - topic: " << topic_name 
-              << ", prefix_size: " << prefix_blob.size() 
-              << ", entity_size: " << entity_blob.size() << std::endl;
-    
-    // 调试：打印BLOB内容
-    std::cout << "[DatabaseManager] Key values: ";
-    for (int i = 0; i < 4; ++i) {
-        std::cout << "key[" << i << "]=" << key.value[i] << " ";
-    }
-    std::cout << std::endl;
-    
-    std::cout << "[DatabaseManager] Prefix BLOB: ";
-    for (size_t i = 0; i < prefix_blob.size(); ++i) {
-        printf("%02x ", prefix_blob[i]);
-    }
-    std::cout << std::endl;
-    
-    std::cout << "[DatabaseManager] Entity BLOB: ";
-    for (size_t i = 0; i < entity_blob.size(); ++i) {
-        printf("%02x ", entity_blob[i]);
-    }
-    std::cout << std::endl;
     
     const char* sql = R"(
         INSERT OR REPLACE INTO datawriters 
@@ -890,6 +847,7 @@ bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
     int result = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
         std::cerr << "[DatabaseManager] Failed to prepare statement: " << sqlite3_errmsg(db_) << std::endl;
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
@@ -905,31 +863,29 @@ bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
     sqlite3_bind_int64(stmt, 7, current_time);
     sqlite3_bind_int64(stmt, 8, current_time);
     
-    // 开始显式事务
-    if (sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, nullptr) != SQLITE_OK) {
-        std::cerr << "[DatabaseManager] Failed to begin transaction: " << sqlite3_errmsg(db_) << std::endl;
-        sqlite3_finalize(stmt);
-        return false;
-    }
-    
     result = sqlite3_step(stmt);
+    int affected_rows = sqlite3_changes(db_);
     sqlite3_finalize(stmt);
     
     if (result != SQLITE_DONE) {
-        std::cerr << "[DatabaseManager] Failed to execute statement: " << sqlite3_errmsg(db_) 
-                  << ", result code: " << result << std::endl;
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
-    // 提交事务
+    // 提交整个事务
     if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
         std::cerr << "[DatabaseManager] Failed to commit transaction: " << sqlite3_errmsg(db_) << std::endl;
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     
-    // 验证数据是否真正插入
+    // 强制同步到磁盘
+    sqlite3_exec(db_, "PRAGMA synchronous = FULL;", nullptr, nullptr, nullptr);
+    
+    // 添加小延迟确保WAL同步
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
+    // 验证数据是否真正插入（在事务提交后）
     const char* verify_sql = "SELECT COUNT(*) FROM datawriters WHERE writer_guid_prefix = ? AND writer_guid_entity = ?";
     sqlite3_stmt* verify_stmt = nullptr;
     if (sqlite3_prepare_v2(db_, verify_sql, -1, &verify_stmt, nullptr) == SQLITE_OK) {
@@ -938,26 +894,13 @@ bool DatabaseManager::register_datawriter(const BuiltinTopicKey_t& key,
         
         if (sqlite3_step(verify_stmt) == SQLITE_ROW) {
             int count = sqlite3_column_int(verify_stmt, 0);
-            std::cout << "[DatabaseManager] Verification: " << count << " DataWriter record(s) found" << std::endl;
             sqlite3_finalize(verify_stmt);
-            
-            if (count > 0) {
-                std::cout << "[DatabaseManager] DataWriter registered successfully and verified" << std::endl;
-                return true;
-            } else {
-                std::cerr << "[DatabaseManager] DataWriter registration failed - no record found after insert" << std::endl;
-                return false;
-            }
-        } else {
-            std::cerr << "[DatabaseManager] Failed to verify DataWriter insertion" << std::endl;
-            sqlite3_finalize(verify_stmt);
-            return false;
+            return count > 0;
         }
-    } else {
-        std::cerr << "[DatabaseManager] Failed to prepare verification query" << std::endl;
-        std::cout << "[DatabaseManager] DataWriter registered successfully (verification skipped)" << std::endl;
-        return true;
+        sqlite3_finalize(verify_stmt);
+        return false;
     }
+    return true;
 }
 
 bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
@@ -1055,8 +998,6 @@ bool DatabaseManager::register_datareader(const BuiltinTopicKey_t& key,
         
         if (sqlite3_step(verify_stmt) == SQLITE_ROW) {
             int count = sqlite3_column_int(verify_stmt, 0);
-            std::cout << "[DatabaseManager] DataReader registration verification: " << count 
-                      << " records found for topic " << topic_name << std::endl;
             sqlite3_finalize(verify_stmt);
             return count > 0;
         } else {
@@ -1321,6 +1262,228 @@ auto DatabaseManager::guid_to_builtin_key(const std::vector<uint8_t>& prefix, co
     }
     
     return key;
+}
+
+// ===== 活跃实体详细信息获取方法 =====
+
+auto DatabaseManager::get_active_datawriters_info() -> std::vector<DataWriterInfo> {
+    std::vector<DataWriterInfo> writers;
+    
+    if (!db_) {
+        return writers;
+    }
+    
+    const std::string sql = R"(
+        SELECT writer_guid_prefix, writer_guid_entity, topic_name, type_name,
+               durability_kind, reliability_kind, discovered_at, last_seen
+        FROM datawriters 
+        WHERE is_active = 1
+        ORDER BY topic_name, discovered_at DESC
+    )";
+    
+    auto stmt = prepare_statement(sql);
+    if (!stmt) {
+        return writers;
+    }
+    
+    while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+        DataWriterInfo info;
+        
+        // 读取GUID前缀和实体ID
+        const void* prefix_blob = sqlite3_column_blob(stmt.get(), 0);
+        int prefix_size = sqlite3_column_bytes(stmt.get(), 0);
+        const void* entity_blob = sqlite3_column_blob(stmt.get(), 1);
+        int entity_size = sqlite3_column_bytes(stmt.get(), 1);
+        
+        if (prefix_blob && entity_blob && prefix_size > 0 && entity_size > 0) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_blob),
+                                          static_cast<const uint8_t*>(prefix_blob) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_blob),
+                                          static_cast<const uint8_t*>(entity_blob) + entity_size);
+            info.key = guid_to_builtin_key(prefix_vec, entity_vec);
+        }
+        
+        // 读取其他信息
+        const char* topic_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+        const char* type_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+        if (topic_name) info.topic_name = topic_name;
+        if (type_name) info.type_name = type_name;
+        
+        info.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 4));
+        info.reliability_kind = static_cast<ReliabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 5));
+        info.discovered_at = microseconds_to_time(sqlite3_column_int64(stmt.get(), 6));
+        info.last_seen = microseconds_to_time(sqlite3_column_int64(stmt.get(), 7));
+        
+        writers.push_back(info);
+    }
+    
+    return writers;
+}
+
+auto DatabaseManager::get_active_datareaders_info() -> std::vector<DataReaderInfo> {
+    std::vector<DataReaderInfo> readers;
+    
+    if (!db_) {
+        return readers;
+    }
+    
+    const std::string sql = R"(
+        SELECT reader_guid_prefix, reader_guid_entity, topic_name, type_name,
+               durability_kind, reliability_kind, discovered_at, last_seen
+        FROM datareaders 
+        WHERE is_active = 1
+        ORDER BY topic_name, discovered_at DESC
+    )";
+    
+    auto stmt = prepare_statement(sql);
+    if (!stmt) {
+        return readers;
+    }
+    
+    while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+        DataReaderInfo info;
+        
+        // 读取GUID前缀和实体ID
+        const void* prefix_blob = sqlite3_column_blob(stmt.get(), 0);
+        int prefix_size = sqlite3_column_bytes(stmt.get(), 0);
+        const void* entity_blob = sqlite3_column_blob(stmt.get(), 1);
+        int entity_size = sqlite3_column_bytes(stmt.get(), 1);
+        
+        if (prefix_blob && entity_blob && prefix_size > 0 && entity_size > 0) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_blob),
+                                          static_cast<const uint8_t*>(prefix_blob) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_blob),
+                                          static_cast<const uint8_t*>(entity_blob) + entity_size);
+            info.key = guid_to_builtin_key(prefix_vec, entity_vec);
+        }
+        
+        // 读取其他信息
+        const char* topic_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+        const char* type_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+        if (topic_name) info.topic_name = topic_name;
+        if (type_name) info.type_name = type_name;
+        
+        info.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 4));
+        info.reliability_kind = static_cast<ReliabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 5));
+        info.discovered_at = microseconds_to_time(sqlite3_column_int64(stmt.get(), 6));
+        info.last_seen = microseconds_to_time(sqlite3_column_int64(stmt.get(), 7));
+        
+        readers.push_back(info);
+    }
+    
+    return readers;
+}
+
+auto DatabaseManager::get_topic_datawriters_info(const std::string& topic_name) -> std::vector<DataWriterInfo> {
+    std::vector<DataWriterInfo> writers;
+    
+    if (!db_) {
+        return writers;
+    }
+    
+    const std::string sql = R"(
+        SELECT writer_guid_prefix, writer_guid_entity, topic_name, type_name,
+               durability_kind, reliability_kind, discovered_at, last_seen
+        FROM datawriters 
+        WHERE is_active = 1 AND topic_name = ?
+        ORDER BY discovered_at DESC
+    )";
+    
+    auto stmt = prepare_statement(sql);
+    if (!stmt) {
+        return writers;
+    }
+    
+    sqlite3_bind_text(stmt.get(), 1, topic_name.c_str(), -1, SQLITE_STATIC);
+    
+    while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+        DataWriterInfo info;
+        
+        // 读取GUID前缀和实体ID
+        const void* prefix_blob = sqlite3_column_blob(stmt.get(), 0);
+        int prefix_size = sqlite3_column_bytes(stmt.get(), 0);
+        const void* entity_blob = sqlite3_column_blob(stmt.get(), 1);
+        int entity_size = sqlite3_column_bytes(stmt.get(), 1);
+        
+        if (prefix_blob && entity_blob && prefix_size > 0 && entity_size > 0) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_blob),
+                                          static_cast<const uint8_t*>(prefix_blob) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_blob),
+                                          static_cast<const uint8_t*>(entity_blob) + entity_size);
+            info.key = guid_to_builtin_key(prefix_vec, entity_vec);
+        }
+        
+        // 读取其他信息
+        const char* topic_name_col = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+        const char* type_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+        if (topic_name_col) info.topic_name = topic_name_col;
+        if (type_name) info.type_name = type_name;
+        
+        info.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 4));
+        info.reliability_kind = static_cast<ReliabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 5));
+        info.discovered_at = microseconds_to_time(sqlite3_column_int64(stmt.get(), 6));
+        info.last_seen = microseconds_to_time(sqlite3_column_int64(stmt.get(), 7));
+        
+        writers.push_back(info);
+    }
+    
+    return writers;
+}
+
+auto DatabaseManager::get_topic_datareaders_info(const std::string& topic_name) -> std::vector<DataReaderInfo> {
+    std::vector<DataReaderInfo> readers;
+    
+    if (!db_) {
+        return readers;
+    }
+    
+    const std::string sql = R"(
+        SELECT reader_guid_prefix, reader_guid_entity, topic_name, type_name,
+               durability_kind, reliability_kind, discovered_at, last_seen
+        FROM datareaders 
+        WHERE is_active = 1 AND topic_name = ?
+        ORDER BY discovered_at DESC
+    )";
+    
+    auto stmt = prepare_statement(sql);
+    if (!stmt) {
+        return readers;
+    }
+    
+    sqlite3_bind_text(stmt.get(), 1, topic_name.c_str(), -1, SQLITE_STATIC);
+    
+    while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+        DataReaderInfo info;
+        
+        // 读取GUID前缀和实体ID
+        const void* prefix_blob = sqlite3_column_blob(stmt.get(), 0);
+        int prefix_size = sqlite3_column_bytes(stmt.get(), 0);
+        const void* entity_blob = sqlite3_column_blob(stmt.get(), 1);
+        int entity_size = sqlite3_column_bytes(stmt.get(), 1);
+        
+        if (prefix_blob && entity_blob && prefix_size > 0 && entity_size > 0) {
+            std::vector<uint8_t> prefix_vec(static_cast<const uint8_t*>(prefix_blob),
+                                          static_cast<const uint8_t*>(prefix_blob) + prefix_size);
+            std::vector<uint8_t> entity_vec(static_cast<const uint8_t*>(entity_blob),
+                                          static_cast<const uint8_t*>(entity_blob) + entity_size);
+            info.key = guid_to_builtin_key(prefix_vec, entity_vec);
+        }
+        
+        // 读取其他信息
+        const char* topic_name_col = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+        const char* type_name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+        if (topic_name_col) info.topic_name = topic_name_col;
+        if (type_name) info.type_name = type_name;
+        
+        info.durability_kind = static_cast<DurabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 4));
+        info.reliability_kind = static_cast<ReliabilityQosPolicyKind>(sqlite3_column_int(stmt.get(), 5));
+        info.discovered_at = microseconds_to_time(sqlite3_column_int64(stmt.get(), 6));
+        info.last_seen = microseconds_to_time(sqlite3_column_int64(stmt.get(), 7));
+        
+        readers.push_back(info);
+    }
+    
+    return readers;
 }
 
 TRAVODDS_NAMESPACE_END

@@ -159,7 +159,12 @@ void PersistenceService::cleanup_resources() {
         topic_durability_.clear();
     }
     
-    // 清理handlers
+    // 安全清理handlers - 先重置每个handler，再清理容器
+    for (auto& [durability, handler] : handlers_) {
+        if (handler) {
+            handler.reset();
+        }
+    }
     handlers_.clear();
     
     // 清理publisher
@@ -168,8 +173,10 @@ void PersistenceService::cleanup_resources() {
         publisher_ = nullptr;
     }
     
+    // 最后清理数据库管理器
     if (database_manager_) {
         database_manager_->shutdown();
+        database_manager_.reset();
     }
 }
 
@@ -807,7 +814,7 @@ void PersistenceService::check_new_publications(std::set<std::string>& processed
         // 检查每个publication
         for (const auto& handle : publication_handles) {
             std::string handle_str = handle_to_string(handle);
-            
+
             // 检查是否已经处理过这个publication
             if (processed_publications.find(handle_str) != processed_publications.end()) {
                 continue; // 已经处理过，跳过
@@ -945,31 +952,32 @@ void PersistenceService::entity_monitoring_thread_main() {
 }
 
 void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopicData& pub_data) {
-    if (!database_manager_ || !database_manager_->is_initialized()) {
-        return;
-    }
-    
     try {
-        // 注册或更新DataWriter
-        bool success = database_manager_->register_datawriter(
-            pub_data.key,
-            pub_data.topic_name,
-            pub_data.type_name,
-            pub_data.durability.kind,
-            pub_data.reliability.kind
-        );
+        // 存储到内存而不是数据库
+        std::lock_guard<std::mutex> lock(entity_info_mutex_);
         
-        if (success) {
-            // 更新内存中的活跃列表
-            std::lock_guard<std::mutex> lock(entity_monitoring_mutex_);
+        auto now = std::chrono::steady_clock::now();
+        
+        ActiveDataWriterInfo writer_info;
+        writer_info.key = pub_data.key;
+        writer_info.topic_name = pub_data.topic_name;
+        writer_info.type_name = pub_data.type_name;
+        writer_info.durability_kind = pub_data.durability.kind;
+        writer_info.reliability_kind = pub_data.reliability.kind;
+        writer_info.discovered_at = now;
+        writer_info.last_seen = now;
+        writer_info.is_active = true;
+        
+        active_writers_info_[pub_data.key] = writer_info;
+        
+        // 同时更新活跃实体列表
+        {
+            std::lock_guard<std::mutex> entity_lock(entity_monitoring_mutex_);
             active_datawriters_[pub_data.topic_name].insert(pub_data.key);
-            
-            std::cout << "[PersistenceService] Registered DataWriter for topic '" 
-                      << pub_data.topic_name << "'" << std::endl;
-        } else {
-            std::cerr << "[PersistenceService] Failed to register DataWriter for topic '" 
-                      << pub_data.topic_name << "'" << std::endl;
         }
+        
+        std::cout << "[PersistenceService] Registered DataWriter for topic '" 
+                  << pub_data.topic_name << "' (in memory)" << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception updating DataWriter registry: " 
@@ -978,38 +986,38 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
 }
 
 void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTopicData& sub_data) {
-    if (!database_manager_ || !database_manager_->is_initialized()) {
-        return;
-    }
-    
     try {
-        // 注册或更新DataReader
-        bool success = database_manager_->register_datareader(
-            sub_data.key,
-            sub_data.topic_name,
-            sub_data.type_name,
-            sub_data.durability.kind,
-            sub_data.reliability.kind
-        );
+        // 存储到内存而不是数据库
+        std::lock_guard<std::mutex> lock(entity_info_mutex_);
         
-        if (success) {
-            // 更新内存中的活跃列表
-            std::lock_guard<std::mutex> lock(entity_monitoring_mutex_);
+        auto now = std::chrono::steady_clock::now();
+        
+        ActiveDataReaderInfo reader_info;
+        reader_info.key = sub_data.key;
+        reader_info.topic_name = sub_data.topic_name;
+        reader_info.type_name = sub_data.type_name;
+        reader_info.durability_kind = sub_data.durability.kind;
+        reader_info.reliability_kind = sub_data.reliability.kind;
+        reader_info.discovered_at = now;
+        reader_info.last_seen = now;
+        reader_info.is_active = true;
+        
+        active_readers_info_[sub_data.key] = reader_info;
+        
+        // 同时更新活跃实体列表
+        {
+            std::lock_guard<std::mutex> entity_lock(entity_monitoring_mutex_);
             active_datareaders_[sub_data.topic_name].insert(sub_data.key);
-            
-            std::cout << "[PersistenceService] Registered DataReader for topic '" 
+        }
+        
+        std::cout << "[PersistenceService] Registered DataReader for topic '" 
+                  << sub_data.topic_name << "' (in memory)" << std::endl;
+        
+        // 检查是否需要发送历史数据
+        if (should_send_historical_data(sub_data.topic_name)) {
+            std::cout << "[PersistenceService] Triggering historical data send for topic '" 
                       << sub_data.topic_name << "'" << std::endl;
-            
-            // 检查是否需要发送历史数据
-            if (should_send_historical_data(sub_data.topic_name)) {
-                std::cout << "[PersistenceService] Triggering historical data send for topic '" 
-                          << sub_data.topic_name << "'" << std::endl;
-                // 这里可以异步触发历史数据发送
-                // 注意：需要确保原有的历史数据发送逻辑会调用should_send_historical_data进行检查
-            }
-        } else {
-            std::cerr << "[PersistenceService] Failed to register DataReader for topic '" 
-                      << sub_data.topic_name << "'" << std::endl;
+            // 这里可以异步触发历史数据发送
         }
         
     } catch (const std::exception& e) {
@@ -1092,6 +1100,60 @@ bool PersistenceService::should_send_historical_data(const std::string& topic_na
                   << e.what() << std::endl;
         return true; // 出错时采用安全策略，发送历史数据
     }
+}
+
+// ===== 内存实体信息查询接口实现 =====
+
+std::vector<ActiveDataWriterInfo> PersistenceService::get_active_datawriters_info() const {
+    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+    std::vector<ActiveDataWriterInfo> result;
+    
+    for (const auto& pair : active_writers_info_) {
+        if (pair.second.is_active) {
+            result.push_back(pair.second);
+        }
+    }
+    
+    return result;
+}
+
+std::vector<ActiveDataReaderInfo> PersistenceService::get_active_datareaders_info() const {
+    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+    std::vector<ActiveDataReaderInfo> result;
+    
+    for (const auto& pair : active_readers_info_) {
+        if (pair.second.is_active) {
+            result.push_back(pair.second);
+        }
+    }
+    
+    return result;
+}
+
+std::vector<ActiveDataWriterInfo> PersistenceService::get_topic_datawriters_info(const std::string& topic_name) const {
+    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+    std::vector<ActiveDataWriterInfo> result;
+    
+    for (const auto& pair : active_writers_info_) {
+        if (pair.second.is_active && pair.second.topic_name == topic_name) {
+            result.push_back(pair.second);
+        }
+    }
+    
+    return result;
+}
+
+std::vector<ActiveDataReaderInfo> PersistenceService::get_topic_datareaders_info(const std::string& topic_name) const {
+    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+    std::vector<ActiveDataReaderInfo> result;
+    
+    for (const auto& pair : active_readers_info_) {
+        if (pair.second.is_active && pair.second.topic_name == topic_name) {
+            result.push_back(pair.second);
+        }
+    }
+    
+    return result;
 }
 
 TRAVODDS_NAMESPACE_END

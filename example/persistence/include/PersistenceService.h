@@ -25,6 +25,29 @@ class DataWriter;
 class Subscriber;
 class Publisher;
 
+// 实体信息结构体（供外部使用，内存管理）
+struct ActiveDataWriterInfo {
+    BuiltinTopicKey_t key;
+    std::string topic_name;
+    std::string type_name;
+    DurabilityQosPolicyKind durability_kind;
+    ReliabilityQosPolicyKind reliability_kind;
+    std::chrono::steady_clock::time_point discovered_at;
+    std::chrono::steady_clock::time_point last_seen;
+    bool is_active;
+};
+
+struct ActiveDataReaderInfo {
+    BuiltinTopicKey_t key;
+    std::string topic_name;
+    std::string type_name;
+    DurabilityQosPolicyKind durability_kind;
+    ReliabilityQosPolicyKind reliability_kind;
+    std::chrono::steady_clock::time_point discovered_at;
+    std::chrono::steady_clock::time_point last_seen;
+    bool is_active;
+};
+
 // Qt 可视化回调接口（便于后续Qt集成）
 class IPersistenceUICallback {
 public:
@@ -96,6 +119,12 @@ public:
     DatabaseManager& get_database_manager() { return *database_manager_; }
     IPersistenceUICallback* get_ui_callback() const { return ui_callback_.get(); }
     
+    // 获取活跃实体信息（新增，直接从内存返回）
+    std::vector<ActiveDataWriterInfo> get_active_datawriters_info() const;
+    std::vector<ActiveDataReaderInfo> get_active_datareaders_info() const;
+    std::vector<ActiveDataWriterInfo> get_topic_datawriters_info(const std::string& topic_name) const;
+    std::vector<ActiveDataReaderInfo> get_topic_datareaders_info(const std::string& topic_name) const;
+    
     // 数据清理
     void cleanup_old_data();
 
@@ -154,6 +183,11 @@ private:
         std::chrono::seconds monitoring_interval{5}; // 监控间隔
     };
     SmartSendingConfig smart_config_;
+    
+    // 内存中的实体信息管理（替代数据库存储）
+    std::map<BuiltinTopicKey_t, ActiveDataWriterInfo> active_writers_info_;
+    std::map<BuiltinTopicKey_t, ActiveDataReaderInfo> active_readers_info_;
+    mutable std::mutex entity_info_mutex_;
     
     // 历史数据发送相关
     std::map<std::string, std::shared_ptr<DataWriter>> topic_writers_;  // topic_name -> DataWriter

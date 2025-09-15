@@ -5,6 +5,9 @@ project(persistence_example LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 查找Qt5
+find_package(Qt5 COMPONENTS Core Widgets QUIET)
+
 # 查找依赖
 # find_package(TRAVODDS 1 REQUIRED)
 # 直接使用本地构建的库
@@ -54,6 +57,57 @@ target_link_libraries(persistence_service_app
     persistence_service
 )
 
+# 条件性地添加Qt支持到持久化服务程序
+if(Qt5_FOUND)
+    message(STATUS "Found Qt5, adding GUI support to persistence_service_app")
+    
+    # 启用Qt的MOC、UIC、RCC
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTOUIC ON)
+    set(CMAKE_AUTORCC ON)
+    
+    # 先创建持久化服务应用基础目标
+    target_sources(persistence_service_app PRIVATE
+        src/PersistenceMonitor.cpp
+        src/QtPersistenceInterface.cpp
+        include/PersistenceMonitor.h
+        include/QtPersistenceInterface.h
+    )
+    
+    # 创建一个单独的MOC目标处理头文件
+    qt5_wrap_cpp(MONITOR_MOC_SOURCES 
+        include/PersistenceMonitor.h
+        include/QtPersistenceInterface.h
+    )
+    
+    # 添加MOC生成的文件
+    target_sources(persistence_service_app PRIVATE ${MONITOR_MOC_SOURCES})
+    
+    # 添加Qt头文件目录
+    target_include_directories(persistence_service_app PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    
+    # 链接Qt库
+    target_link_libraries(persistence_service_app PRIVATE
+        Qt5::Core
+        Qt5::Widgets
+    )
+    
+    # 定义BUILD_WITH_QT宏
+    target_compile_definitions(persistence_service_app PRIVATE BUILD_WITH_QT)
+    
+    # 设置Qt应用程序属性
+    if(WIN32)
+        set_target_properties(persistence_service_app PROPERTIES
+            WIN32_EXECUTABLE TRUE
+        )
+    endif()
+    
+else()
+    message(WARNING "Qt5 not found, building console-only persistence service. Install Qt5 development packages to enable GUI support.")
+endif()
+
 # 持久化Hello World示例
 add_executable(persistent_hello_world 
     example/persistent_hello_world.cpp
@@ -73,21 +127,4 @@ target_link_libraries(persistent_hello_world
     pthread
 )
 
-# 测试发布者 - 用于测试自动发现
-add_executable(test_publisher
-    example/test_publisher.cpp
-    ../cpp/hello_world/HelloWorld.cpp
-    ../cpp/hello_world/HelloWorldTypeSupport.cpp
-)
 
-target_include_directories(test_publisher 
-    PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/hello_world
-)
-
-target_link_libraries(test_publisher 
-    PRIVATE 
-    travodds
-    pthread
-)
