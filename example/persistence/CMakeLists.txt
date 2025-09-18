@@ -69,15 +69,12 @@ if(Qt5_FOUND)
     # 先创建持久化服务应用基础目标
     target_sources(persistence_service_app PRIVATE
         src/PersistenceMonitor.cpp
-        src/QtPersistenceInterface.cpp
         include/PersistenceMonitor.h
-        include/QtPersistenceInterface.h
     )
     
     # 创建一个单独的MOC目标处理头文件
     qt5_wrap_cpp(MONITOR_MOC_SOURCES 
         include/PersistenceMonitor.h
-        include/QtPersistenceInterface.h
     )
     
     # 添加MOC生成的文件

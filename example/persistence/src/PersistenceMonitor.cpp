@@ -1,5 +1,4 @@
 #include "PersistenceMonitor.h"
-#include "QtPersistenceInterface.h"
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QMessageBox>
@@ -25,7 +24,6 @@ using namespace TRAVODDS;
 PersistenceMonitor::PersistenceMonitor(QWidget* parent)
     : QMainWindow(parent)
     , persistence_service_(nullptr)
-    , qt_interface_(nullptr)
     , main_tabs_(nullptr)
     , is_monitoring_(false)
     , refresh_interval_ms_(2000) // 2秒刷新间隔
@@ -88,16 +86,7 @@ void PersistenceMonitor::setPersistenceService(std::shared_ptr<TRAVODDS::Persist
     persistence_service_ = service;
     
     if (service) {
-        // 创建Qt接口
-        qt_interface_ = std::make_shared<QtPersistenceInterface>(service, this);
-        
-        // 连接信号进行数据刷新
-        connect(qt_interface_.get(), &QtPersistenceInterface::statisticsUpdated,
-                this, &PersistenceMonitor::refreshAllData);
-        connect(qt_interface_.get(), &QtPersistenceInterface::dataStored,
-                this, &PersistenceMonitor::refreshAllData);
-        
-        // 启动定时器定期刷新
+        // 启动定时器定期刷新数据
         refresh_timer_->start(1000); // 每秒刷新
     }
 }

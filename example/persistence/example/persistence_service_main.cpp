@@ -37,36 +37,6 @@ void print_usage(const char* program_name) {
     std::cout << "  " << program_name << " --gui        # GUI mode, default settings" << std::endl;
 }
 
-// 简单的Qt回调示例实现
-class ConsoleUICallback : public IPersistenceUICallback {
-public:
-    void on_writer_discovered(const std::string& topic, const std::string& type) override {
-        std::cout << "[UI] Writer discovered - Topic: " << topic << ", Type: " << type << std::endl;
-    }
-    
-    void on_reader_discovered(const std::string& topic, const std::string& type) override {
-        std::cout << "[UI] Reader discovered - Topic: " << topic << ", Type: " << type << std::endl;
-    }
-    
-    void on_data_stored(const std::string& topic, size_t data_size) override {
-        std::cout << "[UI] Data stored - Topic: " << topic << ", Size: " << data_size << " bytes" << std::endl;
-    }
-    
-    void on_historical_data_sent(const std::string& topic, size_t count) override {
-        std::cout << "[UI] Historical data sent - Topic: " << topic << ", Count: " << count << std::endl;
-    }
-    
-    void on_statistics_updated() override {
-        // 定期统计更新，避免太频繁的输出
-        static auto last_print = std::chrono::steady_clock::now();
-        auto now = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_print).count() > 10) {
-            std::cout << "[UI] Statistics updated" << std::endl;
-            last_print = now;
-        }
-    }
-};
-
 void signal_handler(int signal) {
     std::cout << "\nReceived signal " << signal << ", shutting down..." << std::endl;
     g_running = false;
@@ -205,11 +175,7 @@ int main(int argc, char* argv[]) {
         std::shared_ptr<DomainParticipant> participant_ptr(participant, participant_deleter);
         g_persistence_service->set_domain_participant(participant_ptr);
         
-        // 设置UI回调
-        auto ui_callback = std::make_shared<ConsoleUICallback>();
-        g_persistence_service->set_ui_callback(ui_callback);
-        
-        // 启动服务
+                // 设置数据管理配置
         bool success = g_persistence_service->initialize();
         if (!success) {
             std::cerr << "Failed to initialize persistence service" << std::endl;

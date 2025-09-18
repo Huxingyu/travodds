@@ -283,10 +283,6 @@ auto PersistenceService::get_historical_data_range(const std::string& topic_name
     return all_data;
 }
 
-void PersistenceService::set_ui_callback(std::shared_ptr<IPersistenceUICallback> callback) {
-    ui_callback_ = callback;
-}
-
 auto PersistenceService::get_statistics() -> std::map<std::string, int64_t> {
     std::map<std::string, int64_t> stats;
     
@@ -370,11 +366,6 @@ void PersistenceService::on_publication_discovered(const std::string& topic_name
         database_manager_->insert_or_update_topic(topic_name, type_name, durability);
     }
     
-    // 通知UI回调
-    if (ui_callback_) {
-        ui_callback_->on_writer_discovered(topic_name, type_name);
-    }
-    
     // 激活相应的持久化处理器
     auto handler_it = handlers_.find(durability);
     if (handler_it != handlers_.end()) {
@@ -403,10 +394,6 @@ void PersistenceService::on_subscription_discovered(const std::string& topic_nam
                   << " Subscription detected: " << topic_name 
                   << " - 持久化服务不处理" << durability_kind_to_string(durability) << "策略" << std::endl;
         
-        // 对于TRANSIENT_LOCAL，仍然通知UI回调
-        if (durability == TRANSIENT_LOCAL_DURABILITY_QOS && ui_callback_) {
-            ui_callback_->on_reader_discovered(topic_name, type_name);
-        }
         return;
     }
     
@@ -430,11 +417,6 @@ void PersistenceService::on_subscription_discovered(const std::string& topic_nam
     // 确保topic在数据库中注册
     if (database_manager_) {
         database_manager_->insert_or_update_topic(topic_name, type_name, durability);
-    }
-    
-    // 通知UI回调
-    if (ui_callback_) {
-        ui_callback_->on_reader_discovered(topic_name, type_name);
     }
     
     // 当发现新的Subscription时，需要确保有DataWriter可以发送历史数据
@@ -761,11 +743,6 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
     std::cout << "[PersistenceService] Historical data sending completed for topic: " 
               << topic_name << ". Sent " << sent_count << " samples out of " 
               << historical_data.size() << " total." << std::endl;
-    
-    // 通知UI回调
-    if (ui_callback_) {
-        ui_callback_->on_historical_data_sent(topic_name, sent_count);
-    }
 }
 
 // 发现轮询线程
@@ -936,6 +913,9 @@ void PersistenceService::entity_monitoring_thread_main() {
     
     while (monitoring_running_.load()) {
         try {
+            // 检查实体活跃状态
+            check_entities_active_status();
+            
             // 清理不活跃的实体
             cleanup_inactive_entities();
             
@@ -958,26 +938,35 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
         
         auto now = std::chrono::steady_clock::now();
         
-        ActiveDataWriterInfo writer_info;
-        writer_info.key = pub_data.key;
-        writer_info.topic_name = pub_data.topic_name;
-        writer_info.type_name = pub_data.type_name;
-        writer_info.durability_kind = pub_data.durability.kind;
-        writer_info.reliability_kind = pub_data.reliability.kind;
-        writer_info.discovered_at = now;
-        writer_info.last_seen = now;
-        writer_info.is_active = true;
-        
-        active_writers_info_[pub_data.key] = writer_info;
+        // 检查是否已存在
+        auto it = active_writers_info_.find(pub_data.key);
+        if (it != active_writers_info_.end()) {
+            // 实体已存在，只更新last_seen时间
+            it->second.last_seen = now;
+            it->second.is_active = true;  // 重新发现时标记为活跃
+        } else {
+            // 新实体，创建完整信息
+            ActiveDataWriterInfo writer_info;
+            writer_info.key = pub_data.key;
+            writer_info.topic_name = pub_data.topic_name;
+            writer_info.type_name = pub_data.type_name;
+            writer_info.durability_kind = pub_data.durability.kind;
+            writer_info.reliability_kind = pub_data.reliability.kind;
+            writer_info.discovered_at = now;
+            writer_info.last_seen = now;
+            writer_info.is_active = true;
+            
+            active_writers_info_[pub_data.key] = writer_info;
+            
+            std::cout << "[PersistenceService] Registered new DataWriter for topic '" 
+                      << pub_data.topic_name << "' (in memory)" << std::endl;
+        }
         
         // 同时更新活跃实体列表
         {
             std::lock_guard<std::mutex> entity_lock(entity_monitoring_mutex_);
             active_datawriters_[pub_data.topic_name].insert(pub_data.key);
         }
-        
-        std::cout << "[PersistenceService] Registered DataWriter for topic '" 
-                  << pub_data.topic_name << "' (in memory)" << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception updating DataWriter registry: " 
@@ -992,17 +981,29 @@ void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTop
         
         auto now = std::chrono::steady_clock::now();
         
-        ActiveDataReaderInfo reader_info;
-        reader_info.key = sub_data.key;
-        reader_info.topic_name = sub_data.topic_name;
-        reader_info.type_name = sub_data.type_name;
-        reader_info.durability_kind = sub_data.durability.kind;
-        reader_info.reliability_kind = sub_data.reliability.kind;
-        reader_info.discovered_at = now;
-        reader_info.last_seen = now;
-        reader_info.is_active = true;
-        
-        active_readers_info_[sub_data.key] = reader_info;
+        // 检查是否已存在
+        auto existing_reader = active_readers_info_.find(sub_data.key);
+        if (existing_reader != active_readers_info_.end()) {
+            // 实体已存在，只更新last_seen时间
+            existing_reader->second.last_seen = now;
+            existing_reader->second.is_active = true;  // 重新发现时标记为活跃
+        } else {
+            // 新实体，创建完整信息
+            ActiveDataReaderInfo reader_info;
+            reader_info.key = sub_data.key;
+            reader_info.topic_name = sub_data.topic_name;
+            reader_info.type_name = sub_data.type_name;
+            reader_info.durability_kind = sub_data.durability.kind;
+            reader_info.reliability_kind = sub_data.reliability.kind;
+            reader_info.discovered_at = now;
+            reader_info.last_seen = now;
+            reader_info.is_active = true;
+            
+            active_readers_info_[sub_data.key] = reader_info;
+            
+            std::cout << "[PersistenceService] Registered new DataReader for topic '" 
+                      << sub_data.topic_name << "' (in memory)" << std::endl;
+        }
         
         // 同时更新活跃实体列表
         {
@@ -1010,11 +1011,8 @@ void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTop
             active_datareaders_[sub_data.topic_name].insert(sub_data.key);
         }
         
-        std::cout << "[PersistenceService] Registered DataReader for topic '" 
-                  << sub_data.topic_name << "' (in memory)" << std::endl;
-        
-        // 检查是否需要发送历史数据
-        if (should_send_historical_data(sub_data.topic_name)) {
+        // 检查是否需要发送历史数据（只对新发现的DataReader）
+        if (existing_reader == active_readers_info_.end() && should_send_historical_data(sub_data.topic_name)) {
             std::cout << "[PersistenceService] Triggering historical data send for topic '" 
                       << sub_data.topic_name << "'" << std::endl;
             // 这里可以异步触发历史数据发送
@@ -1023,6 +1021,53 @@ void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTop
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception updating DataReader registry: " 
                   << e.what() << std::endl;
+    }
+}
+
+void PersistenceService::check_entities_active_status() {
+    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+    auto now = std::chrono::steady_clock::now();
+    
+    // 检查DataWriter活跃状态
+    for (auto& [key, writer_info] : active_writers_info_) {
+        auto time_since_last_seen = now - writer_info.last_seen;
+        bool was_active = writer_info.is_active;
+        
+        // 如果超过超时时间，标记为不活跃
+        if (time_since_last_seen > smart_config_.entity_timeout) {
+            writer_info.is_active = false;
+            if (was_active) {
+                std::cout << "[PersistenceService] DataWriter for topic '" 
+                          << writer_info.topic_name << "' marked as inactive (timeout)" << std::endl;
+            }
+        } else {
+            writer_info.is_active = true;
+            if (!was_active) {
+                std::cout << "[PersistenceService] DataWriter for topic '" 
+                          << writer_info.topic_name << "' marked as active" << std::endl;
+            }
+        }
+    }
+    
+    // 检查DataReader活跃状态
+    for (auto& [key, reader_info] : active_readers_info_) {
+        auto time_since_last_seen = now - reader_info.last_seen;
+        bool was_active = reader_info.is_active;
+        
+        // 如果超过超时时间，标记为不活跃
+        if (time_since_last_seen > smart_config_.entity_timeout) {
+            reader_info.is_active = false;
+            if (was_active) {
+                std::cout << "[PersistenceService] DataReader for topic '" 
+                          << reader_info.topic_name << "' marked as inactive (timeout)" << std::endl;
+            }
+        } else {
+            reader_info.is_active = true;
+            if (!was_active) {
+                std::cout << "[PersistenceService] DataReader for topic '" 
+                          << reader_info.topic_name << "' marked as active" << std::endl;
+            }
+        }
     }
 }
 

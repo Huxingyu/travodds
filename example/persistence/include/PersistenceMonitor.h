@@ -29,9 +29,6 @@
 
 #include "PersistenceService.h"
 
-// 前向声明
-class QtPersistenceInterface;
-
 TRAVODDS_NAMESPACE_BEGIN
 class PersistenceService;
 TRAVODDS_NAMESPACE_END
@@ -93,7 +90,6 @@ private:
     
     // 成员变量
     std::shared_ptr<TRAVODDS::PersistenceService> persistence_service_;
-    std::shared_ptr<QtPersistenceInterface> qt_interface_;
     
     // 主要UI组件
     QTabWidget* main_tabs_;

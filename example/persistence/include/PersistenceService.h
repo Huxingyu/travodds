@@ -48,17 +48,6 @@ struct ActiveDataReaderInfo {
     bool is_active;
 };
 
-// Qt 可视化回调接口（便于后续Qt集成）
-class IPersistenceUICallback {
-public:
-    virtual ~IPersistenceUICallback() = default;
-    virtual void on_writer_discovered(const std::string& topic, const std::string& type) = 0;
-    virtual void on_reader_discovered(const std::string& topic, const std::string& type) = 0;
-    virtual void on_data_stored(const std::string& topic, size_t data_size) = 0;
-    virtual void on_historical_data_sent(const std::string& topic, size_t count) = 0;
-    virtual void on_statistics_updated() = 0;
-};
-
 // 持久化配置
 struct PersistenceConfig {
     static constexpr size_t DEFAULT_RETENTION_HOURS = 24;
@@ -105,9 +94,6 @@ public:
                                   const Time_t& start_time,
                                   const Time_t& end_time) -> std::vector<StoredData>;
     
-    // UI回调接口
-    void set_ui_callback(std::shared_ptr<IPersistenceUICallback> callback);
-    
     // 统计信息
     auto get_statistics() -> std::map<std::string, int64_t>;
     
@@ -117,7 +103,6 @@ public:
     // 访问内部组件（用于处理器）
     MemoryCache& get_memory_cache() { return *memory_cache_; }
     DatabaseManager& get_database_manager() { return *database_manager_; }
-    IPersistenceUICallback* get_ui_callback() const { return ui_callback_.get(); }
     
     // 获取活跃实体信息（新增，直接从内存返回）
     std::vector<ActiveDataWriterInfo> get_active_datawriters_info() const;
@@ -143,7 +128,6 @@ private:
     
     // DDS集成
     std::shared_ptr<DomainParticipant> participant_;
-    std::shared_ptr<IPersistenceUICallback> ui_callback_;
     
     // 发现监听相关
     std::shared_ptr<DataReader> publication_reader_;
@@ -232,6 +216,7 @@ private:
     void update_datawriter_registry(const PublicationBuiltinTopicData& pub_data);
     void update_datareader_registry(const SubscriptionBuiltinTopicData& sub_data);
     void cleanup_inactive_entities();
+    void check_entities_active_status();  // 新增：检查实体活跃状态
     bool should_send_historical_data(const std::string& topic_name) const;
     
     // 数据处理方法
