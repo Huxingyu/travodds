@@ -3,6 +3,7 @@
 #include "xtypes/dynamicdata.h"
 #include <stdexcept> 
 #include <cassert> 
+USING_TRAVODDS_NAMESPACE
 using namespace TRAVODDS::DDSSQL;
 
 template<typename T>

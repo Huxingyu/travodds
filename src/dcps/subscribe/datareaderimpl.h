@@ -17,10 +17,8 @@
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
 
-class SerializedBuffer;
-
 TRAVODDS_NAMESPACE_BEGIN
-
+class SerializedBuffer;
 class Reader;
 class SubscriberImpl;
 class TopicDescriptionImpl;
