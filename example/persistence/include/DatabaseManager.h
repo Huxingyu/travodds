@@ -20,28 +20,6 @@ struct DatabaseConfig {
     int connection_timeout_ms = 30000;
 };
 
-// DataWriter信息结构体
-struct DataWriterInfo {
-    BuiltinTopicKey_t key;
-    std::string topic_name;
-    std::string type_name;
-    DurabilityQosPolicyKind durability_kind;
-    ReliabilityQosPolicyKind reliability_kind;
-    Time_t discovered_at;
-    Time_t last_seen;
-};
-
-// DataReader信息结构体
-struct DataReaderInfo {
-    BuiltinTopicKey_t key;
-    std::string topic_name;
-    std::string type_name;
-    DurabilityQosPolicyKind durability_kind;
-    ReliabilityQosPolicyKind reliability_kind;
-    Time_t discovered_at;
-    Time_t last_seen;
-};
-
 // 数据库管理器
 class DatabaseManager {
 public:
@@ -72,45 +50,22 @@ public:
     
     // Topic管理
     bool insert_or_update_topic(const std::string& topic_name, 
-                               const std::string& type_name,
-                               DurabilityQosPolicyKind durability_kind);
+                               const std::string& type_name);
     bool update_topic_stats(const std::string& topic_name, size_t data_size);
     
     // 清理操作
     bool cleanup_old_data(std::chrono::hours retention_time);
     bool cleanup_topic_data(const std::string& topic_name);
     
-    // DataWriter/DataReader 管理
-    bool register_datawriter(const BuiltinTopicKey_t& key,
-                            const std::string& topic_name,
-                            const std::string& type_name,
-                            DurabilityQosPolicyKind durability_kind,
-                            ReliabilityQosPolicyKind reliability_kind);
-    
-    bool register_datareader(const BuiltinTopicKey_t& key,
-                           const std::string& topic_name,
-                           const std::string& type_name,
-                           DurabilityQosPolicyKind durability_kind,
-                           ReliabilityQosPolicyKind reliability_kind);
-    
-    bool update_entity_activity(const BuiltinTopicKey_t& key, bool is_writer);
-    bool mark_entity_inactive(const BuiltinTopicKey_t& key, bool is_writer);
-    
-    auto get_active_datawriters(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
-    auto get_active_datareaders(const std::string& topic_name) -> std::vector<BuiltinTopicKey_t>;
-    
-    // 获取详细实体信息的新方法
-    auto get_active_datawriters_info() -> std::vector<DataWriterInfo>;
-    auto get_active_datareaders_info() -> std::vector<DataReaderInfo>;
-    auto get_topic_datawriters_info(const std::string& topic_name) -> std::vector<DataWriterInfo>;
-    auto get_topic_datareaders_info(const std::string& topic_name) -> std::vector<DataReaderInfo>;
-    
-    bool is_datawriter_active(const BuiltinTopicKey_t& key);
-    bool cleanup_inactive_entities(std::chrono::minutes inactive_threshold);
-    
     // 统计信息
     auto get_database_stats() -> std::map<std::string, int64_t>;
     bool is_initialized() const { return db_ != nullptr; }
+
+    // 【新增】获取所有表名
+    auto get_table_names() -> std::vector<std::string>;
+
+    // 【新增】获取指定表的通用内容（返回二维字符串数组）
+    auto get_table_content(const std::string& table_name) -> std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>;
     
 private:
     DatabaseConfig config_;
@@ -124,11 +79,6 @@ private:
     // 辅助方法
     static auto time_to_microseconds(const Time_t& time) -> int64_t;
     static auto microseconds_to_time(int64_t microseconds) -> Time_t;
-    
-    // GUID和BuiltinTopicKey转换辅助方法
-    static auto builtin_key_to_guid_prefix(const BuiltinTopicKey_t& key) -> std::vector<uint8_t>;
-    static auto builtin_key_to_guid_entity(const BuiltinTopicKey_t& key) -> std::vector<uint8_t>;
-    static auto guid_to_builtin_key(const std::vector<uint8_t>& prefix, const std::vector<uint8_t>& entity) -> BuiltinTopicKey_t;
 };
 
 TRAVODDS_NAMESPACE_END

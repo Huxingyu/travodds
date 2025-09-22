@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <set>
 #include <chrono>
+#include <cstring>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -108,9 +109,16 @@ void PersistenceService::shutdown() {
 }
 
 void PersistenceService::initialize_handlers() {
-
     handlers_[TRANSIENT_DURABILITY_QOS] = std::make_unique<TransientHandler>(this);
     handlers_[PERSISTENT_DURABILITY_QOS] = std::make_unique<PersistentHandler>(this);
+    
+    // 初始化所有Handler
+    for (auto& [durability, handler] : handlers_) {
+        if (!(handler && handler->initialize())) {
+            std::cerr << "[PersistenceService] Failed to initialize " 
+                      << durability_kind_to_string(durability) << " handler" << std::endl;
+        }
+    }
     
     std::cout << "[PersistenceService] Durability handlers initialized" << std::endl;
 }
@@ -137,6 +145,186 @@ auto PersistenceService::durability_kind_to_string(DurabilityQosPolicyKind durab
     }
 }
 
+// ============ QoS兼容性检查方法 ============
+auto PersistenceService::are_qos_compatible(const StoredData& stored_data, 
+                                           const ActiveDataReaderInfo& reader_info) const -> bool {
+    // 检查DURABILITY兼容性
+    if (!check_durability_compatibility(stored_data.durability_kind, reader_info.durability_kind)) {
+        return false;
+    }
+    
+    // 检查PRESENTATION兼容性
+    if (!check_presentation_compatibility(stored_data.presentation, reader_info.presentation)) {
+        return false;
+    }
+    
+    // 检查DEADLINE兼容性
+    if (!check_deadline_compatibility(stored_data.deadline, reader_info.deadline)) {
+        return false;
+    }
+    
+    // 检查LATENCY_BUDGET兼容性
+    if (!check_latency_budget_compatibility(stored_data.latency_budget, reader_info.latency_budget)) {
+        return false;
+    }
+    
+    // 检查OWNERSHIP兼容性
+    if (!check_ownership_compatibility(stored_data.ownership, reader_info.ownership)) {
+        return false;
+    }
+    
+    // 检查LIVELINESS兼容性
+    if (!check_liveliness_compatibility(stored_data.liveliness, reader_info.liveliness)) {
+        return false;
+    }
+    
+    // 检查RELIABILITY兼容性
+    if (!check_reliability_compatibility(stored_data.reliability_kind, reader_info.reliability_kind)) {
+        return false;
+    }
+    
+    // 检查DESTINATION_ORDER兼容性
+    if (!check_destination_order_compatibility(stored_data.destination_order, reader_info.destination_order)) {
+        return false;
+    }
+    
+    return true;
+}
+
+auto PersistenceService::check_durability_compatibility(DurabilityQosPolicyKind writer_kind, 
+                                                       DurabilityQosPolicyKind reader_kind) const -> bool {
+    // DURABILITY兼容性规则：DataWriter的kind >= DataReader的kind
+    // VOLATILE(0) < TRANSIENT_LOCAL(1) < TRANSIENT(2) < PERSISTENT(3)
+    return static_cast<int>(writer_kind) >= static_cast<int>(reader_kind);
+}
+
+auto PersistenceService::check_presentation_compatibility(const PresentationQosPolicy& writer_pres, 
+                                                         const PresentationQosPolicy& reader_pres) const -> bool {
+    // PRESENTATION兼容性规则：
+    // 1. DataWriter的access_scope >= DataReader的access_scope
+    // INSTANCE(0) < TOPIC(1) < GROUP(2)
+    if (static_cast<int>(writer_pres.access_scope) < static_cast<int>(reader_pres.access_scope)) {
+        return false;
+    }
+    
+    // 2. DataReader的coherent_access为FALSE，或者DataWriter和DataReader的coherent_access都为TRUE
+    if (reader_pres.coherent_access && !writer_pres.coherent_access) {
+        return false;
+    }
+    
+    // 3. DataReader的ordered_access为FALSE，或者DataWriter和DataReader的ordered_access都为TRUE
+    if (reader_pres.ordered_access && !writer_pres.ordered_access) {
+        return false;
+    }
+    
+    return true;
+}
+
+auto PersistenceService::check_deadline_compatibility(const DeadlineQosPolicy& writer_deadline, 
+                                                     const DeadlineQosPolicy& reader_deadline) const -> bool {
+    // DEADLINE兼容性规则：DataWriter的deadline period <= DataReader的deadline period
+    
+    // 如果reader的deadline是INFINITE，则总是兼容
+    if (reader_deadline.period.sec == DURATION_INFINITE_SEC && 
+        reader_deadline.period.nanosec == DURATION_INFINITE_NSEC) {
+        return true;
+    }
+    
+    // 如果writer的deadline是INFINITE而reader不是，则不兼容
+    if (writer_deadline.period.sec == DURATION_INFINITE_SEC && 
+        writer_deadline.period.nanosec == DURATION_INFINITE_NSEC) {
+        return false;
+    }
+    
+    // 比较时间周期：writer_period <= reader_period
+    if (writer_deadline.period.sec < reader_deadline.period.sec) {
+        return true;
+    } else if (writer_deadline.period.sec == reader_deadline.period.sec) {
+        return writer_deadline.period.nanosec <= reader_deadline.period.nanosec;
+    } else {
+        return false;
+    }
+}
+
+auto PersistenceService::check_latency_budget_compatibility(const LatencyBudgetQosPolicy& writer_budget, 
+                                                           const LatencyBudgetQosPolicy& reader_budget) const -> bool {
+    // LATENCY_BUDGET兼容性规则：DataWriter的duration <= DataReader的duration
+    
+    // 如果reader的latency budget是INFINITE，则总是兼容
+    if (reader_budget.duration.sec == DURATION_INFINITE_SEC && 
+        reader_budget.duration.nanosec == DURATION_INFINITE_NSEC) {
+        return true;
+    }
+    
+    // 如果writer的latency budget是INFINITE而reader不是，则不兼容
+    if (writer_budget.duration.sec == DURATION_INFINITE_SEC && 
+        writer_budget.duration.nanosec == DURATION_INFINITE_NSEC) {
+        return false;
+    }
+    
+    // 比较时间周期：writer_duration <= reader_duration
+    if (writer_budget.duration.sec < reader_budget.duration.sec) {
+        return true;
+    } else if (writer_budget.duration.sec == reader_budget.duration.sec) {
+        return writer_budget.duration.nanosec <= reader_budget.duration.nanosec;
+    } else {
+        return false;
+    }
+}
+
+auto PersistenceService::check_ownership_compatibility(const OwnershipQosPolicy& writer_ownership, 
+                                                      const OwnershipQosPolicy& reader_ownership) const -> bool {
+    // OWNERSHIP兼容性规则：DataWriter和DataReader的kind必须完全匹配
+    return writer_ownership.kind == reader_ownership.kind;
+}
+
+auto PersistenceService::check_liveliness_compatibility(const LivelinessQosPolicy& writer_liveliness, 
+                                                       const LivelinessQosPolicy& reader_liveliness) const -> bool {
+    // LIVELINESS兼容性规则：
+    // 1. DataWriter的kind >= DataReader的kind
+    // AUTOMATIC(0) < MANUAL_BY_PARTICIPANT(1) < MANUAL_BY_TOPIC(2)
+    if (static_cast<int>(writer_liveliness.kind) < static_cast<int>(reader_liveliness.kind)) {
+        return false;
+    }
+    
+    // 2. DataWriter的lease_duration <= DataReader的lease_duration
+    
+    // 如果reader的lease_duration是INFINITE，则总是兼容
+    if (reader_liveliness.lease_duration.sec == DURATION_INFINITE_SEC && 
+        reader_liveliness.lease_duration.nanosec == DURATION_INFINITE_NSEC) {
+        return true;
+    }
+    
+    // 如果writer的lease_duration是INFINITE而reader不是，则不兼容
+    if (writer_liveliness.lease_duration.sec == DURATION_INFINITE_SEC && 
+        writer_liveliness.lease_duration.nanosec == DURATION_INFINITE_NSEC) {
+        return false;
+    }
+    
+    // 比较时间周期：writer_lease_duration <= reader_lease_duration
+    if (writer_liveliness.lease_duration.sec < reader_liveliness.lease_duration.sec) {
+        return true;
+    } else if (writer_liveliness.lease_duration.sec == reader_liveliness.lease_duration.sec) {
+        return writer_liveliness.lease_duration.nanosec <= reader_liveliness.lease_duration.nanosec;
+    } else {
+        return false;
+    }
+}
+
+auto PersistenceService::check_reliability_compatibility(ReliabilityQosPolicyKind writer_kind, 
+                                                        ReliabilityQosPolicyKind reader_kind) const -> bool {
+    // RELIABILITY兼容性规则：DataWriter的kind >= DataReader的kind
+    // BEST_EFFORT(0) < RELIABLE(1)
+    return static_cast<int>(writer_kind) >= static_cast<int>(reader_kind);
+}
+
+auto PersistenceService::check_destination_order_compatibility(const DestinationOrderQosPolicy& writer_order, 
+                                                              const DestinationOrderQosPolicy& reader_order) const -> bool {
+    // DESTINATION_ORDER兼容性规则：DataWriter的kind >= DataReader的kind
+    // BY_RECEPTION_TIMESTAMP(0) < BY_SOURCE_TIMESTAMP(1)
+    return static_cast<int>(writer_order.kind) >= static_cast<int>(reader_order.kind);
+}
+
 void PersistenceService::cleanup_resources() {
     // 清理自身实体句柄记录
     {
@@ -159,9 +347,12 @@ void PersistenceService::cleanup_resources() {
         topic_durability_.clear();
     }
     
-    // 安全清理handlers - 先重置每个handler，再清理容器
+    // 安全清理handlers - 先调用shutdown，再重置每个handler，最后清理容器
     for (auto& [durability, handler] : handlers_) {
         if (handler) {
+            handler->shutdown();
+            std::cout << "[PersistenceService] Shutdown " 
+                      << durability_kind_to_string(durability) << " handler" << std::endl;
             handler.reset();
         }
     }
@@ -216,8 +407,8 @@ void PersistenceService::worker_thread_main() {
 }
 
 auto PersistenceService::get_handler_for_durability(DurabilityQosPolicyKind kind) -> DurabilityHandler* {
-    auto it = handlers_.find(kind);
-    return (it != handlers_.end()) ? it->second.get() : nullptr;
+    auto handler_it = handlers_.find(kind);
+    return (handler_it != handlers_.end()) ? handler_it->second.get() : nullptr;
 }
 
 void PersistenceService::store_data(const StoredData& data) {
@@ -335,127 +526,97 @@ void PersistenceService::setup_discovery_listeners() {
     std::cout << "[PersistenceService] Discovery polling thread started" << std::endl;
 }
 
-void PersistenceService::on_publication_discovered(const std::string& topic_name, 
-                                                  const std::string& type_name, 
-                                                  DurabilityQosPolicyKind durability) {
+void PersistenceService::on_publication_discovered(const PublicationBuiltinTopicData& pub_data) {
     // 使用统一的策略检查方法
-    if (!should_handle_durability(durability)) {
-        std::cout << " - 持久化服务不处理" << durability_kind_to_string(durability) 
-                  << "策略，跳过订阅" << std::endl;
+    if (!should_handle_durability(pub_data.durability.kind)) {
+        std::cout << "[PersistenceService] " << durability_kind_to_string(pub_data.durability.kind) 
+                  << " Publication detected: " << pub_data.topic_name 
+                  << " - 持久化服务不处理" << durability_kind_to_string(pub_data.durability.kind) << "策略" << std::endl;
         return; 
     }
         
-    // TRANSIENT和PERSISTENT策略：持久化服务需要处理
-    std::cout << "[PersistenceService] Persistent Publication: " 
-              << topic_name << " (" << durability_kind_to_string(durability) << ") Type: " << type_name << std::endl;
+    std::cout << "[PersistenceService] Persistent Publication discovered: " 
+              << pub_data.topic_name << " (" << durability_kind_to_string(pub_data.durability.kind) 
+              << ") Type: " << pub_data.type_name << std::endl;
     
     // 保存Topic信息 
     {
         std::lock_guard<std::mutex> lock(topic_info_mutex_);
-        TopicInfo& info = topic_info_map_[topic_name];
-        info.topic_name = topic_name;
-        info.type_name = type_name;
-        info.durability_kind = durability;
-        info.reliability_kind = RELIABLE_RELIABILITY_QOS; // 默认值，后续可从发现数据中获取
+        TopicInfo& info = topic_info_map_[pub_data.topic_name];
+        info.topic_name = pub_data.topic_name;
+        info.type_name = pub_data.type_name;
+        info.durability_kind = pub_data.durability.kind;
+        info.reliability_kind = pub_data.reliability.kind;
         info.discovered_at = std::chrono::steady_clock::now();
-        // TODO: 从发现的PublicationBuiltinTopicData中获取完整信息
     }
     
     // 注册topic信息到数据库
     if (database_manager_) {
-        database_manager_->insert_or_update_topic(topic_name, type_name, durability);
+        database_manager_->insert_or_update_topic(pub_data.topic_name, pub_data.type_name);
     }
     
-    // 激活相应的持久化处理器
-    auto handler_it = handlers_.find(durability);
-    if (handler_it != handlers_.end()) {
-        std::cout << "[PersistenceService] Activated " 
-                  << durability_kind_to_string(durability)
-                  << " handler for " << topic_name << std::endl;
+    // 更新DataWriter注册表
+    update_datawriter_registry(pub_data);
+    
+    // 创建匹配的DataReader来接收外部Writer的数据
+    if (create_data_reader_for_topic(pub_data)) {
+        std::cout << "[PersistenceService] Successfully created matching DataReader for external Writer" << std::endl;
+    } else {
+        std::cout << "[PersistenceService] Failed to create matching DataReader for external Writer" << std::endl;
     }
     
-    // 只为TRANSIENT和PERSISTENT策略创建DataReader来订阅数据
-    if (create_data_reader_for_topic(topic_name, type_name, durability)) {
-        std::cout << "[PersistenceService] Created DataReader for persistent topic: " << topic_name << std::endl;
-    }
-    
-    // 同时创建DataWriter用于向新订阅者发送历史数据
-    if (create_data_writer_for_topic(topic_name, type_name, durability)) {
-        std::cout << "[PersistenceService] Created DataWriter for historical data sending: " << topic_name << std::endl;
-    }
 }
 
-void PersistenceService::on_subscription_discovered(const std::string& topic_name, 
-                                                   const std::string& type_name, 
-                                                   DurabilityQosPolicyKind durability) {
+void PersistenceService::on_subscription_discovered(const SubscriptionBuiltinTopicData& sub_data) {
     // 使用统一的策略检查方法
-    if (!should_handle_durability(durability)) {
-        std::cout << "[PersistenceService] " << durability_kind_to_string(durability) 
-                  << " Subscription detected: " << topic_name 
-                  << " - 持久化服务不处理" << durability_kind_to_string(durability) << "策略" << std::endl;
-        
+    if (!should_handle_durability(sub_data.durability.kind)) {
+        std::cout << "[PersistenceService] " << durability_kind_to_string(sub_data.durability.kind) 
+                  << " Subscription detected: " << sub_data.topic_name 
+                  << " - 持久化服务不处理" << durability_kind_to_string(sub_data.durability.kind) << "策略" << std::endl;
         return;
     }
     
-    // TRANSIENT和PERSISTENT策略：持久化服务需要处理
-    std::cout << "[PersistenceService] Persistent Subscription: " 
-              << topic_name << " (" << durability_kind_to_string(durability) << ")" << std::endl;
+    std::cout << "[PersistenceService] Persistent Subscription discovered: " 
+              << sub_data.topic_name << " (" << durability_kind_to_string(sub_data.durability.kind) 
+              << ") Type: " << sub_data.type_name << std::endl;
     
     // 保存Topic信息
     {
         std::lock_guard<std::mutex> lock(topic_info_mutex_);
-        if (topic_info_map_.find(topic_name) == topic_info_map_.end()) {
-            TopicInfo& info = topic_info_map_[topic_name];
-            info.topic_name = topic_name;
-            info.type_name = type_name;
-            info.durability_kind = durability;
-            info.reliability_kind = RELIABLE_RELIABILITY_QOS;
+        if (topic_info_map_.find(sub_data.topic_name) == topic_info_map_.end()) {
+            TopicInfo& info = topic_info_map_[sub_data.topic_name];
+            info.topic_name = sub_data.topic_name;
+            info.type_name = sub_data.type_name;
+            info.durability_kind = sub_data.durability.kind;
+            info.reliability_kind = sub_data.reliability.kind;
             info.discovered_at = std::chrono::steady_clock::now();
         }
     }
     
     // 确保topic在数据库中注册
     if (database_manager_) {
-        database_manager_->insert_or_update_topic(topic_name, type_name, durability);
+        database_manager_->insert_or_update_topic(sub_data.topic_name, sub_data.type_name);
     }
     
-    // 当发现新的Subscription时，需要确保有DataWriter可以发送历史数据
-    // 如果还没有为此topic创建DataWriter，现在创建一个
-    {
-        std::lock_guard<std::mutex> lock(writers_mutex_);
-        if (topic_writers_.find(topic_name) == topic_writers_.end()) {
-            std::cout << "[PersistenceService] Creating DataWriter for historical data sending: " << topic_name << std::endl;
-        }
-    }
+    // 更新DataReader注册表
+    update_datareader_registry(sub_data);
     
-    // 在锁外创建DataWriter以避免死锁
-    if (topic_writers_.find(topic_name) == topic_writers_.end()) {
-        if (!create_data_writer_for_topic(topic_name, type_name, durability)) {
-            std::cerr << "[PersistenceService] Failed to create DataWriter for topic: " << topic_name << std::endl;
-            return; 
-        }
-    }
-    
-    // 向新订阅者发送历史数据
-    send_historical_data_to_subscriber(topic_name, type_name, durability);
 }
 
-// 数据订阅相关方法实现
-auto PersistenceService::create_data_reader_for_topic(const std::string& topic_name, 
-                                                     const std::string& type_name, 
-                                                     DurabilityQosPolicyKind durability) -> bool {
+// 根据外部Writer的QoS创建匹配的DataReader
+auto PersistenceService::create_data_reader_for_topic(const PublicationBuiltinTopicData& pub_data) -> bool {
     // 使用统一的策略检查方法
-    if (!should_handle_durability(durability)) {
-        std::cout << "[PersistenceService] 跳过为" << durability_kind_to_string(durability) 
-                  << " Topic创建DataReader: " << topic_name << std::endl;
+    if (!should_handle_durability(pub_data.durability.kind)) {
+        std::cout << "[PersistenceService] 跳过为" << durability_kind_to_string(pub_data.durability.kind) 
+                  << " Writer创建匹配DataReader: " << pub_data.topic_name << std::endl;
         return false;
     }
     
     std::lock_guard<std::mutex> lock(readers_mutex_);
     
     // 检查是否已经为此topic创建了reader
-    if (topic_readers_.find(topic_name) != topic_readers_.end()) {
-        std::cout << "[PersistenceService] DataReader already exists for topic: " << topic_name << std::endl;
+    if (topic_readers_.find(pub_data.topic_name) != topic_readers_.end()) {
+        std::cout << "[PersistenceService] DataReader already exists for topic: " << pub_data.topic_name << std::endl;
         return true;
     }
     
@@ -465,51 +626,73 @@ auto PersistenceService::create_data_reader_for_topic(const std::string& topic_n
     }
     
     try {
-        // 创建Subscriber
-        auto* subscriber = participant_->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        // 创建Subscriber - 配置与Writer兼容的QoS
+        SubscriberQos subscriber_qos = SUBSCRIBER_QOS_DEFAULT;
+        subscriber_qos.presentation = pub_data.presentation;
+        
+        auto* subscriber = participant_->create_subscriber(subscriber_qos, nullptr, STATUS_MASK_NONE);
         if (subscriber == nullptr) {
             std::cout << "[PersistenceService] Failed to create Subscriber" << std::endl;
             return false;
         }
         
-        // 创建Topic
-        auto* topic = participant_->create_topic(topic_name, type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        // 创建Topic (先查找是否已存在)
+        Duration_t timeout = {0, 0}; // 0秒超时，立即返回
+        auto* topic = participant_->find_topic(pub_data.topic_name, timeout);
         if (topic == nullptr) {
-            std::cout << "[PersistenceService] Failed to create Topic: " << topic_name << std::endl;
-            return false;
+            // Topic不存在，创建新的
+            topic = participant_->create_topic(pub_data.topic_name, pub_data.type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+            if (topic == nullptr) {
+                std::cout << "[PersistenceService] Failed to create Topic: " << pub_data.topic_name << std::endl;
+                return false;
+            }
+            std::cout << "[PersistenceService] Created new Topic: " << pub_data.topic_name << std::endl;
+        } else {
+            std::cout << "[PersistenceService] Using existing Topic: " << pub_data.topic_name << std::endl;
         }
         
-        // 设置DataReader QoS
+        // 设置DataReader QoS - 完全匹配Writer的QoS以确保兼容性
         DataReaderQos reader_qos = DATAREADER_QOS_DEFAULT;
-        reader_qos.durability.kind = durability;
-        reader_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
-        reader_qos.history.kind = KEEP_ALL_HISTORY_QOS;
+        reader_qos.durability.kind = pub_data.durability.kind;
+        reader_qos.reliability.kind = pub_data.reliability.kind;
+        reader_qos.deadline = pub_data.deadline;
+        reader_qos.latency_budget = pub_data.latency_budget;
+        reader_qos.ownership = pub_data.ownership;
+        reader_qos.liveliness = pub_data.liveliness;
+        reader_qos.destination_order = pub_data.destination_order;
+        reader_qos.history.kind = KEEP_ALL_HISTORY_QOS;  // 持久化服务使用KEEP_ALL
+        reader_qos.time_based_filter.minimum_separation.sec = 0;
+        reader_qos.time_based_filter.minimum_separation.nanosec = 0;
+        
+        std::cout << "[PersistenceService] Creating DataReader with matching QoS for Writer:" << std::endl;
+        std::cout << "  Topic: " << pub_data.topic_name << ", Type: " << pub_data.type_name << std::endl;
+        std::cout << "  Durability: " << durability_kind_to_string(pub_data.durability.kind) << std::endl;
+        std::cout << "  Reliability: " << (pub_data.reliability.kind == RELIABLE_RELIABILITY_QOS ? "RELIABLE" : "BEST_EFFORT") << std::endl;
         
         // 创建DataReader
         auto* reader = subscriber->create_datareader(topic, reader_qos, nullptr, STATUS_MASK_NONE);
         if (reader == nullptr) {
-            std::cout << "[PersistenceService] Failed to create DataReader for topic: " << topic_name << std::endl;
+            std::cout << "[PersistenceService] Failed to create DataReader for topic: " << pub_data.topic_name << std::endl;
             return false;
         }
         
-        // 保存reader信息（转换为shared_ptr）
-        topic_readers_[topic_name] = std::shared_ptr<DataReader>(reader);
-        topic_durability_[topic_name] = durability;
+        // 保存reader信息
+        topic_readers_[pub_data.topic_name] = std::shared_ptr<DataReader>(reader);
+        topic_durability_[pub_data.topic_name] = pub_data.durability.kind;
         
-        // 记录自己创建的DataReader句柄，避免在发现时将其存入数据库,后续可以替换为持久化服务自己独有的guid或Qos
+        // 记录自己创建的DataReader句柄
         {
             std::lock_guard<std::mutex> entities_lock(own_entities_mutex_);
             own_datareader_handles_.insert(reader->get_instance_handle());
-            std::cout << "[PersistenceService] Registered own DataReader handle for topic: " << topic_name << std::endl;
         }
         
-        std::cout << "[PersistenceService] Successfully created DataReader for topic: " 
-                  << topic_name << " with durability: " << static_cast<int>(durability) << std::endl;
+        std::cout << "[PersistenceService] Successfully created matching DataReader for external Writer on topic: " 
+                  << pub_data.topic_name << std::endl;
         
         return true;
         
     } catch (const std::exception& e) {
-        std::cout << "[PersistenceService] Exception creating DataReader: " << e.what() << std::endl;
+        std::cout << "[PersistenceService] Exception creating matching DataReader: " << e.what() << std::endl;
         return false;
     }
 }
@@ -574,8 +757,37 @@ void PersistenceService::poll_data_readers() {
                 stored_data.topic_name = topic_name;
                 stored_data.type_name = real_type_name; 
                 stored_data.instance_id = "instance_" + std::to_string(reinterpret_cast<uintptr_t>(&sample_info.instance_handle));
-                stored_data.durability_kind = durability;
                 stored_data.is_disposed = (sample_info.instance_state == NOT_ALIVE_DISPOSED_INSTANCE_STATE);
+                
+                // 从sample_info获取Writer的GUID
+                // 注意：sample_info.publication_handle包含了Writer的GUID信息
+                stored_data.writer_guid = Conversion::ToGuid(sample_info.publication_handle);
+                
+                // 查找对应Writer的完整QoS信息
+                {
+                    std::lock_guard<std::mutex> lock(writers_mutex_);
+                    auto writer_it = active_writers_info_.find(Conversion::ToBuiltinTopicKey(stored_data.writer_guid));
+                    if (writer_it != active_writers_info_.end()) {
+                        const auto& writer_info = writer_it->second;
+                        // 复制完整的QoS信息
+                        stored_data.durability_kind = writer_info.durability_kind;
+                        stored_data.reliability_kind = writer_info.reliability_kind;
+                        stored_data.presentation = writer_info.presentation;
+                        stored_data.deadline = writer_info.deadline;
+                        stored_data.latency_budget = writer_info.latency_budget;
+                        stored_data.ownership = writer_info.ownership;
+                        stored_data.ownership_strength = writer_info.ownership_strength;
+                        stored_data.liveliness = writer_info.liveliness;
+                        stored_data.destination_order = writer_info.destination_order;
+                        stored_data.lifespan = writer_info.lifespan;
+                    } else {
+                        // 如果找不到Writer信息，使用默认值（向后兼容）
+                        std::cout << "[PersistenceService] Warning: Writer QoS info not found for GUID, using defaults" << std::endl;
+                        stored_data.durability_kind = durability;
+                        stored_data.reliability_kind = BEST_EFFORT_RELIABILITY_QOS;
+                        // 其他QoS字段保持默认初始化
+                    }
+                }
                 
                 // 设置时间戳
                 stored_data.storage_time.sec = sample_info.source_timestamp.sec;
@@ -584,10 +796,66 @@ void PersistenceService::poll_data_readers() {
                 // 设置序列号
                 stored_data.sequence_number = sample_info.write_sequence_number;
                 
-                // TODO: 使用DDS原生序列化而非手动提取 - 待实现TypeSupport序列化
-                // 当前暂时保持兼容性，存储真实数据内容
-                std::string sample_data = sample.message;
-                stored_data.data.assign(sample_data.begin(), sample_data.end());
+                // 使用DDS原生TypeSupport序列化完整对象
+                try {
+                    HelloWorldTypeSupport* type_support = HelloWorldTypeSupport::get_instance();
+                    if (type_support != nullptr) {
+                        // 获取序列化所需的缓冲区大小
+                        uint32_t data_size = type_support->get_serialized_data_size(&sample, 0);
+                        
+                        // 创建序列化缓冲区
+                        SerializedBuffer buffer;
+                        
+                        // 创建CDR序列化器
+                        CdrSerializer serializer(&buffer, true); // 使用小端字节序
+                        
+                        // 执行序列化
+                        int result = type_support->serialize_data(&sample, &serializer, 1);
+                        if (result == 0) {
+                            // 序列化成功，保存完整的二进制数据
+                            uint32_t total_length = buffer.bufferTotalLength();
+                            if (total_length > 0) {
+                                stored_data.data.resize(total_length);
+                                
+                                // 复制缓冲区数据
+                                uint32_t copied = 0;
+                                for (SerializedBuffer* current = &buffer; current != nullptr && copied < total_length; current = current->next) {
+                                    uint32_t current_length = current->bufferLength();
+                                    if (current_length > 0 && current->buffer != nullptr) {
+                                        std::memcpy(stored_data.data.data() + copied, 
+                                                   current->buffer + current->reader_position, 
+                                                   current_length);
+                                        copied += current_length;
+                                    }
+                                }
+                                
+                                std::cout << "[PersistenceService] Successfully serialized HelloWorld object "
+                                          << "(index: " << sample.index << ", message: '" << sample.message 
+                                          << "') to " << total_length << " bytes" << std::endl;
+                            } else {
+                                // 序列化结果为空，回退到手动提取
+                                std::cerr << "[PersistenceService] Serialization produced empty buffer, falling back to manual extraction" << std::endl;
+                                std::string sample_data = sample.message;
+                                stored_data.data.assign(sample_data.begin(), sample_data.end());
+                            }
+                        } else {
+                            // 序列化失败，回退到手动提取
+                            std::cerr << "[PersistenceService] TypeSupport serialization failed, falling back to manual extraction" << std::endl;
+                            std::string sample_data = sample.message;
+                            stored_data.data.assign(sample_data.begin(), sample_data.end());
+                        }
+                    } else {
+                        // TypeSupport不可用，回退到手动提取
+                        std::cerr << "[PersistenceService] TypeSupport instance not available, using manual extraction" << std::endl;
+                        std::string sample_data = sample.message;
+                        stored_data.data.assign(sample_data.begin(), sample_data.end());
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "[PersistenceService] Exception during serialization: " << e.what() 
+                              << ", falling back to manual extraction" << std::endl;
+                    std::string sample_data = sample.message;
+                    stored_data.data.assign(sample_data.begin(), sample_data.end());
+                }
                 
                 // 设置完整的sample info - 生产级持久化服务必须保存完整状态
                 stored_data.sample_info = sample_info;
@@ -608,22 +876,20 @@ void PersistenceService::poll_data_readers() {
     }
 }
 
-// 历史数据传送相关方法实现
-auto PersistenceService::create_data_writer_for_topic(const std::string& topic_name, 
-                                                     const std::string& type_name, 
-                                                     DurabilityQosPolicyKind durability) -> bool {
+// 根据外部Reader的QoS创建匹配的DataWriter
+auto PersistenceService::create_data_writer_for_topic(const SubscriptionBuiltinTopicData& sub_data) -> bool {
     // 使用统一的策略检查方法
-    if (!should_handle_durability(durability)) {
-        std::cout << "[PersistenceService] 跳过为" << durability_kind_to_string(durability) 
-                  << " Topic创建DataWriter: " << topic_name << std::endl;
+    if (!should_handle_durability(sub_data.durability.kind)) {
+        std::cout << "[PersistenceService] 跳过为" << durability_kind_to_string(sub_data.durability.kind) 
+                  << " Reader创建匹配DataWriter: " << sub_data.topic_name << std::endl;
         return false;
     }
     
     std::lock_guard<std::mutex> lock(writers_mutex_);
     
     // 检查是否已经为此topic创建了writer
-    if (topic_writers_.find(topic_name) != topic_writers_.end()) {
-        std::cout << "[PersistenceService] DataWriter already exists for topic: " << topic_name << std::endl;
+    if (topic_writers_.find(sub_data.topic_name) != topic_writers_.end()) {
+        std::cout << "[PersistenceService] DataWriter already exists for topic: " << sub_data.topic_name << std::endl;
         return true;
     }
     
@@ -633,55 +899,70 @@ auto PersistenceService::create_data_writer_for_topic(const std::string& topic_n
     }
     
     try {
-        // 查找或创建Topic  
-        Duration_t timeout = {1, 0}; // 1秒超时
-        auto* topic = participant_->find_topic(topic_name, timeout);
+        // 创建Topic (先查找是否已存在)
+        Duration_t timeout = {0, 0}; // 0秒超时，立即返回
+        auto* topic = participant_->find_topic(sub_data.topic_name, timeout);
         if (topic == nullptr) {
             // Topic不存在，创建新的
-            topic = participant_->create_topic(topic_name, type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+            topic = participant_->create_topic(sub_data.topic_name, sub_data.type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
             if (topic == nullptr) {
-                std::cout << "[PersistenceService] Failed to create Topic for writer: " << topic_name << std::endl;
+                std::cout << "[PersistenceService] Failed to create Topic: " << sub_data.topic_name << std::endl;
                 return false;
             }
+            std::cout << "[PersistenceService] Created new Topic: " << sub_data.topic_name << std::endl;
+        } else {
+            std::cout << "[PersistenceService] Using existing Topic: " << sub_data.topic_name << std::endl;
         }
         
-        // 设置DataWriter QoS
+        // 设置DataWriter QoS - 完全匹配Reader的QoS以确保兼容性
         DataWriterQos writer_qos = DATAWRITER_QOS_DEFAULT;
-        writer_qos.durability.kind = durability;
-        writer_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
-        writer_qos.history.kind = KEEP_ALL_HISTORY_QOS;
+        
+        // 基础QoS - 需要满足兼容性规则
+        writer_qos.durability.kind = sub_data.durability.kind;  // 匹配Reader的durability
+        writer_qos.reliability.kind = sub_data.reliability.kind;  // 匹配Reader的reliability
+        writer_qos.deadline = sub_data.deadline;
+        writer_qos.latency_budget = sub_data.latency_budget;
+        writer_qos.ownership = sub_data.ownership;
+        writer_qos.liveliness = sub_data.liveliness;
+        writer_qos.destination_order = sub_data.destination_order;
+        writer_qos.history.kind = KEEP_ALL_HISTORY_QOS;  // 持久化服务使用KEEP_ALL
+        
+        std::cout << "[PersistenceService] Creating DataWriter with matching QoS for Reader:" << std::endl;
+        std::cout << "  Topic: " << sub_data.topic_name << ", Type: " << sub_data.type_name << std::endl;
+        std::cout << "  Durability: " << durability_kind_to_string(sub_data.durability.kind) << std::endl;
+        std::cout << "  Reliability: " << (sub_data.reliability.kind == RELIABLE_RELIABILITY_QOS ? "RELIABLE" : "BEST_EFFORT") << std::endl;
         
         // 创建DataWriter
         auto* writer = publisher_->create_datawriter(topic, writer_qos, nullptr, STATUS_MASK_NONE);
         if (writer == nullptr) {
-            std::cout << "[PersistenceService] Failed to create DataWriter for topic: " << topic_name << std::endl;
+            std::cout << "[PersistenceService] Failed to create DataWriter for topic: " << sub_data.topic_name << std::endl;
             return false;
         }
         
-        // 保存writer信息（转换为shared_ptr）
-        topic_writers_[topic_name] = std::shared_ptr<DataWriter>(writer);
+        // 保存writer信息
+        topic_writers_[sub_data.topic_name] = std::shared_ptr<DataWriter>(writer);
         
-        //记录自己创建的DataWriter句柄，避免在发现时将其存入数据库
+        // 记录自己创建的DataWriter句柄
         {
             std::lock_guard<std::mutex> entities_lock(own_entities_mutex_);
             own_datawriter_handles_.insert(writer->get_instance_handle());
-            std::cout << "[PersistenceService] Registered own DataWriter handle for topic: " << topic_name << std::endl;
         }
         
-        std::cout << "[PersistenceService] Successfully created DataWriter for topic: " 
-                  << topic_name << " with durability: " << durability_kind_to_string(durability) << std::endl;
+        std::cout << "[PersistenceService] Successfully created matching DataWriter for external Reader on topic: " 
+                  << sub_data.topic_name << std::endl;
         
         return true;
         
     } catch (const std::exception& e) {
-        std::cout << "[PersistenceService] Exception creating DataWriter: " << e.what() << std::endl;
+        std::cout << "[PersistenceService] Exception creating matching DataWriter: " << e.what() << std::endl;
         return false;
     }
 }
 
 void PersistenceService::send_historical_data_to_subscriber(const std::string& topic_name, 
                                                            const std::string& type_name, 
-                                                           DurabilityQosPolicyKind durability) {
+                                                           DurabilityQosPolicyKind durability,
+                                                           const BuiltinTopicKey_t& reader_key) {
     // 智能发送检查：如果有活跃的DataWriter，则不发送历史数据
     if (!should_send_historical_data(topic_name)) {
         std::cout << "[PersistenceService] Skipping historical data send for topic '" 
@@ -689,8 +970,22 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
         return;
     }
     
-    std::cout << "[PersistenceService] Sending historical data to new subscriber for topic: " 
-              << topic_name << " (" << durability_kind_to_string(durability) << ")" << std::endl;
+    // 获取目标DataReader的QoS信息
+    ActiveDataReaderInfo reader_info;
+    bool reader_found = false;
+    {
+        std::lock_guard<std::mutex> lock(readers_mutex_);
+        auto reader_it = active_readers_info_.find(reader_key);
+        if (reader_it != active_readers_info_.end()) {
+            reader_info = reader_it->second;
+            reader_found = true;
+        }
+    }
+    
+    if (!reader_found) {
+        std::cout << "[PersistenceService] DataReader not found for key" << std::endl;
+        return;
+    }
     
     // 获取历史数据
     auto historical_data = get_historical_data(topic_name);
@@ -699,29 +994,115 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
         return;
     }
     
-    // 查找对应的DataWriter
-    std::lock_guard<std::mutex> lock(writers_mutex_);
-    auto writer_it = topic_writers_.find(topic_name);
-    if (writer_it == topic_writers_.end()) {
-        std::cout << "[PersistenceService] No DataWriter found for topic: " << topic_name << std::endl;
+    // 过滤QoS兼容的历史数据
+    std::vector<StoredData> compatible_data;
+    for (const auto& stored_data : historical_data) {
+        // 检查存储数据的QoS与目标DataReader的QoS是否兼容
+        if (are_qos_compatible(stored_data, reader_info)) {
+            compatible_data.push_back(stored_data);
+        } else {
+            std::cout << "[PersistenceService] Skipping incompatible data: seq=" 
+                      << stored_data.sequence_number << " (QoS mismatch with DataReader)" << std::endl;
+        }
+    }
+    
+    if (compatible_data.empty()) {
+        std::cout << "[PersistenceService] No QoS-compatible historical data found for DataReader" << std::endl;
         return;
     }
     
-    auto writer = writer_it->second;
+    std::cout << "[PersistenceService] Found " << compatible_data.size() 
+              << " QoS-compatible samples out of " << historical_data.size() 
+              << " total for topic: " << topic_name << std::endl;
+    
+    // 查找或创建用于发送历史数据的DataWriter
+    std::shared_ptr<DataWriter> writer;
+    {
+        std::lock_guard<std::mutex> lock(writers_mutex_);
+        auto writer_it = topic_writers_.find(topic_name);
+        if (writer_it != topic_writers_.end()) {
+            writer = writer_it->second;
+        }
+    }
+
+    // 如果Writer不存在，则根据Reader的QoS信息创建它
     if (!writer) {
-        std::cout << "[PersistenceService] DataWriter is null for topic: " << topic_name << std::endl;
+        std::cout << "[PersistenceService] DataWriter for topic '" << topic_name 
+                  << "' not found, creating one based on Reader's QoS..." << std::endl;
+        if (create_data_writer_for_topic(reader_info.full_subscription_data)) {
+            std::lock_guard<std::mutex> lock(writers_mutex_);
+            auto writer_it = topic_writers_.find(topic_name);
+            if (writer_it != topic_writers_.end()) {
+                writer = writer_it->second;
+            }
+        }
+    }
+    
+    if (!writer) {
+        std::cout << "[PersistenceService] Failed to find or create DataWriter for topic: " << topic_name << std::endl;
         return;
     }
     
     // 发送历史数据
     size_t sent_count = 0;
-    for (const auto& stored_data : historical_data) {
+    for (const auto& stored_data : compatible_data) {
         try {
-            // 将存储的数据反序列化为HelloWorld对象
+            // 使用TypeSupport反序列化完整对象
             HelloWorld sample;
+            bool deserialization_success = false;
+            
             if (!stored_data.data.empty()) {
-                std::string message_str(stored_data.data.begin(), stored_data.data.end());
-                sample.message = message_str;
+                try {
+                    HelloWorldTypeSupport* type_support = HelloWorldTypeSupport::get_instance();
+                    if (type_support != nullptr) {
+                        // 创建序列化缓冲区并填充数据
+                        SerializedBuffer buffer;
+                        
+                        // 将存储的数据复制到缓冲区（简化处理，假设数据在单个缓冲区中）
+                        if (!stored_data.data.empty()) {
+                            // 创建临时缓冲区来存储数据
+                            char* temp_buffer = new char[stored_data.data.size()];
+                            std::memcpy(temp_buffer, stored_data.data.data(), stored_data.data.size());
+                            
+                            // 设置缓冲区属性
+                            buffer.buffer = temp_buffer;
+                            buffer.origin_buffer = temp_buffer;
+                            buffer.buffer_size = stored_data.data.size();
+                            buffer.writer_position = stored_data.data.size();
+                            buffer.reader_position = 0;
+                            buffer.next = nullptr;
+                            
+                            // 创建CDR反序列化器
+                            CdrDeserializer deserializer(&buffer, true); // 使用小端字节序
+                            
+                            // 执行反序列化
+                            int result = type_support->deserialize_data(&sample, &deserializer, 1);
+                            if (result == 0) {
+                                deserialization_success = true;
+                                std::cout << "[PersistenceService] Successfully deserialized HelloWorld object "
+                                          << "(index: " << sample.index << ", message: '" << sample.message 
+                                          << "') from " << stored_data.data.size() << " bytes" << std::endl;
+                            } else {
+                                std::cerr << "[PersistenceService] TypeSupport deserialization failed, result: " << result << std::endl;
+                            }
+                            
+                            // 清理临时缓冲区
+                            delete[] temp_buffer;
+                        }
+                    } else {
+                        std::cerr << "[PersistenceService] TypeSupport instance not available for deserialization" << std::endl;
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "[PersistenceService] Exception during deserialization: " << e.what() << std::endl;
+                }
+                
+                // 如果TypeSupport反序列化失败，回退到手动提取
+                if (!deserialization_success) {
+                    std::cout << "[PersistenceService] Falling back to manual data extraction" << std::endl;
+                    std::string message_str(stored_data.data.begin(), stored_data.data.end());
+                    sample.message = message_str;
+                    sample.index = 0; // 默认值，因为手动提取时没有index信息
+                }
             }
             
             // 发送数据
@@ -742,7 +1123,16 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
     
     std::cout << "[PersistenceService] Historical data sending completed for topic: " 
               << topic_name << ". Sent " << sent_count << " samples out of " 
-              << historical_data.size() << " total." << std::endl;
+              << compatible_data.size() << " QoS-compatible samples (total stored: " 
+              << historical_data.size() << ")." << std::endl;
+}
+
+void PersistenceService::send_historical_data_for_handler(const std::string& topic_name, 
+                                                         const std::string& type_name, 
+                                                         DurabilityQosPolicyKind durability,
+                                                         const BuiltinTopicKey_t& reader_key) {
+    // 委托给私有的send_historical_data_to_subscriber方法
+    send_historical_data_to_subscriber(topic_name, type_name, durability, reader_key);
 }
 
 // 发现轮询线程
@@ -827,7 +1217,7 @@ void PersistenceService::check_new_publications(std::set<std::string>& processed
             // 更新DataWriter注册表
             update_datawriter_registry(pub_data);
             
-            on_publication_discovered(pub_data.topic_name, pub_data.type_name, pub_data.durability.kind);
+            on_publication_discovered(pub_data);
         }
         
     } catch (const std::exception& e) {
@@ -889,7 +1279,7 @@ void PersistenceService::check_new_subscriptions(std::set<std::string>& processe
             // 更新DataReader注册表
             update_datareader_registry(sub_data);
             
-            on_subscription_discovered(sub_data.topic_name, sub_data.type_name, sub_data.durability.kind);
+            on_subscription_discovered(sub_data);
         }
         
     } catch (const std::exception& e) {
@@ -939,11 +1329,11 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
         auto now = std::chrono::steady_clock::now();
         
         // 检查是否已存在
-        auto it = active_writers_info_.find(pub_data.key);
-        if (it != active_writers_info_.end()) {
+        auto writer_it = active_writers_info_.find(pub_data.key);
+        if (writer_it != active_writers_info_.end()) {
             // 实体已存在，只更新last_seen时间
-            it->second.last_seen = now;
-            it->second.is_active = true;  // 重新发现时标记为活跃
+            writer_it->second.last_seen = now;
+            writer_it->second.is_active = true;  // 重新发现时标记为活跃
         } else {
             // 新实体，创建完整信息
             ActiveDataWriterInfo writer_info;
@@ -955,6 +1345,19 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
             writer_info.discovered_at = now;
             writer_info.last_seen = now;
             writer_info.is_active = true;
+            
+            // 收集完整的QoS信息用于兼容性检查
+            writer_info.presentation = pub_data.presentation;
+            writer_info.deadline = pub_data.deadline;
+            writer_info.latency_budget = pub_data.latency_budget;
+            writer_info.ownership = pub_data.ownership;
+            writer_info.ownership_strength = pub_data.ownership_strength;
+            writer_info.liveliness = pub_data.liveliness;
+            writer_info.destination_order = pub_data.destination_order;
+            writer_info.lifespan = pub_data.lifespan;
+            
+            // 存储完整的Publication数据以备将来使用
+            writer_info.full_publication_data = pub_data;
             
             active_writers_info_[pub_data.key] = writer_info;
             
@@ -976,33 +1379,51 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
 
 void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTopicData& sub_data) {
     try {
+        bool is_new_reader = false;
+        std::string topic_name_copy = sub_data.topic_name;  // 拷贝一份topic_name
+        
         // 存储到内存而不是数据库
-        std::lock_guard<std::mutex> lock(entity_info_mutex_);
-        
-        auto now = std::chrono::steady_clock::now();
-        
-        // 检查是否已存在
-        auto existing_reader = active_readers_info_.find(sub_data.key);
-        if (existing_reader != active_readers_info_.end()) {
-            // 实体已存在，只更新last_seen时间
-            existing_reader->second.last_seen = now;
-            existing_reader->second.is_active = true;  // 重新发现时标记为活跃
-        } else {
-            // 新实体，创建完整信息
-            ActiveDataReaderInfo reader_info;
-            reader_info.key = sub_data.key;
-            reader_info.topic_name = sub_data.topic_name;
-            reader_info.type_name = sub_data.type_name;
-            reader_info.durability_kind = sub_data.durability.kind;
-            reader_info.reliability_kind = sub_data.reliability.kind;
-            reader_info.discovered_at = now;
-            reader_info.last_seen = now;
-            reader_info.is_active = true;
+        {
+            std::lock_guard<std::mutex> lock(entity_info_mutex_);
             
-            active_readers_info_[sub_data.key] = reader_info;
+            auto now = std::chrono::steady_clock::now();
             
-            std::cout << "[PersistenceService] Registered new DataReader for topic '" 
-                      << sub_data.topic_name << "' (in memory)" << std::endl;
+            // 检查是否已存在
+            auto existing_reader = active_readers_info_.find(sub_data.key);
+            if (existing_reader != active_readers_info_.end()) {
+                // 实体已存在，只更新last_seen时间
+                existing_reader->second.last_seen = now;
+                existing_reader->second.is_active = true;  // 重新发现时标记为活跃
+            } else {
+                // 新实体，创建完整信息
+                ActiveDataReaderInfo reader_info;
+                reader_info.key = sub_data.key;
+                reader_info.topic_name = sub_data.topic_name;
+                reader_info.type_name = sub_data.type_name;
+                reader_info.durability_kind = sub_data.durability.kind;
+                reader_info.reliability_kind = sub_data.reliability.kind;
+                reader_info.discovered_at = now;
+                reader_info.last_seen = now;
+                reader_info.is_active = true;
+                
+                // 收集完整的QoS信息用于兼容性检查
+                reader_info.presentation = sub_data.presentation;
+                reader_info.deadline = sub_data.deadline;
+                reader_info.latency_budget = sub_data.latency_budget;
+                reader_info.ownership = sub_data.ownership;
+                reader_info.liveliness = sub_data.liveliness;
+                reader_info.destination_order = sub_data.destination_order;
+                reader_info.time_based_filter = sub_data.time_based_filter;
+                
+                // 存储完整的Subscription数据以备将来使用
+                reader_info.full_subscription_data = sub_data;
+                
+                active_readers_info_[sub_data.key] = reader_info;
+                is_new_reader = true;
+                
+                std::cout << "[PersistenceService] Registered new DataReader for topic '" 
+                          << sub_data.topic_name << "' (in memory)" << std::endl;
+            }
         }
         
         // 同时更新活跃实体列表
@@ -1011,11 +1432,12 @@ void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTop
             active_datareaders_[sub_data.topic_name].insert(sub_data.key);
         }
         
-        // 检查是否需要发送历史数据（只对新发现的DataReader）
-        if (existing_reader == active_readers_info_.end() && should_send_historical_data(sub_data.topic_name)) {
+        // 检查是否需要发送历史数据（在锁外执行，避免死锁）
+        if (is_new_reader && should_send_historical_data(topic_name_copy)) {
             std::cout << "[PersistenceService] Triggering historical data send for topic '" 
-                      << sub_data.topic_name << "'" << std::endl;
-            // 这里可以异步触发历史数据发送
+                      << topic_name_copy << "'" << std::endl;
+            // 实际发送历史数据
+            send_historical_data_to_subscriber(sub_data.topic_name, sub_data.type_name, sub_data.durability.kind, sub_data.key);
         }
         
     } catch (const std::exception& e) {
@@ -1072,43 +1494,82 @@ void PersistenceService::check_entities_active_status() {
 }
 
 void PersistenceService::cleanup_inactive_entities() {
-    if (!database_manager_ || !database_manager_->is_initialized()) {
-        return;
-    }
-    
     try {
-        // 使用配置的超时时间清理数据库中的不活跃实体
-        auto timeout_minutes = std::chrono::duration_cast<std::chrono::minutes>(smart_config_.entity_timeout);
-        bool success = database_manager_->cleanup_inactive_entities(timeout_minutes);
+        auto timeout_duration = smart_config_.entity_timeout;
+        auto now = std::chrono::steady_clock::now();
         
-        if (success) {
-            // 同步更新内存中的活跃列表
-            std::lock_guard<std::mutex> lock(entity_monitoring_mutex_);
+        // 获取需要清理的实体列表（在锁外面创建列表）
+        std::vector<BuiltinTopicKey_t> writers_to_remove;
+        std::vector<BuiltinTopicKey_t> readers_to_remove;
+        
+        {
+            std::lock_guard<std::mutex> lock(entity_info_mutex_);
             
-            for (auto& topic_writers : active_datawriters_) {
-                const std::string& topic_name = topic_writers.first;
-                auto active_writers = database_manager_->get_active_datawriters(topic_name);
+            // 检查inactive的DataWriters
+            for (auto it = active_writers_info_.begin(); it != active_writers_info_.end(); ) {
+                const auto& [key, writer_info] = *it;
+                auto time_since_last_seen = now - writer_info.last_seen;
                 
-                // 重建活跃Writer集合
-                std::set<BuiltinTopicKey_t> new_active_set;
-                for (const auto& key : active_writers) {
-                    new_active_set.insert(key);
+                if (time_since_last_seen > timeout_duration || !writer_info.is_active) {
+                    writers_to_remove.push_back(key);
+                    std::cout << "[PersistenceService] Marking inactive writer for removal - Topic: " 
+                              << writer_info.topic_name 
+                              << ", Key: [" << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]"
+                              << ", Inactive for: " << std::chrono::duration_cast<std::chrono::seconds>(time_since_last_seen).count() 
+                              << " seconds" << std::endl;
                 }
-                topic_writers.second = std::move(new_active_set);
+                ++it;
             }
             
-            for (auto& topic_readers : active_datareaders_) {
-                const std::string& topic_name = topic_readers.first;
-                auto active_readers = database_manager_->get_active_datareaders(topic_name);
+            // 检查inactive的DataReaders
+            for (auto it = active_readers_info_.begin(); it != active_readers_info_.end(); ) {
+                const auto& [key, reader_info] = *it;
+                auto time_since_last_seen = now - reader_info.last_seen;
                 
-                // 重建活跃Reader集合
-                std::set<BuiltinTopicKey_t> new_active_set;
-                for (const auto& key : active_readers) {
-                    new_active_set.insert(key);
+                if (time_since_last_seen > timeout_duration || !reader_info.is_active) {
+                    readers_to_remove.push_back(key);
+                    std::cout << "[PersistenceService] Marking inactive reader for removal - Topic: " 
+                              << reader_info.topic_name 
+                              << ", Key: [" << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]"
+                              << ", Inactive for: " << std::chrono::duration_cast<std::chrono::seconds>(time_since_last_seen).count() 
+                              << " seconds" << std::endl;
                 }
-                topic_readers.second = std::move(new_active_set);
+                ++it;
             }
         }
+        
+        // 实际删除操作（在锁外执行，避免长时间持锁）
+        if (!writers_to_remove.empty() || !readers_to_remove.empty()) {
+            std::lock_guard<std::mutex> lock(entity_info_mutex_);
+            
+            // 移除inactive的DataWriters
+            for (const auto& key : writers_to_remove) {
+                auto removed_count = active_writers_info_.erase(key);
+                if (removed_count > 0) {
+                    std::cout << "[PersistenceService] Removed inactive writer with key: [" 
+                              << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]" << std::endl;
+                }
+            }
+            
+            // 移除inactive的DataReaders  
+            for (const auto& key : readers_to_remove) {
+                auto removed_count = active_readers_info_.erase(key);
+                if (removed_count > 0) {
+                    std::cout << "[PersistenceService] Removed inactive reader with key: [" 
+                              << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]" << std::endl;
+                }
+            }
+        }
+        
+        // 委托给各个Handler进行专门的清理（如数据库清理等）
+        for (auto& [kind, handler] : handlers_) {
+            if (handler) {
+                // 对于PERSISTENT handler，可以清理数据库中的过期数据
+                // 对于TRANSIENT handler，可以清理内存缓存中的过期数据
+                // 这里handlers可以各自实现自己的清理逻辑
+            }
+        }
+        
         
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception in cleanup_inactive_entities: " 
@@ -1126,19 +1587,34 @@ bool PersistenceService::should_send_historical_data(const std::string& topic_na
     }
     
     try {
-        // 直接查询数据库中的活跃DataWriter，避免使用非const成员
-        auto active_writers = database_manager_->get_active_datawriters(topic_name);
+        // 检查当前Topic上是否有活跃的、非持久化服务创建的DataWriter
+        std::lock_guard<std::mutex> lock(entity_info_mutex_);
         
-        if (active_writers.empty()) {
-            // 没有活跃的DataWriter，可以发送历史数据
-            return true;
+       
+        constexpr auto ACTIVE_WRITER_TIMEOUT_SECONDS = 10;
+        
+        for (const auto& [guid, info] : active_writers_info_) {
+            // 检查是否是同一个topic
+            if (info.topic_name == topic_name) {
+                // 检查是否是其他应用程序创建的DataWriter（非持久化服务）
+                auto current_time = std::chrono::steady_clock::now();
+                auto time_since_last_seen = current_time - info.last_seen;
+                
+                // 如果Writer在过去10秒内是活跃的，认为它可能仍在发布数据
+                if (time_since_last_seen <= std::chrono::seconds(ACTIVE_WRITER_TIMEOUT_SECONDS)) {
+                    std::cout << "[PersistenceService] Found active external writer (GUID: " 
+                             << std::hex << guid.value[3] << std::dec 
+                             << ") for topic '" << topic_name 
+                             << "', skipping historical data" << std::endl;
+                    return false;
+                }
+            }
         }
         
-        // 有活跃的DataWriter，不发送历史数据，避免重复
-        std::cout << "[PersistenceService] Topic '" << topic_name 
-                  << "' has " << active_writers.size() 
-                  << " active DataWriter(s), skipping historical data send" << std::endl;
-        return false;
+        // 如果没有找到活跃的外部DataWriter，则发送历史数据
+        std::cout << "[PersistenceService] No active external writers found for topic '" 
+                 << topic_name << "', sending historical data" << std::endl;
+        return true;
         
     } catch (const std::exception& e) {
         std::cerr << "[PersistenceService] Exception in should_send_historical_data: " 
@@ -1199,6 +1675,27 @@ std::vector<ActiveDataReaderInfo> PersistenceService::get_topic_datareaders_info
     }
     
     return result;
+}
+
+auto PersistenceService::get_db_table_names() -> std::vector<std::string> {
+    if (database_manager_) {
+        return database_manager_->get_table_names();
+    }
+    return {};
+}
+
+auto PersistenceService::get_db_table_content(const std::string& table_name) -> std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> {
+    if (database_manager_) {
+        return database_manager_->get_table_content(table_name);
+    }
+    return {};
+}
+
+auto PersistenceService::get_memory_cache_usage() const -> std::pair<size_t, size_t> {
+    if (memory_cache_) {
+        return {memory_cache_->memory_usage(), config_.memory_cache_size_mb * 1024 * 1024};
+    }
+    return {0, 0};
 }
 
 TRAVODDS_NAMESPACE_END

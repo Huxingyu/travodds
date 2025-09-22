@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../include/travodds_dll.h"
 #include "PersistenceTypes.h"
 #include "MemoryCache.h"
 #include "DatabaseManager.h"
@@ -35,6 +36,19 @@ struct ActiveDataWriterInfo {
     std::chrono::steady_clock::time_point discovered_at;
     std::chrono::steady_clock::time_point last_seen;
     bool is_active;
+    
+    // 扩展的QoS字段用于兼容性检查
+    PresentationQosPolicy presentation;
+    DeadlineQosPolicy deadline;
+    LatencyBudgetQosPolicy latency_budget;
+    OwnershipQosPolicy ownership;
+    OwnershipStrengthQosPolicy ownership_strength;
+    LivelinessQosPolicy liveliness;
+    DestinationOrderQosPolicy destination_order;
+    LifespanQosPolicy lifespan;
+    
+    // 可选：存储完整的Publication数据
+    PublicationBuiltinTopicData full_publication_data;
 };
 
 struct ActiveDataReaderInfo {
@@ -46,6 +60,18 @@ struct ActiveDataReaderInfo {
     std::chrono::steady_clock::time_point discovered_at;
     std::chrono::steady_clock::time_point last_seen;
     bool is_active;
+    
+    // 扩展的QoS字段用于兼容性检查
+    PresentationQosPolicy presentation;
+    DeadlineQosPolicy deadline;
+    LatencyBudgetQosPolicy latency_budget;
+    OwnershipQosPolicy ownership;
+    LivelinessQosPolicy liveliness;
+    DestinationOrderQosPolicy destination_order;
+    TimeBasedFilterQosPolicy time_based_filter;
+    
+    // 可选：存储完整的Subscription数据
+    SubscriptionBuiltinTopicData full_subscription_data;
 };
 
 // 持久化配置
@@ -84,8 +110,8 @@ public:
     
     // 发现监听相关
     void setup_discovery_listeners();
-    void on_publication_discovered(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability);
-    void on_subscription_discovered(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability);
+    void on_publication_discovered(const PublicationBuiltinTopicData& pub_data);
+    void on_subscription_discovered(const SubscriptionBuiltinTopicData& sub_data);
     
     // 数据操作
     void store_data(const StoredData& data);
@@ -97,6 +123,15 @@ public:
     // 统计信息
     auto get_statistics() -> std::map<std::string, int64_t>;
     
+    // 【新增】获取数据库表名
+    auto get_db_table_names() -> std::vector<std::string>;
+
+    // 【新增】获取数据库表内容
+    auto get_db_table_content(const std::string& table_name) -> std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>;
+
+    // 【新增】获取内存缓存使用情况
+    auto get_memory_cache_usage() const -> std::pair<size_t, size_t>; // current_bytes, max_bytes
+
     // 配置访问
     const PersistenceConfig& get_config() const { return config_; }
     
@@ -104,14 +139,57 @@ public:
     MemoryCache& get_memory_cache() { return *memory_cache_; }
     DatabaseManager& get_database_manager() { return *database_manager_; }
     
+    // 为Handler提供的DDS实体创建辅助方法
+    auto create_datareader_for_handler(const std::string& topic_name, 
+                                      const std::string& type_name, 
+                                      DurabilityQosPolicyKind durability) -> std::shared_ptr<DataReader>;
+    auto create_datawriter_for_handler(const std::string& topic_name, 
+                                      const std::string& type_name, 
+                                      DurabilityQosPolicyKind durability) -> std::shared_ptr<DataWriter>;
+    
+    // 为Handler提供的QoS兼容性检查方法
+    auto check_qos_compatibility_for_handler(const std::string& topic_name,
+                                            const BuiltinTopicKey_t& reader_key) -> bool;
+    
     // 获取活跃实体信息（新增，直接从内存返回）
     std::vector<ActiveDataWriterInfo> get_active_datawriters_info() const;
     std::vector<ActiveDataReaderInfo> get_active_datareaders_info() const;
     std::vector<ActiveDataWriterInfo> get_topic_datawriters_info(const std::string& topic_name) const;
     std::vector<ActiveDataReaderInfo> get_topic_datareaders_info(const std::string& topic_name) const;
     
+    // QoS兼容性检查方法（public for testing）
+    // StoredData与ActiveDataReaderInfo的QoS兼容性检查重载
+    [[nodiscard]] auto are_qos_compatible(const StoredData& stored_data, 
+                                          const ActiveDataReaderInfo& reader_info) const -> bool;
+    [[nodiscard]] auto check_durability_compatibility(DurabilityQosPolicyKind writer_kind, 
+                                                      DurabilityQosPolicyKind reader_kind) const -> bool;
+    [[nodiscard]] auto check_presentation_compatibility(const PresentationQosPolicy& writer_pres, 
+                                                        const PresentationQosPolicy& reader_pres) const -> bool;
+    [[nodiscard]] auto check_deadline_compatibility(const DeadlineQosPolicy& writer_deadline, 
+                                                    const DeadlineQosPolicy& reader_deadline) const -> bool;
+    [[nodiscard]] auto check_latency_budget_compatibility(const LatencyBudgetQosPolicy& writer_budget, 
+                                                          const LatencyBudgetQosPolicy& reader_budget) const -> bool;
+    [[nodiscard]] auto check_ownership_compatibility(const OwnershipQosPolicy& writer_ownership, 
+                                                     const OwnershipQosPolicy& reader_ownership) const -> bool;
+    [[nodiscard]] auto check_liveliness_compatibility(const LivelinessQosPolicy& writer_liveliness, 
+                                                      const LivelinessQosPolicy& reader_liveliness) const -> bool;
+    [[nodiscard]] auto check_reliability_compatibility(ReliabilityQosPolicyKind writer_kind, 
+                                                       ReliabilityQosPolicyKind reader_kind) const -> bool;
+    [[nodiscard]] auto check_destination_order_compatibility(const DestinationOrderQosPolicy& writer_order, 
+                                                             const DestinationOrderQosPolicy& reader_order) const -> bool;
+    
     // 数据清理
     void cleanup_old_data();
+    
+    // 数据订阅相关（移到public让Handler使用）
+    auto create_data_reader_for_topic(const PublicationBuiltinTopicData& pub_data) -> bool;  // 根据Writer QoS创建匹配的Reader
+    auto create_data_writer_for_topic(const SubscriptionBuiltinTopicData& sub_data) -> bool;  // 根据Reader QoS创建匹配的Writer
+    
+    // 为Handler提供的历史数据发送方法
+    void send_historical_data_for_handler(const std::string& topic_name, 
+                                         const std::string& type_name, 
+                                         DurabilityQosPolicyKind durability,
+                                         const BuiltinTopicKey_t& reader_key);
 
 private:
     
@@ -202,6 +280,8 @@ private:
     [[nodiscard]] auto requires_persistence_service(DurabilityQosPolicyKind durability) const -> bool;
     [[nodiscard]] auto durability_kind_to_string(DurabilityQosPolicyKind durability) const -> const char*;
     
+
+    
     // 工作线程方法
     void worker_thread_main();
     void discovery_polling_thread();
@@ -223,11 +303,7 @@ private:
     void poll_data_readers();
     
     // 历史数据传送方法
-    auto create_data_writer_for_topic(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability) -> bool;
-    void send_historical_data_to_subscriber(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability);
-    
-    // 数据订阅相关
-    auto create_data_reader_for_topic(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability) -> bool;
+    void send_historical_data_to_subscriber(const std::string& topic_name, const std::string& type_name, DurabilityQosPolicyKind durability, const BuiltinTopicKey_t& reader_key);
 };
 
 TRAVODDS_NAMESPACE_END
