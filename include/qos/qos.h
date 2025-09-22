@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_QOS_QOS_H
-#define AGIDDS_QOS_QOS_H
+#ifndef TRAVODDS_QOS_QOS_H
+#define TRAVODDS_QOS_QOS_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 const  std::string  USERDATA_QOS_POLICY_NAME              = "UserData";
 const  std::string  DURABILITY_QOS_POLICY_NAME            = "Durability";
@@ -131,7 +131,7 @@ struct DeadlineQosPolicy {
 struct LatencyBudgetQosPolicy {
 	Duration_t duration;
 
-	/* wangyi fastdds 适配默认值修改为TIME_ZERO */
+	/* wangyi fastdds 閫傞厤榛樿鍊间慨鏀逛负TIME_ZERO */
 	LatencyBudgetQosPolicy() : duration(TIME_ZERO) {
 
 	}
@@ -191,7 +191,7 @@ struct ReliabilityQosPolicy {
 	ReliabilityQosPolicyKind kind;
 	Duration_t max_blocking_time;
 
-	ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{0, 100000} {
+	ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{0, 100000000} {
 	}
 };
 
@@ -379,6 +379,6 @@ DDS_DLL extern const SubscriberQos SUBSCRIBER_QOS_DEFAULT;
 DDS_DLL extern const DataWriterQos DATAWRITER_QOS_DEFAULT;
 DDS_DLL extern const DataReaderQos DATAREADER_QOS_DEFAULT;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_QOS_QOS_H
+#endif // !TRAVODDS_QOS_QOS_H

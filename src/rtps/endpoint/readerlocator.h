@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_READERLOCATOR_H
-#define AGIDDS_RTPS_ENDPOINT_READERLOCATOR_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_READERLOCATOR_H
+#define TRAVODDS_RTPS_ENDPOINT_READERLOCATOR_H
 
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * ReaderLocator类,包含有关远端DataReader的信息，但不保存其状态。
@@ -87,7 +87,12 @@ public:
 	Locator_t GetLocator();
 
 	//bool sendData();
+
+	void SetRemoteGuid(const GUID_t& guid);
+
+	const GUID_t& GetRemoteGuid();
 private:
+	GUID_t remoteGuid_;
 	SequenceNumber_t highestSentChangeSN_;
 	SeqNumberVec requestedChanges_;
 	Locator_t locator_;
@@ -95,6 +100,6 @@ private:
 
 	std::shared_ptr<HistoryCache> writerCache_ = nullptr;
 };
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_RTPS_ENDPOINT_READERLOCATOR_H
+#endif // !TRAVODDS_RTPS_ENDPOINT_READERLOCATOR_H

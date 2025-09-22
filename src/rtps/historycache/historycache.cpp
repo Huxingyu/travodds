@@ -2,7 +2,7 @@
 #include "rtps/historycache/historycache.h"
 #include "rtps/endpoint/writer.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 HistoryCache::HistoryCache(const HistoryQosPolicy& historyQos, const ResourceLimitsQosPolicy& resourceLimitsQos, const TopicKind_t& topicKind)
 	: historyQos_(historyQos), resourceLimitesQos_(resourceLimitsQos), topicKind_(topicKind)
@@ -62,31 +62,32 @@ bool HistoryCache::AddChange(std::shared_ptr<CacheChange> change)
 	ins.cacheChanges.push_back(change);
 	//AddSampleCounters(change->sampleInfo.sample_state, 
 	//	ins.viewState, ins.instanceState);
+
 	changeMutex_.unlock();
 
 	return true;
 }
 
-bool HistoryCache::RemoveChange(std::shared_ptr<CacheChange> change)
+bool HistoryCache::RemoveChange(const SequenceNumber_t& seqNum)
 {
-	if (nullptr == change) {
-		return false;
-	}
-
-	changeMutex_.lock();
-	cacheChanges_.erase(change->sequenceNumber);
-
-	auto itor = instanceChanges_.find(change->instanceHandle);
-	if (itor != instanceChanges_.end()) {
-		for (auto cache = itor->second.cacheChanges.begin(); cache != itor->second.cacheChanges.end(); cache++) {
-			if (cache->get() == change.get()) {
-				//RemoveSampleCounters(change->sampleInfo.sample_state, itor->second.viewState, itor->second.instanceState);
-				itor->second.cacheChanges.erase(cache);
-				break;
-			}
+	{
+		std::lock_guard<std::mutex> lock(changeMutex_);
+		auto change = cacheChanges_.find(seqNum);
+		if (change == cacheChanges_.end()) {
+			return false;
 		}
+		auto itor = instanceChanges_.find(change->second->instanceHandle);
+		if (itor != instanceChanges_.end()) {
+			auto& cacheChanges = itor->second.cacheChanges;
+			cacheChanges.erase(
+				std::remove_if(cacheChanges.begin(), cacheChanges.end(), [&change](const auto& cachedPtr) {
+				return cachedPtr.get() == change->second.get();
+				}),
+				cacheChanges.end()
+			);
+		}
+		cacheChanges_.erase(change);
 	}
-	changeMutex_.unlock();
 
 	changeVar_.notify_all();
 
@@ -99,8 +100,9 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 
 	changeMutex_.lock();
 
-	if (cacheChanges_.end() != cacheChanges_.find(seqNum)) {
-		pCacheChange = cacheChanges_[seqNum];
+	auto itor = cacheChanges_.find(seqNum);
+	if (cacheChanges_.end() != itor) {
+		pCacheChange = itor->second;
 	}
 		
 	changeMutex_.unlock();
@@ -109,11 +111,35 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 
 }
 
+std::shared_ptr<CacheChange> HistoryCache::GetMinSourceTimespace()
+{
+	std::shared_ptr<CacheChange> MinSourceTimespaceCache = nullptr;
+
+	for (auto itor = instanceChanges_.begin(); itor != instanceChanges_.end();itor++) {
+		if (itor->second.cacheChanges.empty()) continue;
+
+		// 在当前 vector 中查找最小值
+		auto it = std::min_element(itor->second.cacheChanges.begin(), itor->second.cacheChanges.end(),
+			[](const auto& a, const auto& b) {
+			if (!a) return false;  // 确保 a 有效
+			if (!b) return true;   // b 无效时 a 总是更小
+			return a->sourceTimespace < b->sourceTimespace;
+		});
+
+		// 更新最小值
+		if (*it && (!MinSourceTimespaceCache || (*it)->sourceTimespace < MinSourceTimespaceCache->sourceTimespace)) {
+			MinSourceTimespaceCache = *it;
+		}
+	}
+
+	return MinSourceTimespaceCache;
+}
+
 SequenceNumber_t HistoryCache::GetSeqNumMin()
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	if (0 == cacheChanges_.size()) {
-		return SEQUENCENUMBER_UNKNOWN;
+		return SEQUENCENUMBER_FIRST;
 	}
 
 	return cacheChanges_.begin()->first;
@@ -124,7 +150,7 @@ SequenceNumber_t HistoryCache::GetSeqNumMax()
 	std::unique_lock<std::mutex> lock(changeMutex_);
 
 	if (0 == cacheChanges_.size()) {
-		return SEQUENCENUMBER_UNKNOWN;
+		return SEQUENCENUMBER_ZERO;
 	}
 
 	return cacheChanges_.rbegin()->first;
@@ -215,7 +241,7 @@ ReturnCode_t HistoryCache::FindORAddKey(const InstanceHandle_t& handle, Serializ
 		*vitOut = itor;
 		return RETCODE_OK;
 	}
-	AGILOG(AGILOG_ERROR, "instanceChanges_.size[%d] >=  resourceLimitesQos_.max_instances[%d]", instanceChanges_.size(), resourceLimitesQos_.max_instances);
+	TRAVODDS_LOG(LOG_ERROR, "instanceChanges_.size[%d] >=  resourceLimitesQos_.max_instances[%d]", instanceChanges_.size(), resourceLimitesQos_.max_instances);
 	return RETCODE_OUT_OF_RESOURCES;
 }
 
@@ -443,11 +469,13 @@ bool HistoryCache::WriterWaitFor(const std::chrono::nanoseconds& time_out, Write
 
 }
 
-SampleCounters HistoryCache::GetSampleCounters()
+SampleCounters HistoryCache::GetSampleCounters(bool trigger)
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	SampleCounters counters = counters_;
-	counters_.change.store(false);
+	if (trigger) {
+		counters_.change.store(false);
+	}
 	return counters;
 }
 
@@ -459,7 +487,7 @@ bool HistoryCache::GetNextDeadline(InstanceHandle_t& handle, std::chrono::steady
 	}
 	std::map<InstanceHandle_t, CacheChangeVector>::iterator itor = 
 		std::min_element(instanceChanges_.begin(), instanceChanges_.end(),
-			[](const std::pair<InstanceHandle_t, CacheChangeVector>& a, const std::pair<InstanceHandle_t, CacheChangeVector>& b) {
+			[](const auto& a, const auto& b) {
 			return a.second.nextDeadline < b.second.nextDeadline;
 			}
 		);

@@ -17,7 +17,7 @@
 
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 class Writer;
 
 /**
@@ -99,6 +99,9 @@ public:
 	 * @return 是则返回true，否则返回false。
 	 */
 	bool IsAcked(SequenceNumber_t number);
+
+	/* 验证是否被全确认 */
+	bool IsAllAcked(const SequenceNumber_t& maxNumber) const;
 
 	/**
 	 * @brief 设置要发送的报文缓冲区。
@@ -230,4 +233,4 @@ private:
 	//std::map<SequenceNumber_t, ChangeForReader>  changeForReaders_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END

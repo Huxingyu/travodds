@@ -5,7 +5,13 @@
 #include <vector>
 #include <map>
 #include <cstdint>
-#include "cdr/agicdr.h"
+#include "cdr/travoddscdr.h"
+
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 #if defined(DDS_TYPE_EXPORT) && defined(_WIN32)
 #define DDS_TYPE_API __declspec(dllexport)

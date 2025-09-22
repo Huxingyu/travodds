@@ -27,6 +27,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include
+    ${PROJECT_SOURCE_DIR}/thirdparty/tao
 )
 
 # 设置源文件
@@ -158,6 +159,7 @@ set(PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/dcps
     ${PROJECT_SOURCE_DIR}/include/qos
     ${PROJECT_SOURCE_DIR}/include/type
+    ${PROJECT_SOURCE_DIR}/include/xtypes
     )
 install(DIRECTORY ${PUBLIC_HEADERS}
     DESTINATION ${INCLUDE_INSTALL_DIR}

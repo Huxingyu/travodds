@@ -9,10 +9,10 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_COMMON_THREADS_THREADPOOL_H
-#define AGIDDS_COMMON_THREADS_THREADPOOL_H
+#ifndef TRAVODDS_COMMON_THREADS_THREADPOOL_H
+#define TRAVODDS_COMMON_THREADS_THREADPOOL_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 #include <vector>       
 #include <queue>        
 #include <functional>   
@@ -22,24 +22,54 @@
 #include <future>
 #include <atomic>
 
-AGIDDS_NAMESPACE_BEGIN
-// Thread safe implementation of a Queue using a std::queue
+TRAVODDS_NAMESPACE_BEGIN
+/* 使用std::queue的队列的线程安全实现 */ 
 using ThreadPoolTask = std::function<void()>;
 
+/**
+ * @brief SafeQueue类,线程池执行函数安全队列，即任务队列。
+ */
 class SafeQueue {
 
 public:
+	/**
+	 * @brief 构造函数。
+	 */
 	SafeQueue();
-	// SafeQueue(SafeQueue&& other) {}
+
+	/**
+	 * @brief 析构函数。
+	 */
 	~SafeQueue();
-	/* 返回队列是否为空 */
+
+	/**
+	 * @brief 判断队列是否为空函数。
+	 * 
+	 * @return 队列为空返回true，否则返回false。
+	 */
 	bool Empty();
 
+	/**
+	 * @brief 获取队列大小。
+	 *
+	 * @return 队列大小。
+	 */
 	int32_t Size();
 
-	/* 队列添加元素 */
+	/**
+	 * @brief 向队列中添加元素。
+	 *
+	 * @param [in] t  队列元素。
+	 */
 	void enqueue(ThreadPoolTask& t);
-	/* 队列取出元素 */
+
+	/**
+	 * @brief 从队列中取出元素。
+	 *
+	 * @param [out] t 队列元素。
+	 * 
+	 * @return 获取成功返回true，否则返回false。
+	 */
 	bool dequeue(ThreadPoolTask& t);
 
 private:
@@ -53,22 +83,35 @@ private:
 class ThreadPool {
 
 public:
-	// 线程池构造函数
+	/**
+	 * @brief 线程池构造函数。
+	 *
+	 * @param [in] threadNum 工作队列构造值（默认值：4）。
+	 */
 	ThreadPool(const int32_t threadNum = 4);
 	ThreadPool(const ThreadPool&) = delete;
 	ThreadPool(ThreadPool&&) = delete;
 	ThreadPool &operator=(const ThreadPool&) = delete;
 	ThreadPool &operator=(ThreadPool&&) = delete;
 
+	/**
+	 * @brief 析构函数。
+	 */
 	~ThreadPool();
 
-	/* 关闭线程池  */
+	/**
+	 * @brief 关闭线程池。
+	 */
 	void shutdown();
 
-	/* 线程入口函数 */
+	/**
+	 * @brief 线程入口函数。
+	 */
 	void ThreadWorker();
 
-	// Submit a function to be executed asynchronously by the pool
+	/**
+	 * @brief 提交线程池中异步执行的函数。
+	 */
 	template <typename F, typename... Args>
 	auto submit(F&& f, Args&& ...args) -> std::future<decltype(f(args...))>
 	{
@@ -107,6 +150,6 @@ private:
 
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

@@ -9,22 +9,31 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H
-#define AGIDDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H
+#ifndef TRAVODDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H
+#define TRAVODDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H
 
 #include "dcps/listener/datareaderlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Subscriber;
+/**
+ * @brief 类SubscriberListener，最终用户应该使用它来实现对某些操作的特定回调。
+ * 它还继承所有DataReaderListener回调。
+ *
+ */
 class SubscriberListener : public DataReaderListener {
 public:
-
+    /**
+     * @brief 由用户实现的虚拟功能，包含当新数据消息在任何读取器上可用时要执行的操作。
+     *
+     * @param subscriber Subscriber
+     */
     virtual void on_data_on_readers(Subscriber* subscriber)
     {
 	    
     }
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_LISTENER_SUBSCRIBERLISTENER_H

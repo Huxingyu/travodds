@@ -1,7 +1,7 @@
 #include  "rtps/endpoint/readerproxy.h"
 #include  "rtps/endpoint/writer.h"
 #include  <algorithm>
-USING_AGIDDS_NAMESPACE
+USING_TRAVODDS_NAMESPACE
 
 ReaderProxy::ReaderProxy(const GUID_t& readerGuid, const GUID_t groupGuid,
 	const LocatorSeq& unicastLocatorList, const LocatorSeq& multicastLocatorList, bool active)
@@ -123,6 +123,18 @@ bool ReaderProxy::IsAcked(SequenceNumber_t number)
 	
 	return false;
 
+}
+
+bool ReaderProxy::IsAllAcked(const SequenceNumber_t& maxNumber) const
+{
+	//statelessreader 默认全都acked
+	if (false == isActive_)
+		return true;
+
+	if (ackedSeq_ >= maxNumber) {
+		return true;
+	}
+	return false;
 }
 
 void ReaderProxy::SetHistoryCache(std::shared_ptr<HistoryCache> writerCache)

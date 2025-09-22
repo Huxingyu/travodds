@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
-#define AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+#ifndef TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+#define TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
 
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/listener/domainparticipantlistener.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 #define TheParticipantFactory  DomainParticipantFactory::get_instance()
 
@@ -27,12 +27,13 @@ public:
     virtual ~DomainParticipantFactory() = default;
 
     /**
-     * 创建参与者。
+     * @brief 创建域参与者，并绑定参数中的QoS和监听器。创建完成的域参与者可用于后续对发布者和订阅者等进行管理。
      *
-     * @param domain_id 域id。
-     * @param qos DomainParticipantQos参考。
-     * @param listener 域参与者侦听器指针。
-     * @param mask 状态掩码参考。
+     * @param [in] domain_id 域id。
+     * @param [in] qos       DomainParticipantQos参考。
+     * @param [in] listener  域参与者监听器指针。
+     * @param [in] mask      StatusMask位掩码参考，用于指定哪些特定事件会触发监听器的回调。
+     * 
      * @return DomainParticipant指针（如果未创建，则为nullptr）。
      */
     virtual DomainParticipant* create_participant(DomainId_t domain_id,
@@ -41,21 +42,23 @@ public:
                                                   const StatusMask& mask) = 0;
 
     /**
-     * 删除参与者以及所有关联的发布者和订阅者。
+     * @brief 删除参与者以及所有关联的发布者和订阅者。
      *
-     * @param participant 指向参与者的指针。
+     * @param [in] participant 指向参与者的指针。
+     * 
      * @return 如果参与者有活动实体，则返回RETCODE_PRECONDION_NOT_MET，
      * 如果参与者被正确删除，则返回RETCODE_OK，否则返回RETCODE_ERROR
      */
     virtual ReturnCode_t delete_participant(DomainParticipant*& participant) = 0;
 
     /**
-     * 此函数检索属于指定domain_id的先前创建的DomainParticipant。
+     * @brief 此函数检索属于指定domain_id的先前创建的DomainParticipant。
      * 如果不存在这样的DomainParticipant，则函数将返回“nullptr”。
      * 如果存在属于该domain_id的多个DomainParticipant实体，
      * 则函数将返回其中一个。没有具体说明是哪一个。
      *
-     * @param domain_id
+     * @param [in] domain_id
+     * 
      * @return 以前在指定域中创建的DomainParticipant。
      */
     virtual DomainParticipant* lookup_participant(DomainId_t domain_id) const = 0;
@@ -72,7 +75,8 @@ public:
      * 以指示默认值QoS应重置回工厂将使用的初始值，
      * 即将在从未调用set_default_participantqos函数时使用。
      *
-     * @param qos 要设置的DomainParticipantQos。
+     * @param [in] qos 要设置的DomainParticipantQos。
+     * 
      * @return RETCODE_INCONSISTENT_POLICY（如果Qos不是自一致的），RETCODE_OK（如果Qos更改正确）。
      */
     virtual ReturnCode_t set_default_participant_qos(const DomainParticipantQos& qos) = 0;
@@ -83,13 +87,13 @@ public:
      * 检索到的值get_default_participant_qos将与上次成功调用
      * set_default_Participatnt_qos时指定的值集匹配，否则，如果从未进行调用，则为默认值。
      *
-     * @param qos 返回qos的DomainParticipantQos。
+     * @param [out] qos 返回qos的DomainParticipantQos。
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_default_participant_qos(DomainParticipantQos& qos) const = 0;
 
     /**
-     * 此函数设置DomainParticipantFactory QoS策略的值。
+     * @brief 此函数设置DomainParticipantFactory QoS策略的值。
      * 这些策略控制实体工厂对象的行为。
      *
      * 注意：尽管具有QoS，但DomainParticipantFactory不是实体。
@@ -97,7 +101,7 @@ public:
      * 此函数将检查生成的策略是否自一致；
      * 如果不是，则函数将无效，并返回INCONSISTENT_POLICY。
      *
-     * @param qos 要设置的DomainParticipantFactoryQos.
+     * @param [in] qos 要设置的DomainParticipantFactoryQos.
      * @return RETCODE_IMMUTABLE_POLICY（如果无法更改任何Qos），
      * RETCODE_INCONSISTENT_POLICY（如果Qos不是自一致的），
      * RETCODE_OK（如果Qos更改正确）。
@@ -105,20 +109,34 @@ public:
     virtual ReturnCode_t set_qos(const DomainParticipantFactoryQos& qos) = 0;
     
     /**
-     * 此函数返回DomainParticipantFactory QoS策略的值。
+     * @brief 此函数返回DomainParticipantFactory QoS策略的值。
      *
-     * @param qos 返回qos的DomaParticipantFactoryQos引用
+     * @param [out] qos 返回qos的DomaParticipantFactoryQos引用
      * @return RETCODE_OK
      */
     virtual ReturnCode_t get_qos(DomainParticipantFactoryQos& qos) const = 0;
 
     /**
-     * 返回DomainParticipantFactory单例。
+     * @brief 返回DomainParticipantFactory单例。
      *
      * @return DomainParticipantFactory单例。
      */
     static DomainParticipantFactory* get_instance();
 
+    /**
+     * @brief 完成事务处理并执行资源清理
+     *
+     * 该方法通常在事务结束时调用，用于：
+     * 1. 提交或回滚未完成的事务
+     * 2. 释放占用的系统资源（内存、句柄等）
+     * 3. 关闭打开的文件、数据库连接或网络套接字
+     * 4. 执行其他必要的清理操作
+     *
+     * @note 注意事项：
+     * - 调用后，对象可能进入不可用状态（取决于实现）
+     * - 应保证多次调用是安全的（幂等性）
+     * - 子类必须调用父类的 finalize() 以确保完整清理
+     */
 	static void finalize();
 
 #ifdef _XML_INTERFACE_CPP
@@ -346,5 +364,5 @@ public:
 #endif // _XML_INTERFACE_CPP
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_DOMAIN_DOMAINPARTICIPANTFACTORY_H

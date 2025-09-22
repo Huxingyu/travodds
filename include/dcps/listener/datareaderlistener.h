@@ -9,21 +9,19 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_LISTENER_DATAREADERLISTENER_H
-#define AGIDDS_DCPS_LISTENER_DATAREADERLISTENER_H
+#ifndef TRAVODDS_DCPS_LISTENER_DATAREADERLISTENER_H
+#define TRAVODDS_DCPS_LISTENER_DATAREADERLISTENER_H
 
 #include "dcps/listener/listener.h"
 #include "dcps/base/status.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DataReader;
 class DataWriter;
 
 /**
- * DataReaderListener类, 最终用户应该使用它来实现对某些函数的特定回调。
- *
- * @ingroup AGIDDS_MODULE
+ * @brief DataReaderListener类, 最终用户应该使用它来实现对某些函数的特定回调。
  */
 class DDS_DLL DataReaderListener : public Listener {
 public:
@@ -106,5 +104,5 @@ public:
     }
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_LISTENER_DATAREADERLISTENER_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_LISTENER_DATAREADERLISTENER_H

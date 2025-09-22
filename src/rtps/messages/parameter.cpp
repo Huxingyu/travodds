@@ -1,11 +1,11 @@
 #include "rtps/messages/parameter.h"
 #include "common/log/logger.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(PL_DEFAULT_ENDIAN)
 {
 	if (length < 4) {
-		AGILOG(AGILOG_ERROR, "length[%d] < 4", length);
+		TRAVODDS_LOG(LOG_ERROR, "length[%d] < 4", length);
 		return;
 	}
 	msgEndian_ = static_cast<EndiannessKind>(*(msg + 1));
@@ -18,6 +18,10 @@ ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const En
 	//PID_USER_DATA : UserDataQosPolicy
 	if (!data.ddsParticipantData.user_data.value.empty()) {
 		AddParameter(ParameterId::PID_USER_DATA, data.ddsParticipantData.user_data);
+	}
+	//PID_SYSTEM_INFO : SystemInfoQosPolicy
+	if(!data.ddsParticipantData.sys_info.empty()) {
+		AddParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
 	}
 	//PID_DOMAIN_ID : DomainId_t
 	if (data.domainId != DOMAIN_ID_UNKNOWN) {
@@ -207,7 +211,7 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
 	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
-	/* wangyi fastdds   ≈‰ ÃÌº”π˝¬À */
+	/* wangyi fastdds ÈÄÇÈÖç Ê∑ªÂä†ËøáÊª§ */
 	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
 		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
 	}
@@ -259,6 +263,8 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 {
 	//PID_USER_DATA : UserDataQosPolicy
 	GetParameter(ParameterId::PID_USER_DATA, data.ddsParticipantData.user_data);
+	//PID_PROPERTY_LIST : PropertySeq
+	GetParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
 	//PID_DOMAIN_ID : DomainId_t
 	GetParameter(ParameterId::PID_DOMAIN_ID, data.domainId);
 	//ID_DOMAIN_TAG : string
@@ -714,7 +720,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			AddParameter(ParameterId::PID_EXPECTS_INLINE_QOS, data);
 			break;
 		}
-		case AGIDDS::ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT: {
+		case ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT: {
 			Count_t data;
 			ReadInt32(msg + offset, data);
 			AddParameter(ParameterId::PID_PARTICIPANT_MANUAL_LIVELINESS_COUNT, data);
@@ -995,9 +1001,11 @@ uint32_t ParameterList::ReaderString(const octet* msg, std::string& str)
 	uint32_t size = 0;
 	ReadUInt32(msg, size);
 	if (size != 0) {
-		size -= 1;
 		str.resize(size);
 		std::copy(msg + 4, msg + 4 + size, str.begin());
+		if(str.back() == '\0') {
+			str.pop_back(); 
+		}
 	}
 	return 4u + (size + 3u) & ~3u;
 }

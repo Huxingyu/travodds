@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_CONDITION_H
-#define AGIDDS_DCPS_CONDITION_CONDITION_H
+#ifndef TRAVODDS_DCPS_CONDITION_CONDITION_H
+#define TRAVODDS_DCPS_CONDITION_CONDITION_H
 
-#include  "agidds_dll.h"
+#include  "travodds_dll.h"
 #include  "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 /**
  * @brief Condition类是可能附加到WaitSet的所有条件的根基类。
@@ -36,6 +36,6 @@ public:
 
 using ConditionSeq = Sequence<Condition*>;
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
-#endif // !AGIDDS_DCPS_CONDITION_CONDITION_H
+#endif // !TRAVODDS_DCPS_CONDITION_CONDITION_H

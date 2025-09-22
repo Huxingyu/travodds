@@ -1,7 +1,7 @@
 #include "dcps/topic/topicdescriptionimpl.h"
 #include "dcps/domain/domainparticipantimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 TopicDescriptionImpl::TopicDescriptionImpl(const std::string& name, const std::string& type_name, DomainParticipantImpl* participant)
     : name_(name), typeName_(type_name), participant_(participant),refs_(0)
 {

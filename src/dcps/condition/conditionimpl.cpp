@@ -1,6 +1,6 @@
 #include "dcps/condition/conditionimpl.h"
 #include "dcps/condition/waitsetimpl.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 ConditionImpl::ConditionImpl()
 	: triggerValue_(false), notify_(false)

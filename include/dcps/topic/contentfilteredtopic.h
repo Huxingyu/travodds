@@ -9,28 +9,31 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
-#define AGIDDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
+#ifndef TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
+#define TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPIC_H
 
 #include "dcps/topic/topicdescription.h"
 #include "dcps/base/retcode.h"
 #include "type/basictype.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class Topic;
 /**
- * TopicDescription的特例化，允许基于内容的订阅。
+ * @brief TopicDescription的特例化，允许基于内容的订阅。
  */
 class DDS_DLL ContentFilteredTopic : public virtual TopicDescription {
 public:
+    /**
+     * @brief 析构函数。
+     */
     virtual ~ContentFilteredTopic() = default;
 
     /**
-    * @brief 获取相关主题。
-    *
-    * 此函数返回与ContentFilteredTopic关联的Topic。即创建ContentFilteredTopic时指定的Topic。
-    */
+     * @brief 获取相关主题指针。
+     *
+     * 此函数返回与ContentFilteredTopic关联的Topic。即创建ContentFilteredTopic时指定的Topic。
+     */
     virtual Topic* get_related_topic() const = 0;
 
     /**
@@ -58,17 +61,17 @@ public:
     virtual ReturnCode_t get_expression_parameters(StringSeq& expression_parameters) const = 0;
 
     /**
-    * @brief 设置表达式参数。
-    *
-    * 此操作更改与此ContentFilteredTopic关联的表达式参数。
-    *
-    * @param [in] expression_parameters  要设置的表达式参数。
-    *
-    * @return RETCODE_OK             表达式参数正确更新。
-    *         RETCODE_BAD_PARAMETER  表达式参数与当前filterexpression不匹配。
-    */
+     * @brief 设置表达式参数。
+     *
+     * 此操作更改与此ContentFilteredTopic关联的表达式参数。
+     *
+     * @param [in] expression_parameters  要设置的表达式参数。
+     *
+     * @return RETCODE_OK             表达式参数正确更新。
+     *         RETCODE_BAD_PARAMETER  表达式参数与当前filterexpression不匹配。
+     */
     virtual ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters) = 0;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 #endif // !CONTENT_FILTERED_TOPIC_H
