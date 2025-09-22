@@ -727,7 +727,13 @@ ReturnCode_t DomainParticipantImpl::enable()
 	if (enable_) {
 		return RETCODE_OK;
 	}
-	participant_->Init();
+    ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);
+    if (RETCODE_OK != ret) {
+        TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d ");
+        return ret;
+    }
+
+	participant_->Init(qos_);
 
     handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
 
@@ -737,11 +743,7 @@ ReturnCode_t DomainParticipantImpl::enable()
 
 	discovery_->WriteSpdPdiscoveredParticipantData();
 
-	ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);
-	if (RETCODE_OK != ret) {
-		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d ");
-		return ret;
-	}
+
 	if (qos_.entity_factory.autoenable_created_entities) {
 		/* topic 优先enble */
 		{

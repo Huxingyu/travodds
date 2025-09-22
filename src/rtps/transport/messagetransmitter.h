@@ -58,6 +58,8 @@ public:
 	 */
 	virtual ReturnCode_t SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority = -1) = 0;
 
+	virtual ReturnCode_t SendAddrRemove(Locator_t destination) = 0;
+
 	/**
 	 * @brief RTPS报文发送函数（虚函数）
 	 *
@@ -171,11 +173,8 @@ public:
 	 */
 	void SetUnicastLocatorList(const LocatorVec& locatorlist);
 
-	/* 检测端口号是否被占用 端口号不解决 */
-
-
 	/**
-	 * @brief 检测端口号是否被占用 端口号不释放。
+	 * @brief 检测端口号是否被占用。
 	 *
 	 * @param [in] port 端口号。
 	 * @param [in] checkUdp udp通信标志。
@@ -195,6 +194,16 @@ public:
 			fd->close();
 		}
 	}
+	
+	/**
+	 * @brief 报文接收后临时回调函数，触发报文解析模块。
+	 *
+	 * @param [in] message RTPS报文。
+	 * @param [in] len 报文长度。
+	 *
+	 * @return 报文解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	ReturnCode_t InterpretMessage(char* message, uint32_t len);
 
 protected:
 	std::atomic_bool runFlag_;

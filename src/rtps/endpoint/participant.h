@@ -64,7 +64,7 @@ public:
 	 *
 	 * @return 初始化成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t Init();
+	ReturnCode_t Init(const DomainParticipantQos & qos);
 
 	/**
 	 * @brief 初始化网络。
@@ -320,6 +320,10 @@ public:
 
 	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
 
+	void TransmittersConnect(const LocatorVec& remoteLocator);
+
+	void TransmittersDisconnect(const LocatorVec& remoteLocator);
+
 	/**
 	 * @brief 获取默认单播定位器。
 	 *
@@ -422,6 +426,10 @@ public:
 	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const;
 	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
 private:
+	DomainParticipantQos qos_;
+
+	LocatorVec IPv4LocatorList_;
+	LocatorVec IPv6LocatorList_;
 	LocatorVec defaultUnicastLocatorList_;
 	LocatorVec defaultMulticastLocatorList_;
 	LocatorVec metatrafficUnicastLocatorList_;

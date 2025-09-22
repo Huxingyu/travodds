@@ -144,6 +144,10 @@ constexpr uint32_t EXPRESSION_PARAMETERS_MAX = 100;
 
 constexpr const char* const SQL_FILTER_NAME = "DDSSQL";
 
+constexpr uint32_t UDP_MAX_MESSAGE_SIZE = 65527;
+
+constexpr uint32_t TCP_MAX_MESSAGE_SIZE = 67108864;
+
 TRAVODDS_NAMESPACE_END
 
 #endif
