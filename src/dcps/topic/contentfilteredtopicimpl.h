@@ -16,7 +16,7 @@
 #include "dcps/topic/topicdescriptionimpl.h"
 TRAVODDS_NAMESPACE_BEGIN
 class TopicImpl;
-class TypeObject;
+class DynamicType;
 /**
  * @brief ContentFilteredTopicImpl类，TopicDescription的具体实现，允许基于内容的订阅。
  */
@@ -83,7 +83,7 @@ public:
     ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters);
 
 public:
-    static bool ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, TypeObject* typeObject);
+    static bool ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, DynamicType* type);
 private:
 
     TopicImpl* relatedTopic_ = nullptr;

@@ -1316,6 +1316,12 @@ TRAVODDS::ReturnCode_t DynamicDataTypeSupport::get_instancehandle(void *data, TR
     return RETCODE_OK;
 }
 
+TRAVODDS::DynamicType* DynamicDataTypeSupport::get_dynamictype()
+{
+    return type_;
+}
+
+
 bool DynamicDataTypeSupport::has_key() {
     if (!type_) {
         return false;

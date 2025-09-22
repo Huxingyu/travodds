@@ -4,27 +4,20 @@
 #include "xtypes/dynamictypebuilder.h"
 #include "xtypes/dynamicdatafactory.h"
 #include "xtypes/dynamicdatatypesupport.h"
-
 USING_TRAVODDS_NAMESPACE
 using namespace DDSSQL;
 using namespace tao::pegtl;
 
-DDSSQLFilter::DDSSQLFilter(TypeObject* typeObject)
-	: root_(nullptr)
+DDSSQLFilter::DDSSQLFilter(DynamicType* dynType)
+	: root_(nullptr), dynType_(dynType)
 {
-	DynamicTypeBuilderFactory* factory = DynamicTypeBuilderFactory::get_instance();
-	// 从TypeObject创建DynamicTypeBuilder
-	DynamicTypeBuilder* builder = factory->create_type_w_type_object(typeObject);
-
-	// 构建DynamicType
-	dynType_.reset(builder->build());
 }
 
 ReturnCode_t DDSSQLFilter::InputSQL(const std::string& expression, const std::vector<std::string>& parameters)
 {
 	try {
 		memory_input<> in(expression, "");
-		CurrentFieldState state{ {},dynType_.get(),nullptr};
+		CurrentFieldState state{ {},dynType_,nullptr};
 		auto root = parse_tree::parse<FilterExpressionGrammar, BinaryTreeNode, FilterExpressionSelector>(in, state);
 		if (!root) {
 			return RETCODE_BAD_PARAMETER;
@@ -40,18 +33,14 @@ ReturnCode_t DDSSQLFilter::InputSQL(const std::string& expression, const std::ve
 	return RETCODE_OK;
 }
 
-bool DDSSQLFilter::Validate(SerializedBuffer* buffer)
+bool DDSSQLFilter::Validate(DynamicData* dynData)
 {
-	// 使用DynamicDataFactory创建数据容器
-	DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*dynType_);
-	DynamicDataTypeSupport typeSupport(dynType_.get());
-	CdrDeserializer cdr(buffer);
-	typeSupport.deserialize_data(dyn_data, &cdr, DEFAULT_ENDIAN);
-
+	std::lock_guard<std::mutex> lock(mutex_);
 	root_->Reset();
 	for (auto it = fields_.begin(); it != fields_.end() && !root_->GetResult(); ++it) {
-		if (!it->second->SetValue(dyn_data, dynType_.get())) {
-			return false;
+		if (!it->second->SetValue(dynData, dynType_)) {
+			// 验证不过也不发返回true
+			return true;
 		}
 	}
 
@@ -85,13 +74,17 @@ std::shared_ptr<DDSSQLCondition> DDSSQLFilter::TransformTreeToPredicate(const Bi
 	}
 
 	if ((ENUM == left->kind) && (ENUM == right->kind)) {
-		// TODO: Handle ENUM comparison logic here
-		// throw std::runtime_error("Cannot compare two ENUM values directly.");
+		if (node.left().typeDesc->descriptor_.name_ != node.right().typeDesc->descriptor_.name_) {
+			throw std::runtime_error("Cannot compare two ENUM values directly.");
+		}
 	} else if (!CheckValueCompatibility(left->kind, right->kind, ignoreEnum)) {
 		throw std::runtime_error("Cannot compare two values directly");
 	}
 
-	TransformEnum(left, right);
+	if (!TransformEnum(left, node.left().typeDesc, right, node.right().typeDesc)) {
+
+		throw std::runtime_error("ENUM error!");
+	}
 	return std::make_shared<DDSSQLPredicate>(GetPredicateOp(node), left, right);
 }
 
@@ -188,24 +181,52 @@ std::shared_ptr<DDSSQLCondition> DDSSQL::DDSSQLFilter::TransformTreeToBetween(co
 	);
 }
 
-void DDSSQLFilter::TransformEnum(std::shared_ptr<TypicalValue> left, std::shared_ptr<TypicalValue> right)
+bool DDSSQLFilter::TransformEnum(std::shared_ptr<TypicalValue> left, const DynamicType* leftdesc, std::shared_ptr<TypicalValue> right, const DynamicType* rightdesc)
 {
-	// TODO: Implement logic to transform ENUM values for comparison
+	const DynamicType* enumType = (leftdesc != nullptr) ? leftdesc : rightdesc;
 
+	if (nullptr != enumType && enumType->descriptor_.kind_ == TK_ENUM) {
+		if (left->kind == STRING) {
+			DynamicTypeMember enumMember;
+			if (RETCODE_OK != enumType->get_member_by_name(enumMember, left->stringValue.data())) {
+				return false;
+			}
+			left->kind = ENUM;
+			MemberDescriptor memDesc;
+			enumMember.get_descriptor(memDesc);
+
+			left->signedIntegerValue = std::stoll(memDesc.default_value_);
+		}
+
+		if (right->kind == STRING) {
+			DynamicTypeMember enumMember;
+			if (RETCODE_OK != enumType->get_member_by_name(enumMember, right->stringValue.data())) {
+				return false;
+			}
+			right->kind = ENUM;
+			MemberDescriptor memDesc;
+			enumMember.get_descriptor(memDesc);
+			right->signedIntegerValue = std::stoll(memDesc.default_value_);
+		}
+
+		
+	}
+	return true;
 }
 
 bool DDSSQLFilter::CheckValueCompatibility(TypicalKind left, TypicalKind right, bool ignoreEnum)
 {
 	if (!ignoreEnum && ENUM == right)
 	{
-		return ENUM == left || SIGNED_INTEGER == left || UNSIGNED_INTEGER == left || STRING == left;
+		return ENUM == left || SIGNED_INTEGER == left || UNSIGNED_INTEGER == left || STRING == left || CHAR == left;
 	}
 
 	switch (left)
 	{
 	case BOOLEAN:
-		return BOOLEAN == right || SIGNED_INTEGER == right || UNSIGNED_INTEGER == right;
-
+		return BOOLEAN == right || SIGNED_INTEGER == right || UNSIGNED_INTEGER == right || CHAR == right;
+	
+	case CHAR:
 	case SIGNED_INTEGER:
 	case UNSIGNED_INTEGER:
 		return SIGNED_INTEGER == right ||
@@ -213,11 +234,11 @@ bool DDSSQLFilter::CheckValueCompatibility(TypicalKind left, TypicalKind right, 
 			BOOLEAN == right ||
 			FLOAT == right ||
 			DOUBLE == right ||
-			LONG_DOUBLE == right;
+			LONG_DOUBLE == right ||
+			CHAR == right;
 
-	case CHAR:
 	case STRING:
-		return CHAR == right ||STRING == right;
+		return CHAR == right || STRING == right;
 
 	case FLOAT:
 	case DOUBLE:
@@ -226,7 +247,8 @@ bool DDSSQLFilter::CheckValueCompatibility(TypicalKind left, TypicalKind right, 
 			DOUBLE == right ||
 			LONG_DOUBLE == right ||
 			SIGNED_INTEGER == right ||
-			UNSIGNED_INTEGER == right;
+			UNSIGNED_INTEGER == right ||
+			CHAR == right;
 
 	case ENUM:
 		if (!ignoreEnum)
@@ -234,7 +256,8 @@ bool DDSSQLFilter::CheckValueCompatibility(TypicalKind left, TypicalKind right, 
 			return ENUM == right ||
 				SIGNED_INTEGER == right ||
 				UNSIGNED_INTEGER == right ||
-				STRING == right;
+				STRING == right ||
+				CHAR == right;
 		}
 	}
 

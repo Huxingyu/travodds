@@ -100,7 +100,7 @@ namespace DDSSQL {
             if (n->is<FIELDNAME>()) {
                 n->value.reset(new DDSSQLFieldValue(state.fields));
                 // state.fields 内容清空
-
+                n->typeDesc = state.currentType;
                 switch (state.currentType->descriptor_.kind_) {
                 case TypeKind::TK_BOOLEAN: {
                     n->value->kind = BOOLEAN;
@@ -117,6 +117,7 @@ namespace DDSSQL {
                     n->value->kind = state.currentType->descriptor_.kind_ == TypeKind::TK_ENUM ? ENUM: SIGNED_INTEGER;
                     break;
                 }
+				case TypeKind::TK_BYTE:
                 case TypeKind::TK_UINT16: 
                 case TypeKind::TK_UINT32:
                 case TypeKind::TK_UINT64: {
@@ -156,9 +157,11 @@ namespace DDSSQL {
                         "Field '" + memberName + "' not found in type '" + state.currentType->get_name() + "'.",
                         n->end());
                 }
-                
+                MemberDescriptor mdesc;
+                member.get_descriptor(mdesc);
                 if (n->children.size() > 1) {
-                    if (n->children.size() - 1 != state.currentType->descriptor_.bound_.size()) {
+
+                    if (n->children.size() - 1 != mdesc.type_->descriptor_.bound_.size()) {
                         throw pegtl::parse_error(
                             "Array dimension mismatch for field '" + memberName + "'.",
                             n->end());
@@ -167,7 +170,7 @@ namespace DDSSQL {
                 std::vector<int32_t> arrayIndex; // 默认无数组索引
                 for(int i = 1;i< n->children.size();i++) {
                     int32_t index = static_cast<int32_t>(std::stoul(n->children[i]->children[0]->content()));
-                    if (index >= state.currentType->descriptor_.bound_[i - 1]) {
+                    if (mdesc.type_->descriptor_.kind_ == TK_ARRAY && index >= mdesc.type_->descriptor_.bound_[i - 1]) {
                         throw pegtl::parse_error(
                             "Array index out of bounds for field '" + memberName + "'.",
                             n->end()); 
@@ -175,10 +178,11 @@ namespace DDSSQL {
 					arrayIndex.emplace_back(index);
                 }
                 state.fields.emplace_back(FieldAccessor{ memberName, -1, arrayIndex });
-
-                MemberDescriptor descriptor;
-                member.get_descriptor(descriptor);
-                state.currentType = descriptor.type_;
+                if (mdesc.type_->descriptor_.kind_ == TK_ARRAY || mdesc.type_->descriptor_.kind_ == TK_SEQUENCE) {
+                    state.currentType = mdesc.type_->descriptor_.element_type_;
+                } else {
+                    state.currentType = mdesc.type_;
+                }
             }
             n->children.clear();
         }
