@@ -30,6 +30,13 @@ public:
 	{
 		return guid_;
 	}
+
+#ifdef DDSSECURITY
+	GUID_t* GetGuidPtr()
+	{
+		return &guid_;
+	}
+#endif
 protected:
 	GUID_t guid_;
 };

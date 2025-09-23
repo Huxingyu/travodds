@@ -422,6 +422,14 @@ struct Property_t {
 };
 using PropertySeq = Sequence<Property_t>;
 
+struct BinaryProperty_t {
+	/** @brief   名称，由厂商自己约定。 */
+	std::string name;
+	/** @brief   名称对应的值。 */
+	Sequence<unsigned char> value;
+};
+using BinaryPropertySeq = Sequence<BinaryProperty_t>;
+
 struct SampleInfo {
 	/*  （READ或NOT_READ）-代表是否已读取过相应的数据样本  */
 	SampleStateKind 		sample_state;

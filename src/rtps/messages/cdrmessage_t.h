@@ -98,6 +98,13 @@ const SubMessageKind_t NACK_FRAG = 0x12;
 const SubMessageKind_t HEARTBEAT_FRAG = 0x13;
 const SubMessageKind_t DATA = 0x15;
 const SubMessageKind_t DATA_FRAG = 0x16;
+#ifdef DDSSECURITY
+const SubMessageKind_t SEC_SUB_MSG = 0x30;     // SecureSubmessage
+const SubMessageKind_t SEC_PREFIX = 0x31;      // SecurePrefix
+const SubMessageKind_t SEC_POSTFIX = 0x32;     // SecurePostfix
+const SubMessageKind_t SRTPS_PREFIX = 0x33;    // SecureRTPSPrefix
+const SubMessageKind_t SRTPS_POSTFIX = 0x34;   // SecureRTPSPostfix
+#endif // DDSSECURITY
 
 #define FLAG_BIT_0 1
 #define FLAG_BIT_1 2

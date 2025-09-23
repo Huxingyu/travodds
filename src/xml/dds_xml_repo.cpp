@@ -13,6 +13,7 @@
 #include "xml/dds_xml_repo.h"
 #include "common/log/logger.h"
 #include <iostream>
+#include <string>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -448,10 +449,19 @@ bool DDSXMLRepo::parseDomainParticipantFactoryQos(XMLElement* element, DomainPar
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos entity_factory\n", child->GetLineNum());
                 return false;
             }
-        } else {
+        } 
+        else if (strcmp(nodeName, "property") == 0) {
+            bool ret = parsePropertyQosPolicy(child, qos.property);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantFactoryQos property\n", child->GetLineNum());
+                return false;
+            }
+        }
+        else {
             TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
         }
+        
     }
     return true;
 }
@@ -470,6 +480,12 @@ bool DDSXMLRepo::parseDomainParticipantQos(XMLElement* element, DomainParticipan
             bool ret = parseUserDataQosPolicy(child, qos.user_data);
             if (!ret) {
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos user_data\n", child->GetLineNum());
+                return false;
+            }
+        } else if (strcmp(nodeName, "property") == 0) {
+            bool ret = parsePropertyQosPolicy(child, qos.property);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos property\n", child->GetLineNum());
                 return false;
             }
         } else {
@@ -646,6 +662,12 @@ bool DDSXMLRepo::parseDataWriterQos(XMLElement* element, DataWriterQos& qos) {
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos writer_data_lifecycle\n", child->GetLineNum());
                 return false;
             }
+        } else if (strcmp(nodeName, "property") == 0) {
+            bool ret = parsePropertyQosPolicy(child, qos.property);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos property\n", child->GetLineNum());
+                return false;
+            }
         } else {
             TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
@@ -728,6 +750,12 @@ bool DDSXMLRepo::parseDataReaderQos(XMLElement* element, DataReaderQos& qos) {
             bool ret = parseReaderDataLifecycleQosPolicy(child, qos.reader_data_lifecycle);
             if (!ret) {
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos reader_data_lifecycle\n", child->GetLineNum());
+                return false;
+            }
+        } else if (strcmp(nodeName, "property") == 0) {
+            bool ret = parsePropertyQosPolicy(child, qos.property);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos property\n", child->GetLineNum());
                 return false;
             }
         } else {
@@ -1093,6 +1121,145 @@ bool DDSXMLRepo::parseUserDataQosPolicy(XMLElement* element, UserDataQosPolicy& 
         } else {
             TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown UserDataQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
+        }
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parseProperty(XMLElement* element, Property_t& property)
+{
+    const char* memberName[] = {
+        "name",
+        "value",
+        "propagate"
+    };
+    // 遍历子节点
+    for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement()) {
+        //验证名字是否合法
+        if (strcmp(childEle->Name(), memberName[0]) == 0)
+        {
+            //取值
+            property.name = childEle->GetText();
+        }
+        else if (strcmp(childEle->Name(), memberName[1]) == 0)
+        {
+            //取值
+            property.value = childEle->GetText();
+        }
+        else if (strcmp(childEle->Name(), memberName[2]) == 0)
+        {
+        }
+        else
+        {
+        }
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parseBinaryProperty(XMLElement* element, BinaryProperty_t& binaryProperty)
+{
+    const char* memberName[] = {
+        "name",
+        "value",
+        "propagate"
+    };
+    // 遍历子节点
+    for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement()) {
+        //验证名字是否合法
+        if (strcmp(childEle->Name(), memberName[0]) == 0)
+        {
+            //取值
+            //childEle->QueryUnsignedText((unsigned int*)(self->name));
+            binaryProperty.name = childEle->GetText();
+        }
+        else if (strcmp(childEle->Name(), memberName[1]) == 0)
+        {
+            //取值
+            const char* str = childEle->GetText();
+            int length = strlen(str);
+            for (int i = 0; i < length; ++i) {
+                unsigned char octet = str[i];
+                binaryProperty.value.push_back(octet);
+            }
+        }
+        else if (strcmp(childEle->Name(), memberName[2]) == 0)
+        {
+            //验证是否是唯一且是叶节点
+        }
+        else
+        {
+        }
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parsePropertySeq(XMLElement* element, PropertyQosPolicy& qos)
+{
+    //SequenceData<Property_t>
+    //注释seq_clear，在qos继承时添加而不覆盖
+    //DDS_PropertySeq_clear(self);
+    //遍历子元素,value下有若干组element
+    for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement("element"))
+    {
+        // 验证名字是否合法，依赖NextSiblingElement("element") 应该不用
+        // 验证除了element是否有其他节点 这步应该可以没有
+        // 取值
+        unsigned int curlen = qos.value.size();
+        Property_t propertyEle;
+        parseProperty(childEle, propertyEle);//解析出结构体
+        qos.value.push_back(propertyEle);//插入seq
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parseBinaryPropertySeq(XMLElement* element, PropertyQosPolicy& qos)
+{
+    //SequenceData<BinaryProperty_t>
+    //注释seq_clear，在qos继承时添加而不覆盖
+    const char* memberName = "element";
+    //遍历子元素,value下有若干组element
+    for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement("element"))
+    {
+        // 验证名字是否合法，依赖NextSiblingElement("element") 应该不用
+        // 验证除了element是否有其他节点 这步应该可以没有
+        // 取值
+        BinaryProperty_t binaryPropertyEle;
+        parseBinaryProperty(childEle, binaryPropertyEle);//解析出结构体
+        qos.binary_value.push_back(binaryPropertyEle);//插入seq
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parsePropertyQosPolicy(XMLElement* element, PropertyQosPolicy& qos) {
+    if (!element) {
+        return true;
+    }
+    // 遍历子节点
+    for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement()) {
+        //检查property标签下是否有子标签value或binary_value
+        const char* nodeName = childEle->Name();//获得的标签名称
+        //如果是value标签，解析value标签
+        if (strcmp(nodeName, "value") == 0) {
+            //验证节点是否唯一
+
+            //取值
+            if (!parsePropertySeq(childEle, qos))
+            {
+                return false;
+            }
+        }
+        //如果是binary_value标签，解析binary_value标签
+        else if (strcmp(nodeName, "binary_value") == 0) {
+            //验证节点是否唯一
+
+            //取值
+            if (!parseBinaryPropertySeq(childEle, qos))
+            {
+                return false;
+            }
+        }
+        else {
+            //忽略
         }
     }
     return true;

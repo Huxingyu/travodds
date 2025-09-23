@@ -88,10 +88,32 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 		TRAVODDS_LOG(LOG_ERROR, "typeSupport[%s] is nullptr", a_topic->get_type_name());
 		return nullptr;
 	}
+#ifdef DDSSECURITY
+    if (participant_->enableDDSSec_) {
+        SecurityException secExce;
+        if (!participant_->secPlugin_.access_control->check_create_datareader(
+            participant_->permissionHdl_,
+            participant_->GetDomainId(),
+            a_topic->get_name(),
+            &qosT,
+            &qos_.partition,
+            NULL,
+            &secExce))
+        {
+            TRAVODDS_LOG(LOG_ERROR, "Create DataReader failed: rejected by access control plugin.");
+            return nullptr;
+        }
+    }
+#endif // DDSSCURITY
+
 	DataReader* reader = nullptr;
 	std::unique_ptr<DataReaderImpl> datareaderPtr = std::make_unique<DataReaderImpl>(a_topic, qosT, a_listener, mask, this, typeSupport);
-
-	if (!datareaderPtr.get()) {
+#ifdef DDSSECURITY
+    //数据读者获取安全属性并填充掩码
+    datareaderPtr->GetSecAttributes();
+    datareaderPtr->FillSecureData();
+#endif // DDSSCURITY
+    if (!datareaderPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datareader[%s] fail", a_topic->get_type_name());
 		return nullptr;
 	}
@@ -204,7 +226,7 @@ ReturnCode_t SubscriberImpl::notify_datareaders() const
     return RETCODE_OK;
 }
 
-const DomainParticipant *SubscriberImpl::get_participant() const
+DomainParticipant *SubscriberImpl::get_participant()
 {
     return participant_;
 }

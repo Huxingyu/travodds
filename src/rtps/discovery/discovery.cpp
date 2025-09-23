@@ -29,6 +29,14 @@ void Discovery::InitBuiltinEndpoint()
 	dcpsSubscription_ = std::make_shared<TopicImpl>("DCPSSubscription", "DiscoveredReaderData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
 	dcpsParticipantMessage_ = std::make_shared<TopicImpl>("DCPSParticipantMessage", "SPDPdiscoveredParticipantDataMessage", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
 
+#ifdef DDSSECURITY
+    /* 安全相关扩展主题 */
+    dcpsSubscriptionSecure_ = std::make_shared<TopicImpl>("DCPSSubscriptionSecure", "DiscoveredReaderDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+    dcpsPublicationSecure_ = std::make_shared<TopicImpl>("DCPSPublicationSecure", "DiscoveredWriterDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+    dcpsParticipantMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantMessageSecure", "ParticipantDataMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+    dcpsParticipantStatelessMessage_ = std::make_shared<TopicImpl>("DCPSParticipantStatelessMessageSecure", "ParticipantStatelessMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+    dcpsParticipantVolatileMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantVolatileSecureMessageSecure", "ParticipantVolatileSecureMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+#endif // DDSSECURITY
 
 	//TODO 补充具体TypeSupport
 	DataWriterQos writerQoS;
@@ -53,26 +61,58 @@ void Discovery::InitBuiltinEndpoint()
 	readerQos.history.depth = 1;
 	builtinPublicationsDataWriter_ = std::make_shared<DataWriterImpl>(dcpsPublication_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinPublicationsDataReader_ = std::make_shared<DataReaderImpl>(dcpsPublication_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
-
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_ANNOUNCER;
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_DETECTOR;
 
+#ifdef DDSSECURITY
+	/* 安全相关扩展实体创建，绑定对应主题 */
+	builtinPublicationsSecureDataWriter_ = std::make_shared<DataWriterImpl>(dcpsPublicationSecure_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
+	builtinPublicationsSecureDataReader_ = std::make_shared<DataReaderImpl>(dcpsPublicationSecure_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_SECURE_ANNOUNCER;
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_SECURE_DETECTOR;
+#endif // DDSSECURITY
+
 	builtinSubscriptionsDataWriter_ = std::make_shared<DataWriterImpl>(dcpsSubscription_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinSubscriptionsDataReader_ = std::make_shared<DataReaderImpl>(dcpsSubscription_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
-
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_ANNOUNCER;
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_DETECTOR;
+
+#ifdef DDSSECURITY
+	builtinSubscriptionsSecureDataWriter_ = std::make_shared<DataWriterImpl>(dcpsSubscriptionSecure_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
+	builtinSubscriptionsSecureDataReader_ = std::make_shared<DataReaderImpl>(dcpsSubscriptionSecure_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_SECURE_ANNOUNCER;
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_SECURE_DETECTOR;
+#endif // DDSSECURITY
 
 	/* wangyi 添加 Liveliness 内置节点初始化 */
 	builtinParticipantMessageDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantMessage_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinParticipantMessageDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantMessage_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
-
 	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER;
 	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_READER;
+
+#ifdef DDSSECURITY
+	builtinParticipantMessageSecureDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantMessageSecure_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
+	builtinParticipantMessageSecureDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantMessageSecure_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_DATA_WRITER;
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_DATA_READER;
+	builtinParticipantStatelessMessageDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantStatelessMessage_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
+	builtinParticipantStatelessMessageDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantStatelessMessage_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_DATA_WRITER;
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_DATA_READER;
+	builtinParticipantVolatileMessageSecureDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantVolatileMessageSecure_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
+	builtinParticipantVolatileMessageSecureDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantVolatileMessageSecure_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_MESSAGE_SECURE_DATA_WRITER;
+	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_MESSAGE_SECURE_DATA_READER;
+#endif // DDSSECURITY
 
 	/* wangyi LivelinessManager 初始化内置数据读者和写者 */
 	domainParticipant_->GetLivelinessManager()->SetParticipantMessageDataWriter(builtinParticipantMessageDataWriter_);
 	domainParticipant_->GetLivelinessManager()->SetParticipantMessageDataReader(builtinParticipantMessageDataReader_);
+
+#ifdef DDSSECURITY
+	domainParticipant_->GetLivelinessManager()->SetParticipantMessageSecureDataWriter(builtinParticipantMessageSecureDataWriter_);
+	domainParticipant_->GetLivelinessManager()->SetParticipantMessageSecureDataReader(builtinParticipantMessageSecureDataReader_);
+#endif // DDSSECURITY
 
 	//TODO SPDP SEDP初始化
 
@@ -84,7 +124,21 @@ void Discovery::InitBuiltinEndpoint()
 
 	sedp_->SetPublicationEndpoint(builtinPublicationsDataWriter_.get(), builtinPublicationsDataReader_.get());
 	sedp_->SetSubscriptionEndpoint(builtinSubscriptionsDataWriter_.get(), builtinSubscriptionsDataReader_.get());
-
+#ifdef DDSSECURITY
+	bool ret = builtinParticipantDataReader_->GetSecAttributes();
+	if (!ret) {
+		// TODO 获取安全属性失败 应该释放实体，表示创建失败
+		TRAVODDS_LOG(LOG_ERROR, "Create DataReader failed: GetSecAttributes failed.");
+		// 释放资源
+		return;
+	}
+	// 创建RTPS层数据读写者，给读者绑定sedp监听器
+	sedp_->SetPublicationSecureEndpoint(builtinPublicationsSecureDataWriter_.get(), builtinPublicationsSecureDataReader_.get());
+	sedp_->SetSubscriptionSecureEndpoint(builtinSubscriptionsSecureDataWriter_.get(), builtinSubscriptionsSecureDataReader_.get());
+	sedp_->SetParticipantMessageSecureEndpoint(builtinParticipantMessageSecureDataWriter_.get(), builtinParticipantMessageSecureDataReader_.get());
+	sedp_->SetParticipantStatelessMessageEndpoint(builtinParticipantStatelessMessageDataWriter_.get(), builtinParticipantStatelessMessageDataReader_.get());
+	sedp_->SetParticipantVolatileSecureMessageEndpoint(builtinParticipantVolatileMessageSecureDataWriter_.get(), builtinParticipantVolatileMessageSecureDataReader_.get());
+#endif // DDSSECURITY
 }
 
 void Discovery::WriteSpdPdiscoveredParticipantData()
@@ -104,6 +158,26 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	data.metatrafficUnicastLocatorList = participant->GetMetatrafficUnicastLocators();
 	data.metatrafficMulticastLocatorList = participant->GetMetatrafficMulticastLocators();
 	data.availableBuiltinEndpoints = builtinEndpointSet_;
+
+#ifdef DDSSECURITY
+	//构造自身Participant中安全扩展相关
+	if (domainParticipant_->enableDDSSec_) {
+		data.ddsParticipantData.contains_security_data = true;
+		data.ddsParticipantData.identity_token = domainParticipant_->identityToken_;
+		data.ddsParticipantData.permissions_token = domainParticipant_->permissionsToken_;
+		data.ddsParticipantData.security_info.participant_security_atributes =
+			ParticipantSecurityAttributesToMask(&domainParticipant_->secAttributes_);
+	}
+	else
+	{
+		data.ddsParticipantData.contains_security_data = false;
+		data.ddsParticipantData.security_info = PARTICIPANT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
+	}
+	//缓存并序列化保存
+	pData_ = data;
+	//spdp_->InitParticipantWriter();
+#endif // DDSSECURITY
+
 	spdp_->WriteSpdPdiscoveredParticipantData(data);
 }
 
@@ -119,10 +193,36 @@ void Discovery::WritePublicationData(DiscoveredWriterData& data)
 	sedp_->WritePublicationData(data);
 }
 
+#ifdef DDSSECURITY
+void Discovery::WritePublicationSecureData(DiscoveredWriterSecureData& data)
+{
+	sedp_->WritePublicationSecureData(data);
+}
+#endif // DDSSECURITY
+
 void Discovery::WriteSubscriptionData(DiscoveredReaderData& data)
 {
 	sedp_->WriteSubscriptionData(data);
 }
+
+#ifdef DDSSECURITY
+void Discovery::WriteSubscriptionSecureData(DiscoveredReaderSecureData& data)
+{
+	sedp_->WriteSubscriptionSecureData(data);
+}
+
+void Discovery::WriteParticipantMessageSecureData(ParticipantMessageSecureData& data) {
+	sedp_->WriteParticipantMessageSecureData(data);
+}
+
+void Discovery::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, Sedp::StatelessMessageDataKind kind) {
+	sedp_->WriteParticipantStatelessMessageData(remoteGuid, data, kind);
+}
+
+void Discovery::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data) {
+	sedp_->WriteParticipantVolatileSecureMessage(remoteGuid, data);
+}
+#endif // DDSSECURITY
 
 void Discovery::RemovePublicationData(InstanceHandle_t& handle)
 {
@@ -144,7 +244,20 @@ void Discovery::AddProxy(const SPDPdiscoveredParticipantData& data)
 
 	sedp_->AddSedpProxy(data);
 }
+#ifdef DDSSECURITY
+void Discovery::AddPartProxy(const SPDPdiscoveredParticipantData& data)
+{
+	spdp_->AddSpdpProxy(data);
 
+	//domainParticipant_->GetLivelinessManager()->AddParticipantMessageProxy(data);
+
+	//sedp_->AddPartSedpProxy(data);
+}
+//void Discovery::AddRemainProxy(const SPDPdiscoveredParticipantData& data)
+//{
+//	sedp_->AddRemainSedpProxy(data);
+//}
+#endif
 void Discovery::RemoveProxy(GUID_t guid)
 {
 	sedp_->RemoveSedpProxy(guid);
@@ -180,3 +293,21 @@ bool Discovery::FindIgnoredParticipants(GUID_t guid)
 	return spdp_->FindIgnoredParticipants(guid);
 }
 
+DomainParticipantImpl* Discovery::GetParticipant()
+{
+	return domainParticipant_;
+}
+
+std::shared_ptr<Spdp> Discovery::GetSpdp()
+{
+	return spdp_;
+}
+std::shared_ptr<Sedp> Discovery::GetSedp()
+{
+	return sedp_;
+}
+
+SPDPdiscoveredParticipantData Discovery::GetParticipantData()
+{
+	return pData_;
+}

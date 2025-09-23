@@ -149,7 +149,7 @@ public:
      *
      * @return DomainParticipant指针。
      */
-    virtual const DomainParticipant* get_participant() const = 0;
+    virtual DomainParticipant* get_participant() = 0;
 
     /**
      * @brief 删除包含的所有DataReader。

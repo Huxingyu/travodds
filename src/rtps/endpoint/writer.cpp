@@ -197,3 +197,9 @@ std::shared_ptr<HistoryCache> Writer::GetWriterCache()
 	return writerCache_;
 }
 
+#ifdef DDSSECURITY
+void Writer::ResetLastChangeSequenceNumber() {
+    lastChangeSequenceNumber_.high = 0;
+    lastChangeSequenceNumber_.low = 0;
+}
+#endif // DDSSECURITY
