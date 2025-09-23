@@ -86,8 +86,8 @@ void PersistenceMonitor::setPersistenceService(std::shared_ptr<TRAVODDS::Persist
     persistence_service_ = service;
     
     if (service) {
-        // 启动定时器定期刷新数据
-        refresh_timer_->start(1000); // 每秒刷新
+        // 自动启动监控
+        startMonitoring();
     }
 }
 
@@ -123,13 +123,154 @@ void PersistenceMonitor::stopMonitoring() {
 }
 
 void PersistenceMonitor::setupUI() {
+    // 设置全局样式表，使用现代化设计
+    setStyleSheet(R"(
+        /* 主窗口样式 */
+        QMainWindow {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+        }
+        
+        /* 标签页样式 */
+        QTabWidget::pane {
+            border: 1px solid #dee2e6;
+            background-color: white;
+            border-radius: 8px;
+        }
+        
+        QTabWidget::tab-bar {
+            alignment: left;
+        }
+        
+        QTabBar::tab {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 12px 20px;
+            margin-right: 2px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            font-weight: 500;
+        }
+        
+        QTabBar::tab:selected {
+            background-color: white;
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+        }
+        
+        QTabBar::tab:hover:!selected {
+            background-color: #f8f9fa;
+        }
+        
+        /* 分组框样式 */
+        QGroupBox {
+            font-weight: bold;
+            color: #343a40;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin-top: 12px;
+            padding-top: 10px;
+            background-color: white;
+        }
+        
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 15px;
+            padding: 0 8px 0 8px;
+            color: #0d6efd;
+            font-size: 14px;
+        }
+        
+        /* 表格样式 */
+        QTableWidget {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: white;
+            alternate-background-color: #f8f9fa;
+            gridline-color: #e9ecef;
+            selection-background-color: #e3f2fd;
+        }
+        
+        QTableWidget::item {
+            padding: 8px;
+            border: none;
+        }
+        
+        QTableWidget::item:selected {
+            background-color: #bbdefb;
+            color: #1565c0;
+        }
+        
+        QHeaderView::section {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 10px;
+            border: none;
+            border-right: 1px solid #dee2e6;
+            font-weight: bold;
+        }
+        
+        /* 树形控件样式 */
+        QTreeWidget {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: white;
+            alternate-background-color: #f8f9fa;
+            selection-background-color: #e3f2fd;
+        }
+        
+        QTreeWidget::item {
+            padding: 6px;
+            border: none;
+        }
+        
+        QTreeWidget::item:selected {
+            background-color: #bbdefb;
+            color: #1565c0;
+        }
+        
+        /* 标签样式 */
+        QLabel {
+            color: #495057;
+            font-size: 13px;
+        }
+        
+        /* 进度条样式 */
+        QProgressBar {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        QProgressBar::chunk {
+            background-color: #28a745;
+            border-radius: 5px;
+        }
+        
+        /* 分割器样式 */
+        QSplitter::handle {
+            background-color: #dee2e6;
+            width: 2px;
+            height: 2px;
+        }
+        
+        QSplitter::handle:hover {
+            background-color: #0d6efd;
+        }
+    )");
+    
     // 创建中央部件
     auto* central_widget = new QWidget(this);
     setCentralWidget(central_widget);
     
-    // 创建主布局，为标题栏留出空间
+    // 创建主布局，使用更现代的间距
     auto* main_layout = new QVBoxLayout(central_widget);
-    main_layout->setContentsMargins(10, 45, 10, 10); // 顶部留出标题栏空间
+    main_layout->setContentsMargins(15, 50, 15, 15); // 更合适的边距
+    main_layout->setSpacing(10); // 添加组件间距
     
     // 创建选项卡
     main_tabs_ = new QTabWidget();
@@ -143,6 +284,8 @@ void PersistenceMonitor::setupUI() {
 void PersistenceMonitor::setupDomainTopicTab() {
     domain_topic_widget_ = new QWidget();
     auto* layout = new QVBoxLayout(domain_topic_widget_);
+    layout->setSpacing(15); // 增加组件间距
+    layout->setContentsMargins(15, 15, 15, 15); // 添加边距
     
     // 创建分割器
     auto* splitter = new QSplitter(Qt::Horizontal);
@@ -150,6 +293,7 @@ void PersistenceMonitor::setupDomainTopicTab() {
     // 左侧：域和主题树
     auto* left_widget = new QWidget();
     auto* left_layout = new QVBoxLayout(left_widget);
+    left_layout->setSpacing(10); // 左侧布局间距
     
     auto* domain_group = new QGroupBox(QString::fromUtf8("域和主题结构"));
     auto* domain_layout = new QVBoxLayout(domain_group);
@@ -165,6 +309,20 @@ void PersistenceMonitor::setupDomainTopicTab() {
     // 右侧：详细信息
     auto* right_widget = new QWidget();
     auto* right_layout = new QVBoxLayout(right_widget);
+    right_layout->setSpacing(12); // 右侧布局间距
+    
+    // 主题统计表格
+    auto* topic_stats_group = new QGroupBox(QString::fromUtf8("主题统计"));
+    auto* topic_stats_layout = new QVBoxLayout(topic_stats_group);
+    
+    topic_table_ = new QTableWidget();
+    topic_table_->setColumnCount(4);
+    topic_table_->setHorizontalHeaderLabels({
+        QString::fromUtf8("主题名称"), QString::fromUtf8("DataWriter数量"), 
+        QString::fromUtf8("DataReader数量"), QString::fromUtf8("类型名称")
+    });
+    topic_table_->horizontalHeader()->setStretchLastSection(true);
+    topic_stats_layout->addWidget(topic_table_);
     
     // 主题详细信息
     auto* topic_group = new QGroupBox(QString::fromUtf8("主题详细信息"));
@@ -201,13 +359,26 @@ void PersistenceMonitor::setupDomainTopicTab() {
     datareader_table_->horizontalHeader()->setStretchLastSection(true);
     reader_layout->addWidget(datareader_table_);
     
+    right_layout->addWidget(topic_stats_group);
     right_layout->addWidget(topic_group);
     right_layout->addWidget(writer_group);
     right_layout->addWidget(reader_group);
     
+    // 添加运行统计表格到右侧
+    auto* stats_group = new QGroupBox(QString::fromUtf8("运行统计"));
+    auto* stats_layout = new QVBoxLayout(stats_group);
+    
+    stats_table_ = new QTableWidget();
+    stats_table_->setColumnCount(2);
+    stats_table_->setHorizontalHeaderLabels({QString::fromUtf8("统计项"), QString::fromUtf8("值")});
+    stats_table_->horizontalHeader()->setStretchLastSection(true);
+    stats_layout->addWidget(stats_table_);
+    
+    right_layout->addWidget(stats_group);
+    
     splitter->addWidget(left_widget);
     splitter->addWidget(right_widget);
-    splitter->setSizes({400, 800});
+    splitter->setSizes({350, 950}); // 更好的比例：左侧350px，右侧950px
     
     layout->addWidget(splitter);
     
@@ -221,6 +392,8 @@ void PersistenceMonitor::setupDomainTopicTab() {
 void PersistenceMonitor::setupDatabaseTab() {
     database_widget_ = new QWidget();
     auto* layout = new QVBoxLayout(database_widget_);
+    layout->setSpacing(15); // 数据库页面组件间距
+    layout->setContentsMargins(15, 15, 15, 15); // 数据库页面边距
     
     // 数据库基本信息
     auto* info_group = new QGroupBox(QString::fromUtf8("数据库信息"));
@@ -256,19 +429,57 @@ void PersistenceMonitor::setupDatabaseTab() {
     disk_usage_bar_->setTextVisible(true);
     usage_layout->addWidget(disk_usage_bar_, 1, 1);
     
-    // 数据库统计表
-    auto* stats_group = new QGroupBox(QString::fromUtf8("运行统计"));
-    auto* stats_layout = new QVBoxLayout(stats_group);
+    // 数据库表内容可视化
+    auto* tables_group = new QGroupBox(QString::fromUtf8("数据库表内容"));
+    auto* tables_layout = new QHBoxLayout(tables_group);
+    tables_layout->setSpacing(12); // 表内容组件间距
     
-    stats_table_ = new QTableWidget();
-    stats_table_->setColumnCount(2);
-    stats_table_->setHorizontalHeaderLabels({QString::fromUtf8("统计项"), QString::fromUtf8("值")});
-    stats_table_->horizontalHeader()->setStretchLastSection(true);
-    stats_layout->addWidget(stats_table_);
+    // 左侧：表列表
+    auto* left_tables_widget = new QWidget();
+    auto* left_tables_layout = new QVBoxLayout(left_tables_widget);
+    left_tables_layout->setSpacing(8); // 左侧组件间距
+    left_tables_layout->setContentsMargins(8, 8, 8, 8); // 左侧边距
+    
+    auto* table_list_label = new QLabel(QString::fromUtf8("数据库表列表"));
+    table_list_label->setStyleSheet("font-weight: bold; margin: 5px;");
+    left_tables_layout->addWidget(table_list_label);
+    
+    database_tables_tree_ = new QTreeWidget();
+    database_tables_tree_->setHeaderLabels({QString::fromUtf8("表名"), QString::fromUtf8("记录数")});
+    database_tables_tree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    left_tables_layout->addWidget(database_tables_tree_);
+    
+    // 右侧：表内容
+    auto* right_tables_widget = new QWidget();
+    auto* right_tables_layout = new QVBoxLayout(right_tables_widget);
+    right_tables_layout->setSpacing(8); // 右侧组件间距
+    right_tables_layout->setContentsMargins(8, 8, 8, 8); // 右侧边距
+    
+    auto* content_label = new QLabel(QString::fromUtf8("表内容 (点击左侧表名查看)"));
+    content_label->setStyleSheet("font-weight: bold; margin: 5px;");
+    right_tables_layout->addWidget(content_label);
+    
+    table_content_view_ = new QTableWidget();
+    table_content_view_->setAlternatingRowColors(true);
+    table_content_view_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table_content_view_->setSortingEnabled(true);
+    right_tables_layout->addWidget(table_content_view_);
+    
+    // 设置分割器
+    auto* tables_splitter = new QSplitter(Qt::Horizontal);
+    tables_splitter->addWidget(left_tables_widget);
+    tables_splitter->addWidget(right_tables_widget);
+    tables_splitter->setSizes({250, 750}); // 左侧表列表较窄，右侧内容更宽
+    
+    tables_layout->addWidget(tables_splitter);
+    
+    // 连接表选择信号
+    connect(database_tables_tree_, &QTreeWidget::itemSelectionChanged, 
+            this, &PersistenceMonitor::onDatabaseTableSelected);
     
     layout->addWidget(info_group);
     layout->addWidget(usage_group);
-    layout->addWidget(stats_group);
+    layout->addWidget(tables_group);
     
     main_tabs_->addTab(database_widget_, QString::fromUtf8("数据库状态"));
 }
@@ -447,8 +658,49 @@ void PersistenceMonitor::updateTopicInfo() {
 }
 
 void PersistenceMonitor::updateTopicTable() {
-    // TODO: 实现主题表格更新
-    // 从持久化服务获取主题信息并更新表格
+    // 使用 get_active_datawriters_info 和 get_active_datareaders_info
+    if (!persistence_service_) {
+        return;
+    }
+    
+    auto writers = persistence_service_->get_active_datawriters_info();
+    auto readers = persistence_service_->get_active_datareaders_info();
+
+    std::set<std::string> topics;
+    for(const auto& writer : writers) topics.insert(writer.topic_name);
+    for(const auto& reader : readers) topics.insert(reader.topic_name);
+
+    topic_table_->setRowCount(0);
+    topic_table_->setRowCount(topics.size());
+    int row = 0;
+    for (const auto& topic_name : topics) {
+        int writer_count = std::count_if(writers.begin(), writers.end(), 
+            [&](const auto& w){ return w.topic_name == topic_name; });
+        int reader_count = std::count_if(readers.begin(), readers.end(), 
+            [&](const auto& r){ return r.topic_name == topic_name; });
+
+        topic_table_->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(topic_name)));
+        topic_table_->setItem(row, 1, new QTableWidgetItem(QString::number(writer_count)));
+        topic_table_->setItem(row, 2, new QTableWidgetItem(QString::number(reader_count)));
+        
+        // 获取第一个实体的type名称
+        std::string type_name = "Unknown";
+        if (!writers.empty()) {
+            auto writer_it = std::find_if(writers.begin(), writers.end(),
+                [&](const auto& w) { return w.topic_name == topic_name; });
+            if (writer_it != writers.end()) {
+                type_name = writer_it->type_name;
+            }
+        } else if (!readers.empty()) {
+            auto reader_it = std::find_if(readers.begin(), readers.end(),
+                [&](const auto& r) { return r.topic_name == topic_name; });
+            if (reader_it != readers.end()) {
+                type_name = reader_it->type_name;
+            }
+        }
+        topic_table_->setItem(row, 3, new QTableWidgetItem(QString::fromStdString(type_name)));
+        row++;
+    }
 }
 
 void PersistenceMonitor::updateDataWriterTable() {
@@ -604,6 +856,7 @@ void PersistenceMonitor::updateDatabaseInfo() {
         return;
     }
     
+    auto table_names = persistence_service_->get_db_table_names();
     auto stats = persistence_service_->get_statistics();
     
     // 更新基本信息
@@ -625,8 +878,44 @@ void PersistenceMonitor::updateDatabaseInfo() {
         total_samples_label_->setText(QString::number(it_samples->second));
     }
     
+    // 更新数据库表树状列表
+    database_tables_tree_->clear();
+    auto* db_root = new QTreeWidgetItem(database_tables_tree_, {"Database Tables", "Records"});
+    
+    // 获取每个表的记录数
+    for (const auto& name : table_names) {
+        auto content = persistence_service_->get_db_table_content(name);
+        auto* table_item = new QTreeWidgetItem(db_root, {
+            QString::fromStdString(name), 
+            QString::number(content.second.size())
+        });
+    }
+    db_root->setExpanded(true);
+    
     updateDatabaseStats();
-    updateMemoryCacheInfo();
+}
+
+void PersistenceMonitor::updateMemoryCacheInfo() {
+    if (!persistence_service_) {
+        return;
+    }
+    
+    auto usage = persistence_service_->get_memory_cache_usage();
+    size_t current_bytes = usage.first;
+    size_t max_bytes = usage.second;
+
+    if (max_bytes > 0) {
+        double current_mb = current_bytes / (1024.0 * 1024.0);
+        double max_mb = max_bytes / (1024.0 * 1024.0);
+        int percentage = static_cast<int>((current_mb / max_mb) * 100);
+        
+        memory_usage_bar_->setMaximum(100);
+        memory_usage_bar_->setValue(percentage);
+        memory_usage_bar_->setFormat(QString("%1 / %2 MB (%3%)")
+            .arg(current_mb, 0, 'f', 2)
+            .arg(max_mb, 0, 'f', 2)
+            .arg(percentage));
+    }
 }
 
 void PersistenceMonitor::updateDatabaseStats() {
@@ -646,70 +935,101 @@ void PersistenceMonitor::updateDatabaseStats() {
     }
 }
 
-void PersistenceMonitor::updateMemoryCacheInfo() {
-    if (!persistence_service_) {
-        return;
-    }
-    
-    auto stats = persistence_service_->get_statistics();
-    
-    // 更新内存使用进度条
-    auto it_cache_size = stats.find("memory_cache_size");
-    auto it_cache_bytes = stats.find("memory_cache_bytes");
-    
-    if (it_cache_size != stats.end() && it_cache_bytes != stats.end()) {
-        int max_size_mb = persistence_service_->get_config().memory_cache_size_mb;
-        double used_mb = it_cache_bytes->second / (1024.0 * 1024.0);
-        int percentage = static_cast<int>((used_mb / max_size_mb) * 100);
-        
-        memory_usage_bar_->setMaximum(100);
-        memory_usage_bar_->setValue(percentage);
-        memory_usage_bar_->setFormat(QString("%1 MB / %2 MB (%3%)")
-                                     .arg(used_mb, 0, 'f', 1)
-                                     .arg(max_size_mb)
-                                     .arg(percentage));
-    }
-    
-    // 磁盘使用（示例）
-    disk_usage_bar_->setMaximum(100);
-    disk_usage_bar_->setValue(25);
-    disk_usage_bar_->setFormat("1.2 GB / 5.0 GB (25%)");
-}
-
 void PersistenceMonitor::refreshAllData() {
-    if (!persistence_service_) {
+    if (!persistence_service_ || !is_monitoring_) {
         return;
     }
-    
-    updateDomainInfo();
-    updateTopicInfo();
+
+    // 更新所有UI部分
+    updateTopicTable();
+    updateDataWriterTable();
+    updateDataReaderTable();
     updateDatabaseInfo();
+    updateMemoryCacheInfo();
 }
 
 void PersistenceMonitor::onTopicSelected() {
     auto selected_items = domain_tree_->selectedItems();
     if (selected_items.isEmpty()) {
-        topic_details_->clear();
+        stats_table_->clear();
         return;
     }
     
     auto* item = selected_items.first();
-    QString topic_name = item->text(0);
     
-    // 显示主题详细信息
-    QString details = QString::fromUtf8(
-        "主题名称: %1\n"
-        "类型: %2\n"
-        "持久化策略: %3\n"
-        "可靠性策略: %4\n"
-        "发现时间: %5\n"
-    ).arg(item->text(0))
-     .arg(item->text(1))
-     .arg(item->text(2))
-     .arg(item->text(3))
-     .arg(QDateTime::currentDateTime().toString());
+    // 如果是根节点，则不处理
+    if (item->parent() == nullptr) {
+        return;
+    }
     
-    topic_details_->setPlainText(details);
+    std::string table_name = item->text(0).toStdString();
+    if (!persistence_service_) {
+        return;
+    }
+    
+    auto content = persistence_service_->get_db_table_content(table_name);
+    
+    // 使用 stats_table_ 来显示表内容
+    stats_table_->clear();
+    if (!content.first.empty()) {
+        stats_table_->setColumnCount(content.first.size());
+        QStringList headers;
+        for (const auto& header : content.first) {
+            headers << QString::fromStdString(header);
+        }
+        stats_table_->setHorizontalHeaderLabels(headers);
+        
+        stats_table_->setRowCount(content.second.size());
+        for (int row = 0; row < static_cast<int>(content.second.size()); ++row) {
+            for (int col = 0; col < static_cast<int>(content.second[row].size()); ++col) {
+                stats_table_->setItem(row, col, new QTableWidgetItem(QString::fromStdString(content.second[row][col])));
+            }
+        }
+        stats_table_->resizeColumnsToContents();
+    }
+}
+
+void PersistenceMonitor::onDatabaseTableSelected() {
+    auto selected_items = database_tables_tree_->selectedItems();
+    if (selected_items.isEmpty()) {
+        table_content_view_->clear();
+        table_content_view_->setRowCount(0);
+        table_content_view_->setColumnCount(0);
+        return;
+    }
+    
+    auto* item = selected_items.first();
+    
+    // 如果是根节点，则不处理
+    if (item->parent() == nullptr) {
+        return;
+    }
+    
+    std::string table_name = item->text(0).toStdString();
+    if (!persistence_service_) {
+        return;
+    }
+    
+    auto content = persistence_service_->get_db_table_content(table_name);
+    
+    // 更新表内容显示
+    table_content_view_->clear();
+    if (!content.first.empty()) {
+        table_content_view_->setColumnCount(content.first.size());
+        QStringList headers;
+        for (const auto& header : content.first) {
+            headers << QString::fromStdString(header);
+        }
+        table_content_view_->setHorizontalHeaderLabels(headers);
+        
+        table_content_view_->setRowCount(content.second.size());
+        for (int row = 0; row < static_cast<int>(content.second.size()); ++row) {
+            for (int col = 0; col < static_cast<int>(content.second[row].size()); ++col) {
+                table_content_view_->setItem(row, col, new QTableWidgetItem(QString::fromStdString(content.second[row][col])));
+            }
+        }
+        table_content_view_->resizeColumnsToContents();
+    }
 }
 
 void PersistenceMonitor::closeEvent(QCloseEvent* event) {
