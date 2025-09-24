@@ -2,11 +2,12 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
+#include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/flowcontrol/flowcontroller.h"
 #include "common/time/ddstimer.h"
-#include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 
 StatelessWriter::StatelessWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
@@ -22,14 +23,14 @@ StatelessWriter::~StatelessWriter()
 void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
 	for (auto locator : subData.unicastLocatorList) {
-		ReaderLocatorAdd(locator);
+		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
 	}
 
 	for (auto locator : subData.multicastLocatorList) {
-		ReaderLocatorAdd(locator);
+		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
 	}
 }
-void StatelessWriter::ReaderLocatorAdd(Locator_t & locator)
+void StatelessWriter::ReaderLocatorAdd(Locator_t & locator, const GUID_t& guid)
 {
 	if (0 != readerLocators_.count(locator)) {
 		return;
@@ -37,6 +38,9 @@ void StatelessWriter::ReaderLocatorAdd(Locator_t & locator)
 
 	std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(locator);
 	readerLocator->SetHistoryCache(writerCache_);
+	if (guid != GUID_UNKNOWN) {
+		readerLocator->SetRemoteGuid(guid);
+	}
 	readerLocators_[locator] = readerLocator;
 }
 
@@ -59,7 +63,7 @@ void StatelessWriter::UnsentChangesReset()
 	}
 }
 
-ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change) 
+ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
 {
 	/* wnagyi  */
 	Duration_t duration = TIME_INFINITE;
@@ -70,7 +74,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr")
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr")
 		}
 	}
 
@@ -79,12 +83,6 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 	}
 
 	//TODO 发送报文
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
 	//srcLocators = participant_->GetDefaultUnicastLocators();
 	//TODO 封装报文
 
@@ -122,9 +120,15 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 
 			/* 发送数据 */
 			for (auto& readerlocator : readerLocators_) {
-				LocatorVec dstLocators;
-				dstLocators.push_back(readerlocator.first);
-				messageTransmitter->MessageSend(srcLocators, dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
+					continue;
+				}
+				LocatorVec dstLocators { readerlocator.first };
+				if (flowControl) {
+					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				} else {
+					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
+				}
 			}
 
 			buffer = buffer->next;
@@ -160,9 +164,11 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change)
 		MessageProcessor::EncapsulateMessageHeader(*change->serializedBuffer, shift, guid_.prefix);
 
 		for (auto& readerlocator : readerLocators_) {
-			LocatorVec dstLocators;
-			dstLocators.push_back(readerlocator.first);
-			messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
+			if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
+				continue;
+			}
+			LocatorVec dstLocators{ readerlocator.first };
+			participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 		}
 			
 	}
@@ -194,7 +200,7 @@ void StatelessWriter::ResendDataPeriod()
 		if (!change) {
 			continue;
 		}
-		DeliveryData(change);
+		DeliveryData(change, true);
 	}
 }
 
@@ -204,7 +210,7 @@ ReturnCode_t StatelessWriter::ReceiveAckNackMessage(const Receive_t&  headerMsg,
 	static_cast<void>(headerMsg);
 	static_cast<void>(ackMsg);
 
-	return RETCODE_UNSUPPORTED;
+	return RETCODE_OK;
 }
 
 ReturnCode_t StatelessWriter::ReceiveNackFragMessage(const Receive_t&  headerMsg, const NackFragSubMessage_t& nackMsg)
@@ -212,5 +218,5 @@ ReturnCode_t StatelessWriter::ReceiveNackFragMessage(const Receive_t&  headerMsg
 	static_cast<void>(headerMsg);
 	static_cast<void>(nackMsg);
 
-	return RETCODE_UNSUPPORTED;
+	return RETCODE_OK;
 }

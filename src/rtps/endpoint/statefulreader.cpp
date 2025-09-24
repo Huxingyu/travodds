@@ -6,7 +6,7 @@
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, const TopicKind_t& kind)
 	: Reader(qos, kind)
 {
@@ -16,6 +16,10 @@ StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, con
 
 StatefulReader::~StatefulReader()
 {
+	if (lastNewCacheTimer_) {
+		lastNewCacheTimer_->Exit();
+	}
+	
 	WriterProxyMap writerProxys = matchedWriters_;
 
 	for (auto & writerProxy : writerProxys) {
@@ -37,7 +41,7 @@ void StatefulReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerProxy)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MatchedWriterAdd Err");
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err");
 		}
 	}
 }
@@ -53,7 +57,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "MatchedWriterRemove Err");
+			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterRemove Err");
 		}
 	}
 	matchedWriters_.erase(writerProxy->GetGuid());
@@ -62,7 +66,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
-		AGILOG(AGILOG_ERROR, "writerGuid not exist");
+		TRAVODDS_LOG(LOG_ERROR, "writerGuid not exist");
 		return nullptr;
 	}
 		
@@ -72,7 +76,7 @@ std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGu
 bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
-		AGILOG(AGILOG_ERROR, "writerGuid not exist");
+		//AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return false;
 	}
     return true;
@@ -106,7 +110,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 		proxy = itor->second;
 	}
 	if (nullptr == proxy) {
-		AGILOG(AGILOG_ERROR, "proxy = nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -168,7 +172,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		proxy = itor->second;
 	}
 	if (nullptr == proxy) {
-		AGILOG(AGILOG_ERROR, "proxy = nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -180,7 +184,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 	if (kind != ALIVE || (dfFlags.nonStandardPayloadFlag || nullptr == data) ) {
 		//TODO  
 		/**  DataFrag必须存在数据，状态为ALIVE  **/
-		AGILOG(AGILOG_ERROR, "DataFrag msg err ");
+		TRAVODDS_LOG(LOG_ERROR, "DataFrag msg err ");
 		return RETCODE_ERROR;
 	}
 
@@ -242,26 +246,26 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match writer");
+		//AGILOG(AGILOG_ERROR, "no match writer");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match writer is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
 	}
 
 	/* TODO 调用函数前进行判断，报文的有效性判断 */
 	//SequenceNumber_t SEQUENCENUMBER_ZERO
 	if (heartMsg.firstSN <= SEQUENCENUMBER_ZERO || heartMsg.lastSN < SEQUENCENUMBER_ZERO || heartMsg.lastSN < heartMsg.firstSN - 1) {
-		AGILOG(AGILOG_ERROR, "hb data is invalid");
+		TRAVODDS_LOG(LOG_ERROR, "hb data is invalid");
 		return RETCODE_ERROR;
 	}
 	if (flags.groupInfoFlag) {
 		//TODO 相关QoS不进行实现
 		if (heartMsg.currentGSN <= SEQUENCENUMBER_ZERO || heartMsg.firstGSN <= SEQUENCENUMBER_ZERO || heartMsg.lastGSN <= SEQUENCENUMBER_ZERO ||
 			heartMsg.lastGSN < heartMsg.firstGSN - 1 || heartMsg.currentGSN > heartMsg.firstGSN || heartMsg.currentGSN < heartMsg.lastGSN) {
-			AGILOG(AGILOG_ERROR, "hb groupInfoFlags data is invalid");
+			TRAVODDS_LOG(LOG_ERROR, "hb groupInfoFlags data is invalid");
 			return RETCODE_ERROR;
 		}
 	}
@@ -326,12 +330,12 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match writer exist");
+		TRAVODDS_LOG(LOG_ERROR, "no match writer exist");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "match writer is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -366,11 +370,11 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	/*  判断报文是否有效  */
 	SequenceNumber_t seq = SEQUENCENUMBER_ZERO;
 	if (gapInfo.gapStart <= seq && (0 == gapInfo.gapList.bitmap.size || gapInfo.gapList.bitmap.size > 256)) {
-		AGILOG(AGILOG_ERROR, "Gap GapData is invalid")
+		TRAVODDS_LOG(LOG_ERROR, "Gap GapData is invalid")
 		return RETCODE_ERROR;
 	}
 	if (groupInfoFlag && (gapInfo.gapStartGSN <= seq || gapInfo.gapEndGSN <= seq || gapInfo.gapEndGSN < gapInfo.gapStart - 1) ) {
-		AGILOG(AGILOG_ERROR, "Gap GroupInfo is invalid")
+		TRAVODDS_LOG(LOG_ERROR, "Gap GroupInfo is invalid")
 		return RETCODE_ERROR;
 	}
 
@@ -378,12 +382,12 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	GUID_t guid(headerInfo.sourceGuidPrefix, gapInfo.writerId);
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
-		AGILOG(AGILOG_ERROR, "no match writer")
+		//AGILOG(AGILOG_ERROR, "no match writer")
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
 	if (nullptr == proxy) {
-		AGILOG(AGILOG_ERROR, "match writer is nullptr")
+		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr")
 		return RETCODE_ERROR;
 	}
 
@@ -410,7 +414,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 {
 	ReturnCode_t ret = RETCODE_OK;
 	if (!proxy) {
-		AGILOG(AGILOG_ERROR, "proxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "proxy is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -423,6 +427,12 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
+		/* wangyi Lifespan 超期判断，超期过滤数据 */
+		if (!datareader_->CheckLifespan(cache)) {
+			cache = proxy->GetSubmitCache();
+			continue;
+		}
+
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
@@ -454,7 +464,7 @@ ReturnCode_t StatefulReader::AssertWriterLiveliness(const GUID_t& writer)
 		}
 		else {
 			/* TODO 日志 */
-			AGILOG(AGILOG_ERROR, "livelinessManager is nullptr");
+			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
 	}
 	return RETCODE_OK;
@@ -464,24 +474,13 @@ ReturnCode_t StatefulReader::AssertWriterLiveliness(const GUID_t& writer)
 ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerProxy, AcknackSubMessage_t& ackMsg)
 {
 	if (!writerProxy) {
-		AGILOG(AGILOG_ERROR, "writerProxy is nullptr")
+		TRAVODDS_LOG(LOG_ERROR, "writerProxy is nullptr")
 		return RETCODE_ERROR;
 	}
 	
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
-		return RETCODE_ERROR;
-	}
 	char data[1224] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -497,13 +496,13 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	bufffer.buffer_size = shift;
 	shift = 0;
 	InfoDestinationSubMessage_t dstMsg;
-	dstMsg.guidPrefix = writerProxy->GetRemoteWriterGuid().prefix;
+	dstMsg.guidPrefix = writerProxy->GetGuid().prefix;
 	dstMsg.header.flags = 0x01;
 	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg);
 
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -514,24 +513,13 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg)
 {
 	if (!writerProxy) {
-		AGILOG(AGILOG_ERROR, "writerProxy is nullptr")
+		TRAVODDS_LOG(LOG_ERROR, "writerProxy is nullptr")
 		return RETCODE_ERROR;
 	}
 
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	LocatorVec srcLocators;
-	Locator_t srcLocator;
-	srcLocator.kind = LOCATOR_KIND_UDPv4;
-	srcLocators.push_back(srcLocator);
-
-	std::shared_ptr<MessageTransmitter> messageTransmitter = participant_->GetMessageTransmitter();
-
-	if (!messageTransmitter) {
-		AGILOG(AGILOG_ERROR, "messageTransmitter is nullptr")
-		return RETCODE_ERROR;
-	}
 	char data[1500] = { 0 };
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
@@ -547,7 +535,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	shift = 0;
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
-	messageTransmitter->MessageSend(srcLocators, unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 

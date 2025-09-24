@@ -8,9 +8,8 @@
 #include "common/timeconversion.h"
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
-#include "algorithm"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Spdp::Spdp(Participant* participant, Discovery* discovery)
 	: participant_(participant), discovery_(discovery),
@@ -25,6 +24,10 @@ Spdp::Spdp(Participant* participant, Discovery* discovery)
 
 Spdp::~Spdp()
 {
+	if (timer_) {
+		timer_->Exit();
+	}
+
 	if (writer_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(writer_->GetGuid());
 		participant_->DeleteWriter(handle);
@@ -41,10 +44,11 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 	dataWriter->get_qos(qos);
 
 	//TODO 补充resendPeriod参数
-    std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER, true, ENTITY_WRITER);
+    std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, guid, true);
 	if (nullptr == writer) {
 		//TODO 日志记录
-		AGILOG(AGILOG_ERROR, "writer is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "writer is nullptr");
 		return;
 	}
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
@@ -62,6 +66,20 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 
 	writer_->ReaderLocatorAdd(locator);
 
+	Locator_t locatorv6;
+	locatorv6.kind = LOCATOR_KIND_UDPv6;
+	locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+	locatorv6.address[0] = 0xff;
+	locatorv6.address[1] = 0x1e;
+	//3-9 : 0
+	locatorv6.address[10] = 0xff;
+	locatorv6.address[11] = 0xff;
+	locatorv6.address[12] = 0xef;
+	locatorv6.address[13] = 0xff;
+	locatorv6.address[15] = 0x01;
+
+	writer_->ReaderLocatorAdd(locatorv6);
+
 	// DiscoveredReaderData data;
 	// participant_->AddRemoteReader()
 
@@ -73,10 +91,11 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
 	DataReaderQos qos;
 	dataReader->get_qos(qos);
 	qos.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
-    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER, true, ENTITY_READER);
+    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, guid, true);
 	if (nullptr == reader) {
 		//TODO 日志记录
-		AGILOG(AGILOG_ERROR, "reader is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "reader is nullptr");
 		return;
 	}
 	reader_ = std::dynamic_pointer_cast<StatelessReader>(reader);
@@ -123,7 +142,7 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 int Spdp::GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data)
 {
 	if (0 == remoteParticipantData_.count(key)) {
-		AGILOG(AGILOG_ERROR, "key not exist");
+		TRAVODDS_LOG(LOG_ERROR, "key not exist");
 		return RETCODE_ERROR;
 	}
 
@@ -175,7 +194,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, buffer, handle, time);
 	if (nullptr == cacheChange) {
-		AGILOG(AGILOG_ERROR, "create newChange Err");
+		TRAVODDS_LOG(LOG_ERROR, "create newChange Err");
 		return ;
 	}
 
@@ -183,7 +202,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 
 	if (RETCODE_OK != ret) {
 		//TODO 记录日志
-		AGILOG(AGILOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
 }
@@ -276,7 +295,7 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
 	if (0 == remoteParticipantStatus_.count(key)) {
-		AGILOG(AGILOG_ERROR, "guid not exist");
+		TRAVODDS_LOG(LOG_ERROR, "guid not exist");
 		return;
 	}
 		

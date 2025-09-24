@@ -1,7 +1,7 @@
 #include "dcps/condition/statusconditionimpl.h"
 #include "dcps/base/entityimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 StatusConditionImpl::StatusConditionImpl(Entity* parent)
     : ConditionImpl(), 
       entity_(parent), 

@@ -9,26 +9,64 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
-#define AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
+#ifndef TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H
+#define TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H
 
 #include "dcps/topic/multitopic.h"
 #include "dcps/topic/topicdescriptionimpl.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
+/**
+ * @brief MultiTopicImpl类h是MultiTopic子类， 是 DDS (Data Distribution Service) 中的一个高级特性，
+ * 它允许订阅者通过单个 DataReader 接收来自多个 Topic 的数据，并对这些数据进行过滤、组合或转换。
+ * 这种机制为复杂的数据订阅场景提供了更灵活的解决方案。
+ */
 class MultiTopicImpl : public virtual MultiTopic, public TopicDescriptionImpl {
 public:
+
+    /**
+     * @brief 构造函数。
+     *
+     * @param [in] name                     主题名。
+     * @param [in] type_name	            通信数据类型。
+     * @param [in] subscription_expression	订阅表达式。
+     * @param [in] expression_parameters	表达式参数。
+     * @param [in] participant		        域参与者DomainParticipantImpl类指针。
+     */
     MultiTopicImpl(const std::string& name, const std::string& type_name, const std::string& subscription_expression, const StringSeq& expression_parameters, DomainParticipantImpl* participant);
+    
+    /**
+     * @brief 析构函数。
+     */
     ~MultiTopicImpl();
 
+    /**
+     * @brief 获取订阅端多主题表达式。
+     *
+     * @return 多主题表达式。
+     */
     const std::string&  get_subscription_expression() const;
 
+    /**
+     * @brief 获取表达式参数。
+     *
+     * @param [out] expression_parameters 表达式参数。
+     *
+     * @return RETCODE_OK。
+     */
     ReturnCode_t get_expression_parameters(StringSeq& expression_parameters) const;
 
+    /**
+     * @brief 设置表达式参数。
+     *
+     * @param [in] expression_parameters 表达式参数。
+     *
+     * @return RETCODE_OK。
+     */
     ReturnCode_t set_expression_parameters(const StringSeq& expression_parameters);
 private:
     std::string subscriptionExpression_;
     StringSeq expressionParameters_;
 };
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_TOPIC_MULTITOPICIMPL_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_TOPIC_MULTITOPICIMPL_H

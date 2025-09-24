@@ -10,12 +10,12 @@
 //
 //See the Mulan PSL v2 for more details.
 
-#ifndef AGICDR_H
-#define AGICDR_H
+#ifndef TRAVODDSCDR_H
+#define TRAVODDSCDR_H
 
 #include <string>
 #include <cstring>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
 #define PID_LIST_END 0xFFFFFFFF
 
@@ -26,6 +26,8 @@
 // 取消对编译器的警告C4244
 #pragma warning(disable: 4244)
 #endif
+
+TRAVODDS_NAMESPACE_BEGIN
 
 // 由于各个平台的long double大小不一致，使用union对齐为16字节
 union LongDouble {
@@ -76,8 +78,8 @@ public:
     uint32_t bufferTotalSpace() 
     {
         uint32_t totalSpace = 0;
-        for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
-            totalSpace += buffer->bufferSpace();
+        for (SerializedBuffer* curBuffer = this; curBuffer != nullptr; curBuffer = curBuffer->next) {
+            totalSpace += curBuffer->bufferSpace();
         }
         return totalSpace;
     }
@@ -90,8 +92,8 @@ public:
     uint32_t bufferTotalLength() 
     {
         uint32_t totalLength = 0;
-        for (SerializedBuffer* buffer = this; buffer != nullptr; buffer = buffer->next) {
-            totalLength += buffer->bufferLength();
+        for (SerializedBuffer* curBuffer = this; curBuffer != nullptr; curBuffer = curBuffer->next) {
+            totalLength += curBuffer->bufferLength();
         }
         return totalLength;
     }
@@ -114,7 +116,7 @@ public:
 /**
  * @brief 序列化器。
  */
-class DDS_DLL AGIDDSCdrSerializer
+class DDS_DLL CdrSerializer
 {
 public:
     /**
@@ -123,13 +125,18 @@ public:
      * @param buffer 目标缓冲区。
      * @param littleEndian 是否小端字节序。
      */
-    AGIDDSCdrSerializer(SerializedBuffer* buffer, bool littleEndian = true);
+    CdrSerializer(SerializedBuffer* buffer, bool littleEndian = true);
 
-    ~AGIDDSCdrSerializer() = default;
+    ~CdrSerializer() = default;
 
     bool serializeLongDouble(LongDouble value);
 
     bool serializeLongDoubleArray(const LongDouble* value, uint32_t length);
+
+    bool serializeBaseType(wchar_t value);
+
+    bool serializeBaseTypeArray(const wchar_t* value, uint32_t length);
+
     /**
      * @brief 序列化基本数类型
      * 
@@ -376,6 +383,16 @@ public:
      * @return 是否成功。
      */
     bool getKeyHash(char* keyHash, bool forceMd5 = false);
+
+    /**
+     * @brief 将UTF-32编码的字符串转换为UTF-16编码。
+     * 
+     * @param utf32Value UTF-32编码的字符串。
+     * @param utf16Value 转换后的UTF-16编码字符。
+     * 
+     * @return 是否转换成功。
+     */
+    static bool convertUft32ToUtf16(const wchar_t utf32Value, uint16_t* utf16Value);
 private:
     /** @brief	序列化目标缓冲区，由SerializedBuffer链表组成，该域表示链表的头指针。 */
     SerializedBuffer* tgaMsgBlock_;
@@ -403,21 +420,21 @@ private:
 /**
  * @brief 反序列化器。
  */
-class DDS_DLL AGIDDSCdrDeserializer {
+class DDS_DLL CdrDeserializer {
 public:
-    AGIDDSCdrDeserializer(SerializedBuffer* buffer, bool littleEndian = true);
-    ~AGIDDSCdrDeserializer() = default;
+    CdrDeserializer(SerializedBuffer* buffer, bool littleEndian = true);
+    ~CdrDeserializer() = default;
 
     bool deserializeLongDouble(LongDouble& value) 
     {
         static char s_alignedData[8] = { 0 };
-        uint32_t ldSize = sizeof(long double);
-        // 先读取补齐的数据
-        bool ret = deserializeBaseTypeArray<char>(s_alignedData, 16 - ldSize);
+        uint32_t offset = alignSize(8);
+        // 先读取对齐的数据
+        bool ret = deserializeBaseTypeArray<char>(s_alignedData, offset);
         if (!ret) {
             return false;
         }
-        return deserializeBaseType(value.ld);
+        return deserializeBaseTypeArray(value.c, sizeof(LongDouble));
     }
     
     bool deserializeLongDoubleArray(LongDouble* value, uint32_t length) 
@@ -429,6 +446,10 @@ public:
         }
         return true;
     }
+
+    bool deserializeBaseType(wchar_t& value);
+
+    bool deserializeBaseTypeArray(wchar_t* value, uint32_t length);
 
     template<typename T>
     bool deserializeBaseType(T& value) 
@@ -555,6 +576,8 @@ public:
     {
         return ((~index_ + 1) & (typeSize - 1));
     }
+
+    bool convertUft16ToUtf32(const uint16_t utf16Value, wchar_t& utf32Value);
 private:
     SerializedBuffer* tgaMsgBlock_;
     SerializedBuffer* curProcessMsgBlock_;
@@ -563,4 +586,6 @@ private:
     bool useLittleEndian_;
 };
 
-#endif // AGICDR_H
+TRAVODDS_NAMESPACE_END
+
+#endif // TRAVODDSCDR_H

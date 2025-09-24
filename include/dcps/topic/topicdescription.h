@@ -9,16 +9,16 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_TOPIC_TOPICDESCRIPTION_H
-#define AGIDDS_DCPS_TOPIC_TOPICDESCRIPTION_H
+#ifndef TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTION_H
+#define TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTION_H
 
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DomainParticipant;
 /**
- * *TopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
+ * @brief TopicDescription类，表示发布和订阅都绑定到单个数据类型的真实情况。
  */
 class DDS_DLL TopicDescription {
 public:
@@ -28,21 +28,21 @@ public:
     virtual ~TopicDescription() = default;
 
     /**
-     * 获取TopicDescription所属的DomainParticipant。
+     * @brief 获取TopicDescription所属的DomainParticipant。
      *
      * @return TopicDescription所属的DomainParticipant。
      */
     virtual DomainParticipant* get_participant() const = 0;
 
     /**
-     * 获取关联的数据类型名称。
+     * @brief 获取关联的数据类型名称。
      *
      * @return 数据类型名.
      */
     virtual const char* get_type_name() const = 0;
 
     /**
-     * 获取用于创建此TopicDescription的名称。
+     * @brief 获取用于创建此TopicDescription的名称。
      *
      * @return 用于创建此TopicDescription的名称。
      */
@@ -50,5 +50,5 @@ public:
 
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_TOPIC_TOPICDESCRIPTION_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_TOPIC_TOPICDESCRIPTION_H
