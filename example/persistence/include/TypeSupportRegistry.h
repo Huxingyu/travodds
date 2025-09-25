@@ -2,6 +2,7 @@
 
 #include "../../../include/travodds_dll.h"
 #include "dcps/topic/typesupport.h"
+#include "dcps/domain/domainparticipant.h"
 #include <string>
 #include <map>
 #include <memory>
@@ -151,6 +152,40 @@ bool register_data_type(const std::string& type_name,
     };
     
     return registry.register_type_support(type_name, type_support, sample_factory);
+}
+
+/**
+ * @brief 统一注册数据类型到DomainParticipant和TypeSupportRegistry
+ * 
+ * 这个函数同时处理DDS框架层面的类型注册和持久化服务层面的类型注册，
+ * 确保类型在两个系统中都可用。
+ * 
+ * @tparam T 数据类型
+ * @tparam TypeSupportT TypeSupport类型
+ * @param participant DomainParticipant实例
+ * @param type_name 类型名称
+ * @return true 注册成功
+ * @return false 注册失败
+ */
+template<typename T, typename TypeSupportT>
+bool register_type_unified(DomainParticipant* participant, const std::string& type_name) {
+    if (!participant) {
+        return false;
+    }
+    
+    // 1. 注册到DomainParticipant (DDS框架需要)
+    ReturnCode_t dds_ret = participant->registe_type(type_name, TypeSupportT::get_instance());
+    if (dds_ret != RETCODE_OK) {
+        return false;
+    }
+    
+    // 2. 注册到TypeSupportRegistry (持久化服务需要)
+    bool registry_ret = register_data_type<T, TypeSupportT>(type_name);
+    if (!registry_ret) {
+        return false;
+    }
+    
+    return true;
 }
 
 TRAVODDS_NAMESPACE_END

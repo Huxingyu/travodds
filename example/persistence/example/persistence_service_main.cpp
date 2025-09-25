@@ -1,4 +1,5 @@
 #include "PersistenceService.h"
+#include "TypeSupportRegistry.h"
 #include "dcps/domain/domainparticipantfactory.h"
 #include "../../cpp/hello_world/HelloWorldTypeSupport.h"
 #include <iostream>
@@ -139,13 +140,13 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         
-        // 注册topic类型
+        // 使用统一的类型注册方法，同时注册到DDS框架和持久化注册表
         const char* type_name = HelloWorldTypeSupport::get_instance()->get_typename();
-        ReturnCode_t register_ret = participant->registe_type(type_name, HelloWorldTypeSupport::get_instance());
-        if (register_ret != RETCODE_OK) {
-            std::cerr << "Failed to register HelloWorld type, error code: " << register_ret << std::endl;
+        if (!register_type_unified<HelloWorld, HelloWorldTypeSupport>(participant, type_name)) {
+            std::cerr << "Failed to register HelloWorld type to both DDS framework and TypeSupportRegistry" << std::endl;
             return -1;
         }
+        std::cout << "Successfully registered HelloWorld type to both DDS framework and persistence registry" << std::endl;
         
         // 创建持久化服务配置信息
         PersistenceConfig config;

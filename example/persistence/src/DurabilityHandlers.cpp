@@ -17,7 +17,7 @@ TransientHandler::TransientHandler(PersistenceService* service)
     : DurabilityHandler(service) {}
 
 void TransientHandler::store_data(const StoredData& data) {
-    std::cout << "[TransientHandler] 存储数据到服务内存缓存 for topic: " << data.topic_name << std::endl;
+
     
     // TRANSIENT策略：仅存储在内存缓存中，不写入数据库
     auto& memory_cache = service_->get_memory_cache();
@@ -26,7 +26,6 @@ void TransientHandler::store_data(const StoredData& data) {
 }
 
 auto TransientHandler::get_historical_data(const std::string& topic_name) -> std::vector<StoredData> {
-    std::cout << "[TransientHandler] 从服务内存缓存获取历史数据 for topic: " << topic_name << std::endl;
     
     // TRANSIENT策略：从内存缓存获取数据
     auto& memory_cache = service_->get_memory_cache();
@@ -36,7 +35,7 @@ auto TransientHandler::get_historical_data(const std::string& topic_name) -> std
 auto TransientHandler::get_historical_data_range(const std::string& topic_name, 
                                                const Time_t& start_time,
                                                const Time_t& end_time) -> std::vector<StoredData> {
-    std::cout << "[TransientHandler] 从服务内存缓存获取历史数据范围 for topic: " << topic_name << std::endl;
+  
     
     // TRANSIENT策略：从内存缓存获取指定时间范围的数据
     auto& memory_cache = service_->get_memory_cache();
@@ -80,7 +79,6 @@ PersistentHandler::PersistentHandler(PersistenceService* service)
     : DurabilityHandler(service) {}
 
 void PersistentHandler::store_data(const StoredData& data) {
-    std::cout << "[PersistentHandler] 持久化存储数据 for topic: " << data.topic_name << std::endl;
     
     // PERSISTENT策略：存储到数据库，同时更新内存缓存
     auto& db_manager = service_->get_database_manager();
@@ -96,7 +94,6 @@ void PersistentHandler::store_data(const StoredData& data) {
 }
 
 auto PersistentHandler::get_historical_data(const std::string& topic_name) -> std::vector<StoredData> {
-    std::cout << "[PersistentHandler] 从持久化数据库获取历史数据 for topic: " << topic_name << std::endl;
     
     // PERSISTENT策略：主要从数据库获取，同时更新缓存
     auto& db_manager = service_->get_database_manager();
@@ -117,7 +114,6 @@ auto PersistentHandler::get_historical_data(const std::string& topic_name) -> st
 auto PersistentHandler::get_historical_data_range(const std::string& topic_name, 
                                                 const Time_t& start_time,
                                                 const Time_t& end_time) -> std::vector<StoredData> {
-    std::cout << "[PersistentHandler] 从持久化数据库获取历史数据范围 for topic: " << topic_name << std::endl;
     
     // PERSISTENT策略：从数据库获取指定时间范围的数据
     auto& db_manager = service_->get_database_manager();

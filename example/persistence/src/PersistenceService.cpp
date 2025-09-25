@@ -130,13 +130,24 @@ void PersistenceService::initialize_handlers() {
 void PersistenceService::initialize_type_supports() {
     auto& registry = TypeSupportRegistry::instance();
     
-    // 注册HelloWorld类型
-    if (register_data_type<HelloWorld, HelloWorldTypeSupport>("HelloWorld")) {
-        std::cout << "[PersistenceService] Successfully registered HelloWorld type support" << std::endl;
+    // 检查HelloWorld类型是否已注册
+    if (!registry.is_type_registered("HelloWorld")) {
+        // 如果未注册，进行注册
+        if (register_data_type<HelloWorld, HelloWorldTypeSupport>("HelloWorld")) {
+            std::cout << "[PersistenceService] Successfully registered HelloWorld type support" << std::endl;
+        } else {
+            std::cerr << "[PersistenceService] Failed to register HelloWorld type support" << std::endl;
+        }
     } else {
-        std::cerr << "[PersistenceService] Failed to register HelloWorld type support" << std::endl;
+        std::cout << "[PersistenceService] HelloWorld type already registered" << std::endl;
     }
     
+    // 显示所有已注册的类型
+    auto registered_types = registry.get_registered_types();
+    std::cout << "[PersistenceService] Total registered types: " << registered_types.size() << std::endl;
+    for (const auto& type : registered_types) {
+        std::cout << "[PersistenceService]   - " << type << std::endl;
+    }
 }
 
 std::shared_ptr<TypeSupport> PersistenceService::get_type_support_for_serialization(const std::string& type_name) {

@@ -26,74 +26,102 @@ class DataWriter;
 class Subscriber;
 class Publisher;
 
-// 实体信息结构体（供外部使用，内存管理）
+/**
+ * @brief 活跃DataWriter实体信息结构体
+ * 
+ * 用于存储和管理发现的DataWriter实体的详细信息，包括QoS策略、状态和时间戳等。
+ */
 struct ActiveDataWriterInfo {
-    BuiltinTopicKey_t key;
-    std::string topic_name;
-    std::string type_name;
-    DurabilityQosPolicyKind durability_kind;
-    ReliabilityQosPolicyKind reliability_kind;
-    std::chrono::steady_clock::time_point discovered_at;
-    std::chrono::steady_clock::time_point last_seen;
-    bool is_active;
+    BuiltinTopicKey_t key;                                    ///< 实体唯一标识符
+    std::string topic_name;                                   ///< Topic名称
+    std::string type_name;                                    ///< 数据类型名称
+    DurabilityQosPolicyKind durability_kind;                  ///< 持久化策略类型
+    ReliabilityQosPolicyKind reliability_kind;                ///< 可靠性策略类型
+    std::chrono::steady_clock::time_point discovered_at;      ///< 发现时间戳
+    std::chrono::steady_clock::time_point last_seen;          ///< 最后活跃时间戳
+    bool is_active;                                           ///< 实体是否活跃
     
     // 扩展的QoS字段用于兼容性检查
-    PresentationQosPolicy presentation;
-    DeadlineQosPolicy deadline;
-    LatencyBudgetQosPolicy latency_budget;
-    OwnershipQosPolicy ownership;
-    OwnershipStrengthQosPolicy ownership_strength;
-    LivelinessQosPolicy liveliness;
-    DestinationOrderQosPolicy destination_order;
-    LifespanQosPolicy lifespan;
+    PresentationQosPolicy presentation;                       ///< 展现策略
+    DeadlineQosPolicy deadline;                              ///< 截止时间策略
+    LatencyBudgetQosPolicy latency_budget;                   ///< 延迟预算策略
+    OwnershipQosPolicy ownership;                            ///< 所有权策略
+    OwnershipStrengthQosPolicy ownership_strength;           ///< 所有权强度策略
+    LivelinessQosPolicy liveliness;                          ///< 活跃性策略
+    DestinationOrderQosPolicy destination_order;             ///< 目标顺序策略
+    LifespanQosPolicy lifespan;                             ///< 生命周期策略
     
     // 可选：存储完整的Publication数据
-    PublicationBuiltinTopicData full_publication_data;
+    PublicationBuiltinTopicData full_publication_data;       ///< 完整的发布数据（可选）
 };
 
+/**
+ * @brief 活跃DataReader实体信息结构体
+ * 
+ * 用于存储和管理发现的DataReader实体的详细信息，包括QoS策略、状态和时间戳等。
+ */
 struct ActiveDataReaderInfo {
-    BuiltinTopicKey_t key;
-    std::string topic_name;
-    std::string type_name;
-    DurabilityQosPolicyKind durability_kind;
-    ReliabilityQosPolicyKind reliability_kind;
-    std::chrono::steady_clock::time_point discovered_at;
-    std::chrono::steady_clock::time_point last_seen;
-    bool is_active;
+    BuiltinTopicKey_t key;                                    ///< 实体唯一标识符
+    std::string topic_name;                                   ///< Topic名称
+    std::string type_name;                                    ///< 数据类型名称
+    DurabilityQosPolicyKind durability_kind;                  ///< 持久化策略类型
+    ReliabilityQosPolicyKind reliability_kind;                ///< 可靠性策略类型
+    std::chrono::steady_clock::time_point discovered_at;      ///< 发现时间戳
+    std::chrono::steady_clock::time_point last_seen;          ///< 最后活跃时间戳
+    bool is_active;                                           ///< 实体是否活跃
     
     // 扩展的QoS字段用于兼容性检查
-    PresentationQosPolicy presentation;
-    DeadlineQosPolicy deadline;
-    LatencyBudgetQosPolicy latency_budget;
-    OwnershipQosPolicy ownership;
-    LivelinessQosPolicy liveliness;
-    DestinationOrderQosPolicy destination_order;
-    TimeBasedFilterQosPolicy time_based_filter;
+    PresentationQosPolicy presentation;                       ///< 展现策略
+    DeadlineQosPolicy deadline;                              ///< 截止时间策略
+    LatencyBudgetQosPolicy latency_budget;                   ///< 延迟预算策略
+    OwnershipQosPolicy ownership;                            ///< 所有权策略
+    LivelinessQosPolicy liveliness;                          ///< 活跃性策略
+    DestinationOrderQosPolicy destination_order;             ///< 目标顺序策略
+    TimeBasedFilterQosPolicy time_based_filter;             ///< 基于时间的过滤策略
     
     // 可选：存储完整的Subscription数据
-    SubscriptionBuiltinTopicData full_subscription_data;
+    SubscriptionBuiltinTopicData full_subscription_data;     ///< 完整的订阅数据（可选）
 };
 
-// 持久化配置
+/**
+ * @brief 持久化服务配置结构体
+ * 
+ * 包含持久化服务运行所需的所有配置参数，如数据保留时间、缓存大小、线程数量等。
+ */
 struct PersistenceConfig {
-    static constexpr size_t DEFAULT_RETENTION_HOURS = 24;
-    static constexpr size_t DEFAULT_MAX_SAMPLES = 10000;
-    static constexpr size_t DEFAULT_CACHE_SIZE_MB = 100;
-    static constexpr size_t DEFAULT_WORKER_THREADS = 4;
+    static constexpr size_t DEFAULT_RETENTION_HOURS = 24;     ///< 默认数据保留时间（小时）
+    static constexpr size_t DEFAULT_MAX_SAMPLES = 10000;      ///< 默认每个Topic最大样本数
+    static constexpr size_t DEFAULT_CACHE_SIZE_MB = 100;      ///< 默认内存缓存大小（MB）
+    static constexpr size_t DEFAULT_WORKER_THREADS = 4;       ///< 默认工作线程数
     
-    std::chrono::hours data_retention{DEFAULT_RETENTION_HOURS};
-    size_t max_samples_per_topic = DEFAULT_MAX_SAMPLES;
-    size_t memory_cache_size_mb = DEFAULT_CACHE_SIZE_MB;
-    size_t worker_thread_count = DEFAULT_WORKER_THREADS;
-    std::string database_path{"persistence_data.db"};
-    bool enable_statistics = true;
-    bool enable_ui_callbacks = false;
+    std::chrono::hours data_retention{DEFAULT_RETENTION_HOURS}; ///< 数据保留时间
+    size_t max_samples_per_topic = DEFAULT_MAX_SAMPLES;         ///< 每个Topic最大样本数
+    size_t memory_cache_size_mb = DEFAULT_CACHE_SIZE_MB;        ///< 内存缓存大小（MB）
+    size_t worker_thread_count = DEFAULT_WORKER_THREADS;        ///< 工作线程数量
+    std::string database_path{"persistence_data.db"};           ///< 数据库文件路径
+    bool enable_statistics = true;                              ///< 是否启用统计功能
+    bool enable_ui_callbacks = false;                           ///< 是否启用UI回调
 };
 
-// 主要的持久化服务类
+/**
+ * @brief 主要的持久化服务类
+ * 
+ * 这是持久化服务的核心类，负责管理DDS实体的持久化数据存储、历史数据重放、
+ * QoS兼容性检查以及与UI的交互。支持TRANSIENT和PERSISTENT持久化策略。
+ */
 class PersistenceService {
 public:
+    /**
+     * @brief 构造函数
+     * 
+     * @param config 持久化服务配置，包含数据保留策略、缓存设置等
+     */
     explicit PersistenceService(const PersistenceConfig& config = PersistenceConfig{});
+    /**
+     * @brief 析构函数
+     * 
+     * 自动调用shutdown()确保资源正确释放
+     */
     ~PersistenceService();
     
     // 禁用拷贝
@@ -101,60 +129,228 @@ public:
     PersistenceService& operator=(const PersistenceService&) = delete;
     
     // 生命周期管理
+    /**
+     * @brief 初始化持久化服务
+     * 
+     * 初始化数据库、内存缓存、监控组件和线程池等核心组件。
+     * 
+     * @return true 初始化成功，false 初始化失败
+     */
     bool initialize();
+    
+    /**
+     * @brief 关闭持久化服务
+     * 
+     * 优雅停止所有组件，确保数据完整性和资源正确释放。
+     */
     void shutdown();
+    
+    /**
+     * @brief 检查服务是否正在运行
+     * 
+     * @return true 服务运行中，false 服务已停止
+     */
     bool is_running() const { return is_running_; }
     
     // DDS集成
+    /**
+     * @brief 设置DDS域参与者
+     * 
+     * 关联持久化服务与特定的DDS域参与者，用于发现和数据传输。
+     * 
+     * @param participant 共享的域参与者指针
+     */
     void set_domain_participant(std::shared_ptr<DomainParticipant> participant);
     
     // 发现监听相关
+    /**
+     * @brief 设置发现监听器
+     * 
+     * 配置用于监听DataWriter和DataReader发现事件的内置监听器。
+     */
     void setup_discovery_listeners();
+    
+    /**
+     * @brief 处理DataWriter发现事件
+     * 
+     * 当发现新的DataWriter时调用，根据其QoS要求决定是否需要持久化其数据。
+     * 
+     * @param pub_data 发布者内置Topic数据，包含QoS和Topic信息
+     */
     void on_publication_discovered(const PublicationBuiltinTopicData& pub_data);
+    
+    /**
+     * @brief 处理DataReader发现事件
+     * 
+     * 当发现新的DataReader时调用，根据其QoS要求发送相应的历史数据。
+     * 
+     * @param sub_data 订阅者内置Topic数据，包含QoS和Topic信息
+     */
     void on_subscription_discovered(const SubscriptionBuiltinTopicData& sub_data);
     
     // 数据操作
+    /**
+     * @brief 存储DDS数据样本
+     * 
+     * 将接收到的DDS数据样本持久化到内存缓存和数据库中。
+     * 
+     * @param data 包含序列化数据、时间戳和元信息的存储数据结构
+     */
     void store_data(const StoredData& data);
+    
+    /**
+     * @brief 获取Topic的历史数据
+     * 
+     * 检索指定Topic的所有历史数据样本，按时间戳排序。
+     * 
+     * @param topic_name Topic名称
+     * @return 历史数据样本向量
+     */
     auto get_historical_data(const std::string& topic_name) -> std::vector<StoredData>;
+    
+    /**
+     * @brief 获取指定时间范围的历史数据
+     * 
+     * 检索指定Topic在特定时间范围内的历史数据样本。
+     * 
+     * @param topic_name Topic名称
+     * @param start_time 开始时间
+     * @param end_time 结束时间
+     * @return 时间范围内的历史数据样本向量
+     */
     auto get_historical_data_range(const std::string& topic_name,
                                   const Time_t& start_time,
                                   const Time_t& end_time) -> std::vector<StoredData>;
     
     // 统计信息
+    /**
+     * @brief 获取持久化服务统计信息
+     * 
+     * 提供服务运行时的各种统计数据，如存储的样本数量、内存使用等。
+     * 
+     * @return 统计信息映射表，键为统计项名称，值为统计数值
+     */
     auto get_statistics() -> std::map<std::string, int64_t>;
     
     // 【新增】获取数据库表名
+    /**
+     * @brief 获取数据库中所有表名
+     * 
+     * @return 数据库表名向量
+     */
     auto get_db_table_names() -> std::vector<std::string>;
 
     // 【新增】获取数据库表内容
+    /**
+     * @brief 获取指定数据库表的内容
+     * 
+     * @param table_name 表名
+     * @return 表内容，包含列名向量和数据行向量
+     */
     auto get_db_table_content(const std::string& table_name) -> std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>;
 
     // 【新增】获取内存缓存使用情况
+    /**
+     * @brief 获取内存缓存使用情况
+     * 
+     * @return 内存使用情况对，包含当前字节数和最大字节数
+     */
     auto get_memory_cache_usage() const -> std::pair<size_t, size_t>; // current_bytes, max_bytes
 
     // 配置访问
+    /**
+     * @brief 获取服务配置
+     * 
+     * @return 当前持久化服务配置的常量引用
+     */
     const PersistenceConfig& get_config() const { return config_; }
     
     // 访问内部组件（用于处理器）
+    /**
+     * @brief 获取内存缓存组件
+     * 
+     * @return 内存缓存管理器的引用
+     */
     MemoryCache& get_memory_cache() { return *memory_cache_; }
+    
+    /**
+     * @brief 获取数据库管理组件
+     * 
+     * @return 数据库管理器的引用
+     */
     DatabaseManager& get_database_manager() { return *database_manager_; }
     
     // 为Handler提供的DDS实体创建辅助方法
+    /**
+     * @brief 为处理器创建DataReader
+     * 
+     * 根据指定的Topic和QoS要求创建用于接收历史数据的DataReader。
+     * 
+     * @param topic_name Topic名称
+     * @param type_name 数据类型名称
+     * @param durability 持久化策略
+     * @return 创建的DataReader共享指针
+     */
     auto create_datareader_for_handler(const std::string& topic_name, 
                                       const std::string& type_name, 
                                       DurabilityQosPolicyKind durability) -> std::shared_ptr<DataReader>;
+    
+    /**
+     * @brief 为处理器创建DataWriter
+     * 
+     * 根据指定的Topic和QoS要求创建用于发送历史数据的DataWriter。
+     * 
+     * @param topic_name Topic名称
+     * @param type_name 数据类型名称
+     * @param durability 持久化策略
+     * @return 创建的DataWriter共享指针
+     */
     auto create_datawriter_for_handler(const std::string& topic_name, 
                                       const std::string& type_name, 
                                       DurabilityQosPolicyKind durability) -> std::shared_ptr<DataWriter>;
     
     // 为Handler提供的QoS兼容性检查方法
+    /**
+     * @brief 为处理器检查QoS兼容性
+     * 
+     * 检查指定Topic和Reader是否QoS兼容，用于决定是否发送历史数据。
+     * 
+     * @param topic_name Topic名称
+     * @param reader_key DataReader实体键
+     * @return true 兼容，false 不兼容
+     */
     auto check_qos_compatibility_for_handler(const std::string& topic_name,
                                             const BuiltinTopicKey_t& reader_key) -> bool;
     
     // 获取活跃实体信息（新增，直接从内存返回）
+    /**
+     * @brief 获取活跃DataWriter信息列表
+     * 
+     * @return 所有活跃DataWriter的信息向量
+     */
     std::vector<ActiveDataWriterInfo> get_active_datawriters_info() const;
+    
+    /**
+     * @brief 获取活跃DataReader信息列表
+     * 
+     * @return 所有活跃DataReader的信息向量
+     */
     std::vector<ActiveDataReaderInfo> get_active_datareaders_info() const;
+    
+    /**
+     * @brief 获取指定Topic的DataWriter信息
+     * 
+     * @param topic_name Topic名称
+     * @return 该Topic下所有DataWriter的信息向量
+     */
     std::vector<ActiveDataWriterInfo> get_topic_datawriters_info(const std::string& topic_name) const;
+    
+    /**
+     * @brief 获取指定Topic的DataReader信息
+     * 
+     * @param topic_name Topic名称
+     * @return 该Topic下所有DataReader的信息向量
+     */
     std::vector<ActiveDataReaderInfo> get_topic_datareaders_info(const std::string& topic_name) const;
     
     // QoS兼容性检查方法（public for testing）
@@ -192,6 +388,13 @@ public:
                                          const BuiltinTopicKey_t& reader_key);
 
 private:
+    // 初始化方法
+    void initialize_type_supports();
+    
+    // 混合TypeSupport查找策略
+    std::shared_ptr<TypeSupport> get_type_support_for_serialization(const std::string& type_name);
+    void* create_sample_for_deserialization(const std::string& type_name);
+    void delete_sample_for_deserialization(const std::string& type_name, void* sample);
     
     PersistenceConfig config_;
     std::atomic<bool> is_running_{false};
