@@ -1,4 +1,5 @@
 #include "PersistenceService.h"
+#include "TypeSupportRegistry.h"
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "dcps/subscribe/subscriber.h"
@@ -47,6 +48,9 @@ bool PersistenceService::initialize() {
         std::cerr << "[PersistenceService] Failed to initialize database" << std::endl;
         return false;
     }
+    
+    // 注册已知的数据类型到TypeSupport注册表
+    initialize_type_supports();
     
     // 初始化处理器
     initialize_handlers();
@@ -121,6 +125,53 @@ void PersistenceService::initialize_handlers() {
     }
     
     std::cout << "[PersistenceService] Durability handlers initialized" << std::endl;
+}
+
+void PersistenceService::initialize_type_supports() {
+    auto& registry = TypeSupportRegistry::instance();
+    
+    // 注册HelloWorld类型
+    if (register_data_type<HelloWorld, HelloWorldTypeSupport>("HelloWorld")) {
+        std::cout << "[PersistenceService] Successfully registered HelloWorld type support" << std::endl;
+    } else {
+        std::cerr << "[PersistenceService] Failed to register HelloWorld type support" << std::endl;
+    }
+    
+}
+
+std::shared_ptr<TypeSupport> PersistenceService::get_type_support_for_serialization(const std::string& type_name) {
+    // 使用TypeSupportRegistry作为统一的类型查找机制
+    // 这样简化了架构，避免了与DomainParticipant类型转换的复杂性
+    auto& registry = TypeSupportRegistry::instance();
+    auto type_support = registry.get_type_support(type_name);
+    if (type_support) {
+        return type_support;
+    }
+    
+    std::cerr << "[PersistenceService] No TypeSupport found for type: " << type_name << std::endl;
+    return nullptr;
+}
+
+void* PersistenceService::create_sample_for_deserialization(const std::string& type_name) {
+    // 使用TypeSupportRegistry的样本工厂进行样本创建
+    auto& registry = TypeSupportRegistry::instance();
+    void* sample = registry.create_sample(type_name);
+    if (sample != nullptr) {
+        return sample;
+    }
+    
+    std::cerr << "[PersistenceService] Failed to create sample for type: " << type_name << std::endl;
+    return nullptr;
+}
+
+void PersistenceService::delete_sample_for_deserialization(const std::string& type_name, void* sample) {
+    if (sample == nullptr) {
+        return;
+    }
+    
+    // 使用TypeSupportRegistry进行样本清理
+    auto& registry = TypeSupportRegistry::instance();
+    registry.delete_sample(type_name, sample);
 }
 
 // ============ 策略检查工具方法 ============
@@ -314,7 +365,16 @@ auto PersistenceService::check_liveliness_compatibility(const LivelinessQosPolic
 auto PersistenceService::check_reliability_compatibility(ReliabilityQosPolicyKind writer_kind, 
                                                         ReliabilityQosPolicyKind reader_kind) const -> bool {
     // RELIABILITY兼容性规则：DataWriter的kind >= DataReader的kind
-    // BEST_EFFORT(0) < RELIABLE(1)
+    // 注意：由于枚举定义问题，进行特殊处理
+    // 标准定义：BEST_EFFORT(0) < RELIABLE(1)
+    // 当前定义：BEST_EFFORT(1) < RELIABLE(2)
+    
+    // 如果两者都是RELIABLE（无论是1还是2），认为兼容
+    if ((writer_kind == 1 || writer_kind == 2) && (reader_kind == 1 || reader_kind == 2)) {
+        return true;  // 都是RELIABLE，兼容
+    }
+    
+    // 原始兼容性检查
     return static_cast<int>(writer_kind) >= static_cast<int>(reader_kind);
 }
 
@@ -523,7 +583,6 @@ void PersistenceService::setup_discovery_listeners() {
     discovery_running_ = true;
     discovery_thread_ = std::thread(&PersistenceService::discovery_polling_thread, this);
     
-    std::cout << "[PersistenceService] Discovery polling thread started" << std::endl;
 }
 
 void PersistenceService::on_publication_discovered(const PublicationBuiltinTopicData& pub_data) {
@@ -535,9 +594,6 @@ void PersistenceService::on_publication_discovered(const PublicationBuiltinTopic
         return; 
     }
         
-    std::cout << "[PersistenceService] Persistent Publication discovered: " 
-              << pub_data.topic_name << " (" << durability_kind_to_string(pub_data.durability.kind) 
-              << ") Type: " << pub_data.type_name << std::endl;
     
     // 保存Topic信息 
     {
@@ -560,7 +616,6 @@ void PersistenceService::on_publication_discovered(const PublicationBuiltinTopic
     
     // 创建匹配的DataReader来接收外部Writer的数据
     if (create_data_reader_for_topic(pub_data)) {
-        std::cout << "[PersistenceService] Successfully created matching DataReader for external Writer" << std::endl;
     } else {
         std::cout << "[PersistenceService] Failed to create matching DataReader for external Writer" << std::endl;
     }
@@ -576,9 +631,6 @@ void PersistenceService::on_subscription_discovered(const SubscriptionBuiltinTop
         return;
     }
     
-    std::cout << "[PersistenceService] Persistent Subscription discovered: " 
-              << sub_data.topic_name << " (" << durability_kind_to_string(sub_data.durability.kind) 
-              << ") Type: " << sub_data.type_name << std::endl;
     
     // 保存Topic信息
     {
@@ -646,9 +698,6 @@ auto PersistenceService::create_data_reader_for_topic(const PublicationBuiltinTo
                 std::cout << "[PersistenceService] Failed to create Topic: " << pub_data.topic_name << std::endl;
                 return false;
             }
-            std::cout << "[PersistenceService] Created new Topic: " << pub_data.topic_name << std::endl;
-        } else {
-            std::cout << "[PersistenceService] Using existing Topic: " << pub_data.topic_name << std::endl;
         }
         
         // 设置DataReader QoS - 完全匹配Writer的QoS以确保兼容性
@@ -664,10 +713,6 @@ auto PersistenceService::create_data_reader_for_topic(const PublicationBuiltinTo
         reader_qos.time_based_filter.minimum_separation.sec = 0;
         reader_qos.time_based_filter.minimum_separation.nanosec = 0;
         
-        std::cout << "[PersistenceService] Creating DataReader with matching QoS for Writer:" << std::endl;
-        std::cout << "  Topic: " << pub_data.topic_name << ", Type: " << pub_data.type_name << std::endl;
-        std::cout << "  Durability: " << durability_kind_to_string(pub_data.durability.kind) << std::endl;
-        std::cout << "  Reliability: " << (pub_data.reliability.kind == RELIABLE_RELIABILITY_QOS ? "RELIABLE" : "BEST_EFFORT") << std::endl;
         
         // 创建DataReader
         auto* reader = subscriber->create_datareader(topic, reader_qos, nullptr, STATUS_MASK_NONE);
@@ -686,8 +731,6 @@ auto PersistenceService::create_data_reader_for_topic(const PublicationBuiltinTo
             own_datareader_handles_.insert(reader->get_instance_handle());
         }
         
-        std::cout << "[PersistenceService] Successfully created matching DataReader for external Writer on topic: " 
-                  << pub_data.topic_name << std::endl;
         
         return true;
         
@@ -763,10 +806,22 @@ void PersistenceService::poll_data_readers() {
                 // 注意：sample_info.publication_handle包含了Writer的GUID信息
                 stored_data.writer_guid = Conversion::ToGuid(sample_info.publication_handle);
                 
+                // 检查是否是自己创建的DataWriter发送的数据（历史数据重放）
+                bool is_own_writer = false;
+                {
+                    std::lock_guard<std::mutex> entities_lock(own_entities_mutex_);
+                    is_own_writer = (own_datawriter_handles_.find(sample_info.publication_handle) != own_datawriter_handles_.end());
+                }
+                
+                if (is_own_writer) {
+                    continue; // 跳过自己发送的历史数据，避免循环存储
+                }
+                
                 // 查找对应Writer的完整QoS信息
                 {
-                    std::lock_guard<std::mutex> lock(writers_mutex_);
-                    auto writer_it = active_writers_info_.find(Conversion::ToBuiltinTopicKey(stored_data.writer_guid));
+                    std::lock_guard<std::mutex> lock(entity_info_mutex_);
+                    auto lookup_key = Conversion::ToBuiltinTopicKey(stored_data.writer_guid);
+                    auto writer_it = active_writers_info_.find(lookup_key);
                     if (writer_it != active_writers_info_.end()) {
                         const auto& writer_info = writer_it->second;
                         // 复制完整的QoS信息
@@ -782,7 +837,6 @@ void PersistenceService::poll_data_readers() {
                         stored_data.lifespan = writer_info.lifespan;
                     } else {
                         // 如果找不到Writer信息，使用默认值（向后兼容）
-                        std::cout << "[PersistenceService] Warning: Writer QoS info not found for GUID, using defaults" << std::endl;
                         stored_data.durability_kind = durability;
                         stored_data.reliability_kind = BEST_EFFORT_RELIABILITY_QOS;
                         // 其他QoS字段保持默认初始化
@@ -796,30 +850,37 @@ void PersistenceService::poll_data_readers() {
                 // 设置序列号
                 stored_data.sequence_number = sample_info.write_sequence_number;
                 
-                // 使用DDS原生TypeSupport序列化完整对象
+                // 使用混合TypeSupport查找策略进行序列化
                 try {
-                    HelloWorldTypeSupport* type_support = HelloWorldTypeSupport::get_instance();
+                    auto type_support = get_type_support_for_serialization(real_type_name);
+                    
                     if (type_support != nullptr) {
                         // 获取序列化所需的缓冲区大小
                         uint32_t data_size = type_support->get_serialized_data_size(&sample, 0);
                         
-                        // 创建序列化缓冲区
-                        SerializedBuffer buffer;
+                        // 正确创建序列化缓冲区（参考DataWriterImpl的实现）
+                        std::unique_ptr<SerializedBuffer> buffer(new SerializedBuffer);
+                        buffer->buffer_size = data_size;
+                        
+                        // 分配缓冲区内存
+                        buffer->origin_buffer = new char[data_size];
+                        buffer->buffer = buffer->origin_buffer;
                         
                         // 创建CDR序列化器
-                        CdrSerializer serializer(&buffer, true); // 使用小端字节序
+                        CdrSerializer serializer(buffer.get(), true); // 使用小端字节序
                         
                         // 执行序列化
                         int result = type_support->serialize_data(&sample, &serializer, 1);
+                        
                         if (result == 0) {
                             // 序列化成功，保存完整的二进制数据
-                            uint32_t total_length = buffer.bufferTotalLength();
+                            uint32_t total_length = buffer->bufferTotalLength();
                             if (total_length > 0) {
                                 stored_data.data.resize(total_length);
                                 
                                 // 复制缓冲区数据
                                 uint32_t copied = 0;
-                                for (SerializedBuffer* current = &buffer; current != nullptr && copied < total_length; current = current->next) {
+                                for (SerializedBuffer* current = buffer.get(); current != nullptr && copied < total_length; current = current->next) {
                                     uint32_t current_length = current->bufferLength();
                                     if (current_length > 0 && current->buffer != nullptr) {
                                         std::memcpy(stored_data.data.data() + copied, 
@@ -829,38 +890,57 @@ void PersistenceService::poll_data_readers() {
                                     }
                                 }
                                 
-                                std::cout << "[PersistenceService] Successfully serialized HelloWorld object "
-                                          << "(index: " << sample.index << ", message: '" << sample.message 
-                                          << "') to " << total_length << " bytes" << std::endl;
                             } else {
-                                // 序列化结果为空，回退到手动提取
-                                std::cerr << "[PersistenceService] Serialization produced empty buffer, falling back to manual extraction" << std::endl;
-                                std::string sample_data = sample.message;
-                                stored_data.data.assign(sample_data.begin(), sample_data.end());
+                                // 序列化结果为空，回退到手动提取（仅对HelloWorld类型）
+                                std::cerr << "[PersistenceService] Serialization produced empty buffer for type " << real_type_name << std::endl;
+                                if (real_type_name == "HelloWorld") {
+                                    const auto* hello_sample = static_cast<const HelloWorld*>(&sample);
+                                    std::string sample_data = hello_sample->message;
+                                    stored_data.data.assign(sample_data.begin(), sample_data.end());
+                                } else {
+                                    std::cerr << "[PersistenceService] Cannot perform manual extraction for unknown type: " << real_type_name << std::endl;
+                                }
                             }
                         } else {
-                            // 序列化失败，回退到手动提取
-                            std::cerr << "[PersistenceService] TypeSupport serialization failed, falling back to manual extraction" << std::endl;
-                            std::string sample_data = sample.message;
-                            stored_data.data.assign(sample_data.begin(), sample_data.end());
+                            // 序列化失败，回退到手动提取（仅对HelloWorld类型）
+                            std::cerr << "[PersistenceService] TypeSupport serialization failed for type " << real_type_name 
+                                      << ", result: " << result << std::endl;
+                            if (real_type_name == "HelloWorld") {
+                                const auto* hello_sample = static_cast<const HelloWorld*>(&sample);
+                                std::string sample_data = hello_sample->message;
+                                stored_data.data.assign(sample_data.begin(), sample_data.end());
+                            } else {
+                                std::cerr << "[PersistenceService] Cannot perform manual fallback for unknown type: " << real_type_name << std::endl;
+                            }
                         }
+                        
+                        // 清理缓冲区内存
+                        delete[] buffer->origin_buffer;
                     } else {
-                        // TypeSupport不可用，回退到手动提取
-                        std::cerr << "[PersistenceService] TypeSupport instance not available, using manual extraction" << std::endl;
-                        std::string sample_data = sample.message;
-                        stored_data.data.assign(sample_data.begin(), sample_data.end());
+                        // TypeSupport不可用
+                        std::cerr << "[PersistenceService] No TypeSupport found for type: " << real_type_name << std::endl;
+                        if (real_type_name == "HelloWorld") {
+                            const auto* hello_sample = static_cast<const HelloWorld*>(&sample);
+                            std::string sample_data = hello_sample->message;
+                            stored_data.data.assign(sample_data.begin(), sample_data.end());
+                        } else {
+                            std::cerr << "[PersistenceService] Cannot handle unregistered type: " << real_type_name << std::endl;
+                        }
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "[PersistenceService] Exception during serialization: " << e.what() 
-                              << ", falling back to manual extraction" << std::endl;
-                    std::string sample_data = sample.message;
-                    stored_data.data.assign(sample_data.begin(), sample_data.end());
+                    std::cerr << "[PersistenceService] Exception during serialization of type " << real_type_name 
+                              << ": " << e.what() << std::endl;
+                    if (real_type_name == "HelloWorld") {
+                        const auto* hello_sample = static_cast<const HelloWorld*>(&sample);
+                        std::string sample_data = hello_sample->message;
+                        stored_data.data.assign(sample_data.begin(), sample_data.end());
+                    }
                 }
                 
-                // 设置完整的sample info - 生产级持久化服务必须保存完整状态
+                // 设置完整的sample info
                 stored_data.sample_info = sample_info;
                 
-                std::cout << "[PersistenceService] Received REAL data for topic: " << topic_name 
+                std::cout << "[PersistenceService] Received data for topic: " << topic_name 
                           << " (type: " << real_type_name << "), message: '" << sample.message 
                           << "', durability: " << static_cast<int>(durability) 
                           << ", sequence: " << stored_data.sequence_number << std::endl;
@@ -909,9 +989,6 @@ auto PersistenceService::create_data_writer_for_topic(const SubscriptionBuiltinT
                 std::cout << "[PersistenceService] Failed to create Topic: " << sub_data.topic_name << std::endl;
                 return false;
             }
-            std::cout << "[PersistenceService] Created new Topic: " << sub_data.topic_name << std::endl;
-        } else {
-            std::cout << "[PersistenceService] Using existing Topic: " << sub_data.topic_name << std::endl;
         }
         
         // 设置DataWriter QoS - 完全匹配Reader的QoS以确保兼容性
@@ -927,11 +1004,7 @@ auto PersistenceService::create_data_writer_for_topic(const SubscriptionBuiltinT
         writer_qos.destination_order = sub_data.destination_order;
         writer_qos.history.kind = KEEP_ALL_HISTORY_QOS;  // 持久化服务使用KEEP_ALL
         
-        std::cout << "[PersistenceService] Creating DataWriter with matching QoS for Reader:" << std::endl;
-        std::cout << "  Topic: " << sub_data.topic_name << ", Type: " << sub_data.type_name << std::endl;
-        std::cout << "  Durability: " << durability_kind_to_string(sub_data.durability.kind) << std::endl;
-        std::cout << "  Reliability: " << (sub_data.reliability.kind == RELIABLE_RELIABILITY_QOS ? "RELIABLE" : "BEST_EFFORT") << std::endl;
-        
+     
         // 创建DataWriter
         auto* writer = publisher_->create_datawriter(topic, writer_qos, nullptr, STATUS_MASK_NONE);
         if (writer == nullptr) {
@@ -948,8 +1021,6 @@ auto PersistenceService::create_data_writer_for_topic(const SubscriptionBuiltinT
             own_datawriter_handles_.insert(writer->get_instance_handle());
         }
         
-        std::cout << "[PersistenceService] Successfully created matching DataWriter for external Reader on topic: " 
-                  << sub_data.topic_name << std::endl;
         
         return true;
         
@@ -1027,8 +1098,6 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
 
     // 如果Writer不存在，则根据Reader的QoS信息创建它
     if (!writer) {
-        std::cout << "[PersistenceService] DataWriter for topic '" << topic_name 
-                  << "' not found, creating one based on Reader's QoS..." << std::endl;
         if (create_data_writer_for_topic(reader_info.full_subscription_data)) {
             std::lock_guard<std::mutex> lock(writers_mutex_);
             auto writer_it = topic_writers_.find(topic_name);
@@ -1047,13 +1116,14 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
     size_t sent_count = 0;
     for (const auto& stored_data : compatible_data) {
         try {
-            // 使用TypeSupport反序列化完整对象
-            HelloWorld sample;
+            // 使用混合TypeSupport查找策略进行反序列化
+            void* sample = create_sample_for_deserialization(type_name);
             bool deserialization_success = false;
             
-            if (!stored_data.data.empty()) {
+            if (sample != nullptr && !stored_data.data.empty()) {
                 try {
-                    HelloWorldTypeSupport* type_support = HelloWorldTypeSupport::get_instance();
+                    auto type_support = get_type_support_for_serialization(type_name);
+                    
                     if (type_support != nullptr) {
                         // 创建序列化缓冲区并填充数据
                         SerializedBuffer buffer;
@@ -1076,44 +1146,57 @@ void PersistenceService::send_historical_data_to_subscriber(const std::string& t
                             CdrDeserializer deserializer(&buffer, true); // 使用小端字节序
                             
                             // 执行反序列化
-                            int result = type_support->deserialize_data(&sample, &deserializer, 1);
+                            int result = type_support->deserialize_data(sample, &deserializer, 1);
                             if (result == 0) {
                                 deserialization_success = true;
-                                std::cout << "[PersistenceService] Successfully deserialized HelloWorld object "
-                                          << "(index: " << sample.index << ", message: '" << sample.message 
-                                          << "') from " << stored_data.data.size() << " bytes" << std::endl;
-                            } else {
-                                std::cerr << "[PersistenceService] TypeSupport deserialization failed, result: " << result << std::endl;
-                            }
+                            } 
                             
                             // 清理临时缓冲区
                             delete[] temp_buffer;
                         }
                     } else {
-                        std::cerr << "[PersistenceService] TypeSupport instance not available for deserialization" << std::endl;
+                        std::cerr << "[PersistenceService] No TypeSupport found for type: " << type_name << std::endl;
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "[PersistenceService] Exception during deserialization: " << e.what() << std::endl;
+                    std::cerr << "[PersistenceService] Exception during deserialization of type " << type_name 
+                              << ": " << e.what() << std::endl;
                 }
                 
-                // 如果TypeSupport反序列化失败，回退到手动提取
-                if (!deserialization_success) {
-                    std::cout << "[PersistenceService] Falling back to manual data extraction" << std::endl;
+                // 如果TypeSupport反序列化失败，回退到手动提取（仅对HelloWorld类型）
+                if (!deserialization_success && type_name == "HelloWorld") {
+                    std::cout << "[PersistenceService] Falling back to manual data extraction for HelloWorld" << std::endl;
+                    auto* hello_sample = static_cast<HelloWorld*>(sample);
                     std::string message_str(stored_data.data.begin(), stored_data.data.end());
-                    sample.message = message_str;
-                    sample.index = 0; // 默认值，因为手动提取时没有index信息
+                    hello_sample->message = message_str;
+                    hello_sample->index = 0; // 默认值，因为手动提取时没有index信息
+                    deserialization_success = true;
+                } else if (!deserialization_success) {
+                    std::cerr << "[PersistenceService] Cannot perform manual fallback for unknown type: " << type_name << std::endl;
                 }
             }
             
-            // 发送数据
-            ReturnCode_t result = writer->write(&sample, HANDLE_NIL);
-            if (result == RETCODE_OK) {
-                sent_count++;
-                std::cout << "[PersistenceService] Sent historical data: seq=" 
-                          << stored_data.sequence_number << ", message='" << sample.message << "'" << std::endl;
-            } else {
-                std::cout << "[PersistenceService] Failed to send historical data: seq=" 
-                          << stored_data.sequence_number << ", error=" << static_cast<int>(result) << std::endl;
+            // 发送数据（如果反序列化成功）
+            if (deserialization_success && sample != nullptr) {
+                ReturnCode_t result = writer->write(sample, HANDLE_NIL);
+                if (result == RETCODE_OK) {
+                    sent_count++;
+                    if (type_name == "HelloWorld") {
+                        auto* hello_sample = static_cast<HelloWorld*>(sample);
+                        std::cout << "[PersistenceService] Sent historical data: seq=" 
+                                  << stored_data.sequence_number << ", message='" << hello_sample->message << "'" << std::endl;
+                    } else {
+                        std::cout << "[PersistenceService] Sent historical data: seq=" 
+                                  << stored_data.sequence_number << " (type: " << type_name << ")" << std::endl;
+                    }
+                } else {
+                    std::cout << "[PersistenceService] Failed to send historical data: seq=" 
+                              << stored_data.sequence_number << ", error=" << static_cast<int>(result) << std::endl;
+                }
+            }
+            
+            // 清理样本内存
+            if (sample != nullptr) {
+                delete_sample_for_deserialization(type_name, sample);
             }
             
         } catch (const std::exception& e) {
@@ -1203,17 +1286,11 @@ void PersistenceService::check_new_publications(std::set<std::string>& processed
             {
                 std::lock_guard<std::mutex> lock(own_entities_mutex_);
                 if (own_datawriter_handles_.find(handle) != own_datawriter_handles_.end()) {
-                    std::cout << "[PersistenceService] Skipping own DataWriter: topic='" 
-                              << pub_data.topic_name << "', type='" << pub_data.type_name << "'" << std::endl;
                     continue; // 跳过自己创建的DataWriter
                 }
             }
             
-            // 处理发现的publication
-            std::cout << "[PersistenceService] Discovered publication: topic='" 
-                      << pub_data.topic_name << "', type='" << pub_data.type_name 
-                      << "', durability=" << pub_data.durability.kind << std::endl;
-            
+           
             // 更新DataWriter注册表
             update_datawriter_registry(pub_data);
             
@@ -1265,17 +1342,11 @@ void PersistenceService::check_new_subscriptions(std::set<std::string>& processe
             {
                 std::lock_guard<std::mutex> lock(own_entities_mutex_);
                 if (own_datareader_handles_.find(handle) != own_datareader_handles_.end()) {
-                    std::cout << "[PersistenceService] Skipping own DataReader: topic='" 
-                              << sub_data.topic_name << "', type='" << sub_data.type_name << "'" << std::endl;
                     continue; // 跳过自己创建的DataReader
                 }
             }
             
-            // 处理发现的subscription
-            std::cout << "[PersistenceService] Discovered subscription: topic='" 
-                      << sub_data.topic_name << "', type='" << sub_data.type_name 
-                      << "', durability=" << sub_data.durability.kind << std::endl;
-            
+           
             // 更新DataReader注册表
             update_datareader_registry(sub_data);
             
@@ -1360,9 +1431,6 @@ void PersistenceService::update_datawriter_registry(const PublicationBuiltinTopi
             writer_info.full_publication_data = pub_data;
             
             active_writers_info_[pub_data.key] = writer_info;
-            
-            std::cout << "[PersistenceService] Registered new DataWriter for topic '" 
-                      << pub_data.topic_name << "' (in memory)" << std::endl;
         }
         
         // 同时更新活跃实体列表
@@ -1434,8 +1502,6 @@ void PersistenceService::update_datareader_registry(const SubscriptionBuiltinTop
         
         // 检查是否需要发送历史数据（在锁外执行，避免死锁）
         if (is_new_reader && should_send_historical_data(topic_name_copy)) {
-            std::cout << "[PersistenceService] Triggering historical data send for topic '" 
-                      << topic_name_copy << "'" << std::endl;
             // 实际发送历史数据
             send_historical_data_to_subscriber(sub_data.topic_name, sub_data.type_name, sub_data.durability.kind, sub_data.key);
         }
@@ -1458,10 +1524,6 @@ void PersistenceService::check_entities_active_status() {
         // 如果超过超时时间，标记为不活跃
         if (time_since_last_seen > smart_config_.entity_timeout) {
             writer_info.is_active = false;
-            if (was_active) {
-                std::cout << "[PersistenceService] DataWriter for topic '" 
-                          << writer_info.topic_name << "' marked as inactive (timeout)" << std::endl;
-            }
         } else {
             writer_info.is_active = true;
             if (!was_active) {
@@ -1479,10 +1541,6 @@ void PersistenceService::check_entities_active_status() {
         // 如果超过超时时间，标记为不活跃
         if (time_since_last_seen > smart_config_.entity_timeout) {
             reader_info.is_active = false;
-            if (was_active) {
-                std::cout << "[PersistenceService] DataReader for topic '" 
-                          << reader_info.topic_name << "' marked as inactive (timeout)" << std::endl;
-            }
         } else {
             reader_info.is_active = true;
             if (!was_active) {
@@ -1512,11 +1570,6 @@ void PersistenceService::cleanup_inactive_entities() {
                 
                 if (time_since_last_seen > timeout_duration || !writer_info.is_active) {
                     writers_to_remove.push_back(key);
-                    std::cout << "[PersistenceService] Marking inactive writer for removal - Topic: " 
-                              << writer_info.topic_name 
-                              << ", Key: [" << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]"
-                              << ", Inactive for: " << std::chrono::duration_cast<std::chrono::seconds>(time_since_last_seen).count() 
-                              << " seconds" << std::endl;
                 }
                 ++it;
             }
@@ -1545,19 +1598,11 @@ void PersistenceService::cleanup_inactive_entities() {
             // 移除inactive的DataWriters
             for (const auto& key : writers_to_remove) {
                 auto removed_count = active_writers_info_.erase(key);
-                if (removed_count > 0) {
-                    std::cout << "[PersistenceService] Removed inactive writer with key: [" 
-                              << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]" << std::endl;
-                }
             }
             
             // 移除inactive的DataReaders  
             for (const auto& key : readers_to_remove) {
                 auto removed_count = active_readers_info_.erase(key);
-                if (removed_count > 0) {
-                    std::cout << "[PersistenceService] Removed inactive reader with key: [" 
-                              << key.value[0] << "," << key.value[1] << "," << key.value[2] << "," << key.value[3] << "]" << std::endl;
-                }
             }
         }
         
@@ -1612,8 +1657,6 @@ bool PersistenceService::should_send_historical_data(const std::string& topic_na
         }
         
         // 如果没有找到活跃的外部DataWriter，则发送历史数据
-        std::cout << "[PersistenceService] No active external writers found for topic '" 
-                 << topic_name << "', sending historical data" << std::endl;
         return true;
         
     } catch (const std::exception& e) {

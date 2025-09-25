@@ -22,6 +22,7 @@ find_package(SQLite3 REQUIRED)
 # 持久化服务库
 add_library(persistence_service STATIC
     src/PersistenceService.cpp
+    src/TypeSupportRegistry.cpp
     src/MemoryCache.cpp
     src/DatabaseManager.cpp
     src/DurabilityHandlers.cpp
