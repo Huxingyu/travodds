@@ -60,6 +60,10 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterRemove Err");
 		}
 	}
+	/* wangyi 删除旧数据 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		readerCache_->RemoveRemoteWriter(writerProxy->GetGuid());
+	}
 	matchedWriters_.erase(writerProxy->GetGuid());
 }
 
@@ -427,6 +431,15 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
+
+		/* wangyi 没有数据不触发回调 */
+		if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+			if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+				//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+			}
+		}
+
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
 		if (!datareader_->CheckLifespan(cache)) {
 			cache = proxy->GetSubmitCache();
@@ -569,6 +582,14 @@ void StatefulReader::TimerExpired()
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
 		return;
+	}
+
+	/* wangyi 没有数据不触发回调 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+			//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+			return ;
+		}
 	}
 
 	if (RETCODE_OK != ret && datareader_) {
