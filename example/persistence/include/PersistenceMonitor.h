@@ -19,13 +19,39 @@
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QAction>
+#include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QGraphicsScene>
+#include <QtWidgets/QGraphicsItem>
+#include <QtWidgets/QGraphicsTextItem>
+#include <QtWidgets/QGraphicsEllipseItem>
+#include <QtWidgets/QGraphicsLineItem>
+#include <QtWidgets/QGraphicsPolygonItem>
+#include <QtWidgets/QDateTimeEdit>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QSlider>
+#include <QtWidgets/QSpinBox>
+#include <QtWidgets/QFileDialog>
 #include <QtCore/QTimer>
 #include <QtCore/QDateTime>
 #include <QtCore/QPoint>
+#include <QtCore/QPropertyAnimation>
 #include <QtGui/QFont>
 #include <QtGui/QIcon>
 #include <QtGui/QMouseEvent>
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QBarCategoryAxis>
 #include <memory>
+#include <map>
+#include <deque>
+#include <set>
+#include <vector>
 
 #include "PersistenceService.h"
 
@@ -78,6 +104,12 @@ public:
      */
     void stopMonitoring();
 
+
+    void exportDataToExcel(const QString& filename,
+                          const QDateTime& start_time,
+                          const QDateTime& end_time,
+                          const QString& topic_filter = "");
+
 protected:
     /**
      * @brief 窗口关闭事件处理
@@ -119,6 +151,11 @@ protected:
      * @param event 鼠标事件
      */
     void mouseReleaseEvent(QMouseEvent* event) override;
+    
+    /**
+     * @brief 事件过滤（用于拓扑视图缩放等）
+     */
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private slots:
     // 数据更新槽函数
@@ -127,10 +164,7 @@ private slots:
      */
     void updateDomainInfo();
     
-    /**
-     * @brief 更新Topic信息显示
-     */
-    void updateTopicInfo();
+
     
     /**
      * @brief 更新数据库信息显示
@@ -142,6 +176,16 @@ private slots:
      */
     void refreshAllData();
     
+    /**
+     * @brief 更新实时图表数据
+     */
+    void updateRealTimeCharts();
+    
+    /**
+     * @brief 更新网络拓扑图
+     */
+    void updateNetworkTopology();
+    
     // 交互槽函数
     /**
      * @brief Topic选择响应
@@ -152,23 +196,45 @@ private slots:
      * @brief 数据库表选择响应
      */
     void onDatabaseTableSelected();
+    
 
-private:
+    
+    /**
+     * @brief 拓扑节点点击响应
+     */
+    void onTopologyNodeClicked(const QString& nodeId);
+    
+    /**
+     * @brief 退出按钮点击响应
+     */
+    void onExitButtonClicked();
+    
+    /**
+     * @brief 数据库查询响应
+     */
+    void onDatabaseQuery();
+    
+    /**
+     * @brief 数据库数据导出响应
+     */
+    void onDatabaseExport();
+
     // UI初始化
     /**
      * @brief 设置用户界面
      */
     void setupUI();
     
-    /**
-     * @brief 设置菜单栏
-     */
-    void setupMenuBar();
     
     /**
      * @brief 设置状态栏
      */
     void setupStatusBar();
+    
+    /**
+     * @brief 设置实时监控标签页
+     */
+    void setupRealTimeMonitoringTab();
     
     /**
      * @brief 设置域和Topic标签页
@@ -180,31 +246,43 @@ private:
      */
     void setupDatabaseTab();
     
+    /**
+     * @brief 设置网络拓扑视图
+     */
+    void setupNetworkTopologyView();
+    
+    /**
+     * @brief 创建示例网络拓扑
+     */
+    void createSampleTopology();
+    
+    /**
+     * @brief 设置实时图表
+     */
+    void setupRealTimeCharts();
+    
+    /**
+     * @brief 创建拓扑图例组件
+     */
+    QWidget* createTopologyLegend();
+    
+
+    
     // 数据更新方法
     /**
-     * @brief 更新Topic表格数据
+     * @brief 更新数据库表结构列表
      */
-    void updateTopicTable();
+    void updateDatabaseTableList();
     
     /**
-     * @brief 更新DataWriter表格数据
+     * @brief 更新Topic过滤器下拉框
      */
-    void updateDataWriterTable();
+    void updateTopicFilterCombo(const std::set<std::string>& topics);
     
     /**
-     * @brief 更新DataReader表格数据
+     * @brief 拓扑选择改变响应（高亮邻接元素）
      */
-    void updateDataReaderTable();
-    
-    /**
-     * @brief 更新数据库统计信息
-     */
-    void updateDatabaseStats();
-    
-    /**
-     * @brief 更新内存缓存信息
-     */
-    void updateMemoryCacheInfo();
+    void onTopologySelectionChanged();
     
     // 样式设置
     /**
@@ -212,27 +290,27 @@ private:
      */
     void applyModernStyle();
     
-    /**
-     * @brief 设置图标
-     */
-    void setupIcons();
+
     
-    // 绘制方法
-    /**
-     * @brief 绘制圆角背景
-     */
-    void drawRoundedBackground();
     
-    /**
-     * @brief 绘制标题栏
-     */
-    void drawTitleBar();
-    
+private:
     // 成员变量
     std::shared_ptr<TRAVODDS::PersistenceService> persistence_service_;  ///< 持久化服务实例
     
     // 主要UI组件
     QTabWidget* main_tabs_;                                              ///< 主标签页控件
+    
+    // 实时监控相关组件
+    QWidget* realtime_monitoring_widget_;                                ///< 实时监控标签页
+    QGraphicsView* topology_view_;                                       ///< 网络拓扑图视图
+    QGraphicsScene* topology_scene_;                                     ///< 网络拓扑图场景
+    QtCharts::QChartView* performance_chart_view_;                       ///< 性能图表视图
+    QtCharts::QChart* performance_chart_;                                ///< 性能图表
+    QtCharts::QLineSeries* cpu_series_;                                  ///< CPU使用率序列
+    QtCharts::QLineSeries* memory_series_;                               ///< 内存使用率序列
+    QtCharts::QLineSeries* throughput_series_;                           ///< 吞吐量序列
+    QtCharts::QValueAxis* time_axis_;                                    ///< 时间轴
+    QtCharts::QValueAxis* performance_axis_;                             ///< 性能轴
     
     // 域和主题相关组件
     QWidget* domain_topic_widget_;                                       ///< 域和Topic标签页
@@ -256,20 +334,61 @@ private:
     QTreeWidget* database_tables_tree_;                                  ///< 数据库表树形控件
     QTableWidget* table_content_view_;                                   ///< 表内容查看器
     
+    // 数据库查询相关组件
+    QDateTimeEdit* db_start_time_edit_;                                  ///< 数据库查询开始时间
+    QDateTimeEdit* db_end_time_edit_;                                    ///< 数据库查询结束时间
+    QComboBox* durability_filter_combo_;                                ///< 持久化策略过滤器
+    QComboBox* db_topic_filter_combo_;                                   ///< Topic过滤器
+    QPushButton* db_query_button_;                                       ///< 数据库查询按钮
+    QPushButton* db_export_button_;                                      ///< 数据库导出按钮
+    QTableWidget* query_results_table_;                                  ///< 查询结果表格
+    
     // 状态栏组件
     QLabel* status_label_;                                               ///< 状态标签
     QLabel* uptime_label_;                                               ///< 运行时间标签
+    QLabel* heartbeat_label_;                                            ///< 心跳状态标签
     
     // 定时器
     QTimer* refresh_timer_;                                              ///< 数据刷新定时器
     QTimer* uptime_timer_;                                               ///< 运行时间定时器
+    QTimer* chart_update_timer_;                                         ///< 图表更新定时器
+    QTimer* topology_update_timer_;                                      ///< 拓扑更新定时器
+    QTimer* heartbeat_timer_;                                            ///< 心跳检测定时器
     QDateTime start_time_;                                               ///< 启动时间
     
     // 状态变量
     bool is_monitoring_;                                                 ///< 是否正在监控
     int refresh_interval_ms_;                                            ///< 刷新间隔（毫秒）
     
+    // 数据缓存 (用于实时图表)
+    std::deque<double> cpu_data_;                                        ///< CPU使用率数据队列
+    std::deque<double> memory_data_;                                     ///< 内存使用率数据队列
+    std::deque<double> throughput_data_;                                 ///< 吞吐量数据队列
+    std::deque<QDateTime> time_data_;                                    ///< 时间数据队列
+    static constexpr int MAX_DATA_POINTS = 100;                         ///< 最大数据点数
+    
+    // 拓扑节点映射
+    std::map<QString, QGraphicsItem*> topology_nodes_;                   ///< 拓扑节点映射
+    std::map<QString, QGraphicsItem*> topology_connections_;             ///< 拓扑连接映射
+    
+    struct TopologyEdge {
+        QGraphicsLineItem* line {nullptr};
+        QGraphicsPolygonItem* arrow {nullptr};
+        QString source;
+        QString target;
+        QString status;
+    };
+    std::vector<TopologyEdge> topology_edges_;                           ///< 边集合（含箭头）
+    std::map<QString, std::set<QString>> adjacency_;                     ///< 邻接表
+    
     // 窗口拖拽相关
     bool is_dragging_;                                                   ///< 是否正在拖拽
     QPoint drag_start_position_;                                         ///< 拖拽起始位置
+    
+    // 缓存管理
+    struct CacheEntry {
+        QDateTime timestamp;
+        QVariant data;
+    };
+    std::map<QString, std::deque<CacheEntry>> data_cache_;               ///< 内存数据缓存 (LRU)
 };

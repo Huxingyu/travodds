@@ -16,6 +16,7 @@
 #include <set>
 #include <chrono>
 #include <cstring>
+#include <cmath>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -559,6 +560,130 @@ auto PersistenceService::get_statistics() -> std::map<std::string, int64_t> {
     }
     
     return stats;
+}
+
+auto PersistenceService::get_uptime_seconds() const -> int64_t {
+    static auto start_time = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+}
+
+// ===== 网络拓扑和域信息接口实现 =====
+auto PersistenceService::get_domain_participant_info() -> std::map<std::string, std::string> {
+    std::map<std::string, std::string> domain_info;
+    
+    domain_info["domain_id"] = "0"; // 假设使用Domain 0
+    domain_info["service_name"] = "TravoDDS持久化服务";
+    domain_info["status"] = is_running_ ? "运行中" : "已停止";
+    domain_info["uptime_seconds"] = std::to_string(get_uptime_seconds());
+    
+    // 统计活跃实体数量
+    auto writers = get_active_datawriters_info();
+    auto readers = get_active_datareaders_info();
+    domain_info["active_writers"] = std::to_string(writers.size());
+    domain_info["active_readers"] = std::to_string(readers.size());
+    
+    // 统计Topic数量
+    std::set<std::string> unique_topics;
+    for (const auto& writer : writers) {
+        unique_topics.insert(writer.topic_name);
+    }
+    for (const auto& reader : readers) {
+        unique_topics.insert(reader.topic_name);
+    }
+    domain_info["total_topics"] = std::to_string(unique_topics.size());
+    
+    return domain_info;
+}
+
+auto PersistenceService::get_network_topology_nodes() -> std::vector<std::map<std::string, std::string>> {
+    std::vector<std::map<std::string, std::string>> nodes;
+    
+    // 添加持久化服务节点
+    std::map<std::string, std::string> service_node;
+    service_node["id"] = "persistence_service";
+    service_node["type"] = "service";
+    service_node["name"] = "持久化服务";
+    service_node["status"] = is_running_ ? "active" : "inactive";
+    service_node["x"] = "400"; // 中心位置
+    service_node["y"] = "300";
+    nodes.push_back(service_node);
+    
+    // 为每个活跃的DataWriter添加节点
+    auto writers = get_active_datawriters_info();
+    int writer_index = 0;
+    for (const auto& writer : writers) {
+        std::map<std::string, std::string> writer_node;
+        writer_node["id"] = "writer_" + std::to_string(writer.key.value[0]) + "_" + std::to_string(writer.key.value[1]) + "_" + std::to_string(writer.key.value[2]);
+        writer_node["type"] = "datawriter";
+        writer_node["name"] = writer.topic_name + " Writer";
+        writer_node["status"] = writer.is_active ? "active" : "inactive";
+        writer_node["topic_name"] = writer.topic_name;
+        writer_node["durability"] = (writer.durability_kind == PERSISTENT_DURABILITY_QOS) ? "PERSISTENT" : 
+                                   (writer.durability_kind == TRANSIENT_DURABILITY_QOS) ? "TRANSIENT" : "VOLATILE";
+        
+        // 围绕中心服务节点分布Writer节点
+        double angle = 2 * M_PI * writer_index / std::max(static_cast<int>(writers.size()), 1);
+        writer_node["x"] = std::to_string(static_cast<int>(400 + 150 * cos(angle)));
+        writer_node["y"] = std::to_string(static_cast<int>(300 + 150 * sin(angle)));
+        
+        nodes.push_back(writer_node);
+        writer_index++;
+    }
+    
+    // 为每个活跃的DataReader添加节点
+    auto readers = get_active_datareaders_info();
+    int reader_index = 0;
+    for (const auto& reader : readers) {
+        std::map<std::string, std::string> reader_node;
+        reader_node["id"] = "reader_" + std::to_string(reader.key.value[0]) + "_" + std::to_string(reader.key.value[1]) + "_" + std::to_string(reader.key.value[2]);
+        reader_node["type"] = "datareader";
+        reader_node["name"] = reader.topic_name + " Reader";
+        reader_node["status"] = reader.is_active ? "active" : "inactive";
+        reader_node["topic_name"] = reader.topic_name;
+        reader_node["durability"] = (reader.durability_kind == PERSISTENT_DURABILITY_QOS) ? "PERSISTENT" : 
+                                   (reader.durability_kind == TRANSIENT_DURABILITY_QOS) ? "TRANSIENT" : "VOLATILE";
+        
+        // 围绕中心服务节点分布Reader节点（在外圈）
+        double angle = 2 * M_PI * reader_index / std::max(static_cast<int>(readers.size()), 1);
+        reader_node["x"] = std::to_string(static_cast<int>(400 + 250 * cos(angle)));
+        reader_node["y"] = std::to_string(static_cast<int>(300 + 250 * sin(angle)));
+        
+        nodes.push_back(reader_node);
+        reader_index++;
+    }
+    
+    return nodes;
+}
+
+auto PersistenceService::get_network_topology_connections() -> std::vector<std::map<std::string, std::string>> {
+    std::vector<std::map<std::string, std::string>> connections;
+    
+    // 添加Writer到持久化服务的连接
+    auto writers = get_active_datawriters_info();
+    for (const auto& writer : writers) {
+        std::map<std::string, std::string> connection;
+        connection["source"] = "writer_" + std::to_string(writer.key.value[0]) + "_" + std::to_string(writer.key.value[1]) + "_" + std::to_string(writer.key.value[2]);
+        connection["target"] = "persistence_service";
+        connection["type"] = "data_flow";
+        connection["topic"] = writer.topic_name;
+        connection["status"] = writer.is_active ? "active" : "inactive";
+        connections.push_back(connection);
+    }
+    
+    // 添加持久化服务到Reader的连接
+    auto readers = get_active_datareaders_info();
+    for (const auto& reader : readers) {
+        std::map<std::string, std::string> connection;
+        connection["source"] = "persistence_service";
+        connection["target"] = "reader_" + std::to_string(reader.key.value[0]) + "_" + std::to_string(reader.key.value[1]) + "_" + std::to_string(reader.key.value[2]);
+        connection["type"] = "historical_data";
+        connection["topic"] = reader.topic_name;
+        connection["status"] = reader.is_active ? "active" : "inactive";
+        connections.push_back(connection);
+    }
+    
+    return connections;
 }
 
 void PersistenceService::cleanup_old_data() {

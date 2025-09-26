@@ -218,7 +218,10 @@ bool DatabaseManager::create_tables() {
     const std::vector<std::string> indexes = {
         "CREATE INDEX IF NOT EXISTS idx_topic_name ON topics(topic_name);",
         "CREATE INDEX IF NOT EXISTS idx_sample_topic_id ON samples(topic_id);",
-        "CREATE INDEX IF NOT EXISTS idx_sample_timestamp ON samples(source_timestamp);",
+        // 源时间戳索引（优先使用）
+        "CREATE INDEX IF NOT EXISTS idx_sample_source_ts ON samples(source_timestamp);",
+        // 入库时间戳索引（当源时间戳不可用时作为回退）
+        "CREATE INDEX IF NOT EXISTS idx_sample_reception_ts ON samples(reception_timestamp);",
         "CREATE INDEX IF NOT EXISTS idx_sample_writer ON samples(writer_guid);",
         "CREATE INDEX IF NOT EXISTS idx_sample_qos_durability ON samples(durability_kind);",
         "CREATE INDEX IF NOT EXISTS idx_sample_qos_reliability ON samples(reliability_kind);"
@@ -486,7 +489,7 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
             FROM samples s
             JOIN topics t ON s.topic_id = t.id
             WHERE t.topic_name = ?
-            ORDER BY s.sequence_number
+            ORDER BY s.reception_timestamp, s.sequence_number
         )";
         
         sqlite3_stmt* stmt = nullptr;
@@ -528,9 +531,10 @@ auto DatabaseManager::load_data(const std::string& topic_name) -> std::vector<St
             data.sequence_number = static_cast<uint64_t>(sqlite3_column_int64(stmt, 1));
             
             // 时间戳转换
-            int64_t timestamp_us = sqlite3_column_int64(stmt, 2);
-            data.storage_time.sec = timestamp_us / 1000000;
-            data.storage_time.nanosec = (timestamp_us % 1000000) * 1000;
+            // 统一使用接收时间戳作为展示与排序时间
+            int64_t timestamp_us = sqlite3_column_int64(stmt, 3); // reception_timestamp
+            data.storage_time.sec = timestamp_us / MICROSECONDS_PER_SECOND;
+            data.storage_time.nanosec = (timestamp_us % MICROSECONDS_PER_SECOND) * NANOSECONDS_PER_MICROSECOND;
             
             // 读取序列化数据
             const void* blob_data = sqlite3_column_blob(stmt, 4);
@@ -582,8 +586,37 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
         // 将Time_t转换为微秒时间戳进行比较
         int64_t start_timestamp_us = start_time.sec * MICROSECONDS_PER_SECOND + start_time.nanosec / NANOSECONDS_PER_MICROSECOND;
         int64_t end_timestamp_us = end_time.sec * MICROSECONDS_PER_SECOND + end_time.nanosec / NANOSECONDS_PER_MICROSECOND;
+        // 若UI只提供到秒的精度（nanosec==0），则将结束时间扩展到该秒末尾，确保包含这一整秒
+        if (end_time.nanosec == 0) {
+            end_timestamp_us += (MICROSECONDS_PER_SECOND - 1);
+        }
+        std::cout << "[DatabaseManager] Query topic '" << topic_name
+                  << "' reception_timestamp in [" << start_timestamp_us
+                  << ", " << end_timestamp_us << "] us" << std::endl;
         
-        // 从新的samples表读取指定时间范围的数据
+        // 可选：打印该topic在库中的接收时间范围，帮助定位时间不匹配问题
+        {
+            const char* diag_sql = R"(
+                SELECT MIN(s.reception_timestamp), MAX(s.reception_timestamp)
+                FROM samples s
+                JOIN topics t ON s.topic_id = t.id
+                WHERE t.topic_name = ?
+            )";
+            sqlite3_stmt* diag_stmt = nullptr;
+            if (sqlite3_prepare_v2(db_, diag_sql, -1, &diag_stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_text(diag_stmt, 1, topic_name.c_str(), -1, SQLITE_STATIC);
+                if (sqlite3_step(diag_stmt) == SQLITE_ROW) {
+                    auto min_ts = sqlite3_column_int64(diag_stmt, 0);
+                    auto max_ts = sqlite3_column_int64(diag_stmt, 1);
+                    std::cout << "[DatabaseManager] Topic '" << topic_name
+                              << "' reception_timestamp range: [" << min_ts
+                              << ", " << max_ts << "] us" << std::endl;
+                }
+                sqlite3_finalize(diag_stmt);
+            }
+        }
+
+        // 从新的samples表读取指定时间范围的数据（基于接收时间戳）
         const char* select_sql = R"(
             SELECT s.writer_guid, s.sequence_number, s.source_timestamp, s.reception_timestamp,
                    s.data, s.data_size,
@@ -598,9 +631,9 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
             FROM samples s
             JOIN topics t ON s.topic_id = t.id
             WHERE t.topic_name = ? 
-            AND s.source_timestamp >= ? 
-            AND s.source_timestamp <= ?
-            ORDER BY s.source_timestamp, s.sequence_number
+            AND s.reception_timestamp >= ? 
+            AND s.reception_timestamp <= ?
+            ORDER BY s.reception_timestamp, s.sequence_number
         )";
         
         sqlite3_stmt* stmt = nullptr;
@@ -644,7 +677,8 @@ auto DatabaseManager::load_data_range(const std::string& topic_name,
             data.sequence_number = static_cast<uint64_t>(sqlite3_column_int64(stmt, 1));
             
             // 时间戳转换
-            int64_t timestamp_us = sqlite3_column_int64(stmt, 2);
+            // 统一使用接收时间戳
+            int64_t timestamp_us = sqlite3_column_int64(stmt, 3); // reception_timestamp
             data.storage_time.sec = timestamp_us / MICROSECONDS_PER_SECOND;
             data.storage_time.nanosec = (timestamp_us % MICROSECONDS_PER_SECOND) * NANOSECONDS_PER_MICROSECOND;
             
@@ -802,10 +836,10 @@ auto DatabaseManager::get_database_stats() -> std::map<std::string, int64_t> {
         // 获取样本数据的时间范围和大小统计
         const char* time_range_sql = R"(
             SELECT 
-                MIN(source_timestamp) as earliest_timestamp,
-                MAX(source_timestamp) as latest_timestamp,
+                MIN(CASE WHEN source_timestamp > 0 THEN source_timestamp ELSE reception_timestamp END) as earliest_timestamp,
+                MAX(CASE WHEN source_timestamp > 0 THEN source_timestamp ELSE reception_timestamp END) as latest_timestamp,
                 COUNT(*) as total_samples,
-                SUM(LENGTH(serialized_data)) as total_data_bytes
+                SUM(LENGTH(data)) as total_data_bytes
             FROM samples
         )";
         
@@ -917,7 +951,8 @@ auto DatabaseManager::get_table_content(const std::string& table_name) -> std::p
         return result;
     }
 
-    std::string sql = "SELECT * FROM " + table_name + " LIMIT 100;"; // 限制最多返回100行
+    // 去除预览限制，返回完整表内容（如需分页可在上层增加 LIMIT/OFFSET 参数）
+    std::string sql = "SELECT * FROM " + table_name + ";";
     auto stmt = prepare_statement(sql);
     if (!stmt) return result;
 

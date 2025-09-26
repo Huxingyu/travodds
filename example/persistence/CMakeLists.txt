@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找Qt5
-find_package(Qt5 COMPONENTS Core Widgets QUIET)
+find_package(Qt5 COMPONENTS Core Widgets Charts QUIET)
 
 # 查找依赖
 # find_package(TRAVODDS 1 REQUIRED)
@@ -67,13 +67,13 @@ if(Qt5_FOUND)
     set(CMAKE_AUTOUIC ON)
     set(CMAKE_AUTORCC ON)
     
-    # 先创建持久化服务应用基础目标
+    # 创建持久化服务应用基础目标
     target_sources(persistence_service_app PRIVATE
         src/PersistenceMonitor.cpp
         include/PersistenceMonitor.h
     )
     
-    # 创建一个单独的MOC目标处理头文件
+    # 创建单独的MOC目标处理头文件
     qt5_wrap_cpp(MONITOR_MOC_SOURCES 
         include/PersistenceMonitor.h
     )
@@ -90,6 +90,7 @@ if(Qt5_FOUND)
     target_link_libraries(persistence_service_app PRIVATE
         Qt5::Core
         Qt5::Widgets
+        Qt5::Charts
     )
     
     # 定义BUILD_WITH_QT宏

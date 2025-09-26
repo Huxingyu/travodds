@@ -257,6 +257,40 @@ public:
      */
     auto get_memory_cache_usage() const -> std::pair<size_t, size_t>; // current_bytes, max_bytes
 
+    // 【新增】获取性能统计信息（为实时图表提供数据）
+    
+    
+    
+    /**
+     * @brief 获取服务运行时间（秒）
+     * 
+     * @return 服务启动以来的运行时间
+     */
+    auto get_uptime_seconds() const -> int64_t;
+    
+    
+    // 【新增】网络拓扑和域信息接口
+    /**
+     * @brief 获取域参与者信息
+     * 
+     * @return 包含域ID、参与者信息等的映射表
+     */
+    auto get_domain_participant_info() -> std::map<std::string, std::string>;
+    
+    /**
+     * @brief 获取网络拓扑节点信息（用于可视化）
+     * 
+     * @return 网络节点信息向量，每个节点包含ID、类型、状态、连接关系等
+     */
+    auto get_network_topology_nodes() -> std::vector<std::map<std::string, std::string>>;
+    
+    /**
+     * @brief 获取网络拓扑连接信息（用于可视化）
+     * 
+     * @return 网络连接信息向量，每个连接包含源节点、目标节点、连接类型等
+     */
+    auto get_network_topology_connections() -> std::vector<std::map<std::string, std::string>>;
+
     // 配置访问
     /**
      * @brief 获取服务配置
