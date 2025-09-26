@@ -419,8 +419,35 @@ using StringSeq = Sequence<std::string>;
 struct Property_t {
 	std::string name;
 	std::string value;
+    bool propagate;
+    Property_t() = default;
+    Property_t(const Property_t& property) :name(property.name),value(property.value),propagate(property.propagate) {}
+
+    Property_t(const std::string& name_, const std::string& value_, bool propagate_ = false) :name(name_), value(value_),propagate(propagate_) {}
+
+    Property_t& operator =(const Property_t& property)
+    {
+        this->name = property.name;
+        this->value = property.value;
+        this->propagate = property.propagate;
+        return *this;
+    }
+
+    bool operator ==(const Property_t& right) const
+    {
+        return (this->name == right.name) && (this->value == right.value);
+    }
+
+    void property(const std::string& name_, const std::string& value_, bool propagate_)
+    {
+        name = name_;
+        value = value_;
+        propagate = propagate_;
+    }
+
 };
 using PropertySeq = Sequence<Property_t>;
+typedef Property_t Property;
 
 struct SampleInfo {
 	/*  （READ或NOT_READ）-代表是否已读取过相应的数据样本  */

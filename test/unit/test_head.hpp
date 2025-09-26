@@ -39,11 +39,11 @@ public:
 
     virtual unsigned int get_max_serialized_data_size(void* data, unsigned int currentAlignment) { return 0; };
 
-    virtual int serialize_data(void* data, AGIDDSCdrSerializer* cdr, int endian) { return 0; };
+    virtual int serialize_data(void* data, CdrSerializer* cdr, int endian) { return 0; };
 
-    virtual int deserialize_data(void* data, AGIDDSCdrDeserializer* cdr, int endian) { return 0; };
+    virtual int deserialize_data(void* data, CdrDeserializer* cdr, int endian) { return 0; };
 
-    virtual ReturnCode_t get_instancehandle(void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) { return 0; };
+    virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) { return 0; };
 
     virtual bool has_key() { return 0; };
 

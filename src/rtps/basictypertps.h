@@ -362,6 +362,9 @@ struct GUID_t {
 
 		return false;
 	}
+	bool operator<(const BuiltinTopicKey_t& right) const {
+        return memcmp(this, &right, sizeof(GUID_t)) < 0;
+    }
 
 	/**
 	 * @brief 重载运算符 >
@@ -394,6 +397,11 @@ struct GUID_t {
 		memcpy(this->prefix.value, right.prefix.value, sizeof(GuidPrefix_t));
 		this->entityId = right.entityId;
 
+		return *this;
+	}
+	GUID_t& operator=(const BuiltinTopicKey_t& other) {
+        // 内部使用memcpy来安全地复制16字节内存
+        memcpy(this, &other, sizeof(GUID_t));
 		return *this;
 	}
 	/**
