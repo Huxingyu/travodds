@@ -173,7 +173,7 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return HANDLE_NIL;
 	}
-	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
+	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
 	SerializedBuffer *buffer = new SerializedBuffer;
 	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
@@ -691,7 +691,7 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_BAD_PARAMETER;
 	}
-	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
+	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
 	SerializedBuffer *buffer = new SerializedBuffer;
 	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);

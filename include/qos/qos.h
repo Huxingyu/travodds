@@ -14,7 +14,8 @@
 
 #include "travodds_dll.h"
 #include "type/basictype.h"
-
+#include "Security/SecurityCommon.h"
+#include "security/propertyqospolicy.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 const  std::string  USERDATA_QOS_POLICY_NAME              = "UserData";
@@ -191,7 +192,7 @@ struct ReliabilityQosPolicy {
 	ReliabilityQosPolicyKind kind;
 	Duration_t max_blocking_time;
 
-	ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{0, 100000000} {
+    ReliabilityQosPolicy() : kind(BEST_EFFORT_RELIABILITY_QOS), max_blocking_time{ 0, 100000 } {
 	}
 };
 
@@ -281,6 +282,7 @@ struct DurabilityServiceQosPolicy {
 struct DomainParticipantFactoryQos {
 	EntityFactoryQosPolicy entity_factory;
 
+    PropertyQosPolicy property;
 	DomainParticipantFactoryQos() {
 	}
 };
@@ -288,7 +290,7 @@ struct DomainParticipantFactoryQos {
 struct DomainParticipantQos {
 	UserDataQosPolicy user_data;
 	EntityFactoryQosPolicy entity_factory;
-
+    PropertyQosPolicy property;
 	DomainParticipantQos() {
 	}
 };
@@ -329,6 +331,7 @@ struct DataWriterQos {
 	OwnershipStrengthQosPolicy   ownership_strength;
 	WriterDataLifecycleQosPolicy writer_data_lifecycle;
 
+    PropertyQosPolicy property;
 	DataWriterQos() {
 		reliability.kind = RELIABLE_RELIABILITY_QOS;
 	}
@@ -358,6 +361,7 @@ struct DataReaderQos {
 	TimeBasedFilterQosPolicy      time_based_filter;
 	ReaderDataLifecycleQosPolicy  reader_data_lifecycle;
 
+    PropertyQosPolicy property;
 	DataReaderQos() {
 	}
 };
