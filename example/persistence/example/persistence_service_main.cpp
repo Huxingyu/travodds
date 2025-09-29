@@ -71,6 +71,7 @@ int main(int argc, char* argv[]) {
     // 解析命令行参数
     DomainId_t domain_id = 0;
     std::string database_path = "enhanced_persistence.db";
+    int exit_code = 0;
     
     // 检查是否有GUI参数
     for (int i = 1; i < argc; ++i) {
@@ -186,7 +187,7 @@ int main(int argc, char* argv[]) {
  
         std::cout << "\npersistence service started successfully!" << std::endl;
         
-        if (g_gui_mode) {
+    if (g_gui_mode) {
 #ifdef BUILD_WITH_QT
             std::cout << "Starting Qt GUI monitoring interface..." << std::endl;
             
@@ -198,7 +199,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Qt GUI started successfully!" << std::endl;
             
             // 进入Qt事件循环
-            return app->exec();
+        exit_code = app->exec();
 #else
             std::cerr << "GUI mode not available - Qt not compiled in" << std::endl;
             return -1;
@@ -234,6 +235,7 @@ int main(int argc, char* argv[]) {
             g_persistence_service->shutdown();
             g_persistence_service.reset();
         }
+        participant_ptr.reset();
         
         // DomainParticipant 将通过 shared_ptr 的自定义删除器自动清理
         
@@ -249,5 +251,5 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     
-    return 0;
+    return exit_code;
 }
