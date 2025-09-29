@@ -147,17 +147,44 @@ ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
     return RETCODE_OK;
 }
 
+void SubscriberImpl::register_builtin_datareader(std::shared_ptr<DataReaderImpl> reader)
+{
+    if (reader) {
+        std::lock_guard<std::mutex> lock(mtxReaders_);
+        // 直接存储 shared_ptr，避免内存管理问题
+        auto handle = reader->get_instance_handle();
+        builtin_readers_[handle] = reader.get();
+        
+        // 同时将共享指针存储在单独的映射中以确保对象生命周期
+        builtin_reader_shared_ptrs_[handle] = reader;
+        
+    }
+}
+
 DataReader *SubscriberImpl::lookup_datareader(const std::string& topic_name) const
 {
     DataReader* reader = nullptr;
 
     std::lock_guard<std::mutex> lock(mtxReaders_);
+    
+    // 首先检查常规DataReader
     for (auto& it : readerHandles_) {
         if (it.second->get_topicdescription()->get_name() == topic_name) {
             reader =  it.second.get();
             break;
         }
     }
+    
+    // 如果未找到，检查内置DataReader
+    if (!reader) {
+        for (auto& it : builtin_readers_) {
+            if (it.second->get_topicdescription()->get_name() == topic_name) {
+                reader = it.second;
+                break;
+            }
+        }
+    }
+    
     return reader;
 }
 

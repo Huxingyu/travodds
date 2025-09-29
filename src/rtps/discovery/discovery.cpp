@@ -21,8 +21,11 @@ Discovery::~Discovery()
 
 void Discovery::InitBuiltinEndpoint()
 {
+	//std::cout << "[Discovery] Initializing builtin endpoints..." << std::endl;
 	builtinPublisher_ = std::make_shared<PublisherImpl>(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
 	builtinSubScriber_ = std::make_shared<SubscriberImpl>(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+
+	//std::cout << "[Discovery] Builtin subscriber created: " << (builtinSubScriber_ ? "SUCCESS" : "FAILED") << std::endl;
 
 	dcpsParticipant_ = std::make_shared<TopicImpl>("DCPSParticipant", "SPDPdiscoveredParticipantData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
 	dcpsPublication_ = std::make_shared<TopicImpl>("DCPSPublication", "DiscoveredWriterData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
@@ -54,11 +57,21 @@ void Discovery::InitBuiltinEndpoint()
 	builtinPublicationsDataWriter_ = std::make_shared<DataWriterImpl>(dcpsPublication_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinPublicationsDataReader_ = std::make_shared<DataReaderImpl>(dcpsPublication_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
 
+	// 注册内置DataReader到内置Subscriber
+	//std::cout << "[Discovery] Registering builtin publication DataReader..." << std::endl;
+	builtinSubScriber_->register_builtin_datareader(builtinPublicationsDataReader_);
+	//std::cout << "[Discovery] Builtin publication DataReader registered successfully" << std::endl;
+
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_ANNOUNCER;
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PUBLICATION_DETECTOR;
 
 	builtinSubscriptionsDataWriter_ = std::make_shared<DataWriterImpl>(dcpsSubscription_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinSubscriptionsDataReader_ = std::make_shared<DataReaderImpl>(dcpsSubscription_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
+
+	// 注册内置DataReader到内置Subscriber
+	//std::cout << "[Discovery] Registering builtin subscription DataReader..." << std::endl;
+	builtinSubScriber_->register_builtin_datareader(builtinSubscriptionsDataReader_);
+	//std::cout << "[Discovery] Builtin subscription DataReader registered successfully" << std::endl;
 
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_ANNOUNCER;
 	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_DETECTOR;
@@ -178,5 +191,11 @@ void Discovery::SetIgnoredParticipants(GUID_t guid)
 bool Discovery::FindIgnoredParticipants(GUID_t guid)
 {
 	return spdp_->FindIgnoredParticipants(guid);
+}
+
+std::shared_ptr<SubscriberImpl> Discovery::GetBuiltinSubscriber() const
+{
+	//std::cout << "[Discovery] GetBuiltinSubscriber called, builtinSubScriber_ is " << (builtinSubScriber_ ? "available" : "null") << std::endl;
+	return builtinSubScriber_;
 }
 

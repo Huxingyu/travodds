@@ -1,5 +1,6 @@
 #include "rtps/messages/parameter.h"
 #include "common/log/logger.h"
+#include <iostream>
 USING_TRAVODDS_NAMESPACE;
 ParameterList::ParameterList(const octet* msg, const uint32_t& length)
 	: msgEndian_(PL_DEFAULT_ENDIAN)
@@ -81,7 +82,7 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessK
 	//PID_TOPIC_NAME : string
 	if (!pubData.topic_name.empty()) {
 		AddParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
-	}
+	} 
 	//PID_TYPE_NAME : string
 	if (!pubData.type_name.empty()) {
 		AddParameter(ParameterId::PID_TYPE_NAME, pubData.type_name);

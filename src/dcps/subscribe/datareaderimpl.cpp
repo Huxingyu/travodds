@@ -195,6 +195,13 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 	sample_infos.unloan();
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true);
 	if (RETCODE_OK != ret) {
+		// RETCODE_NO_DATA 是正常情况，不应该作为错误记录
+		if (ret == RETCODE_NO_DATA) {
+			// 静默处理 - 没有数据是正常的，特别是在自动发现轮询时
+			return ret;
+		} else {
+			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
+		}
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}

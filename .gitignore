@@ -7,6 +7,13 @@
 *.o
 *.obj
 
+# Compiled C/C++ files
+build/
+.cache/
+.vscode/
+*.clangd
+
+
 # Precompiled Headers
 *.gch
 *.pch
