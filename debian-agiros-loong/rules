@@ -20,8 +20,7 @@
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCMAKE_INSTALL_PREFIX=/opt/agiros/loong \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DAPPEND_PROJECT_NAME_TO_INSTALL=ON
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/tmp

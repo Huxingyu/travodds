@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
-#define AGIDDS_RTPS_ENDPOINT_PARTICIPANT_H
+#ifndef TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
+#define TRAVODDS_RTPS_ENDPOINT_PARTICIPANT_H
 
 #include "rtps/endpoint/rtpsentity.h"
 #include "rtps/endpoint/reader.h"
-
-AGIDDS_NAMESPACE_BEGIN
+#include "rtps/flowcontrol/flowcontroltype.h"
+TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
 class Reader;
@@ -25,6 +25,8 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class FlowControlManager;
+class FlowRateLimitedManager;
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -60,9 +62,16 @@ public:
 	/**
 	 * @brief Participant类初始化。
 	 *
-	 * @return 初始化成功返回RETCODE_OK，否则返回RETCODE_ERROR。。
+	 * @return 初始化成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t Init();
+
+	/**
+	 * @brief 初始化网络。
+	 *
+	 * @return 初始化成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	ReturnCode_t InitNetwork();
 
 	/**
 	 * @brief 创建发布端在rtps层映射Writer。
@@ -70,12 +79,12 @@ public:
 	 *
 	 * @param [in] dw DataWriterImpl类指针。
 	 * @param [in] dwQos DataWriter Qos。
-	 * @param [in] EntityID 实体id。
+	 * @param [in] GUID_t 实体id。
 	 * @param [in] key 键值标志。
 	 *
 	 * @return 创建出的的发布端映射Writer指针。
 	 */
-    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const EntityId_t& EntityID, bool key);
+    std::shared_ptr<Writer> CreateWriter(DataWriterImpl* dw, const DataWriterQos& dwQos, const GUID_t& guid, bool key, FlowControllerConfig flowConfig = FlowControllerConfig());
 
 	/**
 	 * @brief 创建发布端在rtps层映射Reader。
@@ -83,12 +92,12 @@ public:
 	 *
 	 * @param [in] dw DataReaderImpl类指针。
 	 * @param [in] dwQos DataReader Qos。
-	 * @param [in] EntityID 实体id。
+	 * @param [in] GUID_t 实体id。
 	 * @param [in] key 键值标志。
 	 *
 	 * @return 创建出的的发布端映射Reader指针。
 	 */
-    std::shared_ptr<Reader> CreateReader(DataReaderImpl* dr, const DataReaderQos& drQos, const EntityId_t& EntityID, bool key);
+    std::shared_ptr<Reader> CreateReader(DataReaderImpl* dr, const DataReaderQos& drQos, const GUID_t& guid, bool key);
 
 	/**
 	 * @brief 从容器中删除发布端在rtps层映射Writer。
@@ -277,6 +286,12 @@ public:
 	 */
 	std::shared_ptr<LivelinessManager> GetLivelinessManager();
 
+	static bool IsRegexPattern(const std::string& str);
+
+	bool RegexPartitionMatch(const std::string& pubName, const std::string& subName);
+
+	bool RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns);
+
 
 	/**
 	 * @brief 判断本地Writer的信息是否与远端Reader匹配，匹配则存储到远端Reader存储容器中。
@@ -299,7 +314,11 @@ public:
 	 *
 	 * @return 网络传输模块对象。
 	 */
-	std::shared_ptr<MessageTransmitter> GetMessageTransmitter();
+	std::vector<std::shared_ptr<MessageTransmitter>> GetMessageTransmitters();
+
+	void TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length);
+
+	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
 
 	/**
 	 * @brief 获取默认单播定位器。
@@ -386,9 +405,11 @@ public:
 	 *
 	 * @return 接收器资源列表大小。
 	 */
-	int32_t CreateReceiverResources(LocatorVec& locatorList, bool applyMutation);
+	int32_t CreateReceiverResources(std::shared_ptr<MessageTransmitter> messageTransmitter, LocatorVec& locatorList, bool applyMutation);
 
-	/* @brief 停止接收线程 */
+	/**
+	 * @brief 停止接收线程 
+	 */
 	void StopReceiveThread();
 
 	/**
@@ -398,8 +419,8 @@ public:
 	 */
 	std::shared_ptr<ThreadPool> GetThreadPool() const;
 
-	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& subHandles) const;
-
+	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const;
+	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
 private:
 	LocatorVec defaultUnicastLocatorList_;
 	LocatorVec defaultMulticastLocatorList_;
@@ -422,6 +443,9 @@ private:
 
 
 	// const DomainParticipantImpl* const domainImpl_ ;
+    std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
+
+    std::unique_ptr<FlowControlManager> flowControlManager_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	
@@ -435,7 +459,7 @@ private:
 	std::map<EntityId_t, std::set<GUID_t>> matchRemoteEntitys_;
 
 	//TODO 网络传输模块对象
-	std::shared_ptr<MessageTransmitter> messageTransmitter_ = nullptr;
+	std::vector<std::shared_ptr<MessageTransmitter>> messageTransmitters_;
 
 	std::shared_ptr<MessageProcessor> messageProcessor_ = nullptr;
 
@@ -457,6 +481,6 @@ private:
 	mutable std::mutex mtxMatchEntitys_;
 };
 
-AGIDDS_NAMESPACE_END
+TRAVODDS_NAMESPACE_END
 
 #endif

@@ -11,7 +11,7 @@
 #include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 /************************************************************
 ** MessageProcessor类构造函数
@@ -468,7 +468,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 {
 	if (message[0] != 'R' || message[1] != 'T' ||
 		message[2] != 'P' || message[3] != 'S') {
-		AGILOG(AGILOG_ERROR, "Msg received with no RTPS in header, ignoring...");
+		TRAVODDS_LOG(LOG_ERROR, "Msg received with no RTPS in header, ignoring...");
 		return RETCODE_ERROR;
 	}
 
@@ -499,7 +499,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 
  	ret = InterpretMessageHeader(message, messageReceiver);
 	if (ret != RETCODE_OK) {
-		AGILOG(AGILOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
 	messageLen -= sizeof(MessageHeader_t);
@@ -582,7 +582,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (keyFlag && dataFlag) {
-		AGILOG(AGILOG_ERROR, "Message received with Data and Key Flag set, ignoring");
+		TRAVODDS_LOG(LOG_ERROR, "Message received with Data and Key Flag set, ignoring");
 		return RETCODE_ERROR;
 	}
 
@@ -612,7 +612,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	}
 	//TODO 
 	if (dataSubMessage.writerSN <= SEQUENCENUMBER_ZERO) {
-		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
+		TRAVODDS_LOG(LOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
@@ -835,18 +835,22 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 
 	//messageReceiver.nonStandardPayloadFlag = nonStandardPayloadFlag;
 
-	memcpy(&dataFragSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
-	messageShift += sizeof(SubMessageHeader_t);
-	memcpy(&dataFragSubMessage.extraFlags, message + messageShift, sizeof(SubMessageFlag_t) * 2);
-	messageShift += sizeof(SubMessageFlag_t) * 2;
-	memcpy(&dataFragSubMessage.octetsToInlineQos, message + messageShift, sizeof(uint16_t));
-	messageShift += sizeof(uint16_t);
-	memcpy(&dataFragSubMessage.readerId, message + messageShift, sizeof(EntityId_t));
-	messageShift += sizeof(EntityId_t);
-	memcpy(&dataFragSubMessage.writerId, message + messageShift, sizeof(EntityId_t));
-	messageShift += sizeof(EntityId_t);
-	memcpy(&dataFragSubMessage.writerSN, message + messageShift, sizeof(SequenceNumber_t));
-	messageShift += sizeof(SequenceNumber_t);
+	//memcpy(&dataFragSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
+	//messageShift += sizeof(SubMessageHeader_t);
+	//memcpy(&dataFragSubMessage.extraFlags, message + messageShift, sizeof(SubMessageFlag_t) * 2);
+	//messageShift += sizeof(SubMessageFlag_t) * 2;
+	//memcpy(&dataFragSubMessage.octetsToInlineQos, message + messageShift, sizeof(uint16_t));
+	//messageShift += sizeof(uint16_t);
+	//memcpy(&dataFragSubMessage.readerId, message + messageShift, sizeof(EntityId_t));
+	//messageShift += sizeof(EntityId_t);
+	//memcpy(&dataFragSubMessage.writerId, message + messageShift, sizeof(EntityId_t));
+	//messageShift += sizeof(EntityId_t);
+	//memcpy(&dataFragSubMessage.writerSN, message + messageShift, sizeof(SequenceNumber_t));
+	//messageShift += sizeof(SequenceNumber_t);
+	
+	// 对于结构字节 4、2、2、4、4、8的顺序，32位或64位系统下，内存对齐无padding直接使用 memcpy
+	memcpy(&dataFragSubMessage, message, sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t));
+	messageShift = sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
 	if (DEFAULT_ENDIAN != (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
@@ -857,7 +861,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	}
 
 	if (dataFragSubMessage.writerSN <= SequenceNumber_t()) {
-		AGILOG(AGILOG_ERROR, "Invalid message received, bad sequence Number");
+		TRAVODDS_LOG(LOG_ERROR, "Invalid message received, bad sequence Number");
 		return RETCODE_ERROR;
 	}
 
@@ -892,7 +896,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	} else {
 		readerList.push_back(dataFragSubMessage.readerId);
 	}
-	for (auto entittyId : readerList) {
+	for (const auto& entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
 			reader->ReceiveDataFragMessage(messageReceiver, dataFragSubMessage, dataFragSubMessage.serializedPayload, serializedPayloadLen);

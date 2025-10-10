@@ -9,17 +9,17 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_NUMERIC_CONSTANTS_H
-#define AGIDDS_NUMERIC_CONSTANTS_H
+#ifndef TRAVODDS_NUMERIC_CONSTANTS_H
+#define TRAVODDS_NUMERIC_CONSTANTS_H
 
 #include <cstdint>  
 #include <cstddef>
-#include "agidds_dll.h"
+#include "travodds_dll.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 namespace SubMessageFlag {
-	constexpr uint8_t NONE_FLAG                      = 0x00; // �ޱ�־λ
+	constexpr uint8_t NONE_FLAG                      = 0x00; // 无标志位
 	constexpr uint8_t ENDIANNESS_FLAG                = 0x01; // EndiannessFlag little-endian
 	// HeaderExtension
 	constexpr uint8_t LENGTH_FLAG                    = 0x02; // LengthFlag
@@ -55,7 +55,7 @@ namespace SubMessageFlag {
 }
 
 namespace StatusInfoFlag {
-	constexpr uint8_t NONE_FLAG         = 0x00; // �ޱ�־λ
+	constexpr uint8_t NONE_FLAG         = 0x00; // 无标志位
 	constexpr uint8_t DISPOSED_FLAG     = 0x01; // DisposedFlag
 	constexpr uint8_t UNREGISTERED_FLAG = 0x02; // UnregisteredFlag
 	constexpr uint8_t FILTERED_FLAG     = 0x04; // FilteredFlag
@@ -64,7 +64,7 @@ namespace StatusInfoFlag {
 enum EndiannessKind : uint8_t {
 	CDR_BE          = 0x00,
 	CDR_LE          = 0x01,
-	/* ���
+	/* 大端
 	 0.............. 8............... 16............ 24.............. 32
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
 	| 0x00            0x02           | 0x00	          0x00           |   = {PL_CDR_BE, 0}
@@ -75,7 +75,7 @@ enum EndiannessKind : uint8_t {
 	+-------------- + -------------- + ------------ + --------------- +
 	*/
 	PL_CDR_BE       = 0x02,
-	/* С��
+	/* 小端
 	 0.............. 8............... 16............ 24.............. 32
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ +
 	| 0x00            0x03           | 0x00	          0x00           |  = {PL_CDR_LE, 0}
@@ -95,7 +95,7 @@ enum EndiannessKind : uint8_t {
 	XML             = 0x04
 };
 
-/* ϵͳ�洢 */
+/* 系统存储 */
 #if defined(_WIN32) || defined(_MSC_VER) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 constexpr bool IS_LITTLE_ENDIAN = true;
 constexpr EndiannessKind PL_DEFAULT_ENDIAN = EndiannessKind::PL_CDR_LE;
@@ -105,7 +105,7 @@ constexpr bool IS_LITTLE_ENDIAN = false;
 constexpr EndiannessKind PL_DEFAULT_ENDIAN = EndiannessKind::PL_CDR_BE;
 constexpr EndiannessKind DEFAULT_ENDIAN = EndiannessKind::CDR_BE;
 #else
-// ����ƽ̨������ʱ���
+// 其他平台：运行时检测
 inline bool IsLittleEndian() {
 	const int32_t num = 1;
 	const uint8_t* byte = reinterpret_cast<const uint8_t*>(&num);
@@ -116,8 +116,8 @@ inline bool IsLittleEndian() {
 #define DEFAULT_ENDIAN IsLittleEndian() ? EndiannessKind::CDR_LE : EndiannessKind::CDR_BE
 #endif
 
-constexpr uint32_t CDR_ENDIANNESS_LEN = 4; // ��С����Ϣ�Ŀռ� B(�ֽ�)
-//�ӱ��Ĺ̶�����
+constexpr uint32_t CDR_ENDIANNESS_LEN = 4; // 大小端信息的空间 B(字节)
+// 子报文固定长度
 constexpr uint16_t SUB_MESSAGE_LEN_PAD = 0;
 constexpr uint16_t SUB_MESSAGE_LEN_GAP = 10;
 constexpr uint16_t SUB_MESSAGE_LEN_INFO_TS = 8;
@@ -126,5 +126,24 @@ constexpr uint16_t SUB_MESSAGE_LEN_INFO_SRC = 20;
 
 constexpr int32_t RECEIVE_BUFFER_SIZE = 10 * 1024 * 1024;
 
-AGIDDS_NAMESPACE_END
+#ifdef _DEBUG
+constexpr int32_t DATAFRAG_DELAY_NUM = 20;
+#else
+constexpr int32_t DATAFRAG_DELAY_NUM = 100;
+#endif
+
+constexpr uint32_t DOMAIN_ID_MAX = 232; // 域ID最大值
+
+// 对报文中string字段或者byte序列的长度限制
+constexpr uint32_t BYTE_ORDER_LENGTH_MAX = 255;
+// 对分区最大限制
+constexpr uint32_t PARTITON_SIZE_MAX = 10;
+
+// 表达式参数最大限制
+constexpr uint32_t EXPRESSION_PARAMETERS_MAX = 100; 
+
+constexpr const char* const SQL_FILTER_NAME = "DDSSQL";
+
+TRAVODDS_NAMESPACE_END
+
 #endif

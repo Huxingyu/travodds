@@ -9,13 +9,13 @@
 //NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 //
 //See the Mulan PSL v2 for more details.
-#ifndef AGIDDS_DCPS_CONDITION_QUERYCONDITION_H
-#define AGIDDS_DCPS_CONDITION_QUERYCONDITION_H
+#ifndef TRAVODDS_DCPS_CONDITION_QUERYCONDITION_H
+#define TRAVODDS_DCPS_CONDITION_QUERYCONDITION_H
 
 #include "dcps/condition/readcondition.h"
 #include "dcps/base/retcode.h"
 
-AGIDDS_NAMESPACE_BEGIN
+TRAVODDS_NAMESPACE_BEGIN
 
 class DDS_DLL QueryCondition : public virtual ReadCondition {
 public:
@@ -32,18 +32,18 @@ public:
 
 	/**
 	 * @brief 获取query_parameters。
-	 * @param value 返回查询到的数据。
+	 * @param [in] value 返回查询到的数据。
 	 * @return RETCODE_OK
 	 */
 	virtual ReturnCode_t get_query_parameters(StringSeq& query_parameters) const = 0;
 
 	/**
 	 * @brief 设置query_parameters。
-	 * @param value 要设置的新数据。
+	 * @param [in] value 要设置的新数据。
 	 * @return RETCODE_OK
 	 */
 	virtual ReturnCode_t set_query_parameters(const StringSeq& query_parameters) = 0;
 };
 
-AGIDDS_NAMESPACE_END
-#endif // !AGIDDS_DCPS_CONDITION_QUERYCONDITION_H
+TRAVODDS_NAMESPACE_END
+#endif // !TRAVODDS_DCPS_CONDITION_QUERYCONDITION_H

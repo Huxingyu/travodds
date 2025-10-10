@@ -1,8 +1,11 @@
 #include "dcps/condition/waitsetimpl.h"
 #include "dcps/condition/conditionimpl.h"
+#include "dcps/condition/guardcondition.h"
+#include "dcps/condition/guardconditionimpl.h"
 #include "common/log/logger.h"
+#include "waitsetimpl.h"
 
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 WaitSetImpl::~WaitSetImpl()
 {
@@ -15,16 +18,29 @@ WaitSetImpl::~WaitSetImpl()
 
 ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 {
+	ConditionImpl* condImpl = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(mtx_);
+
+		Condition* cond = const_cast<Condition*>(&condition);
+
+		GuardConditionImpl* guard  = IsGuardCondition(cond);
+		if (nullptr != guard) {
+			condImpl = guard;
+		} else if (dynamic_cast<ConditionImpl*>(cond) != nullptr) {
+			condImpl = dynamic_cast<ConditionImpl*>(cond);
+		} else {
+			TRAVODDS_LOG(LOG_ERROR, "Condition type is not supported in WaitSetImpl.");
+			return RETCODE_BAD_PARAMETER;
+		}
 		for (const auto& it : conditions_) {
-			if (&condition == it) {
+			if (condImpl == it) {
 				return RETCODE_OK;
 			}
 		}
-		conditions_.emplace_back(dynamic_cast<ConditionImpl*>(const_cast<Condition*>(&condition)));
+		conditions_.emplace_back(condImpl);
 	}
-	dynamic_cast<ConditionImpl*>(const_cast<Condition*>(&condition))->JoinWaitSet(this);
+	condImpl->JoinWaitSet(this);
 	if (condition.get_trigger_value()) {
 		Notify();
 	}
@@ -33,22 +49,25 @@ ReturnCode_t WaitSetImpl::attach_condition(const Condition& condition)
 
 ReturnCode_t WaitSetImpl::detach_condition(const Condition& condition)
 {
-	bool ret = false;
+	Condition* cond = const_cast<Condition*>(&condition);
+	GuardConditionImpl* guard = IsGuardCondition(cond);
+	ConditionImpl* condImpl = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(mtx_);
 		auto itor = conditions_.begin();
 		for (; itor != conditions_.end(); itor++) {
-			if (&condition == *itor) {
+			if (&condition == *itor || guard == *itor) {
+				condImpl = *itor;
 				conditions_.erase(itor);
-				ret = true;
 				break;
 			}
 		}
 	}
-	if (ret) {
-		dynamic_cast<ConditionImpl*>(const_cast<Condition*>(&condition))->LeaveWaitSet(this);
+	if (nullptr != condImpl) {
+		condImpl->LeaveWaitSet(this);
+		return RETCODE_OK;
 	}
-	return ret ? RETCODE_OK : RETCODE_PRECONDITION_NOT_MET;
+	return RETCODE_PRECONDITION_NOT_MET;
 }
 
 ReturnCode_t WaitSetImpl::wait(ConditionSeq& active_conditions, const Duration_t& timeout)
@@ -80,6 +99,11 @@ ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) cons
 	std::lock_guard<std::mutex> lock(mtx_);
 	attached_conditions.reserve(conditions_.size());
 	for (auto& it : conditions_) {
+		Condition* guard = IsGuardConditionImpl(it);
+		if (nullptr != guard) {
+			attached_conditions.emplace_back(guard);
+			continue;
+		}
 		attached_conditions.emplace_back(it);
 	}
 	return RETCODE_OK;
@@ -90,6 +114,11 @@ uint32_t WaitSetImpl::FindTrigger(ConditionSeq& active_conditions)
 	std::lock_guard<std::mutex> lock(mtx_);
 	for (auto& it : conditions_) {
 		if (it->get_trigger_value() || it->IsNotify()) {
+			Condition* guard = IsGuardConditionImpl(it);
+			if (nullptr != guard) {
+				active_conditions.emplace_back(guard);
+				continue;
+			}
 			active_conditions.emplace_back(it);
 		}
 	}
@@ -100,4 +129,20 @@ void WaitSetImpl::Notify()
 {
 	std::lock_guard<std::mutex> guard(mtxCv_);
 	cv_.notify_one();
+}
+
+GuardConditionImpl* WaitSetImpl::IsGuardCondition(Condition* cond)
+{
+	if (dynamic_cast<GuardCondition*>(cond) != nullptr) {
+		return dynamic_cast<GuardCondition*>(cond)->impl_;
+	}
+	return nullptr;
+}
+
+Condition* WaitSetImpl::IsGuardConditionImpl(ConditionImpl* cond) const
+{
+	if (nullptr != dynamic_cast<GuardConditionImpl*>(cond)) {
+		return  dynamic_cast<GuardConditionImpl*>(cond)->GetGuardCondition();
+	}
+	return nullptr;
 }

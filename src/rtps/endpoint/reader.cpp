@@ -3,7 +3,7 @@
 #include "common/log/logger.h"
 #include "common/timeconversion.h"
 #include "dcps/subscribe/datareaderimpl.h"
-USING_AGIDDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE;
 
 Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 	: qos_(qos),
@@ -156,7 +156,7 @@ ReturnCode_t Reader::FindNextInstance(const InstanceHandle_t& preHander, Instanc
 }
 
 
-std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,InstanceHandle_t pubHandle, Time_t sourceTimespace)
+std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t& handle, const InstanceHandle_t& pubHandle, const Time_t& sourceTimespace)
 {
 	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
 
@@ -268,11 +268,13 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 
 	}
 
+	/* TODO wangyi 暂时以接收时间为源时间戳 */
+	Time_t::now(cache->sourceTimespace);//获取当前时间
+
 	//wangyi time_based_filter 过滤判断
 	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
 		//wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数
-		Duration_t ltime;
-		Duration_t::now(ltime);//获取当前时间
+		Duration_t ltime = Conversion::TimeToDuration(cache->sourceTimespace);
 		Duration_t costTime = ltime - lastTime_;
 		if (costTime < qos_.time_based_filter.minimum_separation) {
 			return RETCODE_TIME_BASED_FILTER;
@@ -375,23 +377,18 @@ void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) cons
 	participant_->GetMatchedEntitys(guid_.entityId, publication_handles);
 }
 
-void Reader::OnUpdateInstanceState(const InstanceHandle_t& handle, const InstanceStateKind& state)
+bool Reader::GetMatchedPublicationData(PublicationBuiltinTopicData& publicationData, const InstanceHandle_t& remotehandle) const
 {
-	//std::map<InstanceHandle_t, CacheChangeVector> instanceChanges;
-	//{
-	//	std::unique_lock<std::mutex> lock(readerCache_.changeMutex_);
-	//	instanceChanges = readerCache_.instanceChanges_;
-	//}
-	//for (auto& itor : instanceChanges) {
-	//	for (auto& itsec : itor.second.cacheChanges) {
-	//		if (itsec->sampleInfo.publication_handle.keyHash != handle.keyHash) {
-	//			continue;
-	//		}
-	//		itsec->sampleInfo.instance_state = state;
+	if (!participant_->RemoteEntityIsMatched(guid_.entityId, remotehandle)) {
+		return false;
+	}
+	if (RETCODE_OK == participant_->GetPublicationData(publicationData, remotehandle)) {
+		return true;
+	}
+	return false;
+}
 
-	//		readerCache_.UpdateState(itsec->sampleInfo, itsec->lastState);
-	//	}
-
-	//}
-
+std::shared_ptr<HistoryCache> Reader::GetReaderCache()
+{
+	return readerCache_;
 }

@@ -1,24 +1,48 @@
 #include "rtps/transport/locator.h"
 
-USING_AGIDDS_NAMESPACE;
-
-UDPv4Locator::UDPv4Locator(const Locator_t& loc)
+USING_TRAVODDS_NAMESPACE;
+AsioLocator::AsioLocator(const Locator_t& loc)
 	: Locator_t(loc)
 {
-	if (kind != LOCATOR_KIND_UDPv4) {
-		valid_ = false;
+}
+
+bool AsioLocator::IsMulticast() const
+{
+	if(kind == LOCATOR_KIND_UDPv4) {
+		return GetAddress<asio::ip::address_v4>().is_multicast();
+	} else if( kind == LOCATOR_KIND_UDPv6) {
+		return GetAddress<asio::ip::address_v6>().is_multicast();
 	}
+	return false;
 }
-uint32_t UDPv4Locator::GetUIAddressV4()
+
+
+bool AsioLocator::Empty() const
 {
-	uint32_t uiAddress = *(uint32_t*)(address + 12);
-	return uiAddress;
+	return address[0] == 0 && address[1] == 0 && address[2] == 0 && address[3] == 0 &&
+		address[4] == 0 && address[5] == 0 && address[6] == 0 && address[7] == 0 &&
+		address[8] == 0 && address[9] == 0 && address[10] == 0 && address[11] == 0 &&
+		address[12] == 0 && address[13] == 0 && address[14] == 0 && address[15] == 0;
 }
-asio::ip::address_v4 UDPv4Locator::GetAddressV4()
+
+std::string AsioLocator::GetStringAddress() const
 {
-	return asio::ip::address_v4({ address[12], address[13], address[14], address[15] });
+	if (kind == LOCATOR_KIND_UDPv4) {
+		return GetAddress<asio::ip::address_v4>().to_string();
+	}
+	else if (kind == LOCATOR_KIND_UDPv6) {
+		return GetAddress<asio::ip::address_v6>().to_string();
+	}
+	return std::string();
 }
-bool UDPv4Locator::Valid()
+
+uint32_t AsioLocator::GetUIAddress() const
 {
-	return valid_;
+	if (kind == LOCATOR_KIND_UDPv4) {
+		uint32_t uiAddress = *(uint32_t*)(address + 12);
+		return uiAddress;
+	} else if (kind == LOCATOR_KIND_UDPv6) {
+		return GetAddress<asio::ip::address_v6>().scope_id();
+	}
+	return ~0u;
 }
