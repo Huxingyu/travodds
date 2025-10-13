@@ -39,6 +39,8 @@ namespace SysInfo {
 	 */
 	std::string GetProcessID();
 	int32_t GetProcessIDStatic();
+
+	bool IsProcessExists(int32_t pid);
 	
 	/**
 	 * @brief 获取用户名ID。
