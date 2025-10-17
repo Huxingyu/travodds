@@ -156,12 +156,12 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	} else {
 		writerPtr = std::make_shared<StatefulWriter>(dwQos, guid, kind);
 	}
+	endpointPtr = writerPtr;
+	endpointPtr->SetParticipant(this);
+	
 	FlowController* controller = flowControlManager_->GetFlowController(flowConfig);
 	writerPtr->SetFlowController(controller);
 	controller->RegisterWriter(writerPtr);
-
-	endpointPtr = writerPtr;
-	endpointPtr->SetParticipant(this);
 
     dw->SetRelatedWriter(writerPtr);
 
