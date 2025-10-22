@@ -14,7 +14,10 @@
 #include "rtps/discovery/discovery.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
-
+#include "xtypes/dynamictypebuilderfactory.h"
+#include "xtypes/dynamictypebuilder.h"
+#include "xtypes/dynamicdatafactory.h"
+#include "xtypes/dynamicdatatypesupport.h"
 using namespace std::chrono;
 USING_TRAVODDS_NAMESPACE
 
@@ -310,12 +313,20 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 	CdrSerializer cdr(bufferHeader);
 	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
-
 	std::set<GUID_t> filterReaders;
-	for (auto& it : readerFilters_) {
-		if (it.second.Validate(bufferHeader)) {
-			filterReaders.insert(it.first);
+	if (!readerFilters_.empty()) {
+		
+		// 使用DynamicDataFactory创建数据容器
+		DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*typeSupport_->get_dynamictype());
+		DynamicDataTypeSupport typeSupport(typeSupport_->get_dynamictype());
+		CdrDeserializer cdr(bufferHeader);
+		typeSupport.deserialize_data(dyn_data, &cdr, DEFAULT_ENDIAN);
+		for (auto& it : readerFilters_) {
+			if (it.second->Validate(dyn_data)) {
+				filterReaders.insert(it.first);
+			}
 		}
+		DynamicDataFactory::get_instance().delete_data(*dyn_data);	
 	}
 
 	bufferHeader->buffer -= CDR_ENDIANNESS_LEN;
@@ -792,11 +803,11 @@ ReturnCode_t DataWriterImpl::DeleteSerializedBuffer(SerializedBuffer* buffer)
 bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
 {
 	using namespace DDSSQL;
-	auto filter = readerFilters_.emplace(readerGuid, DDSSQLFilter(typeSupport_->get_typeobject()));
+	auto filter = readerFilters_.emplace(readerGuid, std::make_shared<DDSSQLFilter>(typeSupport_->get_dynamictype()));
 	assert(filter.second);
 	ReturnCode_t ret = RETCODE_ERROR;
 	if (filter.second) { 
-		ret = filter.first->second.InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
+		ret = filter.first->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
 	}
 	return ret == RETCODE_OK ? true : false;
 }

@@ -59,6 +59,13 @@ static int64_t ToSignedInteger(
 
         return static_cast<int64_t>(value.floatValue);
     }
+    case TypicalKind::UNSIGNED_INTEGER: {
+        if (value.unsignedIntegerValue > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+            assert(false);
+	    }
+        return static_cast<int64_t>(value.unsignedIntegerValue);
+    }
+
     default:
         assert(false);
     }
@@ -338,6 +345,13 @@ bool DDSSQLFieldValue::SetSeqValue(DynamicData* memberData, MemberId memberId, T
         charValue = charseq[elementIndex];
         return true;
     }
+    case TypeKind::TK_BYTE: {
+        DynamicData::ByteSeq uintSeq;
+        memberData->get_byte_values(uintSeq, memberId);
+        kind = UNSIGNED_INTEGER;
+        unsignedIntegerValue = uintSeq[elementIndex];
+        return true;
+    }
     case TypeKind::TK_INT16: {
         DynamicData::Int16Seq intSeq;
         memberData->get_int16_values(intSeq, memberId);
@@ -434,6 +448,13 @@ bool DDSSQLFieldValue::SetBaseValue(DynamicData* memberData, MemberId memberId, 
         memberData->get_char8_value(value, memberId);
         kind = CHAR;
         charValue = value;
+        return true;
+    }
+    case TypeKind::TK_BYTE: {
+        octet value;
+        memberData->get_byte_value(value, memberId);
+        kind = UNSIGNED_INTEGER;
+        unsignedIntegerValue = value;
         return true;
     }
     case TypeKind::TK_INT16: {
@@ -547,30 +568,35 @@ bool DDSSQLFieldValue::GetMemberValue(DynamicData* dynData, DynamicType* dynType
     member.get_descriptor(memberDescriptor);
     DynamicType* memberType = memberDescriptor.type_;
     TypeKind memberKind = memberType->get_kind();
-
+    //检查各个维度,并且将其转化一维index
+    int32_t elementIndex = 0;
     // 处理数组 / 序列索引
     if (accessor.arrayIndex.size() > 0) {
-        if (memberKind != TypeKind::TK_ARRAY && memberKind != TypeKind::TK_SEQUENCE) {
-            return false;
-        }
-        // 检查索引是否有效
-        // 检查维度是否一致
-        if (accessor.arrayIndex.size() != memberType->descriptor_.bound_.size()) {
-            return false;
-        }
-        //检查各个维度,并且将其转化一维index
-        int32_t elementIndex = 0;
-        for (int32_t i = 0; i < accessor.arrayIndex.size(); i++) {
-            if (memberType->descriptor_.bound_[i] < 0 || accessor.arrayIndex[i] >= memberType->descriptor_.bound_[i]) {
+        if (memberKind == TypeKind::TK_ARRAY) {
+            // 检查索引是否有效
+            // 检查维度是否一致
+            if (accessor.arrayIndex.size() != memberType->descriptor_.bound_.size()) {
                 return false;
-            } 
-            int32_t product = 1;
-            for (int32_t j = i + 1; j < memberType->descriptor_.bound_.size(); ++j) {
-                product *= memberType->descriptor_.bound_[j];
             }
-            elementIndex += accessor.arrayIndex[i] * product;
-        }
 
+            for (int32_t i = 0; i < accessor.arrayIndex.size(); i++) {
+                if (memberType->descriptor_.bound_[i] < 0 || accessor.arrayIndex[i] >= memberType->descriptor_.bound_[i]) {
+                    return false;
+                }
+                int32_t product = 1;
+                for (int32_t j = i + 1; j < memberType->descriptor_.bound_.size(); ++j) {
+                    product *= memberType->descriptor_.bound_[j];
+                }
+                elementIndex += accessor.arrayIndex[i] * product;
+            }
+        } else if (memberKind == TypeKind::TK_SEQUENCE && accessor.arrayIndex.size() == 1) {
+            elementIndex = accessor.arrayIndex[0];
+            if (elementIndex >= dynData->get_memberid_item_count(memberId)) {
+                return false;
+            }
+        } else {
+            return false;
+        }
         DynamicType* elementType = memberType->descriptor_.element_type_;
 
         if (std::next(itor) == end) {

@@ -26,6 +26,8 @@ namespace DDSSQL {
         // 参数的形式为％n， 对应参数列表索引
         int32_t parameterIndex = -1;
 
+        DynamicType* typeDesc = nullptr;
+
         // 关键特点
         //
         // 1. 二叉树性质：

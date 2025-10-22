@@ -273,7 +273,7 @@ ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const s
     }
     std::string typeName = related_topic->get_type_name();
 
-    if (!ContentFilteredTopicImpl::ValidFilterExpression(filter_expression, expression_parameters, typeSupports_.find(typeName)->second->get_typeobject())) {
+    if (!ContentFilteredTopicImpl::ValidFilterExpression(filter_expression, expression_parameters, typeSupports_.find(typeName)->second->get_dynamictype())) {
         return nullptr;
     }
     ContentFilteredTopic* fit = nullptr;
