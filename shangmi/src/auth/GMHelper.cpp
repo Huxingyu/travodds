@@ -979,6 +979,65 @@ using EvpCipherCtxUP = std::unique_ptr<EVP_CIPHER_CTX, EvpCipherCtxDel>;
 struct EvpCipherDel    { void operator()(EVP_CIPHER* p) const noexcept { EVP_CIPHER_free(p); } };
 using EvpCipherUP     = std::unique_ptr<EVP_CIPHER, EvpCipherDel>;
 
+int GMHelper::sm4_gcm_gmac_decrypt(
+    CryptoTransformKind kind,
+    const unsigned char* key, 
+    const unsigned char iv[12],
+    const BuffersContainer& in_buffers, 
+    unsigned int out_need,
+    const unsigned char tag[16],
+    unsigned char* out,
+    unsigned int* inout_len)
+{
+    if (!key || !iv || !inout_len)
+        return 0;
+
+    *inout_len = 0;
+
+    // GMAC 模式不包含密文，只做认证
+    if (kind == c_transform_kind_sm4_gmac)
+        return 0;
+
+    if (kind != c_transform_kind_sm4_gcm)
+        return 0;
+
+    std::vector<uint8_t> ciphertext;
+    ciphertext.reserve(in_buffers.src_buffer ? in_buffers.src_buffer->buffer_size : 0);
+
+    for (unsigned int i = 0; i < in_buffers.buffers_num; ++i)
+    {
+        const SerializedBuffer* buf = in_buffers.src_buffer + i;
+        if (!buf || !buf->buffer || buf->buffer_size == 0)
+            continue;
+
+        const unsigned char* p = reinterpret_cast<const unsigned char*>(buf->buffer);
+        ciphertext.insert(ciphertext.end(), p, p + buf->buffer_size);
+    }
+
+    if (ciphertext.empty())
+        return 0;
+
+    std::vector<uint8_t> key_vec(16);
+    std::memcpy(key_vec.data(), key, 16);
+
+    std::vector<uint8_t> iv_vec(iv, iv + 12);
+    std::vector<uint8_t> aad;  
+    std::vector<uint8_t> tag_vec(tag, tag + 16);
+    std::vector<uint8_t> plaintext;
+
+    bool ok = GMHelper::sm4_gcm_decrypt_vector(
+        key_vec, iv_vec, aad, ciphertext, tag_vec, plaintext);
+
+    if (!ok || plaintext.empty())
+        return 0;
+
+    unsigned int take = std::min(out_need, static_cast<unsigned int>(plaintext.size()));
+    if (out && take > 0)
+        std::memcpy(out, plaintext.data(), take);
+
+    *inout_len = take;
+    return static_cast<int>(take);
+}
 
 bool GMHelper::sm4_gcm_encrypt_vector(const std::vector<uint8_t>& key,
     const std::vector<uint8_t>& iv,

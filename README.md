@@ -59,7 +59,6 @@ AGIROS开源社区自研DDS，研发开源数据分发通信中间件产品，�
         --cdr         序列化和反序列化
         --type        数据类型    
 
-    --shangmi 基于国密算法的安全插件
     --test    测试框架与测试用例
     --example 示例
     --tools   脚本工具

@@ -29,7 +29,7 @@ public:
 
     virtual bool create_local_participant_crypto_tokens(
         ParticipantCryptoTokenSeq& local_participant_crypto_tokens,
-        const ParticipantCryptoHandle& locat_participant,
+        ParticipantCryptoHandle& locat_participant,
         ParticipantCryptoHandle& remote_participant,
         SecurityException& exception) = 0;
 
@@ -47,7 +47,7 @@ public:
     */
 
     virtual bool set_remote_participant_crypto_tokens(
-        const ParticipantCryptoHandle& local_participant_crypto,
+        ParticipantCryptoHandle& local_participant_crypto,
         ParticipantCryptoHandle& remote_participant_crypto,
         const ParticipantCryptoTokenSeq& remote_participant_tokens,
         SecurityException& exception) = 0;

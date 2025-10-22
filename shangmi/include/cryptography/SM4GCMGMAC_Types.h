@@ -3,19 +3,30 @@
 
 #include <array>
 #include <cstdint>
+#include <atomic>
+#include <optional>
+#include "cdr/travoddscdr.h"
 #include "cryptography/CryptoTypes.h"
 #include "accesscontrol/ParticipantSecurityAttributes.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
+#define SEC_BODY 0x30
+#define SEC_PREFIX 0x31
+#define SEC_POSTFIX 0x32
+#define SRTPS_PREFIX 0x33
+#define SRTPS_POSTFIX 0x34
+
+using CryptoTransformKind = std::array<uint8_t, 4>;
+
 // 无加密，无认证标签
-#define CRYPTO_TRANSFORMATION_KIND_NONE              { {0, 0, 0, 0} }
+#define CRYPTO_TRANSFORMATION_KIND_NONE     (CryptoTransformKind{0, 0, 0, 0})
 
 // 无加密, SM4-GMAC 认证 (128位)
-#define CRYPTO_TRANSFORMATION_KIND_SM4_GMAC          { {0, 0, 0, 10} }
+#define CRYPTO_TRANSFORMATION_KIND_SM4_GMAC (CryptoTransformKind{0, 0, 0, 10})
 
 // SM4-GCM 认证加密 (128位)
-#define CRYPTO_TRANSFORMATION_KIND_SM4_GCM           { {0, 0, 0, 11} }
+#define CRYPTO_TRANSFORMATION_KIND_SM4_GCM  (CryptoTransformKind {0, 0, 0, 11})
 
 constexpr CryptoTransformKind c_transform_kind_none = CRYPTO_TRANSFORMATION_KIND_NONE;
 constexpr CryptoTransformKind c_transform_kind_sm4_gmac = CRYPTO_TRANSFORMATION_KIND_SM4_GMAC;
@@ -52,6 +63,14 @@ struct KeySessionData
 
 typedef std::vector<KeyMaterial_SM4_GCM_GMAC> KeyMaterial_SM4_GCM_GMAC_Seq;
 
+struct MessageFramingProfile {
+    uint32_t header_fixed = 0;    // 固定头部开销（字节）
+    uint32_t header_mutable_length = 0;    // 每接收方额外头开销
+    uint32_t encrypt_percentage = 100;  // 加密数据百分比
+    uint32_t tail_fixed = 16;   // AEAD TAG，GCM/GMAC 16 字节
+    uint32_t tail_mutable_length = 0;    // 每接收方额外尾开销
+};
+
 struct EntityKeyHandle
 {
     static const char* const class_id_;
@@ -72,7 +91,9 @@ struct EntityKeyHandle
     // （反向）接收方特定密钥 - 本质上持有远程读取方（remote readers）的主密钥
     KeyMaterial_SM4_GCM_GMAC_Seq Remote2EntityKeyMaterial;
     // 用于加密CryptoToken的密钥材料副本（从父参与者继承）
-    // KeyMaterial_SM4_GCM_GMAC Participant2ParticipantKxKeyMaterial;
+    KeyMaterial_SM4_GCM_GMAC Participant2ParticipantKxKeyMaterial;
+    // 消息级帧参数
+    MessageFramingProfile submsg_framing{};
 
     // 用于存储当前会话密钥，以及判断何时需要更新会话密钥的数据
     KeySessionData Sessions[2];
@@ -83,6 +104,34 @@ struct EntityKeyHandle
 typedef HandleImpl<EntityKeyHandle> SM4GCMGMAC_WriterCryptoHandle;
 typedef HandleImpl<EntityKeyHandle> SM4GCMGMAC_ReaderCryptoHandle;
 typedef HandleImpl<EntityKeyHandle> SM4GCMGMAC_EntityCryptoHandle;
+
+/**
+ * @struct BuffersContainer
+ *
+ * @brief 保存缓存读取状态的结构
+ */
+struct BuffersContainer
+{
+    BuffersContainer(const SerializedBuffer* src, unsigned int num, bool l_endian);
+    BuffersContainer();
+    /** @brief Buffer for source data */
+    const SerializedBuffer* src_buffer;
+    /** @brief The buffers number */
+    unsigned int buffers_num;
+    /** @brief The current using buffer */
+    unsigned int cur_buffer_index;
+    /** @brief The current buffer offset */
+    unsigned int cur_buffer_offset;
+    /** @brief true to little endian of source data */
+    bool little_endian;
+};
+
+enum class PskProtectionKind {
+    NONE = 0,           // 不做任何PSK保护
+    SIGN_ONLY,          // 仅签名/验签（HMAC-SM3）
+    ENCRYPT_ONLY,       // 仅加密（SM4-GCM）
+    SIGN_AND_ENCRYPT    // 先签名再加密
+};
 
 struct ParticipantKeyHandle
 {
@@ -104,14 +153,138 @@ struct ParticipantKeyHandle
     std::vector<std::shared_ptr<DatawriterCryptoHandle>> Writers;
     // 所有已匹配读取方（Readers）的加密句柄指针列表
     std::vector<std::shared_ptr<DatareaderCryptoHandle>> Readers;
+    // 消息级帧参数
+    MessageFramingProfile msg_framing{};
 
     // 用于存储当前会话密钥，以及判断何时需要更新会话密钥的数据
     KeySessionData Session;
     uint64_t max_blocks_per_session = {0};
-    std::mutex mutex_; // 互斥锁，用于保证线程安全
+
+    struct PskConfig {
+        bool enabled = false;                     // is_rtps_psk_protected
+        PskProtectionKind kind = PskProtectionKind::NONE; // SIGN_ONLY / ENCRYPT_ONLY / SIGN_AND_ENCRYPT
+    } psk_cfg_;
+
+    struct PskDeriveResult {
+        std::vector<uint8_t> master_sender_key;  // 用于SM4-GCM加密/认证
+        std::vector<uint8_t> master_salt;        // 用于派生IV/nonce
+    };
+
+    std::optional<PskDeriveResult> psk_keys_;        // PSK 派生的主密钥族缓存
+
+    // PSK发送序列号（用于SM4-GCM nonce）
+    mutable std::atomic<uint64_t> psk_send_seq{0};
+    mutable std::mutex mutex_; // 互斥锁，用于保证线程安全
 };
 
 typedef HandleImpl<ParticipantKeyHandle> SM4GCMGMAC_ParticipantCryptoHandle;
+
+/**
+ * @struct  CryptoTransformIdentifier
+ *
+ * @brief   转换标识的数据结构.
+ */
+struct CryptoTransformIdentifier
+{
+    /** @brief	转换类型. */
+    CryptoTransformKind transformation_kind;
+    /** @brief	转换的id. */
+    CryptoTransformKeyId transformation_key_id;
+};
+
+struct SubMsgHeader
+{
+    /** @brief   数据类型. */
+    unsigned char msg_kind;
+    /** @brief   字节顺序标识. */
+    unsigned char flags;
+    /** @brief   相距下一数据头的长度. */
+    unsigned short octets_to_next_header;
+};
+
+/**
+ * @struct  SecureDataHeader
+ *
+ * @brief   加密后的数据头，大端序列化
+ */
+struct CryptoHeader
+{
+    /** @brief  转换的标识*/
+    CryptoTransformIdentifier transform_identifier;
+    /** @brief  与后缀共同组成IV */
+    unsigned char session_id[4];
+    /** @brief  IV后缀 */
+    unsigned char initialization_vector_suffix[8];
+};
+
+/**
+ * @struct   SecureDataBody
+ *
+ * @brief    信息主体数据结构，大端序列化
+ */
+struct CryptoContent
+{
+    /** @brief  数据的类型，无效、加密、签名 */
+    enum bodyKind { INVALID, ENCRYPT, SIGN };
+    /** @brief   数据主体类型的标识. */
+    bodyKind body_flag;
+    /** @brief   子消息头 */
+    SubMsgHeader header;
+    /** @brief   数据长度. */
+    unsigned int body_length;
+    /** @brief   数据指针. */
+    unsigned char* secure_data;
+    /** @brief   包含数据内容的缓存，记录在反序列化时的内容 */
+    BuffersContainer data_buffers;
+};
+
+/**
+ * @struct   ReceiverSpecificMAC
+ *
+ * @brief    接收端详细签名信息数据结构，大端序列化
+ */
+struct ReceiverSpecificMAC
+{
+    /** @brief	标识. */
+    CryptoTransformKeyId receiver_mac_key_id;
+    /** @brief   详细签名信息. */
+    unsigned char  receiver_mac[16];
+};
+
+/**
+ * @struct  SecureDataTag
+ *
+ * @brief   信息尾部数据结构，大端序列化
+ */
+struct CryptoFooter
+{
+    /** @brief  签名信息. */
+    unsigned char common_mac[16];
+    /** @brief  其他接收者详细签名信息. */
+    std::vector<ReceiverSpecificMAC> receiver_specific_macs;
+};
+
+struct SecurePrefixSubMsg : public SubMsgHeader
+{
+    /** @brief   数据头. */
+    CryptoHeader sec_data_header;
+};
+
+struct SecurePostfixSubMsg : public SubMsgHeader
+{
+    /** @brief   数据尾部. */
+    CryptoFooter sec_data_tag;
+};
+
+struct SecureRTPSPrefixSubMsg : public SubMsgHeader
+{
+    /** @brief   RTPS数据报文头部. */
+    unsigned char rtps_header[20];
+    /** @brief   加密数据头部. */
+    CryptoHeader sec_data_header;
+};
+
+typedef SecurePostfixSubMsg SecureRTPSPostfixSubMsg;
 
 TRAVODDS_NAMESPACE_END
 #endif // _SECURITY_AUTHENTICATION_SM4GCMGMAC_TYPES_H_

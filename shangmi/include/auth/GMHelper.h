@@ -14,6 +14,7 @@
 #include "Security/SecurityCommon.h"
 #include "Security/SecurityException.h"
 #include "Security/PKcs11Provider.h"
+#include "cryptography/SM4GCMGMAC_Types.h"
 
 
 #define SM3_DIGEST_LENGTH 32
@@ -209,6 +210,34 @@ public:
         const std::vector<uint8_t>& plaintext,
         std::vector<uint8_t>& ciphertext,
         std::vector<uint8_t>& tag);
+
+    /**
+     * @brief 使用 OpenSSL 3.0+ 实现 SM4-GCM 解密或 SM4-GMAC 认证
+     * @details
+     * - 当 kind 为 c_transform_kind_sm4_gcm 时, 函数会执行解密和认证标签校验。
+     * - 当 kind 为 c_transform_kind_sm4_gmac 时, 函数仅执行认证标签校验 (此时不应有密文输入)。
+     * 该函数能够处理分散在多个缓冲区中的输入数据。
+     *
+     * @param kind          转换类型, 指明是执行 SM4-GCM 解密还是 SM4-GMAC 认证。
+     * @param key           16字节 (128位) 的会话密钥。
+     * @param iv            12字节的初始化向量 (IV)。
+     * @param in_buffers    包含待处理数据(密文)的缓冲区容器。
+     * @param out_need      输出缓冲区 `out` 的最大容量 (字节数)。
+     * @param tag           用于校验的16字节 GCM 认证标签。
+     * @param out           [输出] 用于存放解密后明文的缓冲区。
+     * @param inout_len     [输出] 指向一个无符号整数, 用于接收实际解密并写入 `out` 的字节数。
+     * @return              成功解密时返回写入的字节数 (与 *inout_len 一致)；
+     * 对于 GMAC 模式或解密/认证失败时返回 0。
+     */
+    static int sm4_gcm_gmac_decrypt(
+        CryptoTransformKind kind,
+        const unsigned char* key, 
+        const unsigned char iv[12],
+        const BuffersContainer& in_buffers, 
+        unsigned int out_need,
+        const unsigned char tag[16],
+        unsigned char* out,
+        unsigned int* inout_len);
     
     /**
      * @brief 使用 OpenSSL 3.0+ 的 EVP API 和 C++ vector 实现 SM4-GCM 解密

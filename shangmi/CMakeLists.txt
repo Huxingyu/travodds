@@ -52,6 +52,7 @@ set(SM_SECURITY_SOURCES
     src/accesscontrol/GovernanceParser.cpp
     src/cryptography/SM4GCMGMAC_KeyExchange.cpp
     src/cryptography/SM4GCMGMAC_KeyFactory.cpp
+    src/cryptography/SM4GCMGMAC_Transform.cpp
     src/dcps/topic/topicdescriptionimpl.cpp
     src/dcps/topic/contentfilteredtopicimpl.cpp
     src/dcps/topic/multitopicimpl.cpp
@@ -181,8 +182,8 @@ set(SM_PUBLIC_HEADERS
     include/cryptography/CryptoTypes.h
     include/cryptography/SM4GCMGMAC_Types.h
     include/cryptography/SM4GCMGMAC_KeyExchange.h
-    include/cryptography/SM4GCMGMAC_KeyFactory.h    
-    src/security/propertyqospolicy.h
+    include/cryptography/SM4GCMGMAC_KeyFactory.h
+    include/cryptography/SM4GCMGMAC_Transform.h     
     include/qos/qos.h
     include/TypeSupport.h
     include/rtps/common/Token.h
@@ -252,6 +253,7 @@ set(SM_PRIVATE_HEADERS
     src/rtps/builtin/liveliness/livelinessmanager.h
     src/rtps/builtin/liveliness/livelinessassert.h
     src/rtps/builtin/liveliness/livelinesstatus.h
+    src/security/propertyqospolicy.h
     src/qos/qospolicycheck.h
 )
 

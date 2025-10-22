@@ -11,7 +11,7 @@
 #include "dcps/topic/typesupport.h"
 #include <chrono>
 
-using namespace AGIDDS;
+using namespace TRAVODDS;
 
 class Stype : virtual public TypeSupport
 {

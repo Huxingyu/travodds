@@ -3,10 +3,10 @@
 
 #include "travodds_dll.h"
 #include "CryCommonSource.h"
+#include "cryptography/SM4GCMGMAC_Types.h" 
+#include "cdr/travoddscdr.h"
 
 TRAVODDS_NAMESPACE_BEGIN
-
-class SerializedBuffer;
 
 class CryptoTransform
 {
@@ -15,7 +15,7 @@ public:
     virtual ~CryptoTransform(){};
 
     /**
-    * @fn  bool CryptoTransform::encode_serialized_payload( ZR_INT8* encoded_buffer, int* encoded_buffer_length, ZR_INT8* extra_inline_qos, int* extra_inlien_qos_num, const ZR_INT8* plain_buffer, int plain_buffer_length, DatawriterCryptoHandle sending_datawriter_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::encode_serialized_payload( ZR_INT8* encoded_buffer, int* encoded_buffer_length, ZR_INT8* extra_inline_qos, int* extra_inlien_qos_num, const ZR_INT8* plain_buffer, int plain_buffer_length, DatawriterCryptoHandle& sending_datawriter_crypto, SecurityException& exception);
     *
     * @brief   使用密钥对payload级别明文进行加密或签名
     *
@@ -30,15 +30,15 @@ public:
     */
 
     virtual bool encode_serialized_payload(
-        SerializedBuffer* encoded_buffer,
-        SerializedBuffer* extra_inline_qos,
+        SerializedBuffer& encoded_buffer,
+        SerializedBuffer& extra_inline_qos,
         const SerializedBuffer* plain_buffer,
         int plain_buffer_count,
-        DatawriterCryptoHandle sending_datawriter_crypto,
-        SecurityException* exception) = 0;
+        DatawriterCryptoHandle& sending_datawriter_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::encode_datawriter_submessage( ZR_INT8* encode_rtps_submessage, int* encode_rtps_submessage_length, const ZR_INT8* plain_rtps_submessage, int plain_rtps_submessage_length, DatawriterCryptoHandle sending_datawriter_crypto, const DatareaderCryptoHandle* receiving_datareader_crypto_list, int receiving_datareader_crypto_num, SecurityException* exception);
+    * @fn  bool CryptoTransform::encode_datawriter_submessage( ZR_INT8* encode_rtps_submessage, int* encode_rtps_submessage_length, const ZR_INT8* plain_rtps_submessage, int plain_rtps_submessage_length, DatawriterCryptoHandle& sending_datawriter_crypto, const DatareaderCryptoHandle& receiving_datareader_crypto_list, int receiving_datareader_crypto_num, SecurityException& exception);
     *
     * @brief   使用密钥对datawriter的submessage进行加密或签名
 
@@ -55,16 +55,16 @@ public:
     */
 
     virtual bool encode_datawriter_submessage(
-        SerializedBuffer* encoded_rtps_submessage,
+        SerializedBuffer& encoded_rtps_submessage,
         const SerializedBuffer* plain_rtps_submessage,
         int plain_rtps_submessage_count,
-        DatawriterCryptoHandle sending_datawriter_crypto,
+        DatawriterCryptoHandle& sending_datawriter_crypto,
         const DatareaderCryptoHandle* receiving_datareader_crypto_list,
         int receiving_datareader_crypto_num,
-        SecurityException* exception) = 0;
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::encode_datareader_submessage( ZR_INT8* encoded_rtps_submessage, int* encode_rtps_submessage_length, const ZR_INT8* plain_rtps_submessage, int plain_rtps_suibmessage_length, DatareaderCryptoHandle sending_datareader_crypto, const DatawriterCryptoHandle* receiving_datawriter_crypto_list, int receiving_datawriter_crypto_list_num, SecurityException* exception);
+    * @fn  bool CryptoTransform::encode_datareader_submessage( ZR_INT8* encoded_rtps_submessage, int* encode_rtps_submessage_length, const ZR_INT8* plain_rtps_submessage, int plain_rtps_suibmessage_length, DatareaderCryptoHandle& sending_datareader_crypto, const DatawriterCryptoHandle& receiving_datawriter_crypto_list, int receiving_datawriter_crypto_list_num, SecurityException& exception);
     *
     * @brief   根据datareader的密钥对datareader的submessage信息进行加密或者签名
     *
@@ -80,16 +80,16 @@ public:
     */
 
     virtual bool encode_datareader_submessage(
-        SerializedBuffer* encoded_rtps_submessage,
+        SerializedBuffer& encoded_rtps_submessage,
         const SerializedBuffer* plain_rtps_submessage,
         int plain_rtps_submessage_count,
-        DatareaderCryptoHandle sending_datareader_crypto,
+        DatareaderCryptoHandle& sending_datareader_crypto,
         const DatawriterCryptoHandle* receiving_datawriter_crypto_list,
         int receiving_datawriter_crypto_list_num,
-        SecurityException* exception) = 0;
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::encode_rtps_message( ZR_INT8* encoded_rtps_message, int* encoded_rtps_message_length, const ZR_INT8* plain_rtps_message, int plain_rtps_message_length, ParticipantCryptoHandle sending_crypto, const ParticipantCryptoHandle* receiving_crypto_list, int receiving_crypto_list_num, SecurityException* exception);
+    * @fn  bool CryptoTransform::encode_rtps_message( ZR_INT8* encoded_rtps_message, int* encoded_rtps_message_length, const ZR_INT8* plain_rtps_message, int plain_rtps_message_length, ParticipantCryptoHandle&  sending_crypto, const ParticipantCryptoHandle* receiving_crypto_list, int receiving_crypto_list_num, SecurityException& exception);
     *
     * @brief   使用participant的密钥对rtps的message进行加密或者签名
     *
@@ -105,16 +105,15 @@ public:
     */
 
     virtual bool encode_rtps_message(
-        SerializedBuffer* encoded_rtps_message,
+        SerializedBuffer& encoded_rtps_message,
         const SerializedBuffer* plain_rtps_message,
         int plain_rtps_message_count,
-        ParticipantCryptoHandle sending_crypto,
-        const ParticipantCryptoHandle* receiving_crypto_list,
-        int receiving_crypto_list_num,
-        SecurityException* exception) = 0;
+        ParticipantCryptoHandle& sending_crypto,
+        std::vector<ParticipantCryptoHandle*>& receiving_crypto_list,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::decode_rtps_message( ZR_INT8* plain_buffer, int* plain_buffer_length, const ZR_INT8* encoded_buffer, int encoded_buffer_length, ParticipantCryptoHandle receiving_crypto, ParticipantCryptoHandle sending_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::decode_rtps_message( ZR_INT8* plain_buffer, int* plain_buffer_length, const ZR_INT8* encoded_buffer, int encoded_buffer_length, ParticipantCryptoHandle&  receiving_crypto, ParticipantCryptoHandle&  sending_crypto, SecurityException& exception);
     *
     * @brief   使用远端participant的密钥对远端的密文进行解密或者验证签名
     *
@@ -129,15 +128,15 @@ public:
     */
 
     virtual bool decode_rtps_message(
-        SerializedBuffer* plain_buffer,
+        SerializedBuffer& plain_buffer,
         const SerializedBuffer* encoded_buffer,
         int encoded_buffer_count,
-        ParticipantCryptoHandle receiving_crypto,
-        ParticipantCryptoHandle sending_crypto,
-        SecurityException* exception) = 0;
+        ParticipantCryptoHandle&  receiving_crypto,
+        ParticipantCryptoHandle&  sending_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::preprocess_secure_submsg( DatawriterCryptoHandle datawriter_crypto, DatareaderCryptoHandle datareader_crypto, DDS_SecureSujmessageCategorty_t* secure_submessage_category, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, ParticipantCryptoHandle receiving_crypto, ParticipantCryptoHandle sending_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::preprocess_secure_submsg( DatawriterCryptoHandle& datawriter_crypto, DatareaderCryptoHandle& datareader_crypto, DDS_SecureSujmessageCategorty_t* secure_submessage_category, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, ParticipantCryptoHandle&  receiving_crypto, ParticipantCryptoHandle&  sending_crypto, SecurityException& exception);
     *
     * @brief   为submessage寻找与之相匹配的datawriter密钥和datareader密钥
     *
@@ -154,17 +153,17 @@ public:
     */
 
     virtual bool preprocess_secure_submsg(
-        DatawriterCryptoHandle* datawriter_crypto,
-        DatareaderCryptoHandle* datareader_crypto,
-        SecureSubmessageCategory_t* secure_submessage_category,
-        const SerializedBuffer* encoded_rtps_submessage,
+        DatawriterCryptoHandle& datawriter_crypto,
+        DatareaderCryptoHandle& datareader_crypto,
+        SecureSubmessageCategory_t& secure_submessage_category,
+        const SerializedBuffer& encoded_rtps_submessage,
         int encoded_rtps_submessage_count,
-        ParticipantCryptoHandle receiving_crypto,
-        ParticipantCryptoHandle sending_crypto,
-        SecurityException* exception) = 0;
+        ParticipantCryptoHandle&  receiving_crypto,
+        ParticipantCryptoHandle&  sending_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::decode_datawriter_submessage( ZR_INT8* plain_rtps_submessage, int* plain_rtps_submessage_length, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, DatareaderCryptoHandle receiving_datareader_crypto, DatawriterCryptoHandle sending_datawriter_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::decode_datawriter_submessage( ZR_INT8* plain_rtps_submessage, int* plain_rtps_submessage_length, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, DatareaderCryptoHandle& receiving_datareader_crypto, DatawriterCryptoHandle& sending_datawriter_crypto, SecurityException& exception);
     *
     * @brief   使用远端datawriter的密钥对datawriter的submessage进行解密或者签名验证
     *
@@ -179,15 +178,15 @@ public:
     */
 
     virtual bool decode_datawriter_submessage(
-        SerializedBuffer* plain_rtps_submessage,
+        SerializedBuffer& plain_rtps_submessage,
         const SerializedBuffer* encoded_rtps_submessage,
         int encoded_rtps_submessage_count,
-        DatareaderCryptoHandle receiving_datareader_crypto,
-        DatawriterCryptoHandle sending_datawriter_crypto,
-        SecurityException* exception) = 0;
+        DatareaderCryptoHandle& receiving_datareader_crypto,
+        DatawriterCryptoHandle& sending_datawriter_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::decode_datareader_submessage( ZR_INT8* plain_rtps_submessage, int* plain_rtps_submessage_length, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, DatawriterCryptoHandle receiving_datawriter_crypto, DatareaderCryptoHandle sending_datareader_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::decode_datareader_submessage( ZR_INT8* plain_rtps_submessage, int* plain_rtps_submessage_length, const ZR_INT8* encoded_rtps_submessage, int encoded_rtps_submessage_length, DatawriterCryptoHandle& receiving_datawriter_crypto, DatareaderCryptoHandle& sending_datareader_crypto, SecurityException& exception);
     *
     * @brief   使用远端datareader的密钥对datareader的submessage消息进行密文解密或者签名验证.
     *
@@ -202,15 +201,15 @@ public:
     */
 
     virtual bool decode_datareader_submessage(
-        SerializedBuffer* plain_rtps_submessage,
+        SerializedBuffer& plain_rtps_submessage,
         const SerializedBuffer* encoded_rtps_submessage,
         int encoded_rtps_submessage_count,
-        DatawriterCryptoHandle receiving_datawriter_crypto,
-        DatareaderCryptoHandle sending_datareader_crypto,
-        SecurityException* exception) = 0;
+        DatawriterCryptoHandle& receiving_datawriter_crypto,
+        DatareaderCryptoHandle& sending_datareader_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn  bool CryptoTransform::decode_serialized_payload( ZR_INT8* plain_buffer, int* plain_buffer_length, const ZR_INT8* encode_buffer, int encode_buffer_length, const ZR_INT8* inline_qos, int inline_qos_num, DatareaderCryptoHandle receiving_datareader_crypto, DatawriterCryptoHandle sending_datawriter_crypto, SecurityException* exception);
+    * @fn  bool CryptoTransform::decode_serialized_payload( ZR_INT8* plain_buffer, int* plain_buffer_length, const ZR_INT8* encode_buffer, int encode_buffer_length, const ZR_INT8* inline_qos, int inline_qos_num, DatareaderCryptoHandle& receiving_datareader_crypto, DatawriterCryptoHandle& sending_datawriter_crypto, SecurityException& exception);
     *
     * @brief   使用秘钥对datareader的submessage消息进行密文解密或者签名验证.
     *
@@ -227,17 +226,17 @@ public:
     */
 
     virtual bool decode_serialized_payload(
-        SerializedBuffer* plain_buffer,
-        const SerializedBuffer* encoded_buffer,
+        SerializedBuffer& plain_buffer,
+        const SerializedBuffer& encoded_buffer,
         int encoded_buffer_count,
-        const SerializedBuffer* inline_qos,
+        const SerializedBuffer& inline_qos,
         int inline_qos_count,
-        DatareaderCryptoHandle receiving_datareader_crypto,
-        DatawriterCryptoHandle sending_datawriter_crypto,
-        SecurityException* exception) = 0;
+        DatareaderCryptoHandle& receiving_datareader_crypto,
+        DatawriterCryptoHandle& sending_datawriter_crypto,
+        SecurityException& exception) = 0;
 
     /**
-    * @fn virtual bool CryptoTransform::get_payload_encode_attributes( DatawriterCryptoHandle datawriter_crypto, CryptoPayloadEncodeAttributes* payload_encode_attributes) = 0;
+    * @fn virtual bool CryptoTransform::get_payload_encode_attributes( DatawriterCryptoHandle& datawriter_crypto, CryptoPayloadEncodeAttributes& payload_encode_attributes) = 0;
     *
     * @brief 获取对数据负载进行加密的相关属性
     *
@@ -250,11 +249,11 @@ public:
     * @return 成功则返回true， 失败返回false.
     */
     virtual bool get_payload_encode_attributes(
-        DatawriterCryptoHandle datawriter_crypto,
-        CryptoPayloadEncodeAttributes* payload_encode_attributes) = 0;
+        DatawriterCryptoHandle& datawriter_crypto,
+        CryptoPayloadEncodeAttributes& payload_encode_attributes) = 0;
 
     /**
-    * @fn virtual bool CryptoTransform::get_datawriter_submessage_encode_attributes( DatawriterCryptoHandle sending_datawriter_crypto, CryptoWriterSubmessageAttributes* writer_submessage_encode_attributes) = 0;
+    * @fn virtual bool CryptoTransform::get_datawriter_submessage_encode_attributes( DatawriterCryptoHandle& sending_datawriter_crypto, CryptoWriterSubmessageAttributes& writer_submessage_encode_attributes) = 0;
     *
     * @brief 获取对DataWriter子消息进行加密的相关属性
     *
@@ -264,11 +263,11 @@ public:
     * @return 成功则返回true， 失败返回false.
     */
     virtual bool get_datawriter_submessage_encode_attributes(
-        DatawriterCryptoHandle sending_datawriter_crypto,
-        CryptoWriterSubmessageAttributes* writer_submessage_encode_attributes) = 0;
+        DatawriterCryptoHandle& sending_datawriter_crypto,
+        CryptoWriterSubmessageAttributes& writer_submessage_encode_attributes) = 0;
 
     /**
-    * @fn virtual bool CryptoTransform::get_datareader_submessage_encode_attributes( DatareaderCryptoHandle datareader_crypto, CryptoReaderSubmessageAttributes* reader_submessage_encode_attributes) = 0;
+    * @fn virtual bool CryptoTransform::get_datareader_submessage_encode_attributes( DatareaderCryptoHandle& datareader_crypto, CryptoReaderSubmessageAttributes* reader_submessage_encode_attributes) = 0;
     *
     * @brief 获取对DataReader子消息进行加密的相关属性
     *
@@ -278,11 +277,11 @@ public:
     * @return 成功则返回true， 失败返回false.
     */
     virtual bool get_datareader_submessage_encode_attributes(
-        DatareaderCryptoHandle datareader_crypto,
-        CryptoReaderSubmessageAttributes* reader_submessage_encode_attributes) = 0;
+        DatareaderCryptoHandle& datareader_crypto,
+        CryptoReaderSubmessageAttributes& reader_submessage_encode_attributes) = 0;
 
     /**
-    * @fn virtual bool CryptoTransform::get_rtps_message_encode_attributes( ParticipantCryptoHandle participant_crypto, CryptoRtpsMessageAttributes* rtps_message_encode_attributes) = 0;
+    * @fn virtual bool CryptoTransform::get_rtps_message_encode_attributes( ParticipantCryptoHandle&  participant_crypto, CryptoRtpsMessageAttributes* rtps_message_encode_attributes) = 0;
     *
     * @brief 获取对RTPS消息进行加密的相关属性
     *
@@ -292,8 +291,8 @@ public:
     * @return 成功则返回true， 失败返回false.
     */
     virtual bool get_rtps_message_encode_attributes(
-        ParticipantCryptoHandle participant_crypto,
-        CryptoRtpsMessageAttributes* rtps_message_encode_attributes) = 0;
+        ParticipantCryptoHandle& participant_crypto,
+        CryptoRtpsMessageAttributes& rtps_message_encode_attributes) = 0;
 };
 
 TRAVODDS_NAMESPACE_END
