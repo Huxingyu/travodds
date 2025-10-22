@@ -287,14 +287,20 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 		}
 	}
 
+
+	/* wangyi 获取远端数据写者QoS */
+	PublicationBuiltinTopicData publicationData;
+	if (EXCLUSIVE_OWNERSHIP_QOS == qos_.ownership.kind) {
+		GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(cache->writerGuid));
+	}
 	{
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
-		//TODO ownershipStrength的值补充输入
+		
 		ReturnCode_t ret = readerCache_->UpdataSampleInstance(
 			cache->instanceHandle, 
 			cache->kind, 
 			cache->writerGuid,
-			0, //ownershipStrength  
+			publicationData.ownership_strength.value, //ownershipStrength  
 			SHARED_OWNERSHIP_QOS == qos_.ownership.kind ? true : false
 		);
 		if (RETCODE_OK != ret) {

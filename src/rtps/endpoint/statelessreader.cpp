@@ -78,6 +78,14 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 		return RETCODE_TIME_BASED_FILTER;
 	}
 
+	/* wangyi 没有数据不触发回调 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+			//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+			return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+		}
+	}
+
 	if (RETCODE_OK != ret && datareader_) {
 		datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 	}
@@ -178,6 +186,14 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			return RETCODE_TIME_BASED_FILTER;
 		}
 
+		/* wangyi 没有数据不触发回调 */
+		if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+			if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+				//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+			}
+		}
+
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(dataFragCache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
@@ -262,6 +278,10 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 			/* TODO 日志 */
 			TRAVODDS_LOG(LOG_ERROR, "livelinessManager is nullptr");
 		}
+	}
+	/* wangyi 删除旧数据 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		readerCache_->RemoveRemoteWriter(writerGuid);
 	}
 	matchWriters_.erase(writerGuid);
 }
