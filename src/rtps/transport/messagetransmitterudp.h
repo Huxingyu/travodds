@@ -23,8 +23,7 @@ using _RECV_SOCKET_MAP = std::map<uint16_t, std::shared_ptr<asio::ip::udp::socke
 using _SEND_PORT_SOCKET_MAP = std::map<Locator_t, std::shared_ptr<asio::ip::udp::socket>>;
 
 
-//接收报文的最大长度 基于UDP
-#define MAXSIZE 65527
+
 class MessageTransmitterUDPv4;
 class MessageTransmitterUDPv6;
 /**
@@ -48,6 +47,8 @@ public:
 	 * @return 封装成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority = -1);
+
+	ReturnCode_t SendAddrRemove(Locator_t destination);
 
 	/**
 	 * @brief 发送RTPS报文，可使用LOCATOR_INVALID不指定网卡，或使用指定IP的网卡进行发送。
@@ -106,16 +107,6 @@ public:
 	 * @brief 设置当前发送线程运行状态为停止，即更改runFlag_变量值为false。
 	 */
 	virtual void SetStop() override;
-public:
-	/**
-	 * @brief 报文接收后临时回调函数，触发报文解析模块。
-	 *
-	 * @param [in] message RTPS报文。
-	 * @param [in] len 报文长度。
-	 *
-	 * @return 报文解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	ReturnCode_t InterpretMessage(char* message, uint32_t len);
 
 private:
 	/**

@@ -1,4 +1,5 @@
 #include "rtps/transport/messagetransmitter.h"
+#include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
 USING_TRAVODDS_NAMESPACE
 
@@ -29,9 +30,9 @@ uint32_t MessageTransmitter::GetTransmitterKind()
 void MessageTransmitter::SetUnicastLocatorList(const LocatorVec& locatorlist)
 {
 	for (auto& it : locatorlist) {
-		if (it.kind == kind_) {
-			unicastLocatorList_.push_back(it);
-		}
+		Locator_t loc = it;
+		loc.kind = kind_;
+		unicastLocatorList_.push_back(loc);
 	}
 }
 
@@ -87,4 +88,9 @@ ReturnCode_t MessageTransmitter::MessageSend(LocatorVec& destinationList, char* 
 		MessageSend(srcLocator, itDest, message, length, priority);
 	}
 	return RETCODE_OK;
+}
+
+ReturnCode_t MessageTransmitter::InterpretMessage(char* message, uint32_t len)
+{
+	return messageProcessor_->InterpretSubmessage(message, len);
 }
