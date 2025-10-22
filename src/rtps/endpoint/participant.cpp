@@ -5,6 +5,7 @@
 #include "rtps/endpoint/statelessreader.h"
 #include "rtps/transport/messagetransmitterudp.h"
 #include "rtps/transport/messagetransmittertcp.h"
+#include "rtps/transport/messagetransmittershm.h"
 #include "rtps/messages/messageprocessor.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
@@ -63,6 +64,12 @@ Participant::~Participant()
 ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 {
 	qos_ = qos;
+
+	int32_t participantid = 0;
+
+	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
+	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
+
 	/* wangyi */
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
@@ -79,13 +86,17 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	if (qos_.transport.hasTransport(TRANSPORT_TCPv6_QOS)) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterTCPv6>(messageProcessor_));
 	}
-
+	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
+		Locator_t loc;
+		loc.kind = LOCATOR_KIND_SHM;
+		loc.port = userPort;
+		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
+		defaultUnicastLocatorList_.push_back(loc);
+	}
+	
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
-	int32_t participantid = 0;
-
-	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
-	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
 
 	for (auto& ip : localIps) {
 		Locator_t ipLoc;
@@ -865,13 +876,17 @@ void Participant::TransmittersConnect(const LocatorVec& remoteLocator)
 {
 	std::shared_ptr<MessageTransmitter> tcpv4Transmitter = nullptr;
 	std::shared_ptr<MessageTransmitter> tcpv6Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> shmTransmitter = nullptr;
 	for (auto& transmitter : messageTransmitters_) {
 
 		if(transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv4 ) {
 			tcpv4Transmitter = transmitter;
 			continue;
-		} else if(transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
 			tcpv6Transmitter = transmitter;
+			continue;
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_SHM) {
+			shmTransmitter = transmitter;
 			continue;
 		} else {
 			continue;
@@ -885,6 +900,9 @@ void Participant::TransmittersConnect(const LocatorVec& remoteLocator)
 		} else if (dest.kind == LOCATOR_KIND_TCPv6 && tcpv6Transmitter) {
 			src.kind = LOCATOR_KIND_TCPv6;
 			tcpv6Transmitter->SendAddrAdd(src, dest);
+		} else if (dest.kind == LOCATOR_KIND_SHM && shmTransmitter) {
+			src.kind = LOCATOR_KIND_SHM;
+			shmTransmitter->SendAddrAdd(src, dest);
 		} else {
 			continue;
 		}
@@ -894,28 +912,31 @@ void Participant::TransmittersDisconnect(const LocatorVec& remoteLocator)
 {
 	std::shared_ptr<MessageTransmitter> tcpv4Transmitter = nullptr;
 	std::shared_ptr<MessageTransmitter> tcpv6Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> shmTransmitter = nullptr;
+
 	for (auto& transmitter : messageTransmitters_) {
 
 		if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv4) {
 			tcpv4Transmitter = transmitter;
 			continue;
-		}
-		else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
 			tcpv6Transmitter = transmitter;
 			continue;
-		}
-		else {
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_SHM) {
+			shmTransmitter = transmitter;
+			continue;
+		} else {
 			continue;
 		}
 	}
 	for (const auto& dest : remoteLocator) {
 		if (dest.kind == LOCATOR_KIND_TCPv4 && tcpv4Transmitter) {
 			tcpv4Transmitter->SendAddrRemove(dest);
-		}
-		else if (dest.kind == LOCATOR_KIND_TCPv6 && tcpv6Transmitter) {
+		} else if (dest.kind == LOCATOR_KIND_TCPv6 && tcpv6Transmitter) {
 			tcpv6Transmitter->SendAddrRemove(dest);
-		}
-		else {
+		} else if (dest.kind == LOCATOR_KIND_SHM && shmTransmitter) {
+			shmTransmitter->SendAddrRemove(dest);
+		} else {
 			continue;
 		}
 	}

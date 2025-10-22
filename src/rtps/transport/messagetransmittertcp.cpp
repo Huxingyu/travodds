@@ -310,8 +310,7 @@ void MessageTransmitterTCP::AsyncAccept()
 					tv.tv_usec = 200 * 100;
 #endif
 					if (-1 == setsockopt(newSocket->native_handle(), SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv))) {
-
-						throw std::exception("setsockopt SO_RCVTIMEO failed");
+						return;
 					}
 
 					// 添加到连接列表
@@ -416,7 +415,7 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 
 		if (-1 == setsockopt(newSendSocket->native_handle(), SOL_SOCKET, SO_SNDTIMEO, (char*)&tv, sizeof(tv))) {
 
-			throw std::exception("setsockopt SO_SNDTIMEO failed");
+			throw std::runtime_error("setsockopt SO_SNDTIMEO failed");
 		}
 		/* 如果端口号不为0,绑定端口号 */
 		if (0 != src.port)

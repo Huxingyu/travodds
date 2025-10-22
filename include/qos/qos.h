@@ -282,7 +282,8 @@ enum TransportQosPolicyKind : octet {
 	TRANSPORT_UDPv4_QOS = 1,
 	TRANSPORT_UDPv6_QOS = 1 << 1,
 	TRANSPORT_TCPv4_QOS = 1 << 2,
-	TRANSPORT_TCPv6_QOS = 1 << 3
+	TRANSPORT_TCPv6_QOS = 1 << 3,
+	TRANSPORT_SHM_QOS   = 1 << 4
 };
 
 struct TransportQosPolicy
