@@ -80,9 +80,9 @@ public:
         const DatareaderCryptoTokenSeq& remote_datareader_tokens,
         SecurityException& exception) override;
 
-    // bool return_crypto_tokens(
-    //     const CryptoTokenSeq& crypto_tokens,
-    //     SecurityException& exception) override;
+    bool return_crypto_tokens(
+        CryptoTokenSeq* crypto_tokens,
+        SecurityException& exception) override;
 
     std::vector<uint8_t> KeyMaterialCDRSerialize(
             KeyMaterial_SM4_GCM_GMAC& key);

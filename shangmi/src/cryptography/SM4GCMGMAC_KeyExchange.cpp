@@ -516,6 +516,19 @@ bool SM4GCMGMAC_KeyExchange::set_remote_participant_crypto_tokens(
     return true;
 }
 
+bool SM4GCMGMAC_KeyExchange::return_crypto_tokens(
+    CryptoTokenSeq* crypto_tokens,
+    SecurityException& exception)
+{
+    if (crypto_tokens==nullptr)
+    {
+        exception = SecurityException("The tokenSeq is NULL.");
+        return false;
+    }
+    //清空seq
+    crypto_tokens->clear();
+    return true;
+}
 
 
 bool SM4GCMGMAC_KeyExchange::create_local_datawriter_crypto_tokens(

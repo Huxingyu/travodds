@@ -140,7 +140,7 @@ public:
     */
 
     virtual bool return_crypto_tokens(
-        const CryptoTokenSeq& crypto_tokens,
+        CryptoTokenSeq* crypto_tokens,
         SecurityException& exception) = 0;
 };
 

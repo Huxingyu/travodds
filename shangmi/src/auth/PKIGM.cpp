@@ -2294,3 +2294,11 @@ bool PKIGM::set_listener(
     (void)exception; // 避免未使用参数警告
     return true;
 }
+
+bool PKIGM::return_identity_status_token(
+    IdentityStatusToken *token,
+    SecurityException &exception){
+    delete token;
+    token = nullptr;
+    return true;
+}
