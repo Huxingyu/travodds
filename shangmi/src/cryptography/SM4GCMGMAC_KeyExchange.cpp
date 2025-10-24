@@ -1,8 +1,6 @@
-#include "travodds_dll.h"
 #include "cryptography/SM4GCMGMAC_KeyExchange.h"
 #include "common/log/logger.h"
 
-#include <cstring>
 #include <sstream>
 
 #include <openssl/aes.h>
@@ -10,7 +8,7 @@
 #include <openssl/rand.h>
 
 #include "auth/GMHelper.h"
-USING_TRAVODDS_NAMESPACE
+using namespace TRAVODDS;
 
 // PSK 基本配置
 static bool get_psk_params_stub(
@@ -47,13 +45,172 @@ SM4GCMGMAC_KeyExchange::~SM4GCMGMAC_KeyExchange()
 {
 }
 
-bool SM4GCMGMAC_KeyExchange::derive_psk_master_keys(
-    const SM4GCMGMAC_ParticipantCryptoHandle& local_participant,
-    PskDeriveResult& out_keys)
+bool SM4GCMGMAC_KeyExchange::protect_with_psk(
+        SM4GCMGMAC_ParticipantCryptoHandle& pc,
+        PskProtectionKind kind,
+        const std::vector<uint8_t>& aad,
+        const std::vector<uint8_t>& plaintext,
+        ProtectedBlob& out,
+        SecurityException& ex)
 {
-    out_keys = {};
-    if (!is_rtps_psk_protected_ || rtps_psk_protection_kind_ == PskProtectionKind::NONE) {
-        return false; // 未启用PSK时，不派生
+    if (pc.nil()) {
+        ex = SecurityException("protect_with_psk: nil participant");
+        return false;
+    }
+    if (!pc->psk_cfg_.enabled || kind == PskProtectionKind::NONE) {
+        out.payload = plaintext;
+        out.mac.clear();
+        return true;
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(pc->mutex_);
+        if (!pc->psk_keys_.has_value()) {
+            if (!SM4GCMGMAC_KeyExchange::derive_psk_master_keys(pc, ex)) {
+                return false;
+            }
+            if (!pc->psk_keys_.has_value()) {
+                ex = SecurityException("protect_with_psk: PSK derivation produced no keys");
+                return false;
+            }
+        }
+    }
+
+    const auto& psk = *pc->psk_keys_;
+
+    const uint64_t seq = pc->psk_send_seq.fetch_add(1, std::memory_order_relaxed);
+
+    switch (kind)
+    {
+        case PskProtectionKind::SIGN_ONLY:
+        {
+            if (!psk_sign_payload(psk.master_sender_key, out.payload, out.mac)) {
+                ex = SecurityException("HMAC-SM3 signing failed");
+                return false;
+            }
+            return true;
+        }
+        case PskProtectionKind::ENCRYPT_ONLY:
+        {
+            if (!psk_encrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, out.payload)) {
+                ex = SecurityException("SM4-GCM encryption failed");
+                return false;
+            }
+            return true;
+        }
+        case PskProtectionKind::SIGN_AND_ENCRYPT:
+        {
+            if (!psk_sign_payload(psk.master_sender_key, out.payload, out.mac)) {
+                ex = SecurityException("HMAC-SM3 signing failed");
+                return false;
+            }
+            if (!psk_encrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, out.payload)) {
+                ex = SecurityException("SM4-GCM encryption failed");
+                return false;
+            }
+            return true;
+        }
+        default:
+            ex = SecurityException("Unknown PskProtectionKind");
+            return false;
+    }
+}
+
+bool SM4GCMGMAC_KeyExchange::unprotect_with_psk(
+    SM4GCMGMAC_ParticipantCryptoHandle& pc,          // 由 derive_psk_master_keys得到
+    PskProtectionKind kind,               // 与对端一致
+    uint64_t seq,               // 入站报文的序列号（由调用者提供/解析）
+    const std::vector<uint8_t>& aad,
+    const std::vector<uint8_t>& in_payload,
+    const std::vector<uint8_t>& in_mac,
+    std::vector<uint8_t>& out_plaintext,
+    SecurityException& ex)
+{
+    if (pc.nil()) {
+        ex = SecurityException("protect_with_psk: nil participant");
+        return false;
+    }
+    if (!pc->psk_cfg_.enabled || kind == PskProtectionKind::NONE) {
+        return true;
+    }
+
+    {
+        std::lock_guard<std::mutex> lk(pc->mutex_);
+        if (!pc->psk_keys_.has_value()) {
+            if (!SM4GCMGMAC_KeyExchange::derive_psk_master_keys(pc, ex)) {
+                return false;
+            }
+            if (!pc->psk_keys_.has_value()) {
+                ex = SecurityException("protect_with_psk: PSK derivation produced no keys");
+                return false;
+            }
+        }
+    }
+
+    const auto& psk = *pc->psk_keys_;
+
+    out_plaintext = in_payload;
+
+    switch (kind)
+    {
+        case PskProtectionKind::SIGN_ONLY:
+            if (in_mac.empty()) {
+                ex = SecurityException("Missing MAC for SIGN_ONLY");
+                return false;
+            }
+            if (!psk_verify_payload(psk.master_sender_key, out_plaintext, in_mac)) {
+                ex = SecurityException("HMAC-SM3 verification failed (SIGN_ONLY)");
+                return false;
+            }
+            return true;
+
+        case PskProtectionKind::ENCRYPT_ONLY:
+            if (!psk_decrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, out_plaintext)) {
+                ex = SecurityException("SM4-GCM decryption failed (ENCRYPT_ONLY)");
+                return false;
+            }
+            return true;
+
+        case PskProtectionKind::SIGN_AND_ENCRYPT:
+            if (in_mac.empty()) {
+                ex = SecurityException("Missing MAC for SIGN_AND_ENCRYPT");
+                return false;
+            }
+            // 先解密
+            if (!psk_decrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, out_plaintext)) {
+                ex = SecurityException("SM4-GCM decryption failed (SIGN_AND_ENCRYPT)");
+                return false;
+            }
+            // 再验签
+            if (!psk_verify_payload(psk.master_sender_key, out_plaintext, in_mac)) {
+                ex = SecurityException("HMAC-SM3 verification failed (SIGN_AND_ENCRYPT)");
+                return false;
+            }
+            return true;
+
+        default:
+            ex = SecurityException("Unknown PskProtectionKind");
+            return false;
+    }
+}
+
+bool derive_psk_master_keys(
+    SM4GCMGMAC_ParticipantCryptoHandle& local_participant,
+    SecurityException& ex)
+{
+    SM4GCMGMAC_ParticipantCryptoHandle& pc =
+    SM4GCMGMAC_ParticipantCryptoHandle::narrow(local_participant);
+
+    if (pc.nil()) {
+        ex = SecurityException("derive_psk_master_keys: nil participant");
+        return false;
+    }
+
+    // 后续访问仍用 pc-> 成员
+    if (!pc->psk_cfg_.enabled || pc->psk_cfg_.kind == PskProtectionKind::NONE) {
+        std::lock_guard<std::mutex> lk(pc->mutex_);
+        pc->psk_keys_.reset();
+        return true;
     }
 
     // 取 PSK 与 RTPS 上下文
@@ -61,12 +218,14 @@ bool SM4GCMGMAC_KeyExchange::derive_psk_master_keys(
     uint32_t passphrase_id = 0;
     std::vector<uint8_t> psk; // PreSharedSecret
     if (!get_psk_params_stub(local_participant, passphrase_id, psk)) {
+        ex = SecurityException("derive_psk_master_keys: missing PSK params");
         return false;
     }
     uint16_t domain_id = 0; 
     std::string domain_tag;
     uint8_t pv[2]{}, vid[2]{}, gp[12]{};
     if (!get_rtps_context_stub(local_participant, domain_id, domain_tag, pv, vid, gp)) {
+        ex = SecurityException("derive_psk_master_keys: missing RTPS context");
         return false;
     }
 
@@ -75,10 +234,13 @@ bool SM4GCMGMAC_KeyExchange::derive_psk_master_keys(
     std::string sid_input = std::string("DomainId=") + std::to_string(domain_id)
                           + std::string(";DomainTag=") + domain_tag;
     uint8_t sid_sm3[32]; 
-    unsigned int sid_len=0;
-    GMHelper::sm3_digest(sid_input.data(), sid_input.size(), sid_sm3, &sid_len);
+    unsigned int sid_len = 0;
+    if (!GMHelper::sm3_digest(sid_input.data(), sid_input.size(), sid_sm3, &sid_len) || sid_len != 32) {
+        ex = SecurityException("derive_psk_master_keys: SM3(SenderKeyId) failed");
+        return false;
+    }
     const uint8_t passphrase_key_id = static_cast<uint8_t>(passphrase_id & 0xFF);
-    std::array<uint8_t,4> sender_key_id{sid_sm3[0], sid_sm3[1], sid_sm3[2], passphrase_key_id};
+    std::array<uint8_t, 4> sender_key_id{ sid_sm3[0], sid_sm3[1], sid_sm3[2], passphrase_key_id };
 
     // inner = "<PSK-SKEY/PSK-SALT>" | SenderKeyId | "RTPS" | PV(2) | VID(2) | GP(12)
     auto build_inner = [&](const char* label){
@@ -110,19 +272,34 @@ bool SM4GCMGMAC_KeyExchange::derive_psk_master_keys(
         out.clear();
         return GMHelper::hmac_sm3(inner_mac, msg, out) && out.size()==32;
     };
-    if (!derive_outer(inner_skey_mac, "master sender key derivation", out_keys.master_sender_key)) return false;
-    if (!derive_outer(inner_salt_mac, "master salt derivation", out_keys.master_salt)) return false;
-
+    ParticipantKeyHandle::PskDeriveResult derived;
+    if (!derive_outer(inner_skey_mac, "master sender key derivation", derived.master_sender_key)) {
+        ex = SecurityException("derive_psk_master_keys: KDF(master_sender_key) failed");
+        return false;
+    }
+    if (!derive_outer(inner_salt_mac, "master salt derivation", derived.master_salt)) {
+        ex = SecurityException("derive_psk_master_keys: KDF(master_salt) failed");
+        return false;
+    }
+    if (derived.master_sender_key.size() < 16) {
+        ex = SecurityException("derive_psk_master_keys: master_sender_key too short");
+        return false;
+    }
+    derived.master_sender_key.resize(16);
+    {
+        std::lock_guard<std::mutex> lk(pc->mutex_);
+        pc->psk_keys_ = std::move(derived);
+    }
     return true;
 }
 
 bool SM4GCMGMAC_KeyExchange::create_local_participant_crypto_tokens(
     ParticipantCryptoTokenSeq& local_participant_crypto_tokens,
-    const ParticipantCryptoHandle& locat_participant_crypto,
+    ParticipantCryptoHandle& locat_participant_crypto,
     ParticipantCryptoHandle& remote_participant_crypto,
     SecurityException& exception)
 {
-    const SM4GCMGMAC_ParticipantCryptoHandle& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(locat_participant_crypto);
+    SM4GCMGMAC_ParticipantCryptoHandle& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(locat_participant_crypto);
     SM4GCMGMAC_ParticipantCryptoHandle& remote_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(remote_participant_crypto);
 
     if (local_participant.nil() || remote_participant.nil())
@@ -144,87 +321,60 @@ bool SM4GCMGMAC_KeyExchange::create_local_participant_crypto_tokens(
             return false;
         }
 
-        std::vector<uint8_t> payload = serialized;  // 默认明文
-        std::vector<uint8_t> mac;                   // 仅在 SIGN_* 时使用
+        ProtectedBlob pb;
+        pb.payload = serialized;  
+        ParticipantCryptoToken temp;
+        temp.GetClassID() = std::string("DDS:Crypto:SM4_GCM_GMAC");
 
-        if (is_rtps_psk_protected_ && rtps_psk_protection_kind_ != PskProtectionKind::NONE)
+        std::vector<uint8_t> seq_prop_value;
+        if (local_participant->psk_cfg_.enabled &&
+            local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
         {
-            PskDeriveResult psk{};
-            if (!derive_psk_master_keys(local_participant, psk)) {
-                exception = SecurityException("PSK master key derivation failed");
+            if (!SM4GCMGMAC_KeyExchange::derive_psk_master_keys(local_participant, exception)) {
                 return false;
             }
 
             const std::vector<uint8_t> aad;
-            uint64_t seq = 0;
-            // auto do_sign = [&](const std::vector<uint8_t>& data)->bool {
-            //     mac.clear();
-            //     return GMHelper::hmac_sm3(psk.master_sender_key, data, mac);
-            // };
-
-            // auto do_encrypt = [&]()->bool {
-            //     // 12B IV：由 master_salt(32B) + 序号派生；现阶段用 seq=0
-            //     // TODO: 换成真实的会话/消息序号
-            //     std::vector<uint8_t> iv = GMHelper::derive_iv_from_salt(psk.master_salt, /*seq=*/0);
-
-            //     // SM4 16B密钥：取 master_sender_key 前 16 字节
-            //     std::vector<uint8_t> sm4_key(psk.master_sender_key.begin(),
-            //                                  psk.master_sender_key.begin()+16);
-
-            //     std::vector<uint8_t> ct, tag;
-            //     if (!GMHelper::sm4_gcm_encrypt_vector(sm4_key, iv, aad, payload, ct, tag)) {
-            //         return false;
-            //     }
-            //     payload.clear();
-            //     payload.reserve(ct.size() + tag.size());
-            //     payload.insert(payload.end(), ct.begin(), ct.end());
-            //     payload.insert(payload.end(), tag.begin(), tag.end());
-            //     return true;
-            // };
-
-            switch (rtps_psk_protection_kind_) {
-                case PskProtectionKind::SIGN_ONLY:
-                    if (!psk_sign_payload(psk.master_sender_key, payload, mac)) {
-                        exception = SecurityException("HMAC-SM3 signing failed");
-                        return false;
-                    }
-                    break;
-                case PskProtectionKind::ENCRYPT_ONLY:
-                    if (!psk_encrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, payload)) {
-                        exception = SecurityException("SM4-GCM encryption failed");
-                        return false;
-                    }
-                    break;
-                case PskProtectionKind::SIGN_AND_ENCRYPT:
-                    if (!psk_sign_payload(psk.master_sender_key, payload, mac)) {
-                        exception = SecurityException("HMAC-SM3 signing failed");
-                        return false;
-                    }
-                    if (!psk_encrypt_payload(psk.master_sender_key, psk.master_salt, seq, aad, payload)) {
-                        exception = SecurityException("SM4-GCM encryption failed");
-                        return false;
-                    }
-                    break;
-                case PskProtectionKind::NONE:
-                default:
-                    break;
+            if (!SM4GCMGMAC_KeyExchange::protect_with_psk(local_participant, local_participant->psk_cfg_.kind, aad,
+                pb.payload, pb, exception))
+            {
+                return false;
             }
+            uint64_t seq_used;
+            {
+                std::lock_guard<std::mutex> lk(local_participant->mutex_);
+                uint64_t cur = local_participant->psk_send_seq.load(std::memory_order_relaxed);
+                seq_used = (cur == 0) ? 0 : (cur - 1);
+            }
+        
+            seq_prop_value.resize(sizeof(uint64_t));
+            std::memcpy(seq_prop_value.data(), &seq_used, sizeof(uint64_t));
         }
 
-        ParticipantCryptoToken temp;
-        temp.GetClassID() = std::string("DDS:Crypto:SM4_GCM_GMAC");
-
         BinaryProperty prop;
-        prop.name()   = std::string("dds.cryp.keymat");
-        prop.value()  = std::move(payload);   // 明文或密文||tag
+        prop.name() = std::string("dds.cryp.keymat");
+        prop.value() = std::move(pb.payload);   // 明文或密文||tag
         prop.propagate(true);
+        if (prop.value().empty())
+        {
+            exception = SecurityException("Empty key material payload");
+            return false;
+        }
         temp.GetBinaryProperties().push_back(std::move(prop));
+        
+        if (!seq_prop_value.empty()) {
+            BinaryProperty prop_seq;
+            prop_seq.name()  = "dds.cryp.keymat.seq";
+            prop_seq.value() = std::move(seq_prop_value);
+            prop_seq.propagate(true);
+            temp.GetBinaryProperties().push_back(std::move(prop_seq));
+        }
 
-        if (!mac.empty())
+        if (!pb.mac.empty())
         {
             BinaryProperty prop_mac;
             prop_mac.name()   = std::string("dds.cryp.keymat.mac");
-            prop_mac.value()  = std::move(mac);
+            prop_mac.value()  = std::move(pb.mac);
             prop_mac.propagate(true);
             temp.GetBinaryProperties().push_back(std::move(prop_mac));
         }
@@ -248,15 +398,13 @@ bool SM4GCMGMAC_KeyExchange::create_local_participant_crypto_tokens(
 }
 
 bool SM4GCMGMAC_KeyExchange::set_remote_participant_crypto_tokens(
-        const ParticipantCryptoHandle& local_participant_crypto,
+        ParticipantCryptoHandle& local_participant_crypto,
         ParticipantCryptoHandle& remote_participant_crypto,
         const ParticipantCryptoTokenSeq& remote_participant_tokens,
-        SecurityException& exception)
+        SecurityException&              exception)
 {
-    const SM4GCMGMAC_ParticipantCryptoHandle& local_participant =
-        SM4GCMGMAC_ParticipantCryptoHandle::narrow(local_participant_crypto);
-    SM4GCMGMAC_ParticipantCryptoHandle& remote_participant =
-        SM4GCMGMAC_ParticipantCryptoHandle::narrow(remote_participant_crypto);
+    SM4GCMGMAC_ParticipantCryptoHandle& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(local_participant_crypto);
+    SM4GCMGMAC_ParticipantCryptoHandle& remote_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(remote_participant_crypto);
 
     if (local_participant.nil() || remote_participant.nil())
     {
@@ -265,22 +413,24 @@ bool SM4GCMGMAC_KeyExchange::set_remote_participant_crypto_tokens(
         return false;
     }
 
-    // Token 基本结构校验
     if (remote_participant_tokens.size() != 1)
     {
-        REC_LOG_WARNING(SECURITY_CRYPTO, "Invalid CryptoTokenSeq length");
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoTokenSequence");
         exception = SecurityException("Incorrect remote CryptoSequence length");
         return false;
     }
 
-    const ParticipantCryptoToken& token = remote_participant_tokens.at(0);
+    const auto& token = remote_participant_tokens.front();
+
+    // 类型校验
     if (token.GetClassID() != std::string("DDS:Crypto:SM4_GCM_GMAC"))
     {
-        REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: unexpected class_id");
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: incorrect class_id");
         exception = SecurityException("Incorrect token type received");
         return false;
     }
 
+    // 不接受 string 属性
     if (!token.GetProperties().empty())
     {
         REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: unexpected string properties");
@@ -288,16 +438,23 @@ bool SM4GCMGMAC_KeyExchange::set_remote_participant_crypto_tokens(
         return false;
     }
 
-    // 提取二进制属性
     const BinaryProperty* keymat_prop = nullptr;
     const BinaryProperty* mac_prop    = nullptr;
+    const BinaryProperty* seq_prop    = nullptr;
 
     for (const auto& p : token.GetBinaryProperties())
     {
-        if (p.name() == std::string("dds.cryp.keymat")) {
+        if (p.name() == std::string("dds.cryp.keymat"))
+        {
             keymat_prop = &p;
-        } else if (p.name() == std::string("dds.cryp.keymat.mac")) {
+        }
+        else if (p.name() == std::string("dds.cryp.keymat.mac"))
+        {
             mac_prop = &p;
+        }
+        else if (p.name() == std::string("dds.cryp.keymat.seq"))
+        {
+            seq_prop = &p;
         }
     }
 
@@ -309,101 +466,605 @@ bool SM4GCMGMAC_KeyExchange::set_remote_participant_crypto_tokens(
     }
 
     std::vector<uint8_t> payload = keymat_prop->value();
-    std::vector<uint8_t> mac_recv;
-    if (mac_prop) {
-        mac_recv = mac_prop->value(); // HMAC-SM3
-    }
-
     if (payload.empty())
     {
-        REC_LOG_WARNING(SECURITY_CRYPTO, "Empty key material payload");
         exception = SecurityException("Empty key material payload");
         return false;
     }
 
-    if (is_rtps_psk_protected_ && rtps_psk_protection_kind_ != PskProtectionKind::NONE)
+    // PSK 保护
+    if (!local_participant.nil() && local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
     {
-        PskDeriveResult psk{};
-        if (!derive_psk_master_keys(local_participant, psk))
+        if (!SM4GCMGMAC_KeyExchange::derive_psk_master_keys(local_participant, exception))
         {
-            exception = SecurityException("PSK master key derivation failed");
             return false;
         }
 
-        const std::vector<uint8_t> aad;
-        // uint64_t seq = 0;           
 
-        switch (rtps_psk_protection_kind_)
+        uint64_t seq = 0;
+        if (seq_prop && seq_prop->value().size() == sizeof(uint64_t))
         {
-            case PskProtectionKind::SIGN_ONLY:
-            {
-                if (mac_recv.empty())
-                {
-                    exception = SecurityException("Missing MAC for SIGN_ONLY");
-                    return false;
-                }
-                if (!psk_verify_payload(psk.master_sender_key, payload, mac_recv))
-                {
-                    exception = SecurityException("HMAC-SM3 verification failed");
-                    return false;
-                }
-                break;
-            }
-
-            case PskProtectionKind::ENCRYPT_ONLY:
-            {
-                if (!psk_decrypt_payload(psk.master_sender_key, psk.master_salt, /*seq =*/ 0, aad, payload))
-                {
-                    exception = SecurityException("SM4-GCM decryption failed");
-                    return false;
-                }
-                break;
-            }
-
-            case PskProtectionKind::SIGN_AND_ENCRYPT:
-            {
-                if (mac_recv.empty())
-                {
-                    exception = SecurityException("Missing MAC for SIGN_AND_ENCRYPT");
-                    return false;
-                }
-                // 解密
-                if (!psk_decrypt_payload(psk.master_sender_key, psk.master_salt, /*seq =*/ 0, aad, payload))
-                {
-                    exception = SecurityException("SM4-GCM decryption failed");
-                    return false;
-                }
-                // 验签
-                if (!psk_verify_payload(psk.master_sender_key, payload, mac_recv))
-                {
-                    exception = SecurityException("HMAC-SM3 verification failed");
-                    return false;
-                }
-                break;
-            }
-
-            case PskProtectionKind::NONE:
-            default:
-                break;
+            std::memcpy(&seq, seq_prop->value().data(), sizeof(uint64_t));
         }
-    }
-    else
-    {
+
+        const std::vector<uint8_t> aad;
+        std::vector<uint8_t> mac_in = mac_prop ? mac_prop->value() : std::vector<uint8_t>{};
+        std::vector<uint8_t> plain;
+
+        if (!unprotect_with_psk(local_participant, local_participant->psk_cfg_.kind, seq, aad,
+                                payload, mac_in, plain, exception))
+        {
+            return false;
+        }
+        payload.swap(plain);
     }
 
-    // 反序列化 KeyMaterial
+    // CDR 反序列化
     KeyMaterial_SM4_GCM_GMAC keymat{};
     if (!KeyMaterialCDRDeserialize(keymat, &payload))
     {
-        REC_LOG_WARNING(SECURITY_CRYPTO, "KeyMaterial CDR deserialize failed");
         exception = SecurityException("KeyMaterial CDR deserialize failed");
         return false;
     }
 
-    remote_participant->RemoteParticipant2ParticipantKeyMaterial.push_back(keymat);
+    {
+        std::unique_lock<std::mutex> lk(remote_participant->mutex_);
+
+        remote_participant->RemoteParticipant2ParticipantKeyMaterial.push_back(keymat);
+    }
+
     return true;
 }
 
+bool SM4GCMGMAC_KeyExchange::return_crypto_tokens(
+    CryptoTokenSeq* crypto_tokens,
+    SecurityException& exception)
+{
+    if (crypto_tokens==nullptr)
+    {
+        exception = SecurityException("The tokenSeq is NULL.");
+        return false;
+    }
+    //清空seq
+    crypto_tokens->clear();
+    return true;
+}
+
+
+bool SM4GCMGMAC_KeyExchange::create_local_datawriter_crypto_tokens(
+        DatawriterCryptoTokenSeq& local_datawriter_crypto_tokens,
+        DatawriterCryptoHandle& local_datawriter_crypto,
+        DatareaderCryptoHandle& remote_datareader_crypto,
+        SecurityException& exception)
+{
+    SM4GCMGMAC_WriterCryptoHandle&  local_writer  =
+        SM4GCMGMAC_WriterCryptoHandle::narrow(local_datawriter_crypto);
+    SM4GCMGMAC_ReaderCryptoHandle&  remote_reader =
+        SM4GCMGMAC_ReaderCryptoHandle::narrow(remote_datareader_crypto);
+
+    if (local_writer.nil() || remote_reader.nil())
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Invalid CryptoHandle received (writer/reader)");
+        exception = SecurityException("Invalid CryptoHandle");
+        return false;
+    }
+
+    try
+    {
+        auto sp_part = local_writer->Parent_participant.lock();
+        if (!sp_part) {
+            exception = SecurityException("PSK enabled but Parent_participant expired (writer not bound to participant)");
+            return false;
+        }
+        auto& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(*sp_part);
+        if (local_participant.nil()) {
+            exception = SecurityException("Invalid local participant handle after narrow()");
+            return false;
+        }
+        std::unique_lock<std::mutex> lk(remote_reader->mutex_);
+
+        // 刷新旧 Token
+        local_datawriter_crypto_tokens.clear();
+
+        for (auto& km : remote_reader->Remote2EntityKeyMaterial)
+        {
+            // CDR 序列化 KeyMaterial
+            std::vector<uint8_t> serialized = KeyMaterialCDRSerialize(km);
+            if (serialized.empty())
+            {
+                exception = SecurityException("KeyMaterial serialization returned empty buffer");
+                return false;
+            }
+
+            ProtectedBlob pb;
+            pb.payload = std::move(serialized);
+            std::vector<uint8_t> seq_prop_value; // 若启用PSK则写入此属性
+
+            if (local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
+            {
+                if (!derive_psk_master_keys(local_participant, exception))
+                {
+                    exception = SecurityException("PSK master key derivation failed");
+                    return false;
+                }
+
+                const std::vector<uint8_t> aad; // TODO: 填充 AAD
+                // Writer 侧也维护独立的发送序列号（与 Participant 类似）
+
+                if (!protect_with_psk(local_participant, local_participant->psk_cfg_.kind, aad, pb.payload, pb, exception))
+                {
+                    return false;
+                }
+                uint64_t seq_used;
+                {
+                    std::lock_guard<std::mutex> lk(local_participant->mutex_);
+                    uint64_t cur = local_participant->psk_send_seq.load(std::memory_order_relaxed);
+                    seq_used = (cur == 0) ? 0 : (cur - 1);  // protect_with_psk 内部 fetch_add(1)
+                }
+                seq_prop_value.resize(sizeof(uint64_t));
+                std::memcpy(seq_prop_value.data(), &seq_used, sizeof(uint64_t));
+            }
+
+            // 组装 DatawriterCryptoToken
+            DatawriterCryptoToken token;
+            token.GetClassID() = std::string("DDS:Crypto:SM4_GCM_GMAC");
+
+            // 主负载：可能是明文（未启PSK）或密文/签名标签（已启PSK）
+            {
+                BinaryProperty prop;
+                prop.name()  = std::string("dds.cryp.keymat");
+                prop.value() = std::move(pb.payload);
+                prop.propagate(true);
+                if (prop.value().empty())
+                {
+                    exception = SecurityException("Empty key material payload");
+                    return false;
+                }
+                token.GetBinaryProperties().push_back(std::move(prop));
+            }
+
+            // 仅在 PSK 启用时携带序列号
+            if (!seq_prop_value.empty())
+            {
+                BinaryProperty prop_seq;
+                prop_seq.name()  = std::string("dds.cryp.keymat.seq");
+                prop_seq.value() = std::move(seq_prop_value);
+                prop_seq.propagate(true);
+                token.GetBinaryProperties().push_back(std::move(prop_seq));
+            }
+
+            // 仅在 SIGN_ONLY / AUTH_ENC 等产生 MAC 时携带
+            if (!pb.mac.empty())
+            {
+                BinaryProperty prop_mac;
+                prop_mac.name()  = std::string("dds.cryp.keymat.mac");
+                prop_mac.value() = std::move(pb.mac);
+                prop_mac.propagate(true);
+                token.GetBinaryProperties().push_back(std::move(prop_mac));
+            }
+
+            local_datawriter_crypto_tokens.push_back(std::move(token));
+        }
+
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Exception in create_local_datawriter_crypto_tokens: " << e.what());
+        exception = SecurityException(std::string("create_local_datawriter_crypto_tokens failed: ") + e.what());
+        return false;
+    }
+    catch (...)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Unknown exception in create_local_datawriter_crypto_tokens");
+        exception = SecurityException("create_local_datawriter_crypto_tokens failed: unknown error");
+        return false;
+    }
+}
+
+bool SM4GCMGMAC_KeyExchange::set_remote_datawriter_crypto_tokens(
+        DatareaderCryptoHandle& local_datareader_crypto,
+        DatawriterCryptoHandle& remote_datawriter_crypto,
+        const DatawriterCryptoTokenSeq& remote_datawriter_tokens,
+        SecurityException& exception)
+{
+    SM4GCMGMAC_ReaderCryptoHandle& local_reader = SM4GCMGMAC_ReaderCryptoHandle::narrow(local_datareader_crypto);
+    SM4GCMGMAC_WriterCryptoHandle& remote_writer = SM4GCMGMAC_WriterCryptoHandle::narrow(remote_datawriter_crypto);
+
+    if (local_reader.nil() || remote_writer.nil())
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Invalid CryptoHandle");
+        exception = SecurityException("Invalid CryptoHandle");
+        return false;
+    }
+
+    const size_t nTokens = remote_datawriter_tokens.size();
+    if (nTokens != 1 && nTokens != 2)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoTokenSequence");
+        exception = SecurityException("Incorrect remote CryptoSequence length");
+        return false;
+    }
+
+    for (size_t i = 0; i < nTokens; ++i)
+    {
+        const auto& token = remote_datawriter_tokens.at(i);
+
+        if (token.GetClassID() != std::string("DDS:Crypto:SM4_GCM_GMAC"))
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: incorrect class_id");
+            exception = SecurityException("Incorrect token type received");
+            return false;
+        }
+        if (!token.GetProperties().empty())
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: unexpected string properties");
+            exception = SecurityException("Malformed CryptoToken");
+            return false;
+        }
+
+        // 提取二进制属性
+        const BinaryProperty* keymat_prop = nullptr;
+        const BinaryProperty* mac_prop = nullptr;
+        const BinaryProperty* seq_prop = nullptr;
+
+        for (const auto& p : token.GetBinaryProperties())
+        {
+            if (p.name() == std::string("dds.cryp.keymat"))
+                keymat_prop = &p;
+            else if (p.name() == std::string("dds.cryp.keymat.mac"))
+                mac_prop = &p;
+            else if (p.name() == std::string("dds.cryp.keymat.seq"))
+                seq_prop = &p;
+        }
+
+        if (!keymat_prop)
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: missing dds.cryp.keymat");
+            exception = SecurityException("Missing key material");
+            return false;
+        }
+
+        std::vector<uint8_t> payload = keymat_prop->value();
+        if (payload.empty())
+        {
+            exception = SecurityException("Empty key material payload");
+            return false;
+        }
+        auto sp_local_part = local_reader->Parent_participant.lock();
+        if (!sp_local_part)
+        {
+            exception = SecurityException("Parent participant expired (reader)");
+            return false;
+        }
+        SM4GCMGMAC_ParticipantCryptoHandle& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(*sp_local_part);
+        // PSK 解封装
+        if (local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
+        {
+            if (local_participant.nil())
+            {
+                exception = SecurityException("Invalid local participant handle");
+                return false;
+            }
+            if (!derive_psk_master_keys(local_participant, exception))
+            {
+                exception = SecurityException("PSK master key derivation failed");
+                return false;
+            }
+
+            uint64_t seq = 0;
+            if (seq_prop && seq_prop->value().size() == sizeof(uint64_t))
+            {
+                std::memcpy(&seq, seq_prop->value().data(), sizeof(uint64_t));
+            }
+
+            const std::vector<uint8_t> aad; // 与发送侧保持一致
+            std::vector<uint8_t> mac_in = mac_prop ? mac_prop->value() : std::vector<uint8_t>{};
+            std::vector<uint8_t> plain;
+
+            if (!unprotect_with_psk(local_participant, local_participant->psk_cfg_.kind, seq, aad,
+                                    payload, mac_in, plain, exception))
+            {
+                return false;
+            }
+            payload.swap(plain);
+        }
+
+        // CDR 反序列化
+        KeyMaterial_SM4_GCM_GMAC keymat{};
+        if (!KeyMaterialCDRDeserialize(keymat, &payload))
+        {
+            exception = SecurityException("KeyMaterial CDR deserialize failed");
+            return false;
+        }
+
+        {
+            std::unique_lock<std::mutex> remote_writer_lock(remote_writer->mutex_);
+            remote_writer->Entity2RemoteKeyMaterial.push_back(keymat);
+        }
+        {
+            std::unique_lock<std::mutex> local_reader_lock(local_reader->mutex_);
+            local_reader->Remote2EntityKeyMaterial.push_back(keymat);
+        }
+    }
+
+    return true;
+}
+
+bool SM4GCMGMAC_KeyExchange::create_local_datareader_crypto_tokens(
+        DatareaderCryptoTokenSeq& local_datareader_crypto_tokens,
+        DatareaderCryptoHandle& local_datareader_crypto,
+        DatawriterCryptoHandle& remote_datawriter_crypto,
+        SecurityException& exception)
+{
+    SM4GCMGMAC_ReaderCryptoHandle&  local_reader  =
+        SM4GCMGMAC_ReaderCryptoHandle::narrow(local_datareader_crypto);
+    SM4GCMGMAC_WriterCryptoHandle&  remote_writer =
+        SM4GCMGMAC_WriterCryptoHandle::narrow(remote_datawriter_crypto);
+
+    if (local_reader.nil() || remote_writer.nil())
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Invalid CryptoHandle received (reader/writer)");
+        exception = SecurityException("Invalid CryptoHandle");
+        return false;
+    }
+
+    try
+    {
+        auto sp_part = local_reader->Parent_participant.lock();
+        if (!sp_part)
+        {
+            exception = SecurityException("Parent participant expired (reader)");
+            return false;
+        }
+
+        auto& local_participant = SM4GCMGMAC_ParticipantCryptoHandle::narrow(*sp_part);
+
+
+        if (local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
+        {
+            if (local_participant.nil())
+            {
+                exception = SecurityException("Invalid local participant handle after narrow()");
+                return false;
+            }
+        }
+
+        std::unique_lock<std::mutex> lk(remote_writer->mutex_);
+
+        // 清空旧 token
+        local_datareader_crypto_tokens.clear();
+
+        for (auto& km : remote_writer->Remote2EntityKeyMaterial)
+        {
+            // CDR 序列化
+            std::vector<uint8_t> serialized = KeyMaterialCDRSerialize(km);
+            if (serialized.empty())
+            {
+                exception = SecurityException("KeyMaterial serialization returned empty buffer");
+                return false;
+            }
+
+            ProtectedBlob pb;
+            pb.payload = std::move(serialized);
+            std::vector<uint8_t> seq_prop_value; 
+
+            if (local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
+            {
+                // 派生 PSK 主密钥
+                if (!derive_psk_master_keys(local_participant, exception))
+                {
+                    exception = SecurityException("PSK master key derivation failed");
+                    return false;
+                }
+
+                // 保护负载
+                const std::vector<uint8_t> aad;
+
+                std::lock_guard<std::mutex> lk2(local_reader->mutex_);
+                uint64_t seq_used = local_participant->psk_send_seq.load(std::memory_order_relaxed);
+
+                if (!protect_with_psk(local_participant, local_participant->psk_cfg_.kind, aad, pb.payload, pb, exception))
+                {
+                    return false;
+                }
+                seq_prop_value.resize(sizeof(uint64_t));
+                std::memcpy(seq_prop_value.data(), &seq_used, sizeof(uint64_t));
+            }
+
+            // 构造 DatareaderCryptoToken
+            DatareaderCryptoToken token;
+            token.GetClassID() = std::string("DDS:Crypto:SM4_GCM_GMAC");
+
+            // 主负载（明文或密文/密文+tag）
+            {
+                BinaryProperty prop;
+                prop.name()  = std::string("dds.cryp.keymat");
+                prop.value() = std::move(pb.payload);
+                prop.propagate(true);
+                if (prop.value().empty())
+                {
+                    exception = SecurityException("Empty key material payload");
+                    return false;
+                }
+                token.GetBinaryProperties().push_back(std::move(prop));
+            }
+
+            // 仅 PSK 时携带序列号
+            if (!seq_prop_value.empty())
+            {
+                BinaryProperty prop_seq;
+                prop_seq.name()  = std::string("dds.cryp.keymat.seq");
+                prop_seq.value() = std::move(seq_prop_value);
+                prop_seq.propagate(true);
+                token.GetBinaryProperties().push_back(std::move(prop_seq));
+            }
+
+            // 若使用签名，携带 MAC
+            if (!pb.mac.empty())
+            {
+                BinaryProperty prop_mac;
+                prop_mac.name()  = std::string("dds.cryp.keymat.mac");
+                prop_mac.value() = std::move(pb.mac);
+                prop_mac.propagate(true);
+                token.GetBinaryProperties().push_back(std::move(prop_mac));
+            }
+
+            // 写入序列
+            local_datareader_crypto_tokens.push_back(std::move(token));
+        }
+
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Exception in create_local_datareader_crypto_tokens: " << e.what());
+        exception = SecurityException(std::string("create_local_datareader_crypto_tokens failed: ") + e.what());
+        return false;
+    }
+    catch (...)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Unknown exception in create_local_datareader_crypto_tokens");
+        exception = SecurityException("create_local_datareader_crypto_tokens failed: unknown error");
+        return false;
+    }
+}
+
+bool SM4GCMGMAC_KeyExchange::set_remote_datareader_crypto_tokens(
+        DatawriterCryptoHandle&                 local_datawriter_crypto,
+        DatareaderCryptoHandle&                 remote_datareader_crypto,
+        const DatareaderCryptoTokenSeq&         remote_datareader_tokens,
+        SecurityException&                      exception)
+{
+    SM4GCMGMAC_WriterCryptoHandle& local_writer = SM4GCMGMAC_WriterCryptoHandle::narrow(local_datawriter_crypto);
+    SM4GCMGMAC_ReaderCryptoHandle& remote_reader = SM4GCMGMAC_ReaderCryptoHandle::narrow(remote_datareader_crypto);
+
+    if (local_writer.nil() || remote_reader.nil())
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Invalid CryptoHandle received");
+        exception = SecurityException("Invalid CryptoHandle");
+        return false;
+    }
+
+    const size_t nTokens = remote_datareader_tokens.size();
+    if (nTokens != 1 && nTokens != 2)
+    {
+        REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoTokenSequence");
+        exception = SecurityException("Incorrect remote CryptoSequence length");
+        return false;
+    }
+
+    for (size_t i = 0; i < nTokens; ++i)
+    {
+        const auto& token = remote_datareader_tokens.at(i);
+
+        // class_id 校验
+        if (token.GetClassID() != std::string("DDS:Crypto:SM4_GCM_GMAC"))
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: incorrect class_id");
+            exception = SecurityException("Incorrect token type received");
+            return false;
+        }
+
+        if (!token.GetProperties().empty())
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: unexpected string properties");
+            exception = SecurityException("Malformed CryptoToken");
+            return false;
+        }
+
+        // 提取二进制属性
+        const BinaryProperty* keymat_prop = nullptr;
+        const BinaryProperty* mac_prop = nullptr;
+        const BinaryProperty* seq_prop = nullptr;
+
+        for (const auto& p : token.GetBinaryProperties())
+        {
+            if (p.name() == std::string("dds.cryp.keymat"))
+                keymat_prop = &p;
+            else if (p.name() == std::string("dds.cryp.keymat.mac"))
+                mac_prop = &p;
+            else if (p.name() == std::string("dds.cryp.keymat.seq"))
+                seq_prop = &p;
+        }
+
+        if (!keymat_prop)
+        {
+            REC_LOG_WARNING(SECURITY_CRYPTO, "Malformed CryptoToken: missing dds.cryp.keymat");
+            exception = SecurityException("Missing key material");
+            return false;
+        }
+
+        std::vector<uint8_t> payload = keymat_prop->value();
+        if (payload.empty())
+        {
+            exception = SecurityException("Empty key material payload");
+            return false;
+        }
+        // 用本地 writer 的父 participant 派生接收侧主密钥
+        auto sp_local_part = local_writer->Parent_participant.lock();
+        if (!sp_local_part)
+        {
+            exception = SecurityException("Parent participant expired (writer)");
+            return false;
+        }
+
+        SM4GCMGMAC_ParticipantCryptoHandle& local_participant =
+            SM4GCMGMAC_ParticipantCryptoHandle::narrow(*sp_local_part);
+        // PSK 解封装
+        if (local_participant->psk_cfg_.enabled && local_participant->psk_cfg_.kind != PskProtectionKind::NONE)
+        {
+
+            if (local_participant.nil())
+            {
+                exception = SecurityException("Invalid local participant handle");
+                return false;
+            }
+
+            if (!derive_psk_master_keys(local_participant, exception))
+            {
+                exception = SecurityException("PSK master key derivation failed");
+                return false;
+            }
+
+            uint64_t seq = 0;
+            if (seq_prop && seq_prop->value().size() == sizeof(uint64_t))
+            {
+                std::memcpy(&seq, seq_prop->value().data(), sizeof(uint64_t));
+            }
+
+            const std::vector<uint8_t> aad;
+            std::vector<uint8_t> mac_in = mac_prop ? mac_prop->value() : std::vector<uint8_t>{};
+            std::vector<uint8_t> plain;
+
+            if (!unprotect_with_psk(local_participant, local_participant->psk_cfg_.kind, seq, aad,
+                                    payload, mac_in, plain, exception))
+            {
+                return false;
+            }
+            payload.swap(plain);
+        }
+
+        // CDR 反序列化
+        KeyMaterial_SM4_GCM_GMAC keymat{};
+        if (!KeyMaterialCDRDeserialize(keymat, &payload))
+        {
+            exception = SecurityException("KeyMaterial CDR deserialize failed");
+            return false;
+        }
+
+        {
+            std::unique_lock<std::mutex> remote_reader_lock(remote_reader->mutex_);
+            remote_reader->Entity2RemoteKeyMaterial.push_back(keymat);
+        }
+        {
+            std::unique_lock<std::mutex> local_writer_lock(local_writer->mutex_);
+            local_writer->Remote2EntityKeyMaterial.push_back(keymat);
+        }
+    }
+
+    return true;
+}
 
 std::vector<uint8_t> SM4GCMGMAC_KeyExchange::KeyMaterialCDRSerialize(
     KeyMaterial_SM4_GCM_GMAC& key)
@@ -531,11 +1192,11 @@ bool SM4GCMGMAC_KeyExchange::psk_sign_payload(const std::vector<uint8_t>& master
 
 bool SM4GCMGMAC_KeyExchange::psk_encrypt_payload(const std::vector<uint8_t>& master_sender_key,
     const std::vector<uint8_t>& master_salt,
-    uint64_t /*seq*/,
+    uint64_t seq,
     const std::vector<uint8_t>& aad,
     std::vector<uint8_t>& payload)
 {
-    std::vector<uint8_t> iv = GMHelper::derive_iv_from_salt(master_salt, /*seq =*/ 0);
+    std::vector<uint8_t> iv = GMHelper::derive_iv_from_salt(master_salt, seq);
     if (iv.size() != 12) { // 固定 12B IV
         return false;
     }
@@ -576,14 +1237,14 @@ bool SM4GCMGMAC_KeyExchange::psk_verify_payload(const std::vector<uint8_t>& mast
 
 bool SM4GCMGMAC_KeyExchange::psk_decrypt_payload(const std::vector<uint8_t>& master_sender_key,
                                                   const std::vector<uint8_t>& master_salt,
-                                                  uint64_t /*seq*/,
+                                                  uint64_t seq,
                                                   const std::vector<uint8_t>& aad,
                                                   std::vector<uint8_t>& payload)
 {
     if (master_sender_key.size() < 16) return false;
     if (payload.size() < 16) return false; 
 
-    std::vector<uint8_t> iv = GMHelper::derive_iv_from_salt(master_salt, /*seq=*/0);
+    std::vector<uint8_t> iv = GMHelper::derive_iv_from_salt(master_salt, seq);
     if (iv.size() != 12) {
         return false;
     }

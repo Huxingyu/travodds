@@ -1,46 +1,87 @@
 #ifndef _SECURITY_AUTHENTICATION_SM4GCMGMAC_KEYEXCHANGE_H_
 #define _SECURITY_AUTHENTICATION_SM4GCMGMAC_KEYEXCHANGE_H_
 
+#include <cstring>
 #include "Security/CryptoKeyExchange.h"
 #include "cryptography/SM4GCMGMAC_Types.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
-enum class PskProtectionKind {
-    NONE = 0,           // 不做任何PSK保护
-    SIGN_ONLY,          // 仅签名/验签（HMAC-SM3）
-    ENCRYPT_ONLY,       // 仅加密（SM4-GCM）
-    SIGN_AND_ENCRYPT    // 先签名再加密
+struct SeqEntry {
+    GUID_t guid;
+    std::atomic<uint64_t> seq;
+
+    SeqEntry() : guid{}, seq(0) {}
+    SeqEntry(const GUID_t& g, uint64_t init = 0) : guid(g), seq(0) {
+        seq.store(init, std::memory_order_relaxed);
+    }
+
+    // 自定义移动构造
+    SeqEntry(SeqEntry&& other) noexcept : guid(other.guid), seq(0)
+    {
+        seq.store(other.seq.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
+
+    // 自定义移动赋值
+    SeqEntry& operator=(SeqEntry&& other) noexcept
+    {
+        if (this != &other) {
+            guid = other.guid;
+            seq.store(other.seq.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
+        return *this;
+    }
+
+    // 禁用拷贝
+    SeqEntry(const SeqEntry&) = delete;
+    SeqEntry& operator=(const SeqEntry&) = delete;
 };
 
 class SM4GCMGMAC_KeyExchange : public CryptoKeyExchange
 {
 public:
-    SM4GCMGMAC_KeyExchange(
-        bool is_rtps_psk_protected = false,
-        bool is_rtps_axk_encrypted = false,
-        PskProtectionKind psk_kind = PskProtectionKind::NONE)
-        : is_rtps_psk_protected_(is_rtps_psk_protected)
-        , is_rtps_axk_encrypted_(is_rtps_axk_encrypted)
-        , rtps_psk_protection_kind_(psk_kind){};
+    SM4GCMGMAC_KeyExchange(){};
         
     ~SM4GCMGMAC_KeyExchange();
-    
-    struct PskDeriveResult {
-        std::vector<uint8_t> master_sender_key;  // 用于SM4-GCM加密/认证
-        std::vector<uint8_t> master_salt;        // 用于派生IV/nonce
-    };
 
     bool create_local_participant_crypto_tokens(
         ParticipantCryptoTokenSeq& local_participant_crypto_tokens,
-        const ParticipantCryptoHandle& locat_participant_crypto,
+        ParticipantCryptoHandle& locat_participant_crypto,
         ParticipantCryptoHandle& remote_participant_crypto,
         SecurityException& exception) override;
 
     bool set_remote_participant_crypto_tokens(
-        const ParticipantCryptoHandle& local_participant_crypto,
+        ParticipantCryptoHandle& local_participant_crypto,
         ParticipantCryptoHandle& remote_participant_crypto,
         const ParticipantCryptoTokenSeq& remote_participant_tokens,
+        SecurityException& exception) override;
+
+    bool create_local_datawriter_crypto_tokens(
+        DatawriterCryptoTokenSeq& local_datawriter_crypto_tokens,
+        DatawriterCryptoHandle& local_datawriter_crypto,
+        DatareaderCryptoHandle& remote_datareader_crypto,
+        SecurityException& exception) override;
+
+    bool set_remote_datawriter_crypto_tokens(
+        DatareaderCryptoHandle& local_datareader_crypto,
+        DatawriterCryptoHandle& remote_datawriter_crypto,
+        const DatawriterCryptoTokenSeq& remote_datawriter_tokens,
+        SecurityException& exception) override;
+
+    bool create_local_datareader_crypto_tokens(
+        DatareaderCryptoTokenSeq& local_datareader_crypto_tokens,
+        DatareaderCryptoHandle& local_datareader_crypto,
+        DatawriterCryptoHandle& remote_datawriter_crypto,
+        SecurityException& exception) override;
+
+    bool set_remote_datareader_crypto_tokens(
+        DatawriterCryptoHandle& local_datawriter_crypto,
+        DatareaderCryptoHandle& remote_datareader_crypto,
+        const DatareaderCryptoTokenSeq& remote_datareader_tokens,
+        SecurityException& exception) override;
+
+    bool return_crypto_tokens(
+        CryptoTokenSeq* crypto_tokens,
         SecurityException& exception) override;
 
     std::vector<uint8_t> KeyMaterialCDRSerialize(
@@ -51,13 +92,10 @@ public:
             std::vector<uint8_t>* CDR);
 
     bool derive_psk_master_keys(
-        const SM4GCMGMAC_ParticipantCryptoHandle& local_participant,
-        PskDeriveResult& out_keys);
-private:
-    bool is_rtps_psk_protected_{false};          // 是否启用 PSK 方案
-    bool is_rtps_axk_encrypted_{false};          // 是否对握手消息加密
-    PskProtectionKind rtps_psk_protection_kind_{PskProtectionKind::NONE};
+        SM4GCMGMAC_ParticipantCryptoHandle& local_participant,
+        SecurityException& ex);
 
+private:
     static bool psk_sign_payload(
         const std::vector<uint8_t>& master_sender_key32,
         const std::vector<uint8_t>& data,
@@ -66,7 +104,7 @@ private:
     static bool psk_encrypt_payload(
         const std::vector<uint8_t>& master_sender_key,
         const std::vector<uint8_t>& master_salt,
-        uint64_t /*seq*/,
+        uint64_t seq,
         const std::vector<uint8_t>& aad,
         std::vector<uint8_t>& payload);
 
@@ -78,9 +116,39 @@ private:
     static bool psk_decrypt_payload(
         const std::vector<uint8_t>& master_sender_key,
         const std::vector<uint8_t>& master_salt,
-        uint64_t /*seq*/,
+        uint64_t seq,
         const std::vector<uint8_t>& aad,
         std::vector<uint8_t>& payload);
+
+    struct PskContext {
+        std::vector<uint8_t> master_sender_key;
+        std::vector<uint8_t> master_salt;
+        std::atomic<uint64_t>& next_seq; // 由调用方维护的序列
+    };
+
+    struct ProtectedBlob {
+        std::vector<uint8_t> payload;
+        std::vector<uint8_t> mac;
+    };
+
+
+    bool protect_with_psk(
+        SM4GCMGMAC_ParticipantCryptoHandle& pc,
+        PskProtectionKind kind,
+        const std::vector<uint8_t>& aad,
+        const std::vector<uint8_t>& plaintext,
+        ProtectedBlob& out,
+        SecurityException& ex);
+
+    bool unprotect_with_psk(
+        SM4GCMGMAC_ParticipantCryptoHandle& pc,
+        PskProtectionKind kind,
+        uint64_t seq,
+        const std::vector<uint8_t>& aad,
+        const std::vector<uint8_t>& in_payload,
+        const std::vector<uint8_t>& in_mac,
+        std::vector<uint8_t>& out_plaintext,
+        SecurityException& ex);
 };
 TRAVODDS_NAMESPACE_END
 #endif // _SECURITY_AUTHENTICATION_SM4GCMGMAC_KEYEXCHANGE_H_

@@ -3,7 +3,7 @@
 
 #include "Security/CryptoKeyFactory.h"
 #include "cryptography/SM4GCMGMAC_Types.h"
-#include "security/propertyqospolicy.h"
+#include "PropertyPolicy.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 

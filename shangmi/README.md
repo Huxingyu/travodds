@@ -33,7 +33,20 @@ sudo apt install libtinyxml2-dev
 sudo apt install lcov
 ```
 
+- openEuler24.03
+```bash
+sudo yum install cmake 
+sudo yum install gcc gcc-c++ make
+sudo yum install asio-devel
+sudo yum install gtest-devel
+sudo yum install tinyxml2-devel
+# 覆盖率测试需要安装
+sudo apt install lcov
+```
+
+
 ## 快速开始
+
 1. 安装包含商密算法的加密算法库（如openSSL等支持SM2/SM3/SM4的实现）
 2. 配置CMake并编译
 3. 参考`test/`目录进行功能验证

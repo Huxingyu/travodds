@@ -1,4 +1,3 @@
-#include "travodds_dll.h"
 #include <string>
 #include "common/log/logger.h"
 #include "accesscontrol/EndpointSecurityAttributes.h"
@@ -9,7 +8,7 @@
 #include <openssl/rand.h>
 #include "auth/GMHelper.h"
 
-USING_TRAVODDS_NAMESPACE
+using namespace TRAVODDS;
 
 // 直接移植
 ParticipantCryptoHandleDeleter::ParticipantCryptoHandleDeleter(

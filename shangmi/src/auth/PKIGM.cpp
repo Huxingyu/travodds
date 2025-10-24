@@ -26,28 +26,40 @@ static bool serializeBinaryPropertySeq(
     CdrSerializer& serializer,
     const std::vector<BinaryProperty>& properties)
 {
-    // 序列化序列中元素的数量
+    std::vector<const BinaryProperty*> filtered;
+    filtered.reserve(properties.size());
+    for (const auto& p : properties)
+    {
+        if (p.propagate())
+        {
+            filtered.push_back(&p);
+        }
+    }
     if (!serializer.serializeBaseType<uint32_t>(static_cast<uint32_t>(properties.size())))
     {
         return false;
     }
 
-    // 遍历并序列化每一个 BinaryProperty
-    for (const auto& prop : properties)
+    for (size_t i = 0; i < filtered.size(); ++i)
     {
-        // 序列化 name (string 类型)
+        const BinaryProperty& prop = *filtered[i];
         if (!serializer.serializeString(prop.name()))
         {
             return false;
         }
         // 序列化 value (字节序列)，需要先写入长度，再写入数据
-        if (!serializer.serializeBaseType<uint32_t>(static_cast<uint32_t>(prop.value().size())))
+        const auto& val = prop.value();
+        const uint32_t vlen = static_cast<uint32_t>(val.size());
+        if (!serializer.serializeBaseType<uint32_t>(vlen))
         {
             return false;
         }
-        if (!serializer.serializeBaseTypeArray<uint8_t>(prop.value().data(), static_cast<uint32_t>(prop.value().size())))
+        if (vlen > 0)
+        {
+            if (!serializer.serializeBaseTypeArray<uint8_t>(val.data(), vlen))
         {
             return false;
+            }
         }
     }
     return true;
@@ -56,30 +68,44 @@ static bool serializeBinaryPropertySeq(
 static bool serializeBinaryPropertySeq(
     CdrSerializer& serializer,
     const std::vector<BinaryProperty>& properties,
-    const std::string& prefix)
+    const std::string& name_start)
 {
-    // 序列化序列中元素的数量
-    if (!serializer.serializeBaseType<uint32_t>(static_cast<uint32_t>(properties.size())))
+    std::vector<const BinaryProperty*> filtered;
+    filtered.reserve(properties.size());
+    for (const auto& p : properties)
+    {
+        const std::string& n = p.name();
+        if (n.size() >= name_start.size() &&
+            n.compare(0, name_start.size(), name_start) == 0)
+        {
+            filtered.push_back(&p);
+        }
+    }
+    if (!serializer.serializeBaseType<uint32_t>(static_cast<uint32_t>(filtered.size())))
     {
         return false;
     }
 
-    // 遍历并序列化每一个 BinaryProperty
-    for (const auto& prop : properties)
+    for (size_t i = 0; i < filtered.size(); ++i)
     {
-        // 序列化 name, 注意加上前缀
-        if (!serializer.serializeString(prefix + prop.name()))
+        const BinaryProperty& prop = *filtered[i];
+        if (!serializer.serializeString(prop.name()))
         {
             return false;
         }
         // 序列化 value (字节序列)
-        if (!serializer.serializeBaseType<uint32_t>(static_cast<uint32_t>(prop.value().size())))
+        const auto& val = prop.value();
+        const uint32_t vlen = static_cast<uint32_t>(val.size());
+        if (!serializer.serializeBaseType<uint32_t>(vlen))
         {
             return false;
         }
-        if (!serializer.serializeBaseTypeArray<uint8_t>(prop.value().data(), static_cast<uint32_t>(prop.value().size())))
+        if (vlen > 0)
+        {
+            if (!serializer.serializeBaseTypeArray<uint8_t>(val.data(), vlen))
         {
             return false;
+            }
         }
     }
     return true;
@@ -2266,5 +2292,13 @@ bool PKIGM::set_listener(
     // 在实际实现中，这里应该存储listener指针以便后续使用
     (void)listener;  // 避免未使用参数警告
     (void)exception; // 避免未使用参数警告
+    return true;
+}
+
+bool PKIGM::return_identity_status_token(
+    IdentityStatusToken *token,
+    SecurityException &exception){
+    delete token;
+    token = nullptr;
     return true;
 }

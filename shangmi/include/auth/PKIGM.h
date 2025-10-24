@@ -129,6 +129,10 @@ class PKIGM : public Authentication
             AuthenticationListener *listener,
             SecurityException &exception) override;
 
+        bool return_identity_status_token(
+            IdentityStatusToken *token,
+            SecurityException &exception);
+
         std::unique_ptr<Pkcs11Provider> pkcs11_provider;
     };
 
