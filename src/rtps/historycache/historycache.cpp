@@ -277,9 +277,10 @@ ReturnCode_t HistoryCache::UpdataSampleInstance(const InstanceHandle_t& handle, 
 	if(!shared) {
 		if(insChange.aliveWriter.empty()) {
 			insChange.aliveWriter.insert({ writerGuid,ownershipStrength });
-		} else {
+		} 
+		else {
 			if(insChange.aliveWriter.begin()->first != writerGuid && insChange.aliveWriter.begin()->second >= ownershipStrength) {
-				return RETCODE_ERROR;
+				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
 			}
 			if (insChange.aliveWriter.begin()->first != writerGuid) {
 				insChange.aliveWriter.erase(insChange.aliveWriter.begin());

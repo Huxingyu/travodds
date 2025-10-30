@@ -10,7 +10,7 @@
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "common/log/logger.h"
 
-TRAVODDS_NAMESPACE_BEGIN;
+TRAVODDS_NAMESPACE_BEGIN
 
 #ifdef DDSSECURITY
 DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId, 
@@ -343,7 +343,7 @@ ContentFilteredTopic* DomainParticipantImpl::create_contentfilteredtopic(const s
     }
     std::string typeName = related_topic->get_type_name();
 
-    if (!ContentFilteredTopicImpl::ValidFilterExpression(filter_expression, expression_parameters, typeSupports_.find(typeName)->second->get_typeobject())) {
+    if (!ContentFilteredTopicImpl::ValidFilterExpression(filter_expression, expression_parameters, typeSupports_.find(typeName)->second->get_dynamictype())) {
         return nullptr;
     }
     ContentFilteredTopic* fit = nullptr;
@@ -797,7 +797,13 @@ ReturnCode_t DomainParticipantImpl::enable()
 	if (enable_) {
 		return RETCODE_OK;
 	}
-	participant_->Init();
+    ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);
+    if (RETCODE_OK != ret) {
+        TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d ");
+        return ret;
+    }
+
+	participant_->Init(qos_);
 
     handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
 
@@ -812,11 +818,7 @@ ReturnCode_t DomainParticipantImpl::enable()
 
 	discovery_->WriteSpdPdiscoveredParticipantData();
 
-	ReturnCode_t ret = QosPolicyCheck::CheckQos(qos_);
-	if (RETCODE_OK != ret) {
-		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err ret = %d ");
-		return ret;
-	}
+
 	if (qos_.entity_factory.autoenable_created_entities) {
 		/* topic 优先enble */
 		{

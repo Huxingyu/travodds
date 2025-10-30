@@ -4,6 +4,8 @@
 #include "rtps/endpoint/statefulreader.h"
 #include "rtps/endpoint/statelessreader.h"
 #include "rtps/transport/messagetransmitterudp.h"
+#include "rtps/transport/messagetransmittertcp.h"
+#include "rtps/transport/messagetransmittershm.h"
 #include "rtps/messages/messageprocessor.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
@@ -66,40 +68,81 @@ Participant::~Participant()
 
 }
 
-ReturnCode_t Participant::Init()
+ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 {
-	/* wangyi */
-	livelinessManager_ = std::make_shared<LivelinessManager>(this);
+	qos_ = qos;
 
-	messageProcessor_ = std::make_shared<MessageProcessor>(this);
-	
-	messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
-	//messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
-
-	std::vector<InfoIP_t> localIps;
-	IpContainer::GetInfoIPs(localIps);
 	int32_t participantid = 0;
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
 	uint32_t spdpPort = SPDP_WELL_KNOWN_UNICAST_PORT(domainId_, participantid);
 
+	/* wangyi */
+	livelinessManager_ = std::make_shared<LivelinessManager>(this);
+
+	messageProcessor_ = std::make_shared<MessageProcessor>(this);
+	if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS) || qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
+	}
+	if (qos_.transport.hasTransport(TRANSPORT_UDPv6_QOS) || qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
+	}
+	if (qos_.transport.hasTransport(TRANSPORT_TCPv4_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterTCPv4>(messageProcessor_));
+	}
+	if (qos_.transport.hasTransport(TRANSPORT_TCPv6_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterTCPv6>(messageProcessor_));
+	}
+	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
+		Locator_t loc;
+		loc.kind = LOCATOR_KIND_SHM;
+		loc.port = userPort;
+		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
+		defaultUnicastLocatorList_.push_back(loc);
+	}
+	
+	std::vector<InfoIP_t> localIps;
+	IpContainer::GetInfoIPs(localIps);
+
 	for (auto& ip : localIps) {
 		Locator_t ipLoc;
+		memcpy(ipLoc.address, ip.address, sizeof(Locator_t::address));
 		if (ip.type == IPV4) {
+			IPv4LocatorList_.push_back(ipLoc);
 			ipLoc.kind = LOCATOR_KIND_UDPv4;
+			if (qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+				ipLoc.port = spdpPort;
+				metatrafficUnicastLocatorList_.push_back(ipLoc);
+			}
+			ipLoc.port = userPort;
+			if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS)) {
+
+				defaultUnicastLocatorList_.push_back(ipLoc);
+			}
+			if (qos_.transport.hasTransport(TRANSPORT_TCPv4_QOS)) {
+				ipLoc.kind = LOCATOR_KIND_TCPv4;
+				defaultUnicastLocatorList_.push_back(ipLoc);
+			}
 		} else if (ip.type == IPV6){
+			IPv6LocatorList_.push_back(ipLoc);
 			ipLoc.kind = LOCATOR_KIND_UDPv6;
+			if (qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+				ipLoc.port = spdpPort;
+				metatrafficUnicastLocatorList_.push_back(ipLoc);
+			}
+			ipLoc.port = userPort;
+			if (qos_.transport.hasTransport(TRANSPORT_UDPv6_QOS)) {
+				defaultUnicastLocatorList_.push_back(ipLoc);
+			}
+			if (qos_.transport.hasTransport(TRANSPORT_TCPv6_QOS)) {
+				ipLoc.kind = LOCATOR_KIND_TCPv6;
+				defaultUnicastLocatorList_.push_back(ipLoc);
+			}
 		} else {
 			continue;
 		}
-		memcpy(ipLoc.address, ip.address, sizeof(Locator_t::address));
-		ipLoc.port = userPort;
-		defaultUnicastLocatorList_.push_back(ipLoc);
-		ipLoc.port = spdpPort;
-		metatrafficUnicastLocatorList_.push_back(ipLoc);
 	}
-	//Locator_t localAddress;
-	//unicastAddress.kind = LOCATOR_KIND_UDPv4;
 
 	FlowParameters flowParameters;
 	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
@@ -113,17 +156,29 @@ ReturnCode_t Participant::InitNetwork()
 	for (auto& messageTransmitter : messageTransmitters_) {
 		Locator_t unicastAddress;
 		//网络传输模块对象初始化发送地址、接收地址
+
 		unicastAddress.kind = messageTransmitter->GetTransmitterKind();
-		messageTransmitter->SendAddrAdd(unicastAddress, unicastAddress);
+
+		if (unicastAddress.kind == LOCATOR_KIND_UDPv6 || unicastAddress.kind == LOCATOR_KIND_TCPv6) {
+			messageTransmitter->SetUnicastLocatorList(IPv6LocatorList_);
+		} else {
+			messageTransmitter->SetUnicastLocatorList(IPv4LocatorList_);
+		}
 
 		CreateReceiverResources(messageTransmitter, defaultUnicastLocatorList_, true);
+
+		if (unicastAddress.kind != LOCATOR_KIND_UDPv4 && unicastAddress.kind != LOCATOR_KIND_UDPv6) {
+			continue;
+		}
+
+		messageTransmitter->SendAddrAdd(unicastAddress, unicastAddress);
 		CreateReceiverResources(messageTransmitter, metatrafficUnicastLocatorList_, true);
-		messageTransmitter->SetUnicastLocatorList(defaultUnicastLocatorList_);
+
 
 		/* UDPv4、UDPv6 组播设置 */
 		Locator_t multicastAaddresses;
 		multicastAaddresses.port = multicPort;
-		if (LOCATOR_KIND_UDPv4 == messageTransmitter->GetTransmitterKind()) {
+		if (LOCATOR_KIND_UDPv4 == messageTransmitter->GetTransmitterKind() && (qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
 			multicastAaddresses.kind = LOCATOR_KIND_UDPv4;
 			multicastAaddresses.address[12] = 239;
 			multicastAaddresses.address[13] = 255;
@@ -131,7 +186,7 @@ ReturnCode_t Participant::InitNetwork()
 			multicastAaddresses.address[15] = 1;
 			messageTransmitter->ReceiveAddrAdd(multicastAaddresses);
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
-		} else if(LOCATOR_KIND_UDPv6 == messageTransmitter->GetTransmitterKind()) {
+		} else if(LOCATOR_KIND_UDPv6 == messageTransmitter->GetTransmitterKind() && (qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
 
 			multicastAaddresses.kind = LOCATOR_KIND_UDPv6;
 			multicastAaddresses.address[0] = 0xff;
@@ -163,12 +218,12 @@ std::shared_ptr<Writer> Participant::CreateWriter(DataWriterImpl* dw, const Data
 	} else {
 		writerPtr = std::make_shared<StatefulWriter>(dwQos, guid, kind);
 	}
+	endpointPtr = writerPtr;
+	endpointPtr->SetParticipant(this);
+	
 	FlowController* controller = flowControlManager_->GetFlowController(flowConfig);
 	writerPtr->SetFlowController(controller);
 	controller->RegisterWriter(writerPtr);
-
-	endpointPtr = writerPtr;
-	endpointPtr->SetParticipant(this);
 
     dw->SetRelatedWriter(writerPtr);
 
@@ -406,6 +461,9 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		return RETCODE_OK;
 	}
 
+	// yuguxu 传输断开链接
+	TransmittersDisconnect(itor->second.unicastLocatorList);
+
 	std::list<EntityId_t> readersEntityid;
 	{
 		std::unique_lock<std::mutex> lock(mtxMatchEntitys_);
@@ -432,7 +490,6 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		if (!reader) {
 			continue;
 		}
-
 		std::shared_ptr<StatefulReader> statefulReader = std::dynamic_pointer_cast<StatefulReader>(reader);
 
 		if(statefulReader) {
@@ -539,6 +596,9 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 	if (itor == remoteReaders_.end()) {
 		return RETCODE_OK;
 	}
+
+	// yuguxu 传输断开链接
+	TransmittersDisconnect(itor->second.unicastLocatorList);
 
 	std::list<EntityId_t> writersEntityid;
 	{
@@ -823,6 +883,9 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 		return;
 	}
 
+	// yuguxu 传输链接
+	TransmittersConnect(subData.unicastLocatorList);
+
 	// yuguxu 主题数据过滤器
 	if (subData.contentFilter.contentFilteredTopicName.size() > 0 &&
 		subData.contentFilter.relatedTopicName == pubData.topic_name &&
@@ -966,6 +1029,8 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		return ;
 	}
 
+	// yuguxu 传输链接
+	TransmittersConnect(pubData.unicastLocatorList);
 
 	if (reader->IsReliable()) {
 		std::shared_ptr<WriterProxy> proxy = std::make_shared<WriterProxy>(pubData.remoteWriterGuid, pubData.remoteGroupGuid, pubData.unicastLocatorList, pubData.multicastLocatorList);
@@ -1265,6 +1330,75 @@ void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* 
 {
 	if (flowRateLimitedManager_) {
 		flowRateLimitedManager_->MessageSend(destinationList, message, length);
+	}
+}
+void Participant::TransmittersConnect(const LocatorVec& remoteLocator)
+{
+	std::shared_ptr<MessageTransmitter> tcpv4Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> tcpv6Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> shmTransmitter = nullptr;
+	for (auto& transmitter : messageTransmitters_) {
+
+		if(transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv4 ) {
+			tcpv4Transmitter = transmitter;
+			continue;
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
+			tcpv6Transmitter = transmitter;
+			continue;
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_SHM) {
+			shmTransmitter = transmitter;
+			continue;
+		} else {
+			continue;
+		}
+	}
+	for (const auto& dest : remoteLocator) {
+		Locator_t src;
+		if(dest.kind == LOCATOR_KIND_TCPv4 && tcpv4Transmitter) {
+			src.kind = LOCATOR_KIND_TCPv4;
+			tcpv4Transmitter->SendAddrAdd(src, dest);
+		} else if (dest.kind == LOCATOR_KIND_TCPv6 && tcpv6Transmitter) {
+			src.kind = LOCATOR_KIND_TCPv6;
+			tcpv6Transmitter->SendAddrAdd(src, dest);
+		} else if (dest.kind == LOCATOR_KIND_SHM && shmTransmitter) {
+			src.kind = LOCATOR_KIND_SHM;
+			shmTransmitter->SendAddrAdd(src, dest);
+		} else {
+			continue;
+		}
+	}
+}
+void Participant::TransmittersDisconnect(const LocatorVec& remoteLocator)
+{
+	std::shared_ptr<MessageTransmitter> tcpv4Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> tcpv6Transmitter = nullptr;
+	std::shared_ptr<MessageTransmitter> shmTransmitter = nullptr;
+
+	for (auto& transmitter : messageTransmitters_) {
+
+		if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv4) {
+			tcpv4Transmitter = transmitter;
+			continue;
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_TCPv6) {
+			tcpv6Transmitter = transmitter;
+			continue;
+		} else if (transmitter->GetTransmitterKind() == LOCATOR_KIND_SHM) {
+			shmTransmitter = transmitter;
+			continue;
+		} else {
+			continue;
+		}
+	}
+	for (const auto& dest : remoteLocator) {
+		if (dest.kind == LOCATOR_KIND_TCPv4 && tcpv4Transmitter) {
+			tcpv4Transmitter->SendAddrRemove(dest);
+		} else if (dest.kind == LOCATOR_KIND_TCPv6 && tcpv6Transmitter) {
+			tcpv6Transmitter->SendAddrRemove(dest);
+		} else if (dest.kind == LOCATOR_KIND_SHM && shmTransmitter) {
+			shmTransmitter->SendAddrRemove(dest);
+		} else {
+			continue;
+		}
 	}
 }
 LocatorVec Participant::GetDefaultUnicastLocators()

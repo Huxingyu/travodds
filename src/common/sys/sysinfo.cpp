@@ -8,6 +8,8 @@
 #include <process.h>
 #include <lmcons.h>
 #else
+#include <sys/types.h>
+#include <signal.h> 
 #include <unistd.h>
 #include <pwd.h>
 #include <limits.h>
@@ -52,6 +54,37 @@ int32_t SysInfo::GetProcessIDStatic()
 #else
     return getpid();
 #endif
+}
+
+bool SysInfo::IsProcessExists(int32_t pid)
+{
+    if (pid <= 0) {
+        return false;
+    }
+
+#ifdef _WIN32
+    // Windows实现
+    HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
+    if (process == NULL) {
+        return false;
+    }
+
+    DWORD exitCode;
+    if (GetExitCodeProcess(process, &exitCode)) {
+        CloseHandle(process);
+        // 如果退出代码不是STILL_ACTIVE，表示进程已终止
+        return (exitCode == STILL_ACTIVE);
+    }
+
+    CloseHandle(process);
+    return false;
+#else
+    // Linux/Unix实现
+    // 发送0信号给进程，如果返回错误表示进程不存在
+    return (kill(pid, 0) == 0);
+#endif
+
+    return false;
 }
 
 std::string SysInfo::GetUsername()

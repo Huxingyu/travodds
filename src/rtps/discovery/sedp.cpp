@@ -11,7 +11,7 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #endif // DDSSECURITY
-USING_TRAVODDS_NAMESPACE;
+USING_TRAVODDS_NAMESPACE
 
 Sedp::Sedp(Participant* participant,Spdp* spdp)
 	: participant_(participant),
@@ -294,50 +294,6 @@ void Sedp::AddSedpProxy(const SPDPdiscoveredParticipantData& data)
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER;
 	readerData.ddsSubscriptionData = subscriptionsReader_->GetRelatedDataReader()->GetBuiltinTopicData();
 	participant_->AddRemoteReader(readerData);
-
-//#ifdef DDSSECURITY
-//	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER;
-//	writerData.ddsPublicationData = publicationsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-//	participant_->AddRemoteWriter(writerData);
-//
-//	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER;
-//	writerData.ddsPublicationData = subscriptionsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-//	participant_->AddRemoteWriter(writerData);
-//
-//	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER;
-//	writerData.ddsPublicationData = participantMessageSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-//	participant_->AddRemoteWriter(writerData);
-//
-//	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER;
-//	writerData.ddsPublicationData = participantStatelessMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-//	participant_->AddRemoteWriter(writerData);
-//
-//	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER;
-//	writerData.ddsPublicationData = participantVolatileSecureMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-//	participant_->AddRemoteWriter(writerData);
-//
-//
-//
-//	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
-//	readerData.ddsSubscriptionData = publicationsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-//	participant_->AddRemoteReader(readerData);
-//
-//	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER;
-//	readerData.ddsSubscriptionData = subscriptionsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-//	participant_->AddRemoteReader(readerData);
-//
-//	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
-//	readerData.ddsSubscriptionData = participantStatelessMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-//	participant_->AddRemoteReader(readerData);
-//
-//	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
-//	readerData.ddsSubscriptionData = participantStatelessMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-//	participant_->AddRemoteReader(readerData);
-//
-//	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
-//	readerData.ddsSubscriptionData = participantVolatileSecureMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-//	participant_->AddRemoteReader(readerData);
-//#endif // DDSSECURITY
 
 	//GUID_t guid;
 	//guid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;

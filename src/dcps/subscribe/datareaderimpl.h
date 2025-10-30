@@ -22,7 +22,7 @@
 class SerializedBuffer;
 
 TRAVODDS_NAMESPACE_BEGIN
-
+class SerializedBuffer;
 class Reader;
 class SubscriberImpl;
 class TopicDescriptionImpl;
