@@ -19,7 +19,7 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 		acceptor_.reset();
 	}
 
-	/* ¹Ø±ÕËùÓĞ½ÓÊÕsocket */
+	/* å…³é—­æ‰€æœ‰æ¥æ”¶socket */
 	for (auto& it : sessions_) {
 		if (it.second->messageBuffer) {
 			receivePool_->releaseBuffer(it.second->messageBuffer);
@@ -30,7 +30,7 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 	}
 	sessions_.clear();
 
-	/* ¹Ø±ÕËùÓĞ·¢ËÍsocket */
+	/* å…³é—­æ‰€æœ‰å‘é€socket */
 	for (auto& it : sendSocketMap_) {
 		if (it.second->socket->is_open()) {
 			it.second->socket->shutdown(asio::ip::tcp::socket::shutdown_send, ec);
@@ -59,7 +59,7 @@ ReturnCode_t MessageTransmitterTCP::SendAddrAdd(Locator_t source, Locator_t dest
 		}
 	}
 
-	// ´´½¨Á¬½ÓÈÎÎñ
+	// åˆ›å»ºè¿æ¥ä»»åŠ¡
 	 AsyncConnect(src, dest, priority);
 	 return RETCODE_OK;
 }
@@ -88,7 +88,7 @@ ReturnCode_t MessageTransmitterTCP::ReceiveAddrAdd(Locator_t receiveAddr)
 		return RETCODE_ERROR;
 	}
 
-	/* ÒÑ¾­´æÔÚ¼àÌı¶Ë¿ÚºÅ ²»ÄÜÔÙ¼àÌıÆäËûµØÖ· */
+	/* å·²ç»å­˜åœ¨ç›‘å¬ç«¯å£å· ä¸èƒ½å†ç›‘å¬å…¶ä»–åœ°å€ */
 	if (acceptor_ && acceptor_->is_open())
 		return RETCODE_OK;
 
@@ -96,28 +96,28 @@ ReturnCode_t MessageTransmitterTCP::ReceiveAddrAdd(Locator_t receiveAddr)
 
 	try
 	{
-		// ´´½¨acceptor
+		// åˆ›å»ºacceptor
 		asio::ip::tcp::endpoint endpoint =  GetEndpoint(rAddr, true);
 		acceptor_ = std::make_shared<asio::ip::tcp::acceptor>(ioContext_);
 		if (!acceptor_->is_open()) {
-			// ´ò¿ªacceptor
+			// æ‰“å¼€acceptor
 			acceptor_->open(endpoint.protocol());
 		}
-		//// ÉèÖÃSO_REUSEADDRÑ¡Ïî ¶Ë¿Ú¸´ÓÃ
+		//// è®¾ç½®SO_REUSEADDRé€‰é¡¹ ç«¯å£å¤ç”¨
 		//acceptor_->set_option(asio::ip::tcp::acceptor::reuse_address(true));
 
-		// Windows£º½ûÖ¹ÆäËû½ø³Ì¸´ÓÃ£¨¹Ø¼ü£¡£©
+		// Windowsï¼šç¦æ­¢å…¶ä»–è¿›ç¨‹å¤ç”¨ï¼ˆå…³é”®ï¼ï¼‰
 #ifdef _WIN32
 		acceptor_->set_option(asio::detail::socket_option::integer<ASIO_OS_DEF(SOL_SOCKET), SO_EXCLUSIVEADDRUSE>(1));
 #endif
 
-		// °ó¶¨µ½¶Ëµã
+		// ç»‘å®šåˆ°ç«¯ç‚¹
 		acceptor_->bind(GetReciveEndpoint(rAddr.port));
 
-		// ¿ªÊ¼¼àÌı£¬ÉèÖÃ×î´óÁ¬½Ó¶ÓÁĞÎª100
+		// å¼€å§‹ç›‘å¬ï¼Œè®¾ç½®æœ€å¤§è¿æ¥é˜Ÿåˆ—ä¸º100
 		acceptor_->listen(100);
 
-		// Æô¶¯Òì²½½ÓÊÜÁ¬½Ó
+		// å¯åŠ¨å¼‚æ­¥æ¥å—è¿æ¥
 		AsyncAccept();
 	} catch (const asio::system_error& e) {
 		if (acceptor_ && acceptor_->is_open()) {
@@ -215,7 +215,7 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> session, const asio::error_code& ec, size_t bytesTransferred)
 {
 	if (ec) {
-		// Ö÷¶¯ÊÍ·ÅÒì³£Á¬½Ó
+		// ä¸»åŠ¨é‡Šæ”¾å¼‚å¸¸è¿æ¥
 		CleanupSession(session);
 		return;
 	}
@@ -226,7 +226,7 @@ void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> sessi
 		CleanupSession(session);
 		return;
 	}
-	// ÑéÖ¤RTCP±êÊ¶
+	// éªŒè¯RTCPæ ‡è¯†
 	if (session->header.rtcp[0] != 'R' || session->header.rtcp[1] != 'T' ||
 		session->header.rtcp[2] != 'C' || session->header.rtcp[3] != 'P') {
 		TRAVODDS_LOG(LOG_ERROR,
@@ -234,16 +234,16 @@ void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> sessi
 		CleanupSession(session);
 		return;
 	}
-	// ÑéÖ¤CRC
+	// éªŒè¯CRC
 	if (!session->header.ValidateCRC()) {
 		TRAVODDS_LOG(LOG_ERROR,
 			"Header CRC validation failed");
 		CleanupSession(session);
 		return;
 	}
-	// »ñÈ¡ÏûÏ¢³¤¶È£¨´¦Àí×Ö½ÚĞò£©
+	// è·å–æ¶ˆæ¯é•¿åº¦ï¼ˆå¤„ç†å­—èŠ‚åºï¼‰
 	uint32_t messagelength = session->header.GetLength();
-	// ÑéÖ¤ÏûÏ¢³¤¶È
+	// éªŒè¯æ¶ˆæ¯é•¿åº¦
 	if (messagelength > TCP_MAX_MESSAGE_SIZE) {
 		TRAVODDS_LOG(LOG_ERROR,
 			"Message too large: %u bytes", messagelength);
@@ -266,14 +266,14 @@ void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> sessi
 void MessageTransmitterTCP::InterpretMessage(std::shared_ptr<ReceiveSession> session, const asio::error_code& ec, size_t bytesTransferred)
 {
 	if (ec) {
-		// Ö÷¶¯ÊÍ·ÅÒì³£Á¬½Ó
+		// ä¸»åŠ¨é‡Šæ”¾å¼‚å¸¸è¿æ¥
 		CleanupSession(session);
 		return;
 	}
 	session->bytesReceived += bytesTransferred;
 	if (session->bytesReceived == session->header.GetLength()) {
 		MessageTransmitter::InterpretMessage(session->messageBuffer, session->header.GetLength());
-		// ÖØÖÃ»á»°×´Ì¬£¬×¼±¸½ÓÊÕÏÂÒ»¸öÏûÏ¢
+		// é‡ç½®ä¼šè¯çŠ¶æ€ï¼Œå‡†å¤‡æ¥æ”¶ä¸‹ä¸€ä¸ªæ¶ˆæ¯
 		session->phase = ReceivePhase::HEADER;
 		session->bytesReceived = 0;
 		receivePool_->releaseBuffer(session->messageBuffer);
@@ -293,16 +293,16 @@ void MessageTransmitterTCP::AsyncAccept()
 	}
 
 	try {
-		// ´´½¨ĞÂsocket
+		// åˆ›å»ºæ–°socket
 		auto newSocket = std::make_shared<asio::ip::tcp::socket>(ioContext_);
-		// Òì²½½ÓÊÜÁ¬½Ó
+		// å¼‚æ­¥æ¥å—è¿æ¥
 		acceptor_->async_accept(*newSocket,
 			[this, newSocket](const asio::error_code& ec) {
 				if (!ec) {
-					// »ñÈ¡¿Í»§¶ËµØÖ·ĞÅÏ¢
+					// è·å–å®¢æˆ·ç«¯åœ°å€ä¿¡æ¯
 					//asio::ip::tcp::endpoint remote_endpoint = newSocket->remote_endpoint();
 #ifdef WIN32
-					/* µ¥Î» ºÁÃë */
+					/* å•ä½ æ¯«ç§’ */
 					int tv = 200;
 #else
 					struct timeval tv;
@@ -313,8 +313,8 @@ void MessageTransmitterTCP::AsyncAccept()
 						return;
 					}
 
-					// Ìí¼Óµ½Á¬½ÓÁĞ±í
-					// ´´½¨½ÓÊÕ»á»°
+					// æ·»åŠ åˆ°è¿æ¥åˆ—è¡¨
+					// åˆ›å»ºæ¥æ”¶ä¼šè¯
 					auto session = std::make_shared<ReceiveSession>();
 					session->socket = newSocket;
 					{
@@ -329,7 +329,7 @@ void MessageTransmitterTCP::AsyncAccept()
 						"[TCP Mode] Accept error: %s", ec.message().c_str());
 				}
 				flagNum_.fetch_sub(1);
-				// ¼ÌĞø½ÓÊÜÏÂÒ»¸öÁ¬½Ó
+				// ç»§ç»­æ¥å—ä¸‹ä¸€ä¸ªè¿æ¥
 				if (acceptor_ && acceptor_->is_open()) {
 					AsyncAccept();
 				}
@@ -355,7 +355,7 @@ void MessageTransmitterTCP::AsyncReceive(std::shared_ptr<ReceiveSession> session
 	}
 
 	if (session->phase == ReceivePhase::HEADER) {
-		// ½ÓÊÕTCPÍ·²¿
+		// æ¥æ”¶TCPå¤´éƒ¨
 		asio::async_read(*session->socket,
 			asio::buffer(&session->header, sizeof(TCPHeader)),
 			[this, session](const asio::error_code& ec, size_t bytes_transferred) {
@@ -363,7 +363,7 @@ void MessageTransmitterTCP::AsyncReceive(std::shared_ptr<ReceiveSession> session
 				flagNum_.fetch_sub(1);
 			});
 	} else {
-		// ½ÓÊÕÏûÏ¢Ìå
+		// æ¥æ”¶æ¶ˆæ¯ä½“
 		asio::async_read(*session->socket,
 			asio::buffer(session->messageBuffer + session->bytesReceived,
 				session->header.GetLength() - session->bytesReceived),
@@ -379,33 +379,33 @@ void MessageTransmitterTCP::AsyncReceive(std::shared_ptr<ReceiveSession> session
 void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocator& dest, uint16_t priority)
 {
 	try {
-		// ±ê¼ÇÎªÕıÔÚÁ¬½ÓÖĞ
+		// æ ‡è®°ä¸ºæ­£åœ¨è¿æ¥ä¸­
 		{
 			std::lock_guard<std::mutex> lock(sendSocketsMtx_);
 			sendSocketMap_[dest] = std::make_shared<SendSession>(nullptr, SendPhase::CONNETING, priority);
 		}
 
-		// TODO v4ºÍv6µÄ´¦Àí
+		// TODO v4å’Œv6çš„å¤„ç†
 		std::shared_ptr<asio::ip::tcp::socket> newSendSocket = GetSocketInit();
 
-		/* ÉèÖÃ¶Ë¿Ú¸´ÓÃ  */
+		/* è®¾ç½®ç«¯å£å¤ç”¨  */
 		asio::socket_base::reuse_address reuse_address_option(true);
 		newSendSocket->set_option(reuse_address_option);
 #ifdef __linux__
 		if (priority != static_cast<uint16_t>(-1)) {
 			int iPriority = priority;
-			// Ê¹ÓÃÔ­ÉúsocketÑ¡ÏîÉèÖÃSO_PRIORITY
+			// ä½¿ç”¨åŸç”Ÿsocketé€‰é¡¹è®¾ç½®SO_PRIORITY
 			asio::detail::socket_option::integer<SOL_SOCKET, SO_PRIORITY> priority_option(iPriority);
 			newSendSocket->set_option(priority_option);
 		}
 #endif
 
-		// ÉèÖÃTCP_NODELAYÑ¡Ïî
+		// è®¾ç½®TCP_NODELAYé€‰é¡¹
 		asio::ip::tcp::no_delay no_delay_option(true);
 		newSendSocket->set_option(no_delay_option);
 
 #ifdef WIN32
-		/* µ¥Î»: ºÁÃë */
+		/* å•ä½: æ¯«ç§’ */
 		int tv = 2000;
 #else
 		struct timeval tv;
@@ -417,21 +417,21 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 
 			throw std::runtime_error("setsockopt SO_SNDTIMEO failed");
 		}
-		/* Èç¹û¶Ë¿ÚºÅ²»Îª0,°ó¶¨¶Ë¿ÚºÅ */
+		/* å¦‚æœç«¯å£å·ä¸ä¸º0,ç»‘å®šç«¯å£å· */
 		if (0 != src.port)
 		{
 			newSendSocket->bind(GetEndpoint(src, true));
 		}
 
-		// ´´½¨Ä¿±ê¶Ëµã²¢Á¬½Ó
+		// åˆ›å»ºç›®æ ‡ç«¯ç‚¹å¹¶è¿æ¥
 		asio::ip::tcp::endpoint remote_endpoint = GetEndpoint(dest); 
 
 
-		// Òì²½Á¬½Ó
+		// å¼‚æ­¥è¿æ¥
 		newSendSocket->async_connect(remote_endpoint,
 			[this, newSendSocket, src, dest, priority] (asio::error_code ec) {
 				std::lock_guard<std::mutex> lock(sendSocketsMtx_);
-				// ¼ì²éÊÇ·ñÒÑ¾­±»ÆäËûÁ¬½Ó¸²¸Ç
+				// æ£€æŸ¥æ˜¯å¦å·²ç»è¢«å…¶ä»–è¿æ¥è¦†ç›–
 				auto it = sendSocketMap_.find(dest);
 				if (it == sendSocketMap_.end() || it->second->phase == SendPhase::CONNECT) {
 					return;
@@ -441,7 +441,7 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 					it->second->phase = SendPhase::CONNECT;
 					it->second->priority = priority;
 				} else {
-					// Á¬½ÓÊ§°Ü
+					// è¿æ¥å¤±è´¥
 					TRAVODDS_LOG(LOG_ERROR, 
 						"Connection failed to %s:%d: %s",
 						dest.GetStringAddress().data(), dest.port, ec.message().data());

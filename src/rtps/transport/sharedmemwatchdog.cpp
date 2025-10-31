@@ -10,8 +10,8 @@ SharedMemWatchdog::SharedMemWatchdog()
 	try {
 		std::unique_lock<named_mutex> lock(*mutex_, std::chrono::milliseconds(500));
 		if (!lock.owns_lock()) {
-			// Ä¬ÈÏ´æÔÚÒì³£½ø³Ì£¬³öÏÖËÀËø
-			// Ö±½Ó½âËø£¬ÖØÐÂ¼ÓËø
+			// é»˜è®¤å­˜åœ¨å¼‚å¸¸è¿›ç¨‹ï¼Œå‡ºçŽ°æ­»é”
+			// ç›´æŽ¥è§£é”ï¼Œé‡æ–°åŠ é”
 			mutex_->unlock();
 			lock.lock();
 		}
@@ -43,8 +43,8 @@ SharedMemWatchdog::~SharedMemWatchdog()
 		if (mutex_) {
 			std::unique_lock<named_mutex> lock(*mutex_, std::chrono::milliseconds(500));
 			if (!lock.owns_lock()) {
-				// Ä¬ÈÏ´æÔÚÒì³£½ø³Ì£¬³öÏÖËÀËø
-				// Ö±½Ó½âËø£¬ÖØÐÂ¼ÓËø
+				// é»˜è®¤å­˜åœ¨å¼‚å¸¸è¿›ç¨‹ï¼Œå‡ºçŽ°æ­»é”
+				// ç›´æŽ¥è§£é”ï¼Œé‡æ–°åŠ é”
 				mutex_->unlock();
 				lock.lock();
 			}

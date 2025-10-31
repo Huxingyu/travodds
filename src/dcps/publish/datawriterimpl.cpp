@@ -96,7 +96,7 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
     }
 
 	if (enable_) {
-		if (qos_.deadline.period != qos.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
+		if (qos_.deadline.period != qosTemp.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
 			std::chrono::steady_clock::time_point nextTime =
 				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
 			history_->UpAllDeadline(nextTime);

@@ -53,7 +53,7 @@ private:
 
 	void AsyncReceive(std::shared_ptr<SharedMemSocket> socket);
 private:
-	asio::io_context& ioContext_; // 调用异步功能
+	asio::io_context& ioContext_; // 璋冪敤寮傛鍔熻兘
 
 	static const std::array<char, 16> uuid_;
 

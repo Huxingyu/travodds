@@ -107,7 +107,7 @@ ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
         return RETCODE_IMMUTABLE_POLICY;
     }
 	if (enable_) {
-		if (qos_.deadline.period != qos.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
+		if (qos_.deadline.period != qosTemp.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
 			std::chrono::steady_clock::time_point nextTime =
 				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
 			history_->UpAllDeadline(nextTime);
@@ -801,6 +801,14 @@ void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& c
 		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
 	}
 
+}
+
+int32_t DataReaderImpl::GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache)
+{
+	GUID_t guid = reader_->GetGuid();
+	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind)
+		return  0;
+	return history_->GetInstanceLostcounts(cache);
 }
 
 void DataReaderImpl::DeadlineTimeout()

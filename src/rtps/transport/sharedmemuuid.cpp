@@ -12,8 +12,8 @@ SharedMemUUID::SharedMemUUID()
 	try {
 		std::unique_lock<named_mutex> lock(*mutex_, std::chrono::milliseconds(500));
 		if (!lock.owns_lock()) {
-			// Ä¬ÈÏ´æÔÚÒì³£½ø³Ì£¬³öÏÖËÀËø
-			// Ö±½Ó½âËø£¬ÖØÐÂ¼ÓËø
+			// é»˜è®¤å­˜åœ¨å¼‚å¸¸è¿›ç¨‹ï¼Œå‡ºçŽ°æ­»é”
+			// ç›´æŽ¥è§£é”ï¼Œé‡æ–°åŠ é”
 			mutex_->unlock();
 			lock.lock();
 		}
@@ -27,7 +27,7 @@ SharedMemUUID::SharedMemUUID()
 			boost::uuids::random_generator generator;
 			boost::uuids::uuid uuid = generator();
 
-			// ÔÚ¹²ÏíÄÚ´æÖÐ´´½¨UUID¶ÔÏó
+			// åœ¨å…±äº«å†…å­˜ä¸­åˆ›å»ºUUIDå¯¹è±¡
 			shareduuid_ = segment_->construct<SharedUUID>(objectName_)();
 			memcpy(shareduuid_->uuid.data(), uuid.data(), shareduuid_->uuid.size());
 			shareduuid_->referenceCount = 1;
@@ -50,8 +50,8 @@ SharedMemUUID::~SharedMemUUID()
 		if (mutex_) {
 			std::unique_lock<named_mutex> lock(*mutex_, std::chrono::milliseconds(500));
 			if (!lock.owns_lock()) {
-				// Ä¬ÈÏ´æÔÚÒì³£½ø³Ì£¬³öÏÖËÀËø
-				// Ö±½Ó½âËø£¬ÖØÐÂ¼ÓËø
+				// é»˜è®¤å­˜åœ¨å¼‚å¸¸è¿›ç¨‹ï¼Œå‡ºçŽ°æ­»é”
+				// ç›´æŽ¥è§£é”ï¼Œé‡æ–°åŠ é”
 				mutex_->unlock();
 				lock.lock();
 			}

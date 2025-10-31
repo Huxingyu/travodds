@@ -73,6 +73,9 @@ void SharedMemAccept::AsyncAccept(std::shared_ptr<SharedMemSocket> socket, std::
 
 void SharedMemAccept::Close() 
 {
+	if(isClosed_) {
+		return;
+	}
 	Shutdown();
 
 	auto start = std::chrono::steady_clock::now();
@@ -81,17 +84,18 @@ void SharedMemAccept::Close()
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
 
 		if (elapsed >= std::chrono::seconds(3)) {
-			break; // ×¼±¸Ç¿ÖÆ¹Ø±Õ
+			break; // å‡†å¤‡å¼ºåˆ¶å…³é—­
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 	scoped_lock<robust_mutex> lock(sharedAcceptList_->mutex);
 	for (auto& it : sockets_) {
-		it.second->Close();
+		it.second->Close(true);
 	}
 	sockets_.clear();
 	sharedAcceptList_->sockets.clear();
+	isClosed_ = true;
 }
 
 
@@ -115,9 +119,9 @@ bool SharedMemAccept::IsShutdown() const
 void SharedMemAccept::CleanupResources()
 {
 	try {
-		// Ìõ¼ş±äÁ¿/ĞÅºÅÁ¿ ¡ú »¥³âËø ¡ú ¹²ÏíÄÚ´æ
+		// æ¡ä»¶å˜é‡/ä¿¡å·é‡ â†’ äº’æ–¥é” â†’ å…±äº«å†…å­˜
 		shared_memory_object::remove(sharedMemoryName_.data());
-		// ÈôÊÇ»¹ÄÜ´ò¿ªÔÙ½øĞĞ¶ş´ÎÉ¾³ı
+		// è‹¥æ˜¯è¿˜èƒ½æ‰“å¼€å†è¿›è¡ŒäºŒæ¬¡åˆ é™¤
 		managed_shared_memory segment(open_only, sharedMemoryName_.data());
 		SharedAcceptList* sharedAcceptList = segment.find<SharedAcceptList>(objectName_).first;			
 		if (sharedAcceptList != nullptr) {

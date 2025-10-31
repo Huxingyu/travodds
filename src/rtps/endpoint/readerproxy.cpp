@@ -159,9 +159,9 @@ ReturnCode_t ReaderProxy::RecvAcknack(const AcknackSubMessage_t& ackMsg)
 	}
 	ackCount_ = ackMsg.count;
 
-	if (ackMsg.readerSNState.bitmapBase < relatedSeqnum_) {
-		return RETCODE_RECEIVE_DUPLICATE;
-	}
+	//if (ackMsg.readerSNState.bitmapBase < relatedSeqnum_) {
+	//	return RETCODE_RECEIVE_DUPLICATE;
+	//}
 	ackedSeq_ = ackMsg.readerSNState.bitmapBase - 1;
 	AckedChangesSet(ackedSeq_);
 	RemoveFragNackCounts(ackedSeq_);
