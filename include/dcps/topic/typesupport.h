@@ -21,6 +21,7 @@
 TRAVODDS_NAMESPACE_BEGIN
 
 class TypeObject;
+class DynamicType;
 
 //class DDS_DLL TypeObject {
 //public:
@@ -99,6 +100,9 @@ public:
 	 * @return ReturnCode_t 表示操作结果的状态码。
 	 */
 	virtual ReturnCode_t get_instancehandle(void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5 = false) = 0;
+
+
+	virtual DynamicType* get_dynamictype() { return nullptr; };
 
 	/**
 	 * @brief 数据类型是否包含key。

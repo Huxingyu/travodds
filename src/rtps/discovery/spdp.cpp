@@ -54,31 +54,35 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
 
 	writer_->SetResendDataPeriod(leaseDuration_);
-
+	DomainParticipantQos dpqos;
+	dataWriter->get_publisher()->get_participant()->get_qos(dpqos);
 	//TODO 补充locator与ip的装换函数
-	Locator_t locator;
-	locator.kind = LOCATOR_KIND_UDPv4;
-	locator.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
-	locator.address[12] = 0xEF;
-	locator.address[13] = 0xFF;
-	locator.address[14] = 0x00;
-	locator.address[15] = 0x01;
+	if (dpqos.dicovery.kind == DISCOVER_UDPv4_QOS || dpqos.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locator;
+		locator.kind = LOCATOR_KIND_UDPv4;
+		locator.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locator.address[12] = 0xEF;
+		locator.address[13] = 0xFF;
+		locator.address[14] = 0x00;
+		locator.address[15] = 0x01;
 
-	writer_->ReaderLocatorAdd(locator);
+		writer_->ReaderLocatorAdd(locator);
+	}
+	if (dpqos.dicovery.kind == DISCOVER_UDPv6_QOS || dpqos.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locatorv6;
+		locatorv6.kind = LOCATOR_KIND_UDPv6;
+		locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locatorv6.address[0] = 0xff;
+		locatorv6.address[1] = 0x1e;
+		//3-9 : 0
+		locatorv6.address[10] = 0xff;
+		locatorv6.address[11] = 0xff;
+		locatorv6.address[12] = 0xef;
+		locatorv6.address[13] = 0xff;
+		locatorv6.address[15] = 0x01;
 
-	Locator_t locatorv6;
-	locatorv6.kind = LOCATOR_KIND_UDPv6;
-	locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
-	locatorv6.address[0] = 0xff;
-	locatorv6.address[1] = 0x1e;
-	//3-9 : 0
-	locatorv6.address[10] = 0xff;
-	locatorv6.address[11] = 0xff;
-	locatorv6.address[12] = 0xef;
-	locatorv6.address[13] = 0xff;
-	locatorv6.address[15] = 0x01;
-
-	writer_->ReaderLocatorAdd(locatorv6);
+		writer_->ReaderLocatorAdd(locatorv6);
+	}
 
 	// DiscoveredReaderData data;
 	// participant_->AddRemoteReader()
@@ -321,7 +325,7 @@ void Spdp::CheckRemoteParticipantDuration()
 
 	GetOverdueParticipant(keys);
 
-	for(auto key : keys)
+	for(auto& key : keys)
 	{
 		GUID_t guid = Conversion::ToGuid(key);
 		discovery_->RemoveProxy(guid);
@@ -336,8 +340,7 @@ void Spdp::GetOverdueParticipant(std::vector<BuiltinTopicKey_t>& keys)
 	DomainParticipantImpl::get_current_time(currentTime);
 	double time = Conversion::ToSecondsDouble(currentTime);
 	//遍历检查是否超期，三次检测未收到报文，判断为超期进行移除操作 
-	for (auto itor : remoteParticipantStatus_) {
-
+	for (const auto& itor : remoteParticipantStatus_) {
 		if (itor.second.recvTime + itor.second.leaseDuration * 3 < time) {
 			keys.push_back(itor.first);
 		}

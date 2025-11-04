@@ -42,6 +42,8 @@ public:
 
     virtual TRAVODDS::ReturnCode_t get_instancehandle(void* data, TRAVODDS::CdrSerializer* cdr, TRAVODDS::InstanceHandle_t& iHandle, bool forceMd5 = false) override;
 
+    virtual TRAVODDS::DynamicType* get_dynamictype() override;
+
     virtual bool has_key() override;
 
     virtual const char* get_typename() override;

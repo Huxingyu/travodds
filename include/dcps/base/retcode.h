@@ -45,6 +45,8 @@ const ReturnCode_t   RETCODE_APPLY_MEM_ERR = 201;
 const ReturnCode_t   RETCODE_TIME_BASED_FILTER = 301;
 /* wangyi LifeSpan 超期判断 */
 const ReturnCode_t   RETCODE_LIFESPAN_TIMEOUT = 302;
+/* wangyi OwnerShip 过滤判断，非所有权数据写者数据 */
+const ReturnCode_t   RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX = 303;
 
 
 TRAVODDS_NAMESPACE_END

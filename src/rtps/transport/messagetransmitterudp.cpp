@@ -1,7 +1,6 @@
 #include "rtps/transport/messagetransmitterudp.h"
-#include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
-#include <iostream>
+
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
@@ -114,6 +113,11 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
+}
+
+ReturnCode_t MessageTransmitterUDP::SendAddrRemove(Locator_t destination)
+{
+	return ReturnCode_t();
 }
 
 ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t destination1, char* message, uint32_t length, uint16_t priority)
@@ -370,20 +374,15 @@ void MessageTransmitterUDP::SetStop()
 	}
 }
 
-ReturnCode_t MessageTransmitterUDP::InterpretMessage(char* message, uint32_t len)
-{
-	return messageProcessor_->InterpretSubmessage(message, len);;
-}
-
 void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> socket)
 {
 	flagNum_.fetch_add(1);
 	char* buffer = nullptr;
-	bool ret = receivePool_->getBuffer(MAXSIZE, buffer);
+	bool ret = receivePool_->getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);
 
 	while (!ret && IsRun()) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		ret = receivePool_->getBuffer(MAXSIZE, buffer);
+		ret = receivePool_->getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);
 	}
 	if (!IsRun()) {
 		flagNum_.fetch_sub(1);
@@ -391,7 +390,7 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 	}
 
 	std::shared_ptr<asio::ip::udp::endpoint> sender_endpoint = std::make_shared<asio::ip::udp::endpoint>();
-	socket->async_receive_from(asio::buffer(buffer, MAXSIZE), *sender_endpoint,
+	socket->async_receive_from(asio::buffer(buffer, UDP_MAX_MESSAGE_SIZE), *sender_endpoint,
 		[this, buffer, socket, sender_endpoint](const std::error_code& ec, std::size_t bytes_transferred) {
 			ReturnCode_t ret = RETCODE_OK;
 			if (!ec) {
