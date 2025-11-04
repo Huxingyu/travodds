@@ -117,8 +117,7 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
 	}
 
 	//更新指定Guid writer的存活状态
-	if(MANUAL_BY_TOPIC_LIVELINESS_QOS == kind)
-	{
+	if(MANUAL_BY_TOPIC_LIVELINESS_QOS == kind) {
 		auto itStatus = writers_.find(guid);
 
 		if (itStatus == writers_.end()) {
@@ -128,14 +127,15 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
 
 		AssertWriterLiveliness(itStatus->second);
 	}
-
-	//更新相同guidprefix writer的存活状态
-	for (auto writerIt = writers_.begin(); writerIt != writers_.end(); writerIt++)
-	{
-		if (writerIt->second.livelinessQos_.kind == kind && CompareGuidPrefix(guid.prefix, writerIt->first.prefix)) {
-			AssertWriterLiveliness(writerIt->second);
-		}
-	}
+    else {
+        //更新相同guidprefix writer的存活状态
+        for (auto writerIt = writers_.begin(); writerIt != writers_.end(); writerIt++)
+        {
+            if (writerIt->second.livelinessQos_.kind == kind && CompareGuidPrefix(guid.prefix, writerIt->first.prefix)) {
+                AssertWriterLiveliness(writerIt->second);
+            }
+        }
+    }
 
 	UpDateCheckedWriter();
 

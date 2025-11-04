@@ -3,7 +3,8 @@
 #include "rtps/messages/parameter.h"
 #include "dcps/domain/domainparticipant.h"
 #include "common/log/logger.h"
-USING_TRAVODDS_NAMESPACE;
+
+USING_TRAVODDS_NAMESPACE
 
 Sedp::Sedp(Participant* participant,Spdp* spdp)
 	: participant_(participant),

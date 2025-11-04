@@ -40,9 +40,9 @@ ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq
     return RETCODE_ERROR;
 }
 
-bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, TypeObject* typeObject)
+bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, DynamicType* type)
 {
-    DDSSQL::DDSSQLFilter filter(typeObject);
+    DDSSQL::DDSSQLFilter filter(type);
     ReturnCode_t ret = filter.InputSQL(filter_expression, expression_parameters);
     return ret == RETCODE_OK ? true : false;
 }

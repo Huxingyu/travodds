@@ -60,6 +60,10 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterRemove Err");
 		}
 	}
+	/* wangyi 删除旧数据 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		readerCache_->RemoveRemoteWriter(writerProxy->GetGuid());
+	}
 	matchedWriters_.erase(writerProxy->GetGuid());
 }
 
@@ -223,12 +227,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		}
 	}
 
-	if (1 != dataMsg.dataFrag.fragmentsInSubmessage) {
-		//TODO
-		//std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		return RETCODE_OK;
-	}
-	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum);
+	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
 
 	Notify(proxy);
 
@@ -350,6 +349,10 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 	if (set.bitmap.size != 0) {
 		//TODO 存在丢包,回复nack报文 
+		if(datareader_) {
+			/* 存在丢包数据,触发监听回调函数 */
+			datareader_->OnSampleLost(1);
+		}
 		
 	}
 
@@ -420,6 +423,9 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
+		if(datareader_ ) {
+			datareader_->SetLastinstanceHandle(cache);
+		}
 		ret = AddChanges(cache);
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
@@ -427,6 +433,15 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
+
+		/* wangyi 没有数据不触发回调 */
+		if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+			if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+				//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+			}
+		}
+
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
 		if (!datareader_->CheckLifespan(cache)) {
 			cache = proxy->GetSubmitCache();
@@ -440,8 +455,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		//TODO 提交数据 
 		if (readerListener_) {
 			readerListener_->on_data_available(cache);
-		}
-		else if (datareader_) {
+		} else if (datareader_) {
 			datareader_->OnDataAvaible();
 		}
 
@@ -569,6 +583,14 @@ void StatefulReader::TimerExpired()
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
 		return;
+	}
+
+	/* wangyi 没有数据不触发回调 */
+	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
+		if (ret == RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX) {
+			//wangyi ownership 过滤判断,非实例所有权数据写者发送的数据，过滤该数据。
+			return ;
+		}
 	}
 
 	if (RETCODE_OK != ret && datareader_) {

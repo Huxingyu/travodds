@@ -15,7 +15,7 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include "cdr/travoddscdr.h"
+#include <mutex>
 #include "dcps/base/retcode.h"
 #include "dcps/sql/ddssqlfield.h"
 #include "dcps/sql/binarytreenode.h"
@@ -25,17 +25,16 @@
 
 
 TRAVODDS_NAMESPACE_BEGIN
-class TypeObject;
 namespace DDSSQL {
 
 	class DDSSQLFilter
 	{
 	public:
-		DDSSQLFilter(TypeObject* typeObject);
+		DDSSQLFilter(DynamicType* dynType);
 
 		ReturnCode_t InputSQL(const std::string& expression, const std::vector<std::string>& parameters);
 
-		bool Validate(SerializedBuffer* buffer);
+		bool Validate(DynamicData* dynData);
 	protected:
 		std::shared_ptr<DDSSQLCondition> TransformTreeToCondition(const BinaryTreeNode& node, const std::vector<std::string>& parameters);
 
@@ -48,19 +47,20 @@ namespace DDSSQL {
 		// between, not betwenn
 		std::shared_ptr<DDSSQLCondition> TransformTreeToBetween(const BinaryTreeNode& node, const std::vector<std::string>& parameters);
 
-		void TransformEnum(std::shared_ptr<TypicalValue> left, std::shared_ptr<TypicalValue> right);
+		bool TransformEnum(std::shared_ptr<TypicalValue> left, const DynamicType* leftdesc, std::shared_ptr<TypicalValue> right, const DynamicType* rightdesc);
 	protected:
 		bool CheckValueCompatibility(TypicalKind left, TypicalKind right, bool ignoreEnum);
 
 		RelOperationKind GetPredicateOp(const BinaryTreeNode& node);
 
 	private:
-		std::unique_ptr<DynamicType> dynType_;
+		DynamicType* dynType_;
 
 		std::shared_ptr<DDSSQLCondition> root_; // 根节点
-
 		// field 占位
 		std::map<std::string, std::shared_ptr<DDSSQLFieldValue>> fields_;
+
+		std::mutex mutex_;
 
 	};
 }
