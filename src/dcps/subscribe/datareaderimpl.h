@@ -17,10 +17,8 @@
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
 
-class SerializedBuffer;
-
 TRAVODDS_NAMESPACE_BEGIN
-
+class SerializedBuffer;
 class Reader;
 class SubscriberImpl;
 class TopicDescriptionImpl;
@@ -822,6 +820,13 @@ public:
 	 * @param [in] cache 最后接收的样本实例。
 	 */
 	void SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache);
+
+	/**
+	 * @brief 获取最后样本实例丢包数。
+	 *
+	 * @return 返回样本实例丢包数。
+	 */
+	int32_t GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache);
 
 	/**
 	 * @brief Qos策略中deadline Qos相关定时器超时执行函数。
