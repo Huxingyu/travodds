@@ -277,9 +277,10 @@ ReturnCode_t HistoryCache::UpdataSampleInstance(const InstanceHandle_t& handle, 
 	if(!shared) {
 		if(insChange.aliveWriter.empty()) {
 			insChange.aliveWriter.insert({ writerGuid,ownershipStrength });
-		} else {
+		} 
+		else {
 			if(insChange.aliveWriter.begin()->first != writerGuid && insChange.aliveWriter.begin()->second >= ownershipStrength) {
-				return RETCODE_ERROR;
+				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
 			}
 			if (insChange.aliveWriter.begin()->first != writerGuid) {
 				insChange.aliveWriter.erase(insChange.aliveWriter.begin());
@@ -523,6 +524,16 @@ void HistoryCache::UpAllDeadline(const std::chrono::steady_clock::time_point& ne
 	for (auto& it : instanceChanges_) {
 		it.second.nextDeadline = nextDeadline;
 	}
+}
+
+int32_t HistoryCache::GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache)
+{
+	int32_t lostcounts = 0;
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	auto& readinstance = instanceChanges_[cache->instanceHandle];
+	lostcounts = cache->sequenceNumber - readinstance.lastSeqNum -1;
+	readinstance.lastSeqNum = cache->sequenceNumber;
+	return lostcounts;
 }
 
 void HistoryCache::RemoveRemoteWriter(const GUID_t& guid)

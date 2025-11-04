@@ -278,6 +278,41 @@ struct DurabilityServiceQosPolicy {
 	}
 };
 
+enum TransportQosPolicyKind : octet {
+	TRANSPORT_UDPv4_QOS = 1,
+	TRANSPORT_UDPv6_QOS = 1 << 1,
+	TRANSPORT_TCPv4_QOS = 1 << 2,
+	TRANSPORT_TCPv6_QOS = 1 << 3,
+	TRANSPORT_SHM_QOS   = 1 << 4
+};
+
+struct TransportQosPolicy
+{
+	octet kinds;
+	TransportQosPolicy() 
+		: kinds(1) {
+	};
+	void addTransport(TransportQosPolicyKind transport_kind) {
+		kinds |= static_cast<octet>(transport_kind);
+	}
+	void removeTransport(TransportQosPolicyKind transport_kind) {
+		kinds &= ~static_cast<octet>(transport_kind);
+	}
+	bool hasTransport(TransportQosPolicyKind transport_kind) const {
+		return (kinds & static_cast<octet>(transport_kind)) != 0;
+	}
+};
+
+enum DiscoveryProtocolQosPolicyKind : octet {
+	DISCOVER_UDPv4_QOS = 0,
+	DISCOVER_UDPv6_QOS = 1,
+	DISCOVER_UDPv4_AND_UDPv6_QOS = 2
+};
+
+struct DiscoveredMethodQosPolicy {
+	DiscoveryProtocolQosPolicyKind kind { DISCOVER_UDPv4_QOS };
+};
+
 struct DomainParticipantFactoryQos {
 	EntityFactoryQosPolicy entity_factory;
 
@@ -288,7 +323,8 @@ struct DomainParticipantFactoryQos {
 struct DomainParticipantQos {
 	UserDataQosPolicy user_data;
 	EntityFactoryQosPolicy entity_factory;
-
+	TransportQosPolicy transport;
+	DiscoveredMethodQosPolicy dicovery;
 	DomainParticipantQos() {
 	}
 };

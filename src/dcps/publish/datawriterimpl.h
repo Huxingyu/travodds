@@ -479,7 +479,7 @@ private:
 	/* 相关联的RTPS对象 */
 	std::shared_ptr<Writer>  writer_;
 	
-	std::map<GUID_t, DDSSQL::DDSSQLFilter> readerFilters_;
+	std::map<GUID_t, std::shared_ptr<DDSSQL::DDSSQLFilter>> readerFilters_;
 
 	/* 相关的数据类型支持的对象  */
 	std::unique_ptr<DataWriterStatusManager> statusMgr_;
