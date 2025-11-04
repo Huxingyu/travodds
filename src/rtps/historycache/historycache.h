@@ -187,6 +187,8 @@ public:
 
 	StateSet lastState;
 
+	SequenceNumber_t lastSeqNum;
+
 	int32_t maxSamples;
 };
 
@@ -389,6 +391,15 @@ public:
 	 * @param [in] nextDeadline 新的下一个截止日期。
 	 */
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
+
+	/**
+	 * @brief 获取实例丢失计数。
+	 *
+	 * @param [in] cache 需获取实例丢失计数的样本。
+	 *
+	 * @return 实例丢失计数。
+	 */
+	int32_t GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache);
 
 	/**
 	 * @brief 重新设置所有实例句柄handle对应的截止时间。

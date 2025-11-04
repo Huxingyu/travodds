@@ -56,13 +56,13 @@ namespace InterprocessType {
 
     struct robust_mutex {
         interprocess_mutex mutex;
-        int32_t hold_pid = 0;      // µ±Ç°³ÖÓĞËøµÄ½ø³ÌID
+        int32_t hold_pid = 0;      // å½“å‰æŒæœ‰é”çš„è¿›ç¨‹ID
 
-        // ³¢ÊÔ»ñÈ¡Ëø£¬±ÀÀ£×ªÒÆ
+        // å°è¯•è·å–é”ï¼Œå´©æºƒè½¬ç§»
         bool try_lock() {
             if (mutex.try_lock_for(std::chrono::milliseconds(500)) ||
                 !SysInfo::IsProcessExists(hold_pid)) {
-                // ¸üĞÂ³ÖÓĞÕßĞÅÏ¢
+                // æ›´æ–°æŒæœ‰è€…ä¿¡æ¯
                 hold_pid = SysInfo::GetProcessIDStatic();
                 return true;
             }
@@ -84,14 +84,14 @@ namespace InterprocessType {
     };
 
 
-    // ¹²ÏímapÀàĞÍ¶¨Òå
+    // å…±äº«mapç±»å‹å®šä¹‰
     using SegmentManager = boost::interprocess::managed_shared_memory::segment_manager;
     using ShmemAllocator = boost::interprocess::allocator<
         std::pair<const uint32_t, uint32_t>, SegmentManager>;
     using PortProcessMap = boost::interprocess::map<
         uint32_t, uint32_t, std::less<uint32_t>, ShmemAllocator>;
 
-    // ¼àÌı¶Ë¿Ú¼ÇÂ¼
+    // ç›‘å¬ç«¯å£è®°å½•
     struct SharedList {
         robust_mutex mutex;
         uint32_t referenceCount;
@@ -100,7 +100,7 @@ namespace InterprocessType {
             : referenceCount(0), portprocessidmap(alloc) {
         }
     };
-    //¼àÌıSocket¼ÇÂ¼
+    //ç›‘å¬Socketè®°å½•
     struct SharedAcceptList {
         robust_mutex mutex;
         interprocess_condition_any condition;

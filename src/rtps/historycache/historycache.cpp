@@ -526,6 +526,16 @@ void HistoryCache::UpAllDeadline(const std::chrono::steady_clock::time_point& ne
 	}
 }
 
+int32_t HistoryCache::GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache)
+{
+	int32_t lostcounts = 0;
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	auto& readinstance = instanceChanges_[cache->instanceHandle];
+	lostcounts = cache->sequenceNumber - readinstance.lastSeqNum -1;
+	readinstance.lastSeqNum = cache->sequenceNumber;
+	return lostcounts;
+}
+
 void HistoryCache::RemoveRemoteWriter(const GUID_t& guid)
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);

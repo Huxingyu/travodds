@@ -340,7 +340,7 @@ bool WriterProxy::ExistCache(const SequenceNumber_t& seq)
 	return ret;
 }
 
-ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t num)
+ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t startNum, int32_t num)
 {
 	std::shared_ptr<CacheChange> cache = nullptr;
 	ReturnCode_t ret = RETCODE_ERROR;
@@ -358,15 +358,18 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	}
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
-	uint32_t shift = 0;
-	if (0 != cache->fragmentSeq.count(num)) {
-		shift += (num - 1) * cache->fraqmentSize;// dataMsg.dataFrag.fragmentSize;
+	if (cache->fragmentSeq.erase(startNum) > 0) {
+		uint32_t shift = (startNum - 1) * cache->fraqmentSize;
 		memcpy(cache->serializedBuffer->buffer + shift, data, len);
-		cache->fragmentSeq.erase(num);
+	} else {
+		//TODO  
+		/* 重复接收分片数据 */
+	    //AGILOG(AGILOG_ERROR, "recv repeat dataFrg frag=%d ", num );
 	}
-	else {
-		//TODO  重复接收分片数据
-		//AGILOG(AGILOG_ERROR, "recv repeat dataFrg frag=%d ", num );
+
+	// yuguxu 移除其他包含的所有分片号
+	for (uint32_t i = startNum + 1; i < startNum + num; i++) {
+		cache->fragmentSeq.erase(i);
 	}
 
 	if (0 == cache->fragmentSeq.size()) {

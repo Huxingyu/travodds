@@ -227,12 +227,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		}
 	}
 
-	if (1 != dataMsg.dataFrag.fragmentsInSubmessage) {
-		//TODO
-		//std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		return RETCODE_OK;
-	}
-	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum);
+	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
 
 	Notify(proxy);
 
@@ -354,6 +349,10 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 	if (set.bitmap.size != 0) {
 		//TODO 存在丢包,回复nack报文 
+		if(datareader_) {
+			/* 存在丢包数据,触发监听回调函数 */
+			datareader_->OnSampleLost(1);
+		}
 		
 	}
 
@@ -424,6 +423,9 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
+		if(datareader_ ) {
+			datareader_->SetLastinstanceHandle(cache);
+		}
 		ret = AddChanges(cache);
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
@@ -453,8 +455,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		//TODO 提交数据 
 		if (readerListener_) {
 			readerListener_->on_data_available(cache);
-		}
-		else if (datareader_) {
+		} else if (datareader_) {
 			datareader_->OnDataAvaible();
 		}
 

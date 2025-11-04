@@ -822,6 +822,13 @@ public:
 	void SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache);
 
 	/**
+	 * @brief 获取最后样本实例丢包数。
+	 *
+	 * @return 返回样本实例丢包数。
+	 */
+	int32_t GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache);
+
+	/**
 	 * @brief Qos策略中deadline Qos相关定时器超时执行函数。
 	 */
 	void DeadlineTimeout();

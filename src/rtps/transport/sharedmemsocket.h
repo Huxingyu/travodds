@@ -23,9 +23,9 @@ class MemoryPool;
 
 /*
  * yuguxu
- * Ä£Äâµã¶ÔµãsocketÁ¬½Ó
- * ¶ÁºÍĞ´µÄ²Ù×÷Ö»»á·Ö±ğÔÚÁ½¸ö½Úµã
- * ²»´æÔÚ¶Á»òĞ´µÄ²Ù×÷»á·¢ÉúÔÚÁ½¸ö½ø³Ì
+ * æ¨¡æ‹Ÿç‚¹å¯¹ç‚¹socketè¿æ¥
+ * è¯»å’Œå†™çš„æ“ä½œåªä¼šåˆ†åˆ«åœ¨ä¸¤ä¸ªèŠ‚ç‚¹
+ * ä¸å­˜åœ¨è¯»æˆ–å†™çš„æ“ä½œä¼šå‘ç”Ÿåœ¨ä¸¤ä¸ªè¿›ç¨‹
  */
 class SharedMemSocket {
 public:
@@ -46,9 +46,9 @@ public:
 
     bool IsShutdown() const;
 
-    void Close();
+    void Close(bool haslock = false);
 private:
-    // ½«³¤¶ÈÏÈĞ´Èë¹²ÏíÄÚ´æ»º´æ
+    // å°†é•¿åº¦å…ˆå†™å…¥å…±äº«å†…å­˜ç¼“å­˜
     void WriteInLength(uint32_t len, uint32_t& currentwritepos, size_t buffersize);
     void CleanupResources();
 
@@ -60,8 +60,10 @@ private:
     std::string acceptPort_;
     std::string sharedMemoryName_;
     const char* objectName_ = "TravoddsTransporType";
-    // Óë¹²ÏíÄÚ´æ±£³ÖÒ»ÖÂ
+    // ä¸å…±äº«å†…å­˜ä¿æŒä¸€è‡´
     bool shutdown_ = false;
+
+	bool isClosed_ = false;
    
     std::unique_ptr<InterprocessType::managed_shared_memory> segment_;
 
@@ -71,20 +73,20 @@ private:
     };
 
     struct Data {
-        // ¶ÁĞ´Ëø¡¢Ìõ¼şµÈ´ı¼¯
+        // è¯»å†™é”ã€æ¡ä»¶ç­‰å¾…é›†
         InterprocessType::interprocess_mutex rmutex;
         InterprocessType::interprocess_condition rcondition;
         InterprocessType::interprocess_mutex wmutex;
         InterprocessType::interprocess_condition wcondition;
 
-		// µ±Ç°¶ÁÈ¡Î»ÖÃ
+		// å½“å‰è¯»å–ä½ç½®
         std::atomic<uint32_t> readpos = 0;
-		// µ±Ç°Ğ´ÈëÎ»ÖÃ
+		// å½“å‰å†™å…¥ä½ç½®
         std::atomic<uint32_t> writepos = 0;
-        // ¶ÁĞ´ÒıÓÃ¼ÇÊı
+        // è¯»å†™å¼•ç”¨è®°æ•°
         std::atomic<uint32_t> refs = 0;
         bool shutdown = false;
-        //»º´æÊµ¼Ê³¤¶ÈÊÇÔÊĞíµ¥´ÎĞ´ÈëµÄÁ½±¶
+        //ç¼“å­˜å®é™…é•¿åº¦æ˜¯å…è®¸å•æ¬¡å†™å…¥çš„ä¸¤å€
         char msg[SHM_MAX_MESSAGE_SIZE * 2];
         Data() : msg{0} {};
     };

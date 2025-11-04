@@ -24,44 +24,44 @@ class MessageTransmitterTCP : public MessageTransmitter
 {
 public:
 	/**
-     * @brief Îö¹¹º¯Êı¡£
+     * @brief ææ„å‡½æ•°ã€‚
      */
 	virtual ~MessageTransmitterTCP();
 
 	/**
-	 * @brief RTPS±¨ÎÄ·¢ËÍSocket´´½¨Óë´æ´¢²¢°ó¶¨·¢ËÍIP¡£
+	 * @brief RTPSæŠ¥æ–‡å‘é€Socketåˆ›å»ºä¸å­˜å‚¨å¹¶ç»‘å®šå‘é€IPã€‚
 	 *
-	 * @param [in] source Ô´µØÖ·¡£
-	 * @param [in] destination Ä¿µÄµØÖ·¡£
-	 * @param [in] priority ·¢ËÍIPµÄÓÅÏÈ¼¶¡£
+	 * @param [in] source æºåœ°å€ã€‚
+	 * @param [in] destination ç›®çš„åœ°å€ã€‚
+	 * @param [in] priority å‘é€IPçš„ä¼˜å…ˆçº§ã€‚
 	 *
-	 * @return ·â×°³É¹¦·µ»ØRETCODE_OK£¬·ñÔò·µ»ØRETCODE_ERROR¡£
+	 * @return å°è£…æˆåŠŸè¿”å›RETCODE_OKï¼Œå¦åˆ™è¿”å›RETCODE_ERRORã€‚
 	 */
 	ReturnCode_t SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority = -1);
 
 	ReturnCode_t SendAddrRemove(Locator_t destination);
 
 	/**
-	 * @brief Ìí¼ÓRTPS±¨ÎÄ¼àÌıµØÖ·¡£
+	 * @brief æ·»åŠ RTPSæŠ¥æ–‡ç›‘å¬åœ°å€ã€‚
 	 *
-	 * @param [in] receiveAddr ¼àÌıµØÖ·¡£
+	 * @param [in] receiveAddr ç›‘å¬åœ°å€ã€‚
 	 *
-	 * @return ¼àÌıµØÖ·Ìí¼Ó³É¹¦·µ»ØRETCODE_OK£¬·ñÔò·µ»ØRETCODE_ERROR¡£
+	 * @return ç›‘å¬åœ°å€æ·»åŠ æˆåŠŸè¿”å›RETCODE_OKï¼Œå¦åˆ™è¿”å›RETCODE_ERRORã€‚
 	 */
     ReturnCode_t ReceiveAddrAdd(Locator_t receiveAddr) ;
 
     ReturnCode_t ReceiveAddrRemove(Locator_t ReceiveAddr) ;
 
 	/**
-	 * @brief ·¢ËÍRTPS±¨ÎÄ£¬¿ÉÊ¹ÓÃLOCATOR_INVALID²»Ö¸¶¨Íø¿¨£¬»òÊ¹ÓÃÖ¸¶¨IPµÄÍø¿¨½øĞĞ·¢ËÍ¡£
+	 * @brief å‘é€RTPSæŠ¥æ–‡ï¼Œå¯ä½¿ç”¨LOCATOR_INVALIDä¸æŒ‡å®šç½‘å¡ï¼Œæˆ–ä½¿ç”¨æŒ‡å®šIPçš„ç½‘å¡è¿›è¡Œå‘é€ã€‚
 	 *
-	 * @param [in] source Ô´µØÖ·¡£
-	 * @param [in] destination Ä¿µÄµØÖ·¡£
-	 * @param [in] message RTPS±¨ÎÄ¡£
-	 * @param [in] length ±¨ÎÄ³¤¶È¡£
-	 * @param [in] priority ·¢ËÍIPµÄÓÅÏÈ¼¶¡£
+	 * @param [in] source æºåœ°å€ã€‚
+	 * @param [in] destination ç›®çš„åœ°å€ã€‚
+	 * @param [in] message RTPSæŠ¥æ–‡ã€‚
+	 * @param [in] length æŠ¥æ–‡é•¿åº¦ã€‚
+	 * @param [in] priority å‘é€IPçš„ä¼˜å…ˆçº§ã€‚
 	 *
-	 * @return ±¨ÎÄ·¢ËÍ³É¹¦·µ»ØRETCODE_OK£¬·ñÔò·µ»ØRETCODE_ERROR¡£
+	 * @return æŠ¥æ–‡å‘é€æˆåŠŸè¿”å›RETCODE_OKï¼Œå¦åˆ™è¿”å›RETCODE_ERRORã€‚
 	 */
 	ReturnCode_t MessageSend(
 		Locator_t source,
@@ -72,9 +72,9 @@ public:
 
 protected:
 	/**
-     * @brief ¹¹Ôìº¯Êı¡£
+     * @brief æ„é€ å‡½æ•°ã€‚
      *
-     * @param [in] messageProcessor MessageProcessorÖ¸Õë¡£
+     * @param [in] messageProcessor MessageProcessoræŒ‡é’ˆã€‚
      */
 	MessageTransmitterTCP(std::shared_ptr<MessageProcessor> messageProcessor);
 
@@ -85,9 +85,9 @@ private:
 			char flag;
 			uint32_t value;
 		}endian;
-		/* ´óĞ¡¶Ë */
-		uint32_t length; /* ±¨ÎÄÊı¾İ´óĞ¡ */
-		/* Ğ£Ñétcp±êÍ· */
+		/* å¤§å°ç«¯ */
+		uint32_t length; /* æŠ¥æ–‡æ•°æ®å¤§å° */
+		/* æ ¡éªŒtcpæ ‡å¤´ */
 		uint32_t crc;
 		TCPHeader() {
 			rtcp[0] = 'R';
@@ -110,26 +110,26 @@ private:
 			return len;
 		}
 
-		// ÉèÖÃCRCÖµ
+		// è®¾ç½®CRCå€¼
 		void SetCRC() {
 			crc = CalculateCRC();
 		}
 
-		// ÑéÖ¤CRCÖµ
+		// éªŒè¯CRCå€¼
 		bool ValidateCRC() const {
 			uint32_t calculated_crc = CalculateCRC();
 			return calculated_crc == crc;
 		}
 
 	private:
-		// ¼ÆËãCRC32Ğ£ÑéÖµ£¨°´Êµ¼ÊÄÚ´æ²¼¾Ö¼ÆËã£©
+		// è®¡ç®—CRC32æ ¡éªŒå€¼ï¼ˆæŒ‰å®é™…å†…å­˜å¸ƒå±€è®¡ç®—ï¼‰
 		uint32_t CalculateCRC() const {
-			// ÁÙÊ±¸±±¾£¬½«crc×Ö¶ÎÖÃ0ºóÔÙ¼ÆËã
+			// ä¸´æ—¶å‰¯æœ¬ï¼Œå°†crcå­—æ®µç½®0åå†è®¡ç®—
 			TCPHeader temp = *this;
 			temp.crc = 0;
 
-			// CRC¼ÆËã·¶Î§£º´Óendian×Ö¶Î¿ªÊ¼µ½length×Ö¶Î½áÊø
-			// ¼´ÄÚ´æÖĞµÄ &endian µ½ &length + sizeof(length)
+			// CRCè®¡ç®—èŒƒå›´ï¼šä»endianå­—æ®µå¼€å§‹åˆ°lengthå­—æ®µç»“æŸ
+			// å³å†…å­˜ä¸­çš„ &endian åˆ° &length + sizeof(length)
 			const char* data_start = reinterpret_cast<const char*>(&temp.endian);
 			size_t data_length = sizeof(temp.endian) + sizeof(temp.length);
 
@@ -137,7 +137,7 @@ private:
 		}
 
 
-		// CRC32¼ÆËãÊµÏÖ£¨Ö±½Ó°´ÄÚ´æ×Ö½Ú¼ÆËã£©
+		// CRC32è®¡ç®—å®ç°ï¼ˆç›´æ¥æŒ‰å†…å­˜å­—èŠ‚è®¡ç®—ï¼‰
 		static uint32_t CalculateCRC32(const char* data, size_t length) {
 			uint32_t crc = 0xFFFFFFFF;
 			uint32_t polynomial = 0xEDB88320;
@@ -179,9 +179,9 @@ private:
 		}
 	};
 	enum class SendPhase {
-		CONNETING, // ÔÚ´´½¨Á¬½ÓÖĞ
-		CONNECT, // Á¬½Ó³É¹¦
-		DISCONNECT //¶Ï¿ªÁ¬½Ó
+		CONNETING, // åœ¨åˆ›å»ºè¿æ¥ä¸­
+		CONNECT, // è¿æ¥æˆåŠŸ
+		DISCONNECT //æ–­å¼€è¿æ¥
 	};
 	struct SendSession {
 		std::shared_ptr<asio::ip::tcp::socket> socket;
@@ -208,9 +208,9 @@ private:
 	void AsyncAccept();
 
     /**
-	 * @brief UDP±¨ÎÄ½ÓÊÕº¯Êı¡£
+	 * @brief UDPæŠ¥æ–‡æ¥æ”¶å‡½æ•°ã€‚
 	 *
-	 * @param [in] socket UDPÍ¨ĞÅ¾ä±ú¡£
+	 * @param [in] socket UDPé€šä¿¡å¥æŸ„ã€‚
 	 */
 	void AsyncReceive(std::shared_ptr<ReceiveSession> session);
 
@@ -228,7 +228,7 @@ protected:
 private:
 	asio::strand<asio::io_context::executor_type> strandWrite_;
 
-	// AcceptorÓÃÓÚ½ÓÊÜÁ¬½Ó
+	// Acceptorç”¨äºæ¥å—è¿æ¥
 	std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
 
 	_RECV_TCPSOCKET_MAP sessions_;
