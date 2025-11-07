@@ -1,11 +1,16 @@
 #include "rtps/endpoint/statefulreader.h"
 #include "dcps/subscribe/datareaderimpl.h"
+#include "dcps/domain/domainparticipantimpl.h"
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
-
+#ifdef DDSSECURITY
+#include "dcps/subscribe/subscriberimpl.h"
+#include "dcps/publish/publisherimpl.h"
+#include <iomanip>
+#endif
 USING_TRAVODDS_NAMESPACE;
 StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, const TopicKind_t& kind)
 	: Reader(qos, kind)
@@ -88,6 +93,9 @@ bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 
 ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len)
 {
+	if (dataMsg.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		TRAVODDS_LOG(LOG_DEBUG, "ReceiveDataMessage from statelessMessageWriter");
+	}
 	ChangeKind_t kind = ALIVE;
 	SerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId};
@@ -142,7 +150,6 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	}
 
 	ReturnCode_t ret = RETCODE_OK;
-
 	ret = proxy->AddReliableDataCache(cache);
 		
 	if (RETCODE_OK == ret) {
@@ -386,6 +393,9 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
 		//AGILOG(AGILOG_ERROR, "no match writer")
+		if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+			TRAVODDS_LOG(LOG_ERROR, "GetMacthList of statelessMessageWriter failed");
+		}
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
@@ -420,15 +430,66 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		TRAVODDS_LOG(LOG_ERROR, "proxy is nullptr");
 		return RETCODE_ERROR;
 	}
-
+	//if (proxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+	//	TRAVODDS_LOG(LOG_DEBUG, "Notify statelessMessageReader 2");
+	//	auto now = std::chrono::system_clock::now();
+	//	std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
+	//	std::cout << "Notify statelessMessageReader now time: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
+	//}
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
+		if (proxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+			TRAVODDS_LOG(LOG_DEBUG, "Notify statelessMessageReader 2");
+		}
+#ifdef DDSSECURITY
+		DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+		GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
+		bool needDecodePayload = readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected;
+		SerializedBuffer* plainData = NULL;
+		if (needDecodePayload) {
+			plainData = new SerializedBuffer;
+			plainData->buffer_size = cache->serializedBuffer->buffer_size;
+			plainData->buffer = new char[plainData->buffer_size];
+			SecurityException secExce;
+			secExce.message[0] = '\0';
+			WriterSampleList* matchWriter = nullptr;
+			auto itor = datareader_->writerSampleList_.find(proxy->GetGuid());
+			if (itor != datareader_->writerSampleList_.end()) {
+				matchWriter = itor->second;
+			}
+			else {
+				TRAVODDS_LOG(LOG_ERROR, "cryptoHdl of WriterSampleList matchWriter = nullptr");
+				return RETCODE_ERROR;
+			}
+			if (!dp->secPlugin_.crypto_transform->decode_serialized_payload(
+				plainData,
+				cache->serializedBuffer,
+				1,
+				NULL, // @todo: inline qos
+				0,
+				datareader_->cryptoHdl_,
+				matchWriter->cryptoHdl,
+				&secExce))
+			{
+				TRAVODDS_LOG(LOG_ERROR, "decode_serialized_payload failed");
+				delete[] plainData->buffer;
+				return RETCODE_ERROR;
+			}
+			plainData->writer_position = plainData->buffer_size;
+			cache->serializedBuffer = plainData;
+		}
+
+#endif // DDSSECURITY
+
 		if(datareader_ ) {
 			datareader_->SetLastinstanceHandle(cache);
 		}
 		ret = AddChanges(cache);
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
+			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
+				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader RETCODE_TIME_BASED_FILTER");
+			}
 			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
 			cache = proxy->GetSubmitCache();
 			continue;
@@ -444,6 +505,9 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
 		if (!datareader_->CheckLifespan(cache)) {
+			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
+				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader CheckLifespan");
+			}
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
@@ -454,8 +518,15 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 		//TODO 提交数据 
 		if (readerListener_) {
+			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
+				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader on_data_available");
+			}
 			readerListener_->on_data_available(cache);
-		} else if (datareader_) {
+		}
+		else if (datareader_) {
+			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
+				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader OnDataAvaible");
+			}
 			datareader_->OnDataAvaible();
 		}
 
@@ -502,21 +573,135 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
+#ifdef DDSSECURITY
+	SerializedBuffer tmpPlainBuffer;
+	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
+	char encodeData[1224 * 2] = { 0 }; //缓存被加密的消息
+	SerializedBuffer encodeBuffer; //加密情况发送的buffer
+
+	bool encodeSubMsg = datareader_->enableSec_
+		&& datareader_->secAttributes_.is_submessage_protected
+		&& guid_.IsUserDefinedEntity();
+	bool encodeRtpsMsg = datareader_->enableSec_
+		&& datareader_->rtpsMsgProtected_
+		&& guid_.IsUserDefinedEntity();
+	//加密后的子消息长度
+	uint32_t lengthAckNackMsg = 0;
+	uint32_t lengthInfoMsg = 0;
+	uint32_t lengthHeaderMsg = 0;
+#endif // DDSSECURITY
+
 	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG) | SubMessageFlag::FINAL_FLAG;
 
 	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg);
+	bufffer.buffer_size = shift;
+
+#ifdef DDSSECURITY
+	if (encodeSubMsg) {
+		tmpPlainBuffer.buffer = bufffer.buffer;
+		tmpPlainBuffer.buffer_size = bufffer.buffer_size;
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		EncodeSubMsgBuffer(writerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+		//拷贝到encodeData末尾
+		lengthAckNackMsg = tmpEncodeBuffer.buffer_size;
+		memcpy(encodeData + 1224 * 2 - lengthAckNackMsg, tmpEncodeBuffer.buffer, lengthAckNackMsg);
+		delete[] tmpEncodeBuffer.buffer;
+	}
+#endif // DDSSECURITY
 
 	/* wangyi test 添加INFODST */
-	bufffer.buffer_size = shift;
 	shift = 0;
 	InfoDestinationSubMessage_t dstMsg;
 	dstMsg.guidPrefix = writerProxy->GetGuid().prefix;
 	dstMsg.header.flags = 0x01;
 	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg);
 
+#ifdef DDSSECURITY
+	//被加密的Info消息明文
+	tmpPlainBuffer.buffer_size = bufffer.buffer_size + shift;
+	tmpPlainBuffer.buffer = bufffer.buffer - shift;
+	//加密子消息encode
+	if (encodeSubMsg) {
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		//encode_datareader_message
+		EncodeSubMsgBuffer(writerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+		lengthInfoMsg = tmpEncodeBuffer.buffer_size;
+		//拷贝到encodeData
+		memcpy(encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg,
+			tmpEncodeBuffer.buffer,
+			lengthInfoMsg);
+		delete[] tmpEncodeBuffer.buffer;
+	}
+#endif // DDSSECURITY
+
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
+#ifdef DDSSECURITY
+	bufffer.buffer_size += shift;
+	bufffer.buffer = bufffer.buffer - shift;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+
+	if (encodeSubMsg) {
+		memcpy(encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg - shift,
+			bufffer.buffer,
+			sizeof(MessageHeader_t));
+		encodeBuffer.buffer = encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg - sizeof(MessageHeader_t);
+		encodeBuffer.buffer_size = lengthInfoMsg + lengthAckNackMsg + sizeof(MessageHeader_t);
+	}
+
+	if (encodeRtpsMsg) {
+		DatawriterCryptoHandle* partHdls = NULL;
+		uint32_t partHdlsCount = 0;
+		if (writerProxy == NULL)
+		{
+			partHdls = dp->secParticipants_.data();
+			partHdlsCount = dp->secParticipants_.size();
+		}
+		else
+		{
+			partHdls = &writerProxy->partCryptoHdl_;
+			partHdlsCount = 1;
+		}
+		if (encodeSubMsg) {
+			tmpPlainBuffer.buffer = encodeBuffer.buffer;
+			tmpPlainBuffer.buffer_size = encodeBuffer.buffer_size;
+		}
+		else {
+			tmpPlainBuffer.buffer_size = bufffer.buffer_size;
+			tmpPlainBuffer.buffer = bufffer.buffer;
+		}
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		SecurityException secExce;
+		if (datareader_->secPlugin_ && !datareader_->secPlugin_->crypto_transform->encode_rtps_message(
+			&tmpEncodeBuffer,
+			&tmpPlainBuffer,
+			1,
+			dp->cryptoHdl_,
+			partHdls,
+			partHdlsCount,
+			&secExce)) {
+			delete[]tmpEncodeBuffer.buffer;
+			return -1;
+		}
+		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
+		encodeBuffer.buffer = encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size;
+		encodeBuffer.buffer_size = tmpEncodeBuffer.buffer_size;
+		delete[]tmpEncodeBuffer.buffer;
+	}
+
+	//MessageHeader_t + INFO + AckNack  buffer.buffer - shift是字符串 buffer.buffer_size + shift是总长度
+	if (encodeSubMsg || encodeRtpsMsg) {
+		participant_->TransmittersSendMessage(unicastList, encodeBuffer.buffer, encodeBuffer.buffer_size);
+	}
+	else {
+		participant_->TransmittersSendMessage(unicastList, bufffer.buffer, bufffer.buffer_size);
+	}
+#else
 	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+#endif // DDSSECURITY
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -541,15 +726,48 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
 
+#ifdef DDSSECURITY
+	SerializedBuffer tmpBuffer; //被加密字段
+	SerializedBuffer tmpEncodeBuffer; //加密后字段
+
+	char encodeData[1500] = { 0 };
+	SerializedBuffer encodeBuffer;
+	encodeBuffer.buffer_size = sizeof(AcknackSubMessage_t);
+	encodeBuffer.buffer = encodeData;
+	encodeBuffer.buffer = encodeBuffer.buffer + BUFF_SHIFT;
+#endif // DDSSECURITY
+
 	nackMsg.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 	MessageProcessor::EncapsulateNackFragMessage(bufffer, shift, nackMsg);
+
+#ifdef DDSSECURITY
+    tmpBuffer.buffer = bufffer.buffer;
+    tmpBuffer.buffer_size = shift;
+    tmpEncodeBuffer.buffer = encodeBuffer.buffer;
+    tmpEncodeBuffer.buffer_size = shift;
+    EncodeSubMsgBuffer(writerProxy, tmpBuffer, tmpEncodeBuffer);
+#endif // DDSSECURITY
 
 	bufffer.buffer_size = shift;
 	shift = 0;
 	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
+#ifdef DDSSECURITY
+	tmpBuffer.buffer = bufffer.buffer - shift;
+	tmpBuffer.buffer_size = sizeof(MessageHeader_t);
+	tmpEncodeBuffer.buffer = encodeBuffer.buffer - shift;
+	tmpEncodeBuffer.buffer_size = sizeof(MessageHeader_t);
+	EncodeSubMsgBuffer(writerProxy, tmpBuffer, tmpEncodeBuffer);
+	if (datareader_->enableSec_ && datareader_->secAttributes_.is_submessage_protected) {
+		participant_->TransmittersSendMessage(unicastList, encodeBuffer.buffer - shift, encodeBuffer.buffer_size + shift);
+	}
+	else {
+		participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	}
+#else
 	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+#endif // DDSSECURITY
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -611,3 +829,46 @@ void StatefulReader::TimerExpired()
 		lastNewCacheTimer_->UpdatePeriod(time);
 	}
 }
+
+#ifdef DDSSECURITY
+int StatefulReader::EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer)
+{
+	if (datareader_->enableSec_) {
+		GUID_t writerGuid = writerProxy->GetGuid();
+		if (datareader_->secAttributes_.is_submessage_protected) {
+			SecurityException secExce;
+			DatawriterCryptoHandle* writerHdls = NULL;
+			uint32_t writerHdlsCount = 0;
+			if (writerProxy == NULL)
+			{
+				writerHdls = datareader_->secWriters_.data();
+				writerHdlsCount = datareader_->secWriters_.size();
+			}
+			else
+			{
+				writerHdls = &writerProxy->cryptoHdl_;
+				writerHdlsCount = 1;
+			}
+			if (!datareader_->secPlugin_->crypto_transform->encode_datareader_submessage(
+				&encodeBuffer,
+				&buffer,
+				1,
+				datareader_->cryptoHdl_,
+				writerHdls,
+				writerHdlsCount,
+				&secExce))
+			{
+				TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage."
+					"\n  Code: %d"
+					"\n  Minor code: %d"
+					"\n  Message: %s",
+					secExce.code,
+					secExce.minor_code,
+					secExce.message);
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+#endif // DDSSECURITY

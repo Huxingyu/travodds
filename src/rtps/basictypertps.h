@@ -20,6 +20,44 @@ TRAVODDS_NAMESPACE_BEGIN
 
 struct GuidPrefix_t {
 	octet value[12];
+#ifdef DDSSECURITY
+	// 重载小于运算符
+	bool operator<(const GuidPrefix_t& other) const {
+		for (int32_t i = 0; i < 12; ++i) {
+			if (this->value[i] < other.value[i]) {
+				return true;
+			}
+			else if (this->value[i] > other.value[i]) {
+				return false;
+			}
+		}
+		return false;
+	}
+
+	bool operator==(const GuidPrefix_t& other) const {
+		for (int32_t i = 0; i < 12; ++i) {
+			if (this->value[i] < other.value[i]) {
+				return false;
+			}
+			else if (this->value[i] > other.value[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool operator!=(const GuidPrefix_t& other) const {
+		for (int32_t i = 0; i < 12; ++i) {
+			if (this->value[i] < other.value[i]) {
+				return true;
+			}
+			else if (this->value[i] > other.value[i]) {
+				return true;
+			}
+		}
+		return false;
+	}
+#endif // DDSSECURITY
 };
 
 /**
@@ -247,6 +285,25 @@ const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER = { {0x00, 0x02
 //内置域参与者信息订阅端entityId
 const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER = { {0x00, 0x02, 0x00}, 0xc7 };
 
+#ifdef DDSSECURITY
+//内置发布信息(安全)发布端entityId
+const EntityId_t ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER = { { 0xff, 0x00, 0x03 }, 0xc2 };
+//内置发布信息(安全)订阅端entityId
+const EntityId_t ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER = { { 0xff, 0x00, 0x03 }, 0xc7 };
+//内置订阅信息发布端entityId
+const EntityId_t ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER = { { 0xff, 0x00, 0x04 }, 0xc2 };
+//内置订阅信息订阅端entityId
+const EntityId_t ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER = { { 0xff, 0x00, 0x04 }, 0xc7 };
+//内置域参与者信息发布端entityId
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER = { { 0xff, 0x02, 0x00 }, 0xc2 };
+//内置域参与者信息订阅端entityId
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER = { { 0xff, 0x02, 0x00 }, 0xc7 };
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER = { { 0x00, 0x02, 0x01 }, 0xc3 };
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER = { { 0x00, 0x02, 0x01 }, 0xc4 };
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER = { { 0xff, 0x02, 0x02 }, 0xc3 };
+const EntityId_t ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER = { { 0xff, 0x02, 0x02 }, 0xc4 };
+#endif // DDSSECURITY
+
 //OMG规范定义的entityKind
 //未知实体
 #define ENTITYKIND_USER_UNKNOWN             0x00
@@ -405,6 +462,30 @@ struct GUID_t {
 		memcpy(this->prefix.value, right.value, sizeof(GuidPrefix_t));
 		return *this;
 	}
+
+#ifdef DDSSECURITY
+    /**
+     * @brief 判断是否是安全内置实体
+     */
+    bool IsSecureBuiltinEntity() {
+        if (entityId.entityKey[0] == (unsigned char)0xff)
+        {
+            return true;
+        }
+        if (entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief 判断是否是用户自定义实体
+     */
+    bool IsUserDefinedEntity() {
+        return (((entityId).entityKind & 0xc0) == 0x00);
+    }
+#endif // DDSSECURITY
 };
 
 const GUID_t GUID_UNKNOWN = { GUIDPREFIX_UNKNOWN,ENTITYID_UNKNOWN };
@@ -493,8 +574,8 @@ const VendorId_t VENDORID_UNKNOWN = { 0,0 };
 const VendorId_t VENDORID_PROSIMA = { 0,0 };
 
 struct SequenceNumber_t {
-	int32_t high;
-	uint32_t low;
+	int32_t high = 0;
+	uint32_t low = 0;
 
 	/**
 	 * @brief 重载运算符 <
@@ -864,6 +945,21 @@ using BuiltinEndpointSet_t = uint32_t;
 #define DISC_BUILTIN_ENDPOINT_PARTICIPANT_STATE_DETECTOR   0x00000001 << 9
 #define BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER   0x00000001 << 10
 #define BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_READER   0x00000001 << 11
+
+#ifdef DDSSECURITY
+/* 安全相关扩展 */
+#define DISC_BUILTIN_ENDPOINT_PUBLICATION_SECURE_ANNOUNCER        0x00000001 << 12
+#define DISC_BUILTIN_ENDPOINT_PUBLICATION_SECURE_DETECTOR         0x00000001 << 13
+#define DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_SECURE_ANNOUNCER       0x00000001 << 14
+#define DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_SECURE_DETECTOR        0x00000001 << 15
+#define BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_DATA_WRITER   0x00000001 << 16
+#define BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_DATA_READER   0x00000001 << 17
+#define BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_DATA_WRITER   0x00000001 << 18
+#define BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_DATA_READER   0x00000001 << 19
+#define BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_MESSAGE_SECURE_DATA_WRITER   0x00000001 << 20
+#define BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_MESSAGE_SECURE_DATA_READER   0x00000001 << 21
+#endif // DDSSECURITY
+
 #define DISC_BUILTIN_ENDPOINT_TOPICS_ANNOUNCER             0x00000001 << 28
 #define DISC_BUILTIN_ENDPOINT_TOPICS_DETECTOR              0x00000001 << 29
 

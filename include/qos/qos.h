@@ -14,6 +14,8 @@
 
 #include "travodds_dll.h"
 #include "type/basictype.h"
+#include "security/securitycommon.h"
+#include "security/propertyqospolicy.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -314,15 +316,18 @@ struct DiscoveredMethodQosPolicy {
 };
 
 struct DomainParticipantFactoryQos {
-	EntityFactoryQosPolicy entity_factory;
-
-	DomainParticipantFactoryQos() {
-	}
+    EntityFactoryQosPolicy entity_factory;
+    /* 属性列表 */
+    PropertyQosPolicy property;
+    DomainParticipantFactoryQos() {
+    }
 };
 
 struct DomainParticipantQos {
 	UserDataQosPolicy user_data;
 	EntityFactoryQosPolicy entity_factory;
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	TransportQosPolicy transport;
 	DiscoveredMethodQosPolicy dicovery;
 	DomainParticipantQos() {
@@ -364,7 +369,8 @@ struct DataWriterQos {
 	OwnershipQosPolicy           ownership;
 	OwnershipStrengthQosPolicy   ownership_strength;
 	WriterDataLifecycleQosPolicy writer_data_lifecycle;
-
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	DataWriterQos() {
 		reliability.kind = RELIABLE_RELIABILITY_QOS;
 	}
@@ -393,7 +399,8 @@ struct DataReaderQos {
 	OwnershipQosPolicy            ownership;
 	TimeBasedFilterQosPolicy      time_based_filter;
 	ReaderDataLifecycleQosPolicy  reader_data_lifecycle;
-
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	DataReaderQos() {
 	}
 };

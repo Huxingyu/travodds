@@ -159,6 +159,9 @@ public:
 	 * @param [in] subData 远端Reader配置信息。
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData) = 0;
+#ifdef DDSSECURITY
+	virtual void MatchedReaderAdd(const DiscoveredReaderSecureData& subData) = 0;
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 接收Ack报文。
@@ -234,6 +237,10 @@ public:
 	 * @return 返回数据写者缓冲区指针。
 	 */
 	std::shared_ptr<HistoryCache> GetWriterCache();
+	
+#ifdef DDSSECURITY
+	 void ResetLastChangeSequenceNumber();
+#endif // DDSSECURITY
 protected:
 
 	bool pushMode_ = true;
