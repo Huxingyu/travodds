@@ -290,7 +290,7 @@ struct InfoReplySubMessage_t
 */
 struct InfoSource_t {
 	SubMessageHeader_t header;
-	long unused;
+	int32_t unused;
 	ProtocolVersion_t version;
 	VendorId_t vendorId;
 	GuidPrefix_t guidPrefix;

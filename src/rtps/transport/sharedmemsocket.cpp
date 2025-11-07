@@ -130,12 +130,12 @@ void SharedMemSocket::Write(const char* message, size_t len)
 
 	WriteInLength(len, currentwritepos, buffersize);
 
-	// ¸´ÖÆÊı¾İµ½»º³åÇø
+	// å¤åˆ¶æ•°æ®åˆ°ç¼“å†²åŒº
 	if (currentwritepos + len <= buffersize) {
-		// Ö±½Ó¸´ÖÆ
+		// ç›´æ¥å¤åˆ¶
 		std::memcpy(data_->msg + currentwritepos, message, len);
 	} else {
-		// ·Ö¶Î¸´ÖÆ£¨¿çÔ½»º³åÇø±ß½ç£©
+		// åˆ†æ®µå¤åˆ¶ï¼ˆè·¨è¶Šç¼“å†²åŒºè¾¹ç•Œï¼‰
 		size_t firstchunk = buffersize - currentwritepos;
 		size_t secondchunk = len - firstchunk;
 
@@ -159,7 +159,7 @@ void SharedMemSocket::Read(std::shared_ptr<MemoryPool> receivePool, std::vector<
 			data_->shutdown;
 		}
 	);
-	// ÏÈÑé±¾µØ£¬ÔÙÑé¹²ÏíÄÚ´æ£¬±£³ÖÒ»ÖÂ
+	// å…ˆéªŒæœ¬åœ°ï¼Œå†éªŒå…±äº«å†…å­˜ï¼Œä¿æŒä¸€è‡´
 	if (IsShutdown() || data_->shutdown) {
 		shutdown_ = true;
 	}
@@ -184,12 +184,12 @@ void SharedMemSocket::Read(std::shared_ptr<MemoryPool> receivePool, std::vector<
 		throw std::bad_alloc();
 	}
 
-	// ¶ÁÈ¡Êı¾İ
+	// è¯»å–æ•°æ®
 	if (currentreadpos + dataavailable <= buffersize) {
-		// Ö±½Ó¶ÁÈ¡
+		// ç›´æ¥è¯»å–
 		std::memcpy(buffer, data_->msg + currentreadpos, dataavailable);
 	} else {
-		// ·Ö¶Î¶ÁÈ¡£¨¿çÔ½»º³åÇø±ß½ç£©
+		// åˆ†æ®µè¯»å–ï¼ˆè·¨è¶Šç¼“å†²åŒºè¾¹ç•Œï¼‰
 		size_t firstchunk = buffersize - currentreadpos;
 		size_t secondchunk = dataavailable - firstchunk;
 
@@ -248,8 +248,11 @@ bool SharedMemSocket::IsShutdown() const
 	return shutdown_;
 }
 
-void SharedMemSocket::Close()
+void SharedMemSocket::Close(bool haslock)
 {
+	if(isClosed_) {
+		return;
+	}
 	Shutdown();
 	auto start = std::chrono::steady_clock::now();
 	while (data_ && data_->refs.load(std::memory_order_acquire) != 0) {
@@ -257,7 +260,7 @@ void SharedMemSocket::Close()
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
 
 		if (elapsed >= std::chrono::seconds(3)) {
-			break; // ×¼±¸Ç¿ÖÆ¹Ø±Õ
+			break; // å‡†å¤‡å¼ºåˆ¶å…³é—­
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
@@ -268,7 +271,10 @@ void SharedMemSocket::Close()
 		managed_shared_memory segment(open_only, sharedMemoryName.data());
 
 		SharedAcceptList* sharedAcceptList = segment.find<SharedAcceptList>(objectName).first;
-		if (sharedAcceptList != nullptr) {
+		if(haslock == false && sharedAcceptList != nullptr) {
+			scoped_lock<robust_mutex> lock(sharedAcceptList->mutex);
+			sharedAcceptList->sockets.erase(port_);
+		} else if (sharedAcceptList != nullptr) {
 			sharedAcceptList->sockets.erase(port_);
 		}
 	} catch (const std::exception& e) {
@@ -276,16 +282,17 @@ void SharedMemSocket::Close()
 	}
 
 	CleanupResources();
+	isClosed_ = true;
 }
 
 void SharedMemSocket::WriteInLength(uint32_t len, uint32_t& currentwritepos, size_t buffersize)
 {
-	// ¸´ÖÆÊı¾İµ½»º³åÇø
+	// å¤åˆ¶æ•°æ®åˆ°ç¼“å†²åŒº
 	if (currentwritepos + sizeof(uint32_t) <= buffersize) {
-		// Ö±½Ó¸´ÖÆ
+		// ç›´æ¥å¤åˆ¶
 		std::memcpy(data_->msg + currentwritepos, (char*)&len, sizeof(uint32_t));
 	} else {
-		// ·Ö¶Î¸´ÖÆ£¨¿çÔ½»º³åÇø±ß½ç£©
+		// åˆ†æ®µå¤åˆ¶ï¼ˆè·¨è¶Šç¼“å†²åŒºè¾¹ç•Œï¼‰
 		size_t firstchunk = buffersize - currentwritepos;
 		size_t secondchunk = sizeof(uint32_t) - firstchunk;
 
@@ -299,7 +306,7 @@ void SharedMemSocket::WriteInLength(uint32_t len, uint32_t& currentwritepos, siz
 void SharedMemSocket::CleanupResources()
 {
 	try {
-		// Ìõ¼ş±äÁ¿/ĞÅºÅÁ¿ ¡ú »¥³âËø ¡ú ¹²ÏíÄÚ´æ
+		// æ¡ä»¶å˜é‡/ä¿¡å·é‡ â†’ äº’æ–¥é” â†’ å…±äº«å†…å­˜
 		shared_memory_object::remove(sharedMemoryName_.data());
 		managed_shared_memory segment(open_only, sharedMemoryName_.data());
 		Data* data = segment.find<Data>(objectName_).first;
@@ -328,7 +335,7 @@ bool SharedMemSocket::IsAllow(const size_t& len) const
 
 	size_t buffersize = sizeof(Data::msg);
 
-	// ¼ÆËã¿ÉÓÃ¿Õ¼ä
+	// è®¡ç®—å¯ç”¨ç©ºé—´
 	size_t availablespace = (currentwritepos >= currentreadpos)
 		? buffersize - (currentwritepos - currentreadpos)
 		: currentreadpos - currentwritepos;

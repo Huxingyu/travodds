@@ -45,6 +45,9 @@ private:
     size_t sharedMemSize_ = 20 * 1024;
 
     bool shutdown_ = false;
+
+    bool isClosed_ = false;
+
     std::atomic<uint32_t> refs_ = 0;
 
     std::unique_ptr<InterprocessType::managed_shared_memory> segment_;

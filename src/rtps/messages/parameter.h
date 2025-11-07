@@ -460,7 +460,9 @@ inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str)
 		memcpy(msg + 4, str.data(), str.size());
 		msg[4 + str.size()] = 0;
 	}
-	return 4u + (size + 3u) & ~3u;
+	uint32_t len = 4u + (size + 3u) & ~3u;
+	memset(msg + 4 + size, 0, len - 4u - size);	
+	return len;
 }
 
 template<typename T>
@@ -481,6 +483,7 @@ template <>
 inline void Parameter<bool>::writerMsg(octet* msg) 
 {
 	*msg = static_cast<octet>(parameter_);
+	memset(msg + 1, 0, 3);
 }
 //std::string
 template <>
@@ -527,6 +530,7 @@ template <>
 inline void Parameter<VendorId_t>::writerMsg(octet* msg) 
 {
 	memcpy(msg, parameter_.data(), 2);
+	memset(msg + 2, 0, 2);
 }
 //LocatorSeq, 特殊每一个Locator都具有单独的 pid+len = 4，兼容做特殊处理
 template <>
@@ -590,6 +594,8 @@ inline void Parameter<QosPolicy>::writerMsg(octet* msg) { \
     uint32_t size = parameter_.value.size(); \
     WriterUInt32(msg, size); \
     memcpy(msg + 4, parameter_.value.data(), size); \
+    uint16_t len = MessageSize();\
+    memset(msg + 4 + size, 0, len - 4 - size); \
 }
 
 IMPLEMENT_PARAMETER_SEQ_SERIALIZATION(UserDataQosPolicy)
@@ -605,6 +611,7 @@ inline uint16_t Parameter<QosPolicy>::size() { \
 template <> \
 inline void Parameter<QosPolicy>::writerMsg(octet* msg) { \
 	*msg = static_cast<octet>(parameter_.kind); \
+     memset(msg + 1, 0, 3); \
 }
 IMPLEMENT_PARAMETER_KIND_SERIALIZATION(DurabilityQosPolicy)
 IMPLEMENT_PARAMETER_KIND_SERIALIZATION(DestinationOrderQosPolicy)
@@ -622,6 +629,7 @@ inline void Parameter<DurabilityServiceQosPolicy>::writerMsg(octet* msg)
 	WriterInt32(msg, parameter_.service_cleanup_delay.sec);
 	WriterUInt32(msg + 4, parameter_.service_cleanup_delay.nanosec);
 	*(msg+8) = static_cast<octet>(parameter_.history_kind);
+	memset(msg + 9, 0, 3);
 	WriterInt32(msg + 12, parameter_.history_depth);
 	WriterInt32(msg + 16, parameter_.max_samples);
 	WriterInt32(msg + 20, parameter_.max_instances);
@@ -663,6 +671,7 @@ template <>
 inline void Parameter<LivelinessQosPolicy>::writerMsg(octet* msg) 
 {
 	*(msg) = static_cast<octet>(parameter_.kind);
+	memset(msg + 1, 0, 3); 
 	WriterInt32(msg + 4, parameter_.lease_duration.sec);
 	WriterUInt32(msg + 8, parameter_.lease_duration.nanosec);
 }
@@ -676,6 +685,7 @@ template <>
 inline void Parameter<ReliabilityQosPolicy>::writerMsg(octet* msg) 
 {
 	*(msg) = static_cast<octet>(parameter_.kind);
+	memset(msg + 1, 0, 3);
 	WriterInt32(msg + 4, parameter_.max_blocking_time.sec);
 	WriterUInt32(msg + 8, parameter_.max_blocking_time.nanosec);
 }
@@ -700,8 +710,10 @@ template <>
 inline void Parameter<PresentationQosPolicy>::writerMsg(octet* msg) 
 {
 	*(msg) = static_cast<octet>(parameter_.access_scope);
+	memset(msg + 1, 0, 3);
 	*(msg + 4) = static_cast<octet>(parameter_.coherent_access);
 	*(msg + 5) = static_cast<octet>(parameter_.ordered_access);
+	memset(msg + 6, 0, 2);
 }
 //PartitionQosPolicy
 template <>
@@ -798,6 +810,7 @@ template <>
 inline void Parameter<HistoryQosPolicy>::writerMsg(octet* msg)
 {
 	*msg = static_cast<octet>(parameter_.kind);
+	memset(msg + 1, 0, 3);
 	WriterInt32(msg + 4, parameter_.depth);
 }
 //ResourceLimitsQosPolicy
@@ -1028,8 +1041,9 @@ inline void Parameter<OriginalWriterInfo_t>::writerMsg(octet* msg)
 		WriterUInt16(msg + inOffset, parameter_.originalWriterQos[i].parameterId);
 		WriterUInt16(msg + inOffset + 2, parameter_.originalWriterQos[i].length);
 		memcpy(msg + inOffset + 4, parameter_.originalWriterQos[i].value.data(), parameter_.originalWriterQos[i].length);
-
-		inOffset += 4 + (parameter_.originalWriterQos[i].length + 3u) & ~3u;
+		uint32_t padLen = 4 + (parameter_.originalWriterQos[i].length + 3u) & ~3u;
+		memset(msg + inOffset + 4 + parameter_.originalWriterQos[i].length, 0, padLen - 4 - parameter_.originalWriterQos[i].length);
+		inOffset += padLen;
 	}
 
 	unsigned char sentinel[2] = { 0x0,0x1 };
@@ -1063,6 +1077,7 @@ template <>
 inline void Parameter<ProtocolVersion_t>::writerMsg(octet* msg)
 {
 	memcpy(msg, &parameter_, 2);
+	memset(msg + 2, 0, 2);
 }
 
 /**

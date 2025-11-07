@@ -114,6 +114,14 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 	//QOS处理
 	//TODO
+	if (datareader_) {
+		datareader_->SetLastinstanceHandle(cache);
+
+		int32_t lostcount = datareader_->GetInstanceLostcounts(cache);
+		if (lostcount > 0) {
+			datareader_->OnSampleLost(lostcount);
+		}
+	}
 
 	if (readerListener_) {
 		readerListener_->on_data_available(cache);
@@ -140,7 +148,6 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 	}
 
 	if (datareader_) {
-		datareader_->SetLastinstanceHandle(cache);
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
 		if (!datareader_->CheckLifespan(cache)) {
 			return RETCODE_LIFESPAN_TIMEOUT;
@@ -216,12 +223,16 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 	if (itor->second->fragmentSeq.erase(dataMsg.dataFrag.fragmentStartingNum) > 0) {
 		uint32_t shift = (dataMsg.dataFrag.fragmentStartingNum - 1) * dataMsg.dataFrag.fragmentSize;
 		memcpy(buffer->buffer + shift, data, len);
-	}
-	else {
+	} else {
 		//TODO  
 		/* 重复接收分片数据 */
 		// std::cout << "recv repeat dataFrg " << __FUNCTION__ << " " << __LINE__ << std::endl;
 		TRAVODDS_LOG(LOG_ERROR, "recv repeat dataFrg");
+	}
+
+	// yuguxu 移除其他包含的所有分片号
+	for (uint32_t i = dataMsg.dataFrag.fragmentStartingNum + 1; i < dataMsg.dataFrag.fragmentStartingNum + dataMsg.dataFrag.fragmentsInSubmessage  ; i++) {
+		itor->second->fragmentSeq.erase(i);
 	}
 
 	if (itor->second->fragmentSeq.empty()) {
@@ -267,6 +278,14 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
             dataFragCache->serializedBuffer = plainData;
         }
 #endif // DDSSECURITY
+		if(datareader_) {
+			datareader_->SetLastinstanceHandle(dataFragCache);
+
+			int32_t lostcount = datareader_->GetInstanceLostcounts(dataFragCache);
+			if (lostcount > 0) {
+				datareader_->OnSampleLost(lostcount);
+			}
+		}
 
 		ReturnCode_t ret = AddChanges(dataFragCache);
 
@@ -288,7 +307,6 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		}
 
 		if (datareader_) {
-			datareader_->SetLastinstanceHandle(dataFragCache);
 			/* wangyi Lifespan 超期判断，超期过滤数据 */
 			if (!datareader_->CheckLifespan(dataFragCache)) {
 				return RETCODE_LIFESPAN_TIMEOUT;

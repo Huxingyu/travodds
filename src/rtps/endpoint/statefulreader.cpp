@@ -234,12 +234,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		}
 	}
 
-	if (1 != dataMsg.dataFrag.fragmentsInSubmessage) {
-		//TODO
-		//std::cout << "DataFrag msg err " << __FUNCTION__ << " " << __LINE__ << std::endl;
-		return RETCODE_OK;
-	}
-	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum);
+	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
 
 	Notify(proxy);
 
@@ -361,6 +356,10 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 	if (set.bitmap.size != 0) {
 		//TODO 存在丢包,回复nack报文 
+		if(datareader_) {
+			/* 存在丢包数据,触发监听回调函数 */
+			datareader_->OnSampleLost(1);
+		}
 		
 	}
 
@@ -481,8 +480,9 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		}
 
 #endif // DDSSECURITY
-		if (proxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
-			TRAVODDS_LOG(LOG_DEBUG, "Notify statelessMessageReader 3");
+
+		if(datareader_ ) {
+			datareader_->SetLastinstanceHandle(cache);
 		}
 		ret = AddChanges(cache);
 

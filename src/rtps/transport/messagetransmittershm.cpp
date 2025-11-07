@@ -18,16 +18,16 @@ MessageTransmitterSHM::MessageTransmitterSHM(std::shared_ptr<MessageProcessor> m
 
 MessageTransmitterSHM::~MessageTransmitterSHM()
 {
-	if (acceptor_) {
-		acceptor_->Close();
-		acceptor_.reset();
-	}
-
-	/* ¹Ø±ÕËùÓĞ·¢ËÍsocket */
+	/* å…³é—­æ‰€æœ‰å‘é€socket */
 	for (auto& it : sendSockets_) {
 		it.second->Close();
 	}
 	sendSockets_.clear();
+
+	if (acceptor_) {
+		acceptor_->Close();
+		acceptor_.reset();
+	}
 }
 
 
@@ -73,7 +73,7 @@ ReturnCode_t  MessageTransmitterSHM::ReceiveAddrAdd(Locator_t receiveAddr)
 		return RETCODE_ERROR;
 	}
 
-	/* ÒÑ¾­´æÔÚ¼àÌı¶Ë¿ÚºÅ */
+	/* å·²ç»å­˜åœ¨ç›‘å¬ç«¯å£å· */
 	if (acceptor_) {
 		return RETCODE_OK;
 	}
