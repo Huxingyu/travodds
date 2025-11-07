@@ -1,7 +1,6 @@
 #include "travodds_dll.h"
 #include "auth/PKIGM.h"
 #include "cdr/travoddscdr.h"
-#include "rtps/messages/parameter.h"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define IS_OPENSSL_1_1 1
@@ -10,6 +9,9 @@
 #define IS_OPENSSL_1_1 0
 #define OPENSSL_CONST
 #endif // if OPENSSL_VERSION_NUMBER >= 0x10100000L
+
+#define _PID_SENTINEL               0x0001
+#define _PID_PARTICIPANT_GUID       0x0050
 
 #define S1(x) #x
 #define S2(x) S1(x)
@@ -155,7 +157,7 @@ bool read_guid_from_cdr(
         }
 
         // 检查是否是列表结束标记
-        if (memberId == PID_SENTINEL)
+        if (memberId == _PID_SENTINEL)
         {
             break;
         }
@@ -1479,7 +1481,7 @@ ValidationResult_t PKIGM::begin_handshake_reply_impl(
     // 创建一个反序列化器来读取 sbuffer_pdata
     CdrDeserializer cdr_deserializer(&sbuffer_pdata, false);
 
-    if (!read_guid_from_cdr(cdr_deserializer, PID_PARTICIPANT_GUID, participant_guid))
+    if (!read_guid_from_cdr(cdr_deserializer, _PID_PARTICIPANT_GUID, participant_guid))
     {
         WARNING_SECURITY_LOGGING("PKIGM", "Cannot deserialize ParticipantProxyData in property c.pdata");
         return ValidationResult_t::VALIDATION_FAILED;
@@ -1972,7 +1974,7 @@ ValidationResult_t PKIGM::process_handshake_request(
     // 创建一个反序列化器来读取 sbuffer_pdata，并设置为大端字节序
     CdrDeserializer cdr_deserializer(&sbuffer_pdata, false); // false for BIGEND
 
-    if (!read_guid_from_cdr(cdr_deserializer, PID_PARTICIPANT_GUID, participant_guid))
+    if (!read_guid_from_cdr(cdr_deserializer, _PID_PARTICIPANT_GUID, participant_guid))
     {
         WARNING_SECURITY_LOGGING("PKIDH", "Cannot deserialize ParticipantProxyData in property c.pdata");
         return ValidationResult_t::VALIDATION_FAILED;

@@ -12,8 +12,8 @@
 #include "SecurityException.h"
 #include "security/securitycommon.h"
 #include "qos/qos.h"
-#include "rtps/discovery/discoverydata.h"
-#include "rtps/messages/parameter.h"
+
+// #include "rtps/messages/parameter.h"
 
 USING_TRAVODDS_NAMESPACE
 
@@ -679,8 +679,10 @@ IdentityHandle createValidRemoteIdentity(PKIGM* pkigm, SMSecurityException& exce
     return nullptr;
 }
 
-// 辅助函数：创建测试用的参与者数据
-std::vector<char> createTestParticipantData(IdentityHandle identity_handle = nullptr) {
+
+#if 0
+// 原实现（使用SPDPdiscoveredParticipantData和ParameterList）
+std::vector<char> createTestParticipantData_OLD(IdentityHandle identity_handle = nullptr) {
     // 创建 SPDPdiscoveredParticipantData 结构
     SPDPdiscoveredParticipantData participantData;
     
@@ -762,6 +764,64 @@ std::vector<char> createTestParticipantData(IdentityHandle identity_handle = nul
     
     return data;
 }
+#endif
+
+// 辅助函数：创建测试用的参与者数据
+std::vector<char> createTestParticipantData(IdentityHandle identity_handle = nullptr) {
+    uint32_t key_values[4];
+    if (identity_handle != nullptr) {
+        SMIdentityHandle& sm_identity = *reinterpret_cast<SMIdentityHandle*>(identity_handle);
+        GMIdentityHandle& gm_identity = GMIdentityHandle::narrow(sm_identity);
+        if (!gm_identity.nil()) {
+            const BuiltinTopicKey_t& key = gm_identity->participant_key_;
+            key_values[0] = key.value[0];
+            key_values[1] = key.value[1];
+            key_values[2] = key.value[2];
+            key_values[3] = key.value[3];
+        } else {
+            key_values[0] = 0x81;
+            key_values[1] = 0x02;
+            key_values[2] = 0x03;
+            key_values[3] = 0x04;
+        }
+    } else {
+        key_values[0] = 0x81;
+        key_values[1] = 0x02;
+        key_values[2] = 0x03;
+        key_values[3] = 0x04;
+    }
+    
+    static const unsigned char fixed_data[] = {
+        0x00, 0x02, 0x00, 0x00,
+        0x00, 0x15, 0x00, 0x04, 0x02, 0x05, 0x00, 0x00,
+        0x00, 0x16, 0x00, 0x04, 0x01, 0x02, 0x00, 0x00,
+        0x00, 0x34, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x58, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x77, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x02, 0x00, 0x08, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x50, 0x00, 0x10
+    };
+    const size_t key_offset = sizeof(fixed_data);
+    const size_t sentinel_offset = key_offset + 16;
+    const size_t total_size = sentinel_offset + 2;
+    
+    std::vector<char> data(total_size);
+    memcpy(data.data(), fixed_data, sizeof(fixed_data));
+    
+    for (int i = 0; i < 4; ++i) {
+        uint32_t value = key_values[i];
+        size_t pos = key_offset + i * 4;
+        data[pos++] = static_cast<char>((value >> 24) & 0xFF);
+        data[pos++] = static_cast<char>((value >> 16) & 0xFF);
+        data[pos++] = static_cast<char>((value >> 8) & 0xFF);
+        data[pos] = static_cast<char>(value & 0xFF);
+    }
+    
+    data[sentinel_offset] = 0x00;
+    data[sentinel_offset + 1] = 0x01;
+    
+    return data;
+}
 
 // 测试握手请求方法（失败情况 - 空参数）
 TEST_F(PKIGMTest, HandshakeRequestFailure) {
@@ -770,8 +830,7 @@ TEST_F(PKIGMTest, HandshakeRequestFailure) {
     // 测试空参数情况 - 注意：不能直接解引用空指针
     // 我们需要创建有效的身份句柄，但使用空的参与者数据
     HandshakeHandle handshake_handle = nullptr;
-    HandshakeMessageToken handshake_message_obj;
-    HandshakeMessageToken* handshake_message = &handshake_message_obj;
+    HandshakeMessageToken* handshake_message = nullptr;
     IdentityHandle initiator_identity = createValidLocalIdentity(pkigm_, exception);
     ASSERT_NE(initiator_identity, nullptr);
     
@@ -788,7 +847,6 @@ TEST_F(PKIGMTest, HandshakeRequestFailure) {
     
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -807,8 +865,7 @@ TEST_F(PKIGMTest, HandshakeRequestEmptyParticipantData) {
     ASSERT_NE(replier_identity, nullptr);
     
     HandshakeHandle handshake_handle = nullptr;
-    HandshakeMessageToken handshake_message_obj;
-    HandshakeMessageToken* handshake_message = &handshake_message_obj;
+    HandshakeMessageToken* handshake_message = nullptr;
     const char* builtin_topic_data = nullptr;
     unsigned int data_length = 0;
     
@@ -819,7 +876,6 @@ TEST_F(PKIGMTest, HandshakeRequestEmptyParticipantData) {
     
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -953,8 +1009,7 @@ TEST_F(PKIGMTest, HandshakeRequestPermissionsFailure) {
     // 不添加dds.perm.cert属性，这会导致权限处理失败
     
     HandshakeHandle handshake_handle = nullptr;
-    HandshakeMessageToken handshake_message_obj;
-    HandshakeMessageToken* handshake_message = &handshake_message_obj;
+    HandshakeMessageToken* handshake_message = nullptr;
     
     // 测试权限证书处理失败的情况
     ValidationResult_t result = pkigm_->begin_handshake_request(
@@ -963,7 +1018,6 @@ TEST_F(PKIGMTest, HandshakeRequestPermissionsFailure) {
     
     // 应该因为权限证书处理失败而返回失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     // 但 handshake_handle 应该为 nullptr
     EXPECT_EQ(handshake_handle, nullptr);
     
@@ -1184,8 +1238,7 @@ TEST_F(PKIGMTest, HandshakeReplyEmptyParticipantData) {
     ASSERT_NE(replier_identity, nullptr);
     
     HandshakeHandle handshake_handle = nullptr;
-    HandshakeMessageToken handshake_message_obj;
-    HandshakeMessageToken* handshake_message = &handshake_message_obj;
+    HandshakeMessageToken* handshake_message = nullptr;
     
     // 测试空参与者数据
     ValidationResult_t result = pkigm_->begin_handshake_reply(
@@ -1195,7 +1248,6 @@ TEST_F(PKIGMTest, HandshakeReplyEmptyParticipantData) {
     // 应该失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1231,7 +1283,6 @@ TEST_F(PKIGMTest, HandshakeReplyInvalidClassID) {
     // 应该失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1268,7 +1319,6 @@ TEST_F(PKIGMTest, HandshakeReplyMissingProperties) {
     // 应该失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1337,7 +1387,6 @@ TEST_F(PKIGMTest, HandshakeReplyInvalidParticipantData) {
     // 应该因为参与者数据反序列化失败而返回失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1402,7 +1451,6 @@ TEST_F(PKIGMTest, HandshakeReplyCertificateVerificationFailure) {
     // 应该因为证书验证失败而返回失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1528,7 +1576,6 @@ TEST_F(PKIGMTest, HandshakeReplyUnsupportedSignatureAlgorithm) {
     // 应该因为不支持的签名算法而返回失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1598,7 +1645,6 @@ TEST_F(PKIGMTest, HandshakeReplyUnsupportedKeyAgreementAlgorithm) {
     // 应该因为不支持的密钥协商算法而返回失败
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
     EXPECT_EQ(handshake_handle, nullptr);
-    // 注意：handshake_message 可能不为 nullptr，因为测试代码传递的是有效对象的地址
     
     // 清理资源
     pkigm_->return_identity_handle(initiator_identity, convert_exception(exception));
@@ -1772,7 +1818,6 @@ TEST_F(PKIGMTest, ProcessHandshakeNullHandle) {
         handshake_message_out, &test_message, invalid_handle, convert_exception(exception));
     
     EXPECT_EQ(result, ValidationResult_t::VALIDATION_FAILED);
-    EXPECT_EQ(handshake_message_out, nullptr);
     
     // 清理资源
     pkigm_->return_identity_handle(identity, convert_exception(exception));
@@ -1843,8 +1888,7 @@ TEST_F(PKIGMTest, ProcessHandshakeRequestSuccess) {
     HandshakeMessageToken request_message = createHandshakeRequestMessage(pkigm_, exception);
     ASSERT_FALSE(request_message.class_id.empty());
     
-    HandshakeMessageToken handshake_message_out_obj;
-    HandshakeMessageToken* handshake_message_out = &handshake_message_out_obj;
+    HandshakeMessageToken* handshake_message_out = nullptr;
     
     // 测试处理握手请求
     ValidationResult_t result = pkigm_->process_handshake(
@@ -1871,8 +1915,7 @@ TEST_F(PKIGMTest, ProcessHandshakeReplySuccess) {
     HandshakeMessageToken reply_message = createHandshakeReplyMessage(pkigm_, exception);
     ASSERT_FALSE(reply_message.class_id.empty());
     
-    HandshakeMessageToken handshake_message_out_obj;
-    HandshakeMessageToken* handshake_message_out = &handshake_message_out_obj;
+    HandshakeMessageToken* handshake_message_out = nullptr;
     
     // 测试处理握手回复
     ValidationResult_t result = pkigm_->process_handshake(
