@@ -463,7 +463,20 @@ struct GUID_t {
 		return *this;
 	}
 
+
 #ifdef DDSSECURITY
+	GUID_t& operator=(const BuiltinTopicKey_t& key) {
+		memcpy(this, &key, sizeof(GUID_t));
+		return *this;
+	}
+
+	GUID_t& operator=(const BuiltinTopicKey_t* key) {
+		if (key != nullptr) {
+			memcpy(this, key, sizeof(GUID_t));
+		}
+		return *this;
+	}
+
     /**
      * @brief 判断是否是安全内置实体
      */
@@ -485,6 +498,7 @@ struct GUID_t {
     bool IsUserDefinedEntity() {
         return (((entityId).entityKind & 0xc0) == 0x00);
     }
+	
 #endif // DDSSECURITY
 };
 

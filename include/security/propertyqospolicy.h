@@ -36,6 +36,30 @@ typedef struct PropertyQosPolicy
     PropertySeq value;
     /** @brief   缓冲区值。 */
     BinaryPropertySeq  binary_value;
+    //!Get properties
+    const PropertySeq& properties() const
+    {
+        return value;
+    }
+
+    //!Set properties
+    PropertySeq& properties()
+    {
+        return value;
+    }
+
+    //!Get binary_properties
+    const BinaryPropertySeq& binary_properties() const
+    {
+        return binary_value;
+    }
+
+    //!Set binary_properties
+    BinaryPropertySeq& binary_properties()
+    {
+        return binary_value;
+    }
+
 }PropertyQosPolicy;
 
 TRAVODDS_NAMESPACE_END
