@@ -36,9 +36,9 @@ typedef enum ValidationResult_t
     VALIDATION_OK_FINAL_MESSAGE
 }ValidationResult_t;
 
-/** 用来独立验证domainparticipant*/
+/** 用来独立验证domainparticipant */
 typedef DDSSecHandle IdentityHandle;
-/** 描述鉴定或者握手协议的状态参数*/
+/** 描述鉴定或者握手协议的状态参数 */
 typedef DDSSecHandle HandshakeHandle;
 typedef DDSSecHandle SharedSecretHandle;
 

@@ -12,6 +12,7 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/transport/ipcontainer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/builtin/dpr/dynamicperformanceregulator.h"
 #include "rtps/flowcontrol/flowcontrolmanager.h"
 #include "rtps/flowcontrol/flowratelimitedmanager.h"
 #include "common/log/logger.h"
@@ -71,6 +72,11 @@ Participant::~Participant()
 ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 {
 	qos_ = qos;
+
+	FlowParameters flowParameters;
+	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
+	flowControlManager_ = std::make_unique<FlowControlManager>(this);
+	regulator_ = std::make_unique<DynamicPerformanceRegulator>(qos.dynamic_adjust, flowRateLimitedManager_.get());
 
 	int32_t participantid = 0;
 
@@ -142,11 +148,10 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 		} else {
 			continue;
 		}
+		if (qos_.transport.hasTransport(TransportQosPolicyKind(TRANSPORT_UDPv4_QOS | TRANSPORT_TCPv4_QOS | TRANSPORT_TCPv6_QOS | TRANSPORT_UDPv6_QOS))) {
+			regulator_->RegisterInterface(ip.dev);
+		}
 	}
-
-	FlowParameters flowParameters;
-	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
-	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	return RETCODE_OK;
 }
 
@@ -1326,11 +1331,13 @@ void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* mes
 		transmitter->MessageSend(destinationList, message, length);
 	}	
 }
-void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+ReturnCode_t Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length, const Duration_t& timeOut)
 {
 	if (flowRateLimitedManager_) {
-		flowRateLimitedManager_->MessageSend(destinationList, message, length);
+		return flowRateLimitedManager_->MessageSend(destinationList, message, length, timeOut);
 	}
+	TransmittersSendMessage(destinationList, message, length);
+	return RETCODE_OK;
 }
 void Participant::TransmittersConnect(const LocatorVec& remoteLocator)
 {

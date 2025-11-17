@@ -27,6 +27,7 @@ class LivelinessManager;
 class ThreadPool;
 class FlowControlManager;
 class FlowRateLimitedManager;
+class DynamicPerformanceRegulator;
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -330,7 +331,7 @@ public:
 
 	void TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length);
 
-	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
+	ReturnCode_t FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length, const Duration_t& timeOut);
 
 	void TransmittersConnect(const LocatorVec& remoteLocator);
 
@@ -480,6 +481,8 @@ private:
     std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
 
     std::unique_ptr<FlowControlManager> flowControlManager_;
+
+	std::unique_ptr<DynamicPerformanceRegulator> regulator_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	

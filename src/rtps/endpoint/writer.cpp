@@ -89,9 +89,7 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 
 	writerCache_->AddChange(cacheChange);
 
-	flowController_->AddNewData(this, cacheChange);
-
-	return RETCODE_OK;
+	return flowController_->AddNewData(this, cacheChange, qos_.reliability.max_blocking_time);
 }
 
 ReturnCode_t Writer::WaitForAcknowledgments(const Duration_t & max_wait)
@@ -119,7 +117,7 @@ bool Writer::DataFilter(std::shared_ptr<CacheChange> change)
 	return true;
 }
 
-ReturnCode_t Writer::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
+ReturnCode_t Writer::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
 	return RETCODE_UNSUPPORTED;
 }

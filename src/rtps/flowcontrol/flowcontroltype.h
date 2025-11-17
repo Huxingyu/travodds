@@ -15,7 +15,6 @@
 
 #include "travodds_dll.h"
 #include "type/basictype.h"
-#include "rtps/messages/cdrmessage_t.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 enum class FlowControllerKind : uint8_t {
@@ -37,6 +36,10 @@ struct FlowParameters
     int32_t maxBytesPerPeriod = 0; // 每个周期内最大发送字节数，0表示不限制
 
 	uint64_t periodMs = 1000; // 周期长度，单位毫秒
+	FlowParameters() = default;
+	FlowParameters(int32_t maxBytes, uint64_t period)
+		: maxBytesPerPeriod(maxBytes), periodMs(period) {
+	}
 };
 
 struct FlowControllerConfig {

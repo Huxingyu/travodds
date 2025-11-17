@@ -315,6 +315,19 @@ struct DiscoveredMethodQosPolicy {
 	DiscoveryProtocolQosPolicyKind kind { DISCOVER_UDPv4_QOS };
 };
 
+/**
+ * @brief 动态性能调整配置参数
+ */
+struct DynamicAdjustQosPolicy {
+	// 分数阈值因子 - 当计算出的性能分数超过此阈值时触发调整
+	// score_threshold_factor 值域 为 [0 , 80]，值越高网络性能问题越严重
+	int32_t score_threshold_factor;
+	// 调整周期
+	Duration_t adjustment_interval;            // 调整间隔
+
+	DynamicAdjustQosPolicy() : score_threshold_factor(50.0), adjustment_interval(TIME_INFINITE) {
+	};
+};
 struct DomainParticipantFactoryQos {
     EntityFactoryQosPolicy entity_factory;
     /* 属性列表 */
@@ -330,6 +343,7 @@ struct DomainParticipantQos {
     PropertyQosPolicy property;
 	TransportQosPolicy transport;
 	DiscoveredMethodQosPolicy dicovery;
+	DynamicAdjustQosPolicy dynamic_adjust;
 	DomainParticipantQos() {
 	}
 };

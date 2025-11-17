@@ -104,7 +104,7 @@ public:
 	 *
 	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief Ack报文接收处理函数。
@@ -133,7 +133,7 @@ public:
  *
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
-	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, bool flowControl);
+	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, const Duration_t& timeOut);
 
 	/**
 	 * @brief Heartbeat报文发送控制函数。
@@ -178,7 +178,7 @@ public:
  *
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
-	ReturnCode_t ReSendData(std::shared_ptr<ReaderProxy> readerProxy, bool flowControl = false);
+	ReturnCode_t ReSendData(std::shared_ptr<ReaderProxy> readerProxy);
 	/**
  * @brief 根据分片报文发送请求需重传序列号列表，重新封装并发送需要重传的分片报文数据。
  *
@@ -188,7 +188,7 @@ public:
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
 	/* 重传分片数据 */
-	ReturnCode_t ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet, bool flowControl = false);
+	ReturnCode_t ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet);
 private:
 	/**
 	 * @brief 根据输入的报文发送请求生成ChangeForReader类对象。

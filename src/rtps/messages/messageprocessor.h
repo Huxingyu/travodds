@@ -417,7 +417,7 @@ private:
 	Participant* participant_;
 #ifdef DDSSECURITY
 public:
-	/* @brief 所属域参与者。*/
+	/* @brief 所属域参与者 */
 	DomainParticipantImpl* participantImpl_;
 #endif // DDSSECURITY
 };

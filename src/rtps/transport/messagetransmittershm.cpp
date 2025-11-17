@@ -4,7 +4,7 @@
 #include "rtps/transport/sharedmemaccept.h"
 #include "rtps/transport/sharedmemsocket.h"
 #include "common/log/logger.h"
-#include <iostream>
+
 USING_TRAVODDS_NAMESPACE;
 
 
