@@ -26,6 +26,7 @@ endif()
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/thirdparty
     ${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include
     ${PROJECT_SOURCE_DIR}/thirdparty/tao
 )
@@ -160,6 +161,7 @@ set(PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/qos
     ${PROJECT_SOURCE_DIR}/include/type
     ${PROJECT_SOURCE_DIR}/include/xtypes
+	${PROJECT_SOURCE_DIR}/include/security
     )
 install(DIRECTORY ${PUBLIC_HEADERS}
     DESTINATION ${INCLUDE_INSTALL_DIR}
