@@ -35,7 +35,10 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
     discovery_ = std::make_shared<Discovery>(this, threadPool_);
     assert(discovery_.get());
 
-    if (secPlugin == NULL) {
+    if (secPlugin == NULL) {  // 如果不存在对应的安全插件
+        enableDDSSec_ = false;
+    }
+    else if (!ExistSecConfig()) { // 存在对应的安全插件,但是安全qos相关配置缺失
         enableDDSSec_ = false;
     }
     else {
@@ -1023,6 +1026,9 @@ ReturnCode_t DomainParticipantImpl::security_check()
         secAttributes_.allow_unauthenticated_participants = secAttr.allow_unauthenticated_participants;
         secAttributes_.is_rtps_protected = secAttr.is_rtps_protected;
         secAttributes_.plugin_participant_attributes = secAttr.plugin_participant_attributes;
+		// 目前下面几个变量未使用
+        // secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
+        // secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
         if (!secPlugin_.access_control->return_participant_sec_attributes(&secAttr, &exceptionInfo))
         {
             TRAVODDS_LOG(LOG_ERROR, "DomainParticipant return security attributes failed."
@@ -1081,6 +1087,104 @@ std::shared_ptr<Discovery> DomainParticipantImpl::GetDiscovery()
 DomainId_t DomainParticipantImpl::GetDomainId()
 {
     return domainId_;
+}
+
+bool DomainParticipantImpl::ExistSecConfig()
+{
+    Property_t* prikey = NULL;  //私钥
+    Property_t* prikey_password = NULL; //私钥
+    Property_t* permission = NULL; //auth_permission.smime
+    Property_t* governance = NULL; //auth_governance.smime
+    Property_t* certificate = NULL; //用户证书
+    Property_t* ca = NULL; //CA证书
+    Property_t* permission_ca = NULL; //访问控制配置，例如democa.pem文件内容
+    Property_t* crl = NULL;
+    int ret = 0;
+    //判定必须需要的配置项
+    for (unsigned int i = 0; i < qos_.property.value.size(); i++)
+    {
+        Property_t* curProperty = &(qos_.property.value[i]);
+        //用户证书
+        if (curProperty->name == "dds.sec.auth.identity_certificate")
+        {
+            certificate = curProperty;
+            continue;
+        }
+        //CA证书
+        if (curProperty->name == "dds.sec.auth.identity_ca")
+        {
+            ca = curProperty;
+            continue;
+        }
+        //私钥
+        if (curProperty->name == "dds.sec.auth.private_key")
+        {
+            prikey = curProperty;
+            continue;
+        }
+        //私钥
+        if (curProperty->name == "dds.sec.auth.password")
+        {
+            prikey_password = curProperty;
+            continue;
+        }
+        //证书注销列表
+        if (curProperty->name == "dds.sec.auth.certificate_revocation_list")
+        {
+            crl = curProperty;
+            continue;
+        }
+        //访问控制配置
+        if (curProperty->name == "dds.sec.access.permissions_ca")
+        {
+            permission_ca = curProperty;
+            continue;
+        }
+        //访问控制配置
+        if (curProperty->name == "dds.sec.access.permissions")
+        {
+            permission = curProperty;
+            continue;
+        }
+        //访问控制配置
+        if (curProperty->name == "dds.sec.access.governance")
+        {
+            governance = curProperty;
+            continue;
+        }
+    }
+    //必须需要的配置项 私钥、CA证书、访问控制配置签名、授权配置签名
+    if (certificate == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search certificate property failed\n");
+        return false;
+    }
+    if (ca == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search ca property failed\n");
+        return false;
+    }
+    if (prikey == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search private_key property failed\n");
+        return false;
+    }
+    if (permission == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search permissions property failed\n");
+        return false;
+    }
+    if (governance == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search governance property failed\n");
+        return false;
+    }
+    if (permission_ca == NULL)
+    {
+        TRAVODDS_LOG(LOG_DEBUG, "search permission ca property failed\n");
+        return false;
+    }
+    return true;
 }
 #endif // DDSSECURITY
 TRAVODDS_NAMESPACE_END

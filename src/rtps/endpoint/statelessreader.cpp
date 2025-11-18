@@ -67,9 +67,11 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 #ifdef DDSSECURITY
 	//负载解密
 	GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
-	SerializedBuffer* plainData = new SerializedBuffer; //TODO 找到析构位置
-	plainData->buffer = new char[len];
+	SerializedBuffer* plainData = new SerializedBuffer;
+	plainData->writer_position = len;
 	plainData->buffer_size = len;
+	MemoryPool::GetInstance()->getBuffer(len, plainData->origin_buffer);
+	plainData->buffer = plainData->origin_buffer;
 	if (readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected) {
 		SecurityException secExce;
 		secExce.message[0] = '\0';
@@ -79,6 +81,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 			matchWriter = itor->second;
 		}
 		else {
+			MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
 			TRAVODDS_LOG(LOG_ERROR, "cryptoHdl of WriterSampleList matchWriter = nullptr");
 			return -1;
 		}
@@ -94,10 +97,12 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 			matchWriter->cryptoHdl,
 			&secExce))
 		{
-			delete[] plainData->buffer;
+			//delete[] plainData->buffer;
+			MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
 			return -4;
 		}
 		plainData->writer_position = plainData->buffer_size;
+		MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
 	}
 	std::shared_ptr<CacheChange> cache;
 	if (readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected) {
@@ -245,9 +250,14 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
         bool needDecodePayload = readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected;
         SerializedBuffer *plainData = NULL;
         if (needDecodePayload) {
-            plainData = new SerializedBuffer;
-            plainData->buffer_size = dataFragCache->serializedBuffer->buffer_size;
-            plainData->buffer = new char[plainData->buffer_size];
+            //plainData = new SerializedBuffer;
+            //plainData->buffer_size = dataFragCache->serializedBuffer->buffer_size;
+            //plainData->buffer = new char[plainData->buffer_size];
+			plainData = new SerializedBuffer;
+			plainData->writer_position = dataFragCache->serializedBuffer->buffer_size;
+			plainData->buffer_size = dataFragCache->serializedBuffer->buffer_size;
+			MemoryPool::GetInstance()->getBuffer(dataFragCache->serializedBuffer->buffer_size, plainData->origin_buffer);
+			plainData->buffer = plainData->origin_buffer;
             SecurityException secExce;
             secExce.message[0] = '\0';
             WriterSampleList* matchWriter = nullptr;
@@ -256,6 +266,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
                 matchWriter = itor->second;
             }
             else {
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
 				TRAVODDS_LOG(LOG_ERROR, "m_cryptoHdl of WriterSampleList matchWriter = nullptr");
                 return -1;
             }
@@ -271,10 +282,13 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
                 matchWriter->cryptoHdl,
                 &secExce))
             {
-                delete[] plainData->buffer;
+                //delete[] plainData->buffer;
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
                 return -4;
             }
             plainData->writer_position = plainData->buffer_size;
+			//MEM 替换之前释放原先的
+			MemoryPool::GetInstance()->releaseBuffer(dataFragCache->serializedBuffer->origin_buffer);
             dataFragCache->serializedBuffer = plainData;
         }
 #endif // DDSSECURITY

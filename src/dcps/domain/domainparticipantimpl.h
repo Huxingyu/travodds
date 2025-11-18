@@ -715,6 +715,13 @@ public:
     std::shared_ptr<Discovery> GetDiscovery();
 
     DomainId_t GetDomainId();
+
+    /**
+     * @brief qos安全相关配置检测。
+     *
+     * @return 检测qos安全相关配置完整则返回true 否则返回false。
+     */
+    bool ExistSecConfig();
 #endif // DDSSECURITY
 
 

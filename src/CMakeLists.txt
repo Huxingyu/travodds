@@ -160,6 +160,7 @@ set(PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/qos
     ${PROJECT_SOURCE_DIR}/include/type
     ${PROJECT_SOURCE_DIR}/include/xtypes
+    ${PROJECT_SOURCE_DIR}/include/security
     )
 install(DIRECTORY ${PUBLIC_HEADERS}
     DESTINATION ${INCLUDE_INSTALL_DIR}
