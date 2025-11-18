@@ -19,7 +19,6 @@
 #ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 #endif // DDSSECURITY
-class SerializedBuffer;
 
 TRAVODDS_NAMESPACE_BEGIN
 class SerializedBuffer;
