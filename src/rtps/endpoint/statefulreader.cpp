@@ -427,29 +427,28 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 {
 	ReturnCode_t ret = RETCODE_OK;
 	if (!proxy) {
-		TRAVODDS_LOG(LOG_ERROR, "proxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "this writerProxy is null");
 		return RETCODE_ERROR;
 	}
-	//if (proxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
-	//	TRAVODDS_LOG(LOG_DEBUG, "Notify statelessMessageReader 2");
-	//	auto now = std::chrono::system_clock::now();
-	//	std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
-	//	std::cout << "Notify statelessMessageReader now time: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
-	//}
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
-		if (proxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
-			TRAVODDS_LOG(LOG_DEBUG, "Notify statelessMessageReader 2");
-		}
 #ifdef DDSSECURITY
 		DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
 		GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
-		bool needDecodePayload = readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected;
+		bool needDecodePayload = readerGuid.IsUserDefinedEntity() 
+			&& datareader_->secAttributes_.is_payload_protected  // permissions配置负载加密
+			&& dp->enableDDSSec_; // dp存在安全插件且安全配置完全
 		SerializedBuffer* plainData = NULL;
 		if (needDecodePayload) {
-			plainData = new SerializedBuffer;
-			plainData->buffer_size = cache->serializedBuffer->buffer_size;
-			plainData->buffer = new char[plainData->buffer_size];
+			plainData = new SerializedBuffer; //TODOMEM
+			//plainData->buffer_size = cache->serializedBuffer->buffer_size;
+			//plainData->buffer = new char[plainData->buffer_size];
+			int len = cache->serializedBuffer->buffer_size;
+			plainData->writer_position = len;
+			plainData->buffer_size = len;
+			MemoryPool::GetInstance()->getBuffer(len, plainData->origin_buffer);
+			plainData->buffer = plainData->origin_buffer;
+
 			SecurityException secExce;
 			secExce.message[0] = '\0';
 			WriterSampleList* matchWriter = nullptr;
@@ -458,7 +457,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 				matchWriter = itor->second;
 			}
 			else {
-				TRAVODDS_LOG(LOG_ERROR, "cryptoHdl of WriterSampleList matchWriter = nullptr");
+				TRAVODDS_LOG(LOG_ERROR, "matched cryptoHdl of remoteWriter is null");
 				return RETCODE_ERROR;
 			}
 			if (!dp->secPlugin_.crypto_transform->decode_serialized_payload(
@@ -472,11 +471,13 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 				&secExce))
 			{
 				TRAVODDS_LOG(LOG_ERROR, "decode_serialized_payload failed");
-				delete[] plainData->buffer;
+				//delete[] plainData->buffer;
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
 				return RETCODE_ERROR;
 			}
 			plainData->writer_position = plainData->buffer_size;
 			cache->serializedBuffer = plainData;
+			// TODOMEM释放原先cache->serializedBuffer
 		}
 
 #endif // DDSSECURITY
@@ -487,9 +488,6 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		ret = AddChanges(cache);
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
-			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
-				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader RETCODE_TIME_BASED_FILTER");
-			}
 			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
 			cache = proxy->GetSubmitCache();
 			continue;

@@ -757,7 +757,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 
             // 需要带上消息头解析
             encodedData.buffer = message - sizeof(MessageHeader_t);
-            encodedData.buffer_size = messageLen + 28; //TODO为什么要加28冗余，正常完整的rtps应该就是messageLen（192）
+            encodedData.buffer_size = messageLen + 28;
             if (!participantImpl_->secPlugin_.crypto_transform->decode_rtps_message(
                 &plainData,
                 &encodedData,

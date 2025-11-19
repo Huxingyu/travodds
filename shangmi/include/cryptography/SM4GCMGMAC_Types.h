@@ -22,13 +22,25 @@
 
 TRAVODDS_NAMESPACE_BEGIN
 
+#define ACKNACK 0x06
+#define NACK_FRAG 0x12
+#define DATA 0x15 
+#define DATA_FRAG 0x16
+#define GAP 0x08 
+#define HEARTBEAT 0x07
+#define HEARTBEAT_FRAG 0x13
+
+#define INFO_TS 0x09
+#define INFO_SRC 0x0c
+#define INFO_REPLY_IP4 0x0d
+#define INFO_DST 0x0e
+#define INFO_REPLY 0x0f
+
 #define SEC_BODY 0x30
-#if 0
 #define SEC_PREFIX 0x31
 #define SEC_POSTFIX 0x32
 #define SRTPS_PREFIX 0x33
 #define SRTPS_POSTFIX 0x34
-#endif
 
 using CryptoTransformKind = std::array<uint8_t, 4>;
 

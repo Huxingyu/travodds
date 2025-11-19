@@ -139,11 +139,11 @@ typedef struct EndpointSecurityAttributes
     /* **继承自 TopicSecurityAttributes 的属性结束 */
 
     /** @brief   是否需要对子消息进行保护. */
-    bool is_submessage_protected;
+    bool is_submessage_protected = false;
     /** @brief   是否需要对数据负载进行保护. */
-    bool is_payload_protected;
+    bool is_payload_protected = false;
     /** @brief   是否需要使用安全插件计算数据实例句柄. */
-    bool is_key_protected;
+    bool is_key_protected = false;
     /** @brief   附加的属性. */
     PropertySeq ac_endpoint_properties;
     /** @brief The plugin endpoint attributes */

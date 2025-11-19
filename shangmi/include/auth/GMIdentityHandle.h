@@ -14,7 +14,7 @@
 #include <openssl/x509.h>
 #include <string>
 #include "security/securitycommon.h"
-#include "rtps/basictypertps.h"
+
 #include "Handle.h"
 
 using std::string;

@@ -586,7 +586,7 @@ public:
 
 	SecurityPluginInstanceImpl* dpSecPlugin_;
 	//TODO 安全扩展，维护几个远端的guid和信息的map
-	RemoteReaderList remoteReaders_; //TODO
+	RemoteReaderList remoteReaders_;
 #endif // DDSSECURITY
 
 	std::shared_ptr<MemoryPool> memoryPool_;

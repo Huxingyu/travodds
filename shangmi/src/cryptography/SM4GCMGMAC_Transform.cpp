@@ -1,6 +1,6 @@
 #include "common/log/logger.h"
 #include "cryptography/SM4GCMGMAC_Transform.h"
-#include "rtps/messages/cdrmessage_t.h"
+//#include "rtps/messages/cdrmessage_t.h"
 #include "auth/GMHelper.h"
 #include <arpa/inet.h>
 

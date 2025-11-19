@@ -866,6 +866,7 @@ bool DataReaderImpl::GetSecAttributes()
 			secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
 			secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
 			secAttributes_.is_payload_protected = secAttr.is_payload_protected;
+			//secAttributes_.is_key_protected = secAttr.is_key_protected;
 			secAttributes_.is_submessage_protected = secAttr.is_submessage_protected;
 			secAttributes_.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
 			dp->secPlugin_.access_control->return_datawriter_sec_attributes(&secAttr, &secExce);

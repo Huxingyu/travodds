@@ -79,8 +79,10 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 	builtinSecureData_.partition = pubQos.partition;
 	builtinSecureData_.group_data = pubQos.group_data;
 	builtinSecureData_.topic_data = topicQos.topic_data;
-	// TODO builtinSecureData_数据结构安全方面扩展
-	// 从DataWriterQos qos的PropertyQosPolicy property中解析出扩展结构data_tags等
+
+	builtinSecureData_.security_info.endpoint_security_attributes = 0;
+	builtinSecureData_.security_info.plugin_endpoint_security_attributes = 0;
+	builtinSecureData_.protected_discovery = false;
 #endif // DDSSECURITY
 }
 
@@ -379,7 +381,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	bufferHeader->buffer_size += CDR_ENDIANNESS_LEN;
 
 #ifdef DDSSECURITY
-	SerializedBuffer* encodeBuffer = new SerializedBuffer;
+	//SerializedBuffer* encodeBuffer = new SerializedBuffer;
+	SerializedBuffer* encodeBuffer = nullptr;
 	SerializedBuffer* encodeBufferHeader = nullptr;
 	// 获取所属域参与者的插件
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
@@ -408,8 +411,15 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 		CryptoTransform* cryptoTransPtr = dp->secPlugin_.crypto_transform;
 		int encodeSize = totalLen * 10 + 500;
-		encodeBuffer->buffer = new char[encodeSize];
-		encodeBuffer->buffer_size = encodeSize;
+		//encodeBuffer->buffer = new char[encodeSize];
+		//encodeBuffer->buffer_size = encodeSize;
+		ret = CreateSerializedBuffer(encodeBuffer, encodeSize);
+		if (RETCODE_OK != ret) {
+			DeleteSerializedBuffer(encodeBuffer);
+			TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
+			return ret;
+		}
+
 		if (!cryptoTransPtr->encode_serialized_payload(
 			encodeBuffer,
 			NULL,
@@ -427,7 +437,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 				secExce.code,
 				secExce.minor_code,
 				secExce.message);
-			delete[]encodeBuffer->buffer;
+			DeleteSerializedBuffer(encodeBuffer);
 			return RETCODE_ERROR;
 		}
 		size = encodeBuffer->buffer_size - 4; //不加密的情况下没算4字节端序，TOCHECK
@@ -442,15 +452,24 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		int encodeBufferSize = encodeBuffer->buffer_size;
 		//SerializedBuffer* encodeBufferHeader = new SerializedBuffer;
 		for (int i = 0; i < encodeSubBufferNum; ++i) {
-			curEncodeSubBuffer = new SerializedBuffer;
+			//curEncodeSubBuffer = new SerializedBuffer;
+			curEncodeSubBuffer = nullptr;
 			if (encodeBufferSize >= DATAMESSAGE_LIMIT * (i + 1)) {
 				curEncodeSubBufferSize = DATAMESSAGE_LIMIT;
 			}
 			else {
 				curEncodeSubBufferSize = encodeBufferSize % DATAMESSAGE_LIMIT;
 			}
-			curEncodeSubBuffer->buffer = new char[curEncodeSubBufferSize];
-			curEncodeSubBuffer->buffer_size = curEncodeSubBufferSize;
+			//curEncodeSubBuffer->buffer = new char[curEncodeSubBufferSize];
+			//curEncodeSubBuffer->buffer_size = curEncodeSubBufferSize;
+			ret = CreateSerializedBuffer(curEncodeSubBuffer, curEncodeSubBufferSize);
+			if (RETCODE_OK != ret) {
+				DeleteSerializedBuffer(curEncodeSubBuffer);
+				TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
+				return ret;
+			}
+			std::cout << "curEncodeSubBuffer = " << (void*)curEncodeSubBuffer->buffer <<
+				" " << "curEncodeSubBuffer Len = " << curEncodeSubBuffer->buffer_size << std::endl;
 			memcpy(curEncodeSubBuffer->buffer, encodeBuffer->buffer + encodeBufferShift, curEncodeSubBufferSize);
 			encodeBufferShift += curEncodeSubBufferSize;
 			if (i == 0) {
@@ -463,7 +482,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 			}
 		}
 
-		delete[]encodeBuffer->buffer;
+		//delete[]encodeBuffer->buffer;
+		DeleteSerializedBuffer(encodeBuffer);
 	}
 	std::shared_ptr<CacheChange> cacheChange;
 	if (statistic_.secAttributes.is_payload_protected) {
@@ -1012,6 +1032,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = secAttr.is_discovery_protected;
 			statistic_.secAttributes.is_liveliness_protected = secAttr.is_liveliness_protected;
 			statistic_.secAttributes.is_payload_protected = secAttr.is_payload_protected;
+			//statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
 			statistic_.secAttributes.is_submessage_protected = secAttr.is_submessage_protected;
 			statistic_.secAttributes.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
 			secPlugin_->access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
@@ -1031,6 +1052,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = false;
 			statistic_.secAttributes.is_liveliness_protected = false;
 			statistic_.secAttributes.is_payload_protected = false;
+			//statistic_.secAttributes.is_key_protected = false;
 			statistic_.secAttributes.is_submessage_protected = false;
 			statistic_.rtpsMsgProtected = false;
 		}
@@ -1099,6 +1121,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 		statistic_.secAttributes.is_discovery_protected = false;
 		statistic_.secAttributes.is_liveliness_protected = false;
 		statistic_.secAttributes.is_payload_protected = false;
+		//statistic_.secAttributes.is_key_protected = false;
 		statistic_.secAttributes.is_submessage_protected = false;
 		statistic_.rtpsMsgProtected = false;
 		secPlugin_ = NULL;

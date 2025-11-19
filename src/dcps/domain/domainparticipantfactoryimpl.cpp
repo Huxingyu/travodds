@@ -48,31 +48,29 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 
 	DDSSecurityPluginInstance* pluginPtr = NULL;
     Property_t pluginNameProperty;
+    bool hasPluginConfig = false; // 是否配置了插件
     for (int index = 0; index < qos.property.value.size(); ++index)
     {
         Property_t tmpProperty = qos.property.value[index];
         // 如果有使用的插件名称属性
         if (tmpProperty.name == std::string("dds.sec.plugin_name"))
         {
+            hasPluginConfig = true;
             pluginNameProperty = tmpProperty; //找到插件键值对对象，即使用的插件，比如BuiltinPlugin
             break;
         }
     }
-    // 从安全插件数组secPlugins_中找到对应的插件实例
-    if (secPlugins_.count(pluginNameProperty.value)) {
-        SecurityPluginModule secModule = secPlugins_.at(pluginNameProperty.value);
-        pluginPtr = &secModule.inst;
-        if (pluginPtr == nullptr) {
-            TRAVODDS_LOG(LOG_ERROR, "Find plugin in secPlugins_, but is NULL");
+    if (hasPluginConfig) {
+        // 从安全插件数组secPlugins_中找到对应的插件实例
+        auto it = secPlugins_.find(pluginNameProperty.value);
+        if (it != secPlugins_.end()) {
+            pluginPtr = &(it->second.inst);
+            TRAVODDS_LOG(LOG_DEBUG, "Find plugin in secPlugins_");
+        }
+        else { //未找到此域参与者对应的安全插件模块,域参与者创建失败
+            TRAVODDS_LOG(LOG_ERROR, "Not find plugin in secPlugins_");
             return nullptr;
         }
-    }
-    else {//未找到插件模块域参与者创建失败
-        TRAVODDS_LOG(LOG_ERROR, "Not find plugin in secPlugins_");
-        return nullptr;
-    }
-    if (pluginPtr != NULL) {
-        TRAVODDS_LOG(LOG_DEBUG, "Find plugin in secPlugins_");
     }
     std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, pluginPtr);
 #else
@@ -103,6 +101,12 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 DomainParticipantFactoryImpl::~DomainParticipantFactoryImpl()
 {
 	participants_.clear();
+#ifdef DDSSECURITY
+    for (const auto& it : secPlugins_) {
+        it.second.finalizeInstFunc();
+    }
+    secPlugins_.clear();
+#endif // DDSSECURITY
 }
 
 ReturnCode_t DomainParticipantFactoryImpl::delete_participant(DomainParticipant*& participant)
@@ -213,9 +217,7 @@ int DomainParticipantFactoryImpl::load_security_plugin(
     {
         return -1;
     }
-    TRAVODDS_LOG(LOG_DEBUG, "SomePlat load security library");
 #ifdef _WIN32
-    TRAVODDS_LOG(LOG_DEBUG, "WIN load security library");
     HMODULE libModule = LoadLibraryA(file_name);
     if (libModule == NULL)
     {
