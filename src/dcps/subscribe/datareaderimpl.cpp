@@ -15,6 +15,10 @@
 #include "common/time/ddstimer.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
+#ifdef DDSSECURITY
+#include "security/securitycommon.h"
+#endif // DDSSECURITY
+
 USING_TRAVODDS_NAMESPACE;
 
 DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos, DataReaderListener* listener, StatusMask mask, SubscriberImpl* sub, TypeSupport* typeSupport)
@@ -67,6 +71,41 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 			contentFilter_.filterExpression = filteredTopic->get_filter_expression();
 			filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
 		}
+#ifdef DDSSECURITY
+		memcpy(builtinSecureData_.key.value, &handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+		memcpy(builtinSecureData_.participant_key.value, &handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+		builtinSecureData_.type_name = topic->get_type_name();
+		builtinSecureData_.durability = qos.durability;
+		builtinSecureData_.deadline = qos.deadline;
+		builtinSecureData_.latency_budget = qos.latency_budget;
+		builtinSecureData_.liveliness = qos.liveliness;
+		builtinSecureData_.reliability = qos.reliability;
+		builtinSecureData_.user_data = qos.user_data;
+		builtinSecureData_.ownership = qos.ownership;
+		builtinSecureData_.destination_order = qos.destination_order;
+		builtinSecureData_.time_based_filter = qos.time_based_filter;
+		builtinSecureData_.presentation = subQos.presentation;
+		builtinSecureData_.partition = subQos.partition;
+		builtinSecureData_.group_data = subQos.group_data;
+		if (realTopic) {
+			TopicQos topicQos;
+			realTopic->get_qos(topicQos);
+			builtinSecureData_.topic_name = topic->get_name();
+			builtinSecureData_.topic_data = topicQos.topic_data;
+		}
+		if (filteredTopic) {
+			TopicQos topicQos;
+			filteredTopic->get_related_topic()->get_qos(topicQos);
+			builtinSecureData_.topic_name = filteredTopic->get_related_topic()->get_name();
+			builtinSecureData_.topic_data = topicQos.topic_data;
+			contentFilter_.contentFilteredTopicName = filteredTopic->get_name();
+			contentFilter_.relatedTopicName = filteredTopic->get_related_topic()->get_name();
+			/* sql 语法 */
+			contentFilter_.filterClassName = SQL_FILTER_NAME;
+			contentFilter_.filterExpression = filteredTopic->get_filter_expression();
+			filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
+		}
+#endif // DDSSECURITY
 	}
 }
 
@@ -88,6 +127,31 @@ DataReaderImpl::~DataReaderImpl()
         //delete listener_;
 		listener_ = nullptr;
     }
+#ifdef DDSSECURITY
+	for (const auto& it : preparingWriters_) {
+		if (it.second != nullptr) {
+			delete it.second;
+			preparingWriters_[it.first] = nullptr;
+		}
+	}
+	//安全扩展 释放crypto_key_factory相关
+	if (enableSec_)
+	{
+		GUID_t drGuid = Conversion::ToGuid(get_instance_handle());
+		if ((drGuid.IsSecureBuiltinEntity()
+			&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+			|| secAttributes_.is_payload_protected
+			|| secAttributes_.is_submessage_protected)
+		{
+			if (secPlugin_ != NULL && secPlugin_->crypto_key_factory != NULL)
+			{
+				SecurityException secExce;
+				secPlugin_->crypto_key_factory->unregister_datareader(
+					cryptoHdl_, &secExce);
+			}
+		}
+	}
+#endif // DDSSECURITY
 }
 
 ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
@@ -691,7 +755,12 @@ ReturnCode_t DataReaderImpl::enable()
 	readerData.contentFilter = contentFilter_;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 	discovery->WriteSubscriptionData(readerData);
-
+#ifdef DDSSECURITY
+	//扩展了会发送DiscoveredReaderSecureData
+	DiscoveredReaderSecureData readerSecureData;
+	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
+	discovery->WriteSubscriptionSecureData(readerSecureData);
+#endif // DDSSECURITY
 	return RETCODE_OK;
 }
 
@@ -701,6 +770,9 @@ void DataReaderImpl::SetRelatedReader(std::shared_ptr<Reader> reader)
 	reader->SetRelatedDataReader(this);
 	handle_ = Conversion::ToInstanceHandle(reader->GetGuid());
 	builtinData_.key = Conversion::ToBuiltinTopicKey(handle_);
+#ifdef DDSSECURITY
+	builtinSecureData_.key = Conversion::ToBuiltinTopicKey(handle_);
+#endif // DDSSECURITY
 }
 
 bool DataReaderImpl::Empty() const
@@ -756,6 +828,208 @@ const SubscriptionBuiltinTopicData& DataReaderImpl::GetBuiltinTopicData()
 	return builtinData_;
 }
 
+#ifdef DDSSECURITY
+const SubscriptionBuiltinTopicSecureData& DataReaderImpl::GetBuiltinTopicSecureData()
+{
+	return builtinSecureData_;
+}
+
+bool DataReaderImpl::GetSecAttributes()
+{
+	enableSec_ = false;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(sub_->get_participant());
+	if (dp->enableDDSSec_) {
+		SecurityException secExce;
+		GUID_t guid = Conversion::ToGuid(handle_);
+		//participantstatestatelessmessageredaer的安全实体的reader 或者是用户自定义读者实体
+		if (guid.IsSecureBuiltinEntity() && guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER
+			|| (guid.IsUserDefinedEntity() && guid.entityId != ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER))
+		{
+			// Access_Control 创建的数据读者若为内置安全相关实体或者非内置实体，需要获取安全属性
+			EndpointSecurityAttributes secAttr;
+			SubscriberQos qos;
+			sub_->get_qos(qos);
+			if (!dp->secPlugin_.access_control->get_datareader_sec_attributes(
+				dp->permissionHdl_,
+				builtinSecureData_.topic_name.c_str(),
+				&qos.partition,
+				NULL,
+				&secAttr,
+				&secExce)) {
+				//取消初始化释放资源
+				createSuccess_ = false;
+				return false;;
+			}
+			secAttributes_.ac_endpoint_properties = secAttr.ac_endpoint_properties;
+			secAttributes_.is_write_protected = secAttr.is_write_protected;
+			secAttributes_.is_read_protected = secAttr.is_read_protected;
+			secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
+			secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
+			secAttributes_.is_payload_protected = secAttr.is_payload_protected;
+			//secAttributes_.is_key_protected = secAttr.is_key_protected;
+			secAttributes_.is_submessage_protected = secAttr.is_submessage_protected;
+			secAttributes_.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+			dp->secPlugin_.access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
+			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
+				rtpsMsgProtected_ = false;
+			}
+			else
+			{
+				rtpsMsgProtected_ = dp->secAttributes_.is_rtps_protected;
+			}
+		}
+		else
+		{
+			// 若为内置实体，则不启用安全
+			secAttributes_.is_write_protected = false;
+			secAttributes_.is_read_protected = false;
+			secAttributes_.is_discovery_protected = false;
+			secAttributes_.is_liveliness_protected = false;
+			secAttributes_.is_submessage_protected = false;
+			secAttributes_.is_payload_protected = false;
+			secAttributes_.is_key_protected = false;
+			rtpsMsgProtected_ = false;
+		}
+		if (secAttributes_.is_write_protected
+			|| secAttributes_.is_read_protected
+			|| secAttributes_.is_discovery_protected
+			|| secAttributes_.is_liveliness_protected
+			|| secAttributes_.is_submessage_protected
+			|| secAttributes_.is_payload_protected
+			|| secAttributes_.is_key_protected)
+		{
+			if (dp->secPlugin_.crypto_key_factory == NULL)
+			{
+				TRAVODDS_LOG(LOG_ERROR, "Create DataReader failed: key factory not found.");
+				createSuccess_ = false;
+				return false;
+			}
+			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
+				unsigned int tmplen = secAttributes_.ac_endpoint_properties.size();
+				Property_t tmpProperty;
+				tmpProperty.name = "dds.sec.builtin_endpoint_name";
+				tmpProperty.value = "BuiltinParticipantVolatileMessageSecureReader";
+				secAttributes_.ac_endpoint_properties.push_back(tmpProperty);
+			}
+			cryptoHdl_ = dp->secPlugin_.crypto_key_factory->register_local_datareader(
+				dp->cryptoHdl_,
+				&secAttributes_.ac_endpoint_properties,
+				&secExce);
+			if (cryptoHdl_ == SEC_NIL_HANDLE)
+			{
+				createSuccess_ = false;
+				return false;
+			}
+			if (!dp->secPlugin_.crypto_transform->get_datareader_submessage_encode_attributes(
+				cryptoHdl_,
+				&submsgEncodeAttr_))
+			{
+				createSuccess_ = false;
+				return false;
+			}
+			enableSec_ = true;
+			secPlugin_ = &(dp->secPlugin_);
+		}
+		else if (rtpsMsgProtected_)
+		{
+			enableSec_ = true;
+			secPlugin_ = &dp->secPlugin_;
+		}
+		else
+		{
+			enableSec_ = false;
+		}
+	}
+	createSuccess_ = false;
+	return true;
+}
+
+int DataReaderImpl::SetRemoteWriterCryptoTokens(const GUID_t* writerId, const Sequence<CryptoToken>* tokens)
+{
+	GUID_t guid = reader_->GetGuid(); //ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER
+	if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+	{
+		return 0;
+	}
+	auto wrIter = preparingWriters_.find(*writerId);
+	if (wrIter == preparingWriters_.end())
+	{
+		Sequence<CryptoToken>& tokenRef = remoteWriterCryptoToken_[*writerId];
+		tokenRef = *tokens;
+		return 0;
+	}
+	WriterSampleList* writer = wrIter->second;
+	SecurityException secExce;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(sub_->get_participant());
+	if (!dp->secPlugin_.crypto_key_exchange->set_remote_datawriter_crypto_tokens(
+		cryptoHdl_,
+		writer->cryptoHdl,
+		tokens,
+		&secExce))
+	{
+		return -2;
+	}
+	writer->partCryptoHdl =
+		GetRemoteParticipantCryptoHandle(dp->GetDiscovery()->GetSpdp().get(), &writerId->prefix);
+	secWriters_.push_back(writer->cryptoHdl);
+	writer->readyForSecComm = true;
+
+	preparingWriters_.erase(wrIter);
+	//DataReaderImpl存储远端写者的加密相关信息
+	writerSampleList_[*writerId] = writer;
+	StatefulReader* statefulReader = dynamic_cast<StatefulReader*>(reader_.get());
+	if (statefulReader) {
+		WriterProxyMap* writerMap = statefulReader->GetMatchedWriters();
+		if (!writerMap->count(*writerId)) {
+			return -1;
+		}
+		(*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
+		(*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
+		(*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+	}
+	StatelessReader* statelessReader = dynamic_cast<StatelessReader*>(reader_.get());
+	if (statelessReader) {
+		std::map<GUID_t, std::shared_ptr<WriterProxy>>* writerMap = statelessReader->GetMatchWriters();
+		if (!writerMap->count(*writerId)) {
+			return -1;
+		}
+		(*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
+		(*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
+		(*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+	}
+	return 0;
+}
+
+ParticipantCryptoHandle DataReaderImpl::GetRemoteParticipantCryptoHandle(Spdp* spdp, const GuidPrefix_t* remotePrefix)
+{
+	auto dpInfoIter = spdp->discParts_.find(*remotePrefix);
+	if (dpInfoIter == spdp->discParts_.end())
+	{
+		return SEC_NIL_HANDLE;
+	}
+	if (dpInfoIter->second->enableDDSSec_)
+	{
+		return dpInfoIter->second->cryptoHdl_;
+	}
+	return SEC_NIL_HANDLE;
+}
+
+ReturnCode_t DataReaderImpl::FillSecureData()
+{
+	if (enableSec_) {
+		builtinSecureData_.security_info.endpoint_security_attributes =
+			EndpointSecurityAttributesToMask(&secAttributes_);
+	}
+	else
+	{
+		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
+	}
+	builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
+	return RETCODE_OK;
+}
+
+
+#endif // DDSSECURITY
 
 bool DataReaderImpl::GetEndianess(SerializedBuffer* buffer)
 {
@@ -930,3 +1204,7 @@ void DataReaderImpl::NotifyReadConditions()
 	}
 }
 
+SubscriberImpl* DataReaderImpl::getParent()
+{
+	return sub_;
+}

@@ -24,6 +24,9 @@ class Participant;
 class MessageTransmitter;
 //class ReceiveBuffer;
 class Endpoint;
+#ifdef DDSSECURITY
+class DomainParticipantImpl;
+#endif // DDSSECURITY
 /**
  * @brief MessageProcessor类，RTPS报文封装解析类。
  */
@@ -412,7 +415,11 @@ public:
 
 private:
 	Participant* participant_;
-
+#ifdef DDSSECURITY
+public:
+	/* @brief 所属域参与者 */
+	DomainParticipantImpl* participantImpl_;
+#endif // DDSSECURITY
 };
 TRAVODDS_NAMESPACE_END
 #endif

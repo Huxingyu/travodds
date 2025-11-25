@@ -14,6 +14,9 @@
 
 #include  "rtps/endpoint/writer.h"
 #include  "rtps/endpoint/readerlocator.h"
+#ifdef DDSSECURITY
+#include "rtps/endpoint/readerproxy.h"
+#endif
 
 TRAVODDS_NAMESPACE_BEGIN
 class Timer;
@@ -45,6 +48,10 @@ public:
 	 * @param [in] subData  远端Reader配置参数。
 	 */
 	void MatchedReaderAdd(const DiscoveredReaderData &subData);
+#ifdef DDSSECURITY
+	void MatchedReaderAdd(const DiscoveredReaderSecureData& subData);
+#endif // DDSSECURITY
+
 
 	/**
 	 * @brief 本地添加与当前Writer匹配的远端Reader通信信息。
@@ -106,6 +113,15 @@ public:
 	 * @return 返回RETCODE_UNSUPPORTED。
 	 */
 	virtual ReturnCode_t ReceiveNackFragMessage(const Receive_t&  headerMsg, const NackFragSubMessage_t& nackMsg);
+
+#ifdef DDSSECURITY
+	/**
+	 * @brief 加密子消息。
+	 *
+	 * @return 返回0表示加密成功，其余失败。
+	 */
+	int EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
 
 private:
 

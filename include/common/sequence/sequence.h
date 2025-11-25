@@ -248,7 +248,7 @@ bool SequenceData<T>::from_array(const T array[], uint32_t copyLength)
 	}
 
 	for (int32_t i = 0; i < copyLength; i++) {
-		datas_[i] = array[i];
+		*datas_[i] = array[i];
 	}
 
 	return true;
@@ -261,7 +261,7 @@ bool SequenceData<T>::to_array(T array[], uint32_t copyLength)
 		return false;
 	}
 	for (int32_t i = 0; i < copyLength; i++) {
-		array[i] = datas_[i];
+		array[i] = *datas_[i];
 	}
 	return true;
 }

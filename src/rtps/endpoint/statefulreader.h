@@ -164,6 +164,11 @@ public:
 	 */
 	ReturnCode_t SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg);
 
+#ifdef DDSSECURITY
+	WriterProxyMap* GetMatchedWriters() {
+		return &matchedWriters_;
+	}
+#endif // DDSSECURITY
 private:	
 	/**
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器初始化函数。
@@ -174,6 +179,13 @@ private:
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器超时执行回传功能函数。
 	 */
 	void TimerExpired();
+
+#ifdef DDSSECURITY
+	/**
+	 * @brief 加密子消息缓存。
+	 */
+	int EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
 private:
 	WriterProxyMap matchedWriters_;
 };

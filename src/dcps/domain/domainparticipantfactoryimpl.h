@@ -357,6 +357,38 @@ public:
      * - 子类必须调用父类的 finalize() 以确保完整清理
      */
 	static void finalize();
+	
+#ifdef DDSSECURITY
+
+    /**
+     * @fn virtual ReturnCode_t DomainParticipantFactory::load_security_plugin( const Char* plugin_name, const Char* file_name, const Char* retrieve_instance_func_name, const Char* finalize_instance_func_name) = 0;
+     *
+     * @brief 加载安全插件
+     *
+     * @details - 在Windows和Linux内核系统中，安全插件以动态库的形式提供（Windows：.dll，Linux：.so），
+     *          可以在运行时通过调用该函数加载。
+     *          - 在VxWorks和ReWorks中，安全插件以开发库的形式提供（.a），必须在开发应用时一同编译到应用中，
+     *          并在需要使用安全插件之前调用该函数。此时的调用 @e file_name 参数不起作用。
+     *          注意：由于ReWorks的基础开发环境ReDe在编译时未被直接引用的符号会在编译过程中被删除，
+     *          因此需要在使用安全插件的应用中放置一个函数，在函数中调用安全插件获取实例和删除实例的函数，
+     *          避免这两个函数被编译器优化。
+     *
+     * @param plugin_name                 为当前加载的安全插件赋予的名称，用于在创建域参与者时引用安全插件。
+     * @param file_name                   安全插件的文件名称，在Windows中是动态链接库（dll），Linux中是动态库（so），VxWorks和ReWorks中此参数不起作用。
+     * @param retrieve_instance_func_name 安全插件中获取实例的函数名称，需要参考安全插件的使用手册获知。
+     * @param finalize_instance_func_name 安全插件中删除实例的函数名称，需要参考安全插件的使用手册获知。
+     *
+     * @return 当前可能的返回值：
+     *          - #RETCODE_OK :表示加载成功；
+     *          - #RETCODE_ERROR :表示加载失败，失败的原因包含：插件文件不存在、加载文件失败、获取安全插件中的函数失败、获取实例失败，详见运行时日志信息。
+     */
+	virtual int load_security_plugin(
+        const char* plugin_name,
+        const char* file_name,
+        const char* retrieve_instance_func_name,
+        const char* finalize_instance_func_name);
+
+#endif // DDSSECURITY
 private:
     /**
      * @brief 构造函数。
@@ -366,6 +398,32 @@ private:
 	mutable std::mutex mtxParticipants_;
     DomainParticipantFactoryQos qos_ = {};
     DomainParticipantQos defaultParticipantQos_ = {};
+
+public:
+#ifdef DDSSECURITY
+
+    struct SecurityPluginModule
+    {
+        /** @brief 安全插件实例 */
+        DDSSecurityPluginInstance inst;
+        /** @brief 安全插件销毁函数 */
+        FinalizeSecurityPlugInstance finalizeInstFunc;
+#ifdef _WIN32
+        //HMODULE libModule;
+        void* libModule;
+#elif defined(_LINUX)
+        void* libModule;
+#elif defined(_VXWORKS_66)
+
+#else 
+        void* libModule;
+#endif
+    };
+    typedef std::map<std::string, SecurityPluginModule> SecurityPluginsDict;
+    /** @brief 安全插件列表 */
+    SecurityPluginsDict secPlugins_;
+
+#endif // DDSSECURITY
 };
 
 TRAVODDS_NAMESPACE_END

@@ -44,6 +44,10 @@ public:
 	 * @param [in] subData  远端Reader配置参数。
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData);
+	
+#ifdef DDSSECURITY
+	virtual void MatchedReaderAdd(const DiscoveredReaderSecureData &subData);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 添加与当前Writer匹配的远端Reader代理。
@@ -210,6 +214,9 @@ private:
 	 */
 	void SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderProxy>);
 
+#ifdef DDSSECURITY
+    int EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
 private:
 	std::map<GUID_t, std::shared_ptr<ReaderProxy>> matchedReaders_;
 

@@ -145,6 +145,11 @@ public:
 	 */
 	void AssertWriterLiveliness(const GUID_t & guid);
 
+#ifdef DDSSECURITY
+	std::map<GUID_t, std::shared_ptr<WriterProxy>>* GetMatchWriters() {
+		return &matchWriters_;
+	}
+#endif // DDSSECURITY
 private:
 	std::map<GUID_t, std::shared_ptr<WriterProxy>> matchWriters_;
 
