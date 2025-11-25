@@ -452,7 +452,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			newDPInfo->enableDDSSec_ = false;
 		}
 		else {
-			TRAVODDS_LOG(LOG_DEBUG, "validate_remote_identity.");
 			// validate_remote_identity 生成为远端参与者创建的handle, 缓存到newDPInfo, 用于本地验证.
 			ValidationResult_t validationRst =
 				secPlugin->authentication->validate_remote_identity(
@@ -630,7 +629,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				// TODO
 				newDPInfo->handshakeMsg_ = new ParticipantGenericMessage;
 				HandshakeMessageToken handshakeToken;
-				TRAVODDS_LOG(LOG_DEBUG, "begin_handshake_request.");
 				validationRst = secPlugin->authentication->begin_handshake_request(
 					&newDPInfo->handshakeHdl_,
 					&handshakeToken,
@@ -656,7 +654,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 					//std::cout << "now time after begin_handshake_request: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
 
 					//执行相互认证和密钥交换之前，发送ParticipantStatelessMessageData解决序列化攻击
-					TRAVODDS_LOG(LOG_INFO, "TESTINFO send request TOKEN.");
 					discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *newDPInfo->handshakeMsg_, Sedp::StatelessMessageDataKind::REQUEST);
 					newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_REPLY;
 
@@ -678,7 +675,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				return;
 			}
 			case VALIDATION_PENDING_HANDSHAKE_MESSAGE: {
-				TRAVODDS_LOG(LOG_DEBUG, "validate_remote_identity into wait request.");
 				newDPInfo->enableDDSSec_ = true;
 				newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_REQUEST;
 

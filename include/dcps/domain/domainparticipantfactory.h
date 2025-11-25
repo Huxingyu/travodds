@@ -387,7 +387,7 @@ public:
 	 *          - #RETCODE_OK :表示加载成功；
 	 *          - #RETCODE_ERROR :表示加载失败，失败的原因包含：插件文件不存在、加载文件失败、获取安全插件中的函数失败、获取实例失败，详见运行时日志信息。
 	 */
-	virtual int load_security_plugin(
+	virtual ReturnCode_t load_security_plugin(
 		const char* plugin_name,
 		const char* file_name,
 		const char* retrieve_instance_func_name,
