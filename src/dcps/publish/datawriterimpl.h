@@ -19,7 +19,9 @@
 #include "dcps/topic/typesupport.h"
 #include "dcps/sql/ddssqlfilter.h"
 #include "rtps/historycache/historycache.h"
-
+#ifdef DDSSECURITY
+#include "security/crycommonsource.h"
+#endif // DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
@@ -28,6 +30,70 @@ class PublisherImpl;
 class TopicImpl;
 class Timer;
 class DataWriterStatusManager;
+
+#ifdef DDSSECURITY
+struct SecurityPluginInstanceImpl;
+
+struct WriterInfo
+{
+	// 安全相关
+	/** @brief Specify if the DataWriter is enabled security */
+	bool enableSec;
+	/** @brief The security attributes for the DataWriter */
+	EndpointSecurityAttributes secAttributes;
+	/** @brief The payload encode attributes */
+	CryptoPayloadEncodeAttributes payloadEncodeAttr;
+	/** @brief The submessage encode attributes */
+	CryptoWriterSubmessageAttributes subMsgEncodeAttr;
+	/** @brief The rtps message encode attributes */
+	CryptoRtpsMessageAttributes rtpsMsgEncodeAttr;
+	/** @brief The encode message length increment constant comparing the origin message */
+	unsigned int encodeMsgLenIncConst;
+	/** @brief The encode message length multiple comparing the origin message */
+	unsigned int encodeMsgMultiple;
+	/** @brief Specify if the rtps message should be encoded */
+	bool rtpsMsgProtected;
+	/** @brief Specify if the message should be encoded */
+	bool encryptoMsg;
+};
+
+struct ReaderInfo
+{
+	ReaderInfo()
+		:guid(GUID_UNKNOWN),
+		rdData(NULL),
+		//epRef(NULL),
+		ackNackCount(0),
+		fragNackCount(0)
+	{
+		readyForSecComm = false;
+	}
+	GUID_t guid;
+	const DiscoveredReaderData* rdData;
+	//RemoteDREndpoint* epRef;
+	SequenceNumber_t ackedSN;
+	SequenceNumber_t ackedBatchSN;
+	uint32_t ackNackCount;
+	uint32_t fragNackCount;
+	SequenceNumber_t maxNackSeq;
+	//HeartbeatInfo hbInfo;
+	/** @brief The remote DataReader crypto handle */
+	DatareaderCryptoHandle cryptoHdl;
+	/** @brief Whether the reader is ready for security communications */
+	bool readyForSecComm;
+};
+
+// 快速查找指定Guid的Reader
+// 快速获取所有地址的列表
+// 快速获取和修改所有Reader的最小SequenceNumber
+struct RemoteReaderList
+{
+	std::map<GUID_t, ReaderInfo*> reliableReaders;
+	std::map<GUID_t, ReaderInfo*> besteffortReaders;
+	std::map<GUID_t, ReaderInfo> preparingReaders;
+	std::map<GUID_t, CryptoTokenSeq> remoteReaderCryptoToken;
+};
+#endif // DDSSECURITY
 
 /**
  * @brief DataWriterImpl类 包含DataWriter类数据写者功能的实际实现。
@@ -402,6 +468,9 @@ public:
 	  * @return 内置主题数据参数。
 	  */
     const PublicationBuiltinTopicData& GetBuiltinTopicData();
+#ifdef DDSSECURITY
+	const PublicationBuiltinTopicSecureData& GetBuiltinTopicSecureData();
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 用户数据键值生成函数。
@@ -470,8 +539,21 @@ public:
 	 */
 	void RemoveReaderFilter(const GUID_t& readerGuid);
 
-private:
+#ifdef DDSSECURITY
+	PublisherImpl* GetParent();
 
+	uint32_t SetRemoteReaderCryptoTokens(const GUID_t* readerId, const CryptoTokenSeq* tokens);
+
+	ReturnCode_t GetSecAttributes();
+
+	/**
+	 * @brief根据加载的属性填充builtinSecureData_的成员。
+	 *
+	 */
+	ReturnCode_t FillSecureData();
+#endif // DDSSECURITY
+	
+private:
     TopicImpl* topic_ = nullptr;
     DataWriterQos qos_;
     DataWriterListener* listener_ = nullptr;
@@ -490,6 +572,22 @@ private:
 	std::shared_ptr<Timer> lifespanTimer_;
 
     PublicationBuiltinTopicData builtinData_;
+
+#ifdef DDSSECURITY
+public:
+	PublicationBuiltinTopicSecureData builtinSecureData_;
+	WriterInfo statistic_;
+	/** @brief The crypto handle for the DataWriter */
+	DatawriterCryptoHandle cryptoHdl_;
+	/** @brief The security plugin instance */
+	SecurityPluginInstanceImpl* secPlugin_ = NULL;
+	/** @brief The list of DataReader which are enabled security */
+	std::vector<DatareaderCryptoHandle> secReaders_;
+
+	SecurityPluginInstanceImpl* dpSecPlugin_;
+	//TODO 安全扩展，维护几个远端的guid和信息的map
+	RemoteReaderList remoteReaders_;
+#endif // DDSSECURITY
 
 	std::shared_ptr<MemoryPool> memoryPool_;
 protected:

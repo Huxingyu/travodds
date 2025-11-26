@@ -11,6 +11,11 @@
 #include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
+#ifdef  DDSSECURITY
+#include "dcps/domain/domainparticipantimpl.h"
+#include "rtps/discovery/discovery.h"
+#endif //  DDSSECURITY
+
 USING_TRAVODDS_NAMESPACE;
 
 /************************************************************
@@ -19,6 +24,9 @@ USING_TRAVODDS_NAMESPACE;
 MessageProcessor::MessageProcessor(Participant* participant)
 	: participant_(participant)
 {
+#ifdef  DDSSECURITY
+	participantImpl_ = participant_->participantImpl_;
+#endif //  DDSSECURITY
 }
 
 MessageProcessor::~MessageProcessor()
@@ -474,7 +482,8 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 
 	MessageHeader_t Header;
 	memcpy(&Header, message, sizeof(Header));
-	message += sizeof(Header);
+	int headerLen = sizeof(Header);
+	message += headerLen;
 
 	memcpy(messageReceiver.sourceGuidPrefix.value, Header.guidPrefix.value, sizeof(GuidPrefix_t));
 	messageReceiver.sourceVersion = Header.version;
@@ -503,6 +512,23 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 		return ret;
 	}
 	messageLen -= sizeof(MessageHeader_t);
+	
+#ifdef DDSSECURITY
+    // 安全扩展相关
+    uint32_t secDataLength = 0;
+    bool procingSecSubmsg = false;
+    SecurityPluginInstanceImpl &secPlugin = participantImpl_->secPlugin_;
+    bool enabledSec = participantImpl_->enableDDSSec_;
+    ParticipantCryptoHandle receiverCryptoHdl = participantImpl_->cryptoHdl_;
+    GuidPrefix_t remoteGuidPrefix = messageReceiver.sourceGuidPrefix;
+    ParticipantCryptoHandle senderCryptoHdl = NULL;
+	std::shared_ptr<Spdp> spdp = participantImpl_->GetDiscovery()->GetSpdp();
+    if (spdp) {
+        senderCryptoHdl = spdp->GetRemoteParticipantCryptoHandle(&remoteGuidPrefix);
+    }
+    SecurityException secExce;
+	SerializedBuffer secDecodedSubmsg;
+#endif // DDSSECURITY
 
 	SubMessageHeader_t subMessageHeader;
 
@@ -515,6 +541,15 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 			subMessageHeader.subMessageLength = ntohs(subMessageHeader.subMessageLength);
 		}
 			
+#ifdef DDSSECURITY
+        // 之前检测到SEC_PREFIX，并且当前子消息不是SEC_POSTFIX
+        if (procingSecSubmsg && subMessageHeader.subMessageId != SEC_POSTFIX)
+        {
+            //累计安全消息长度
+            secDataLength += (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            subMessageHeader.subMessageId = SEC_SUB_MSG;
+        }
+#endif // DDSSECURITY
 		switch (subMessageHeader.subMessageId) {
 			case DATA:
 				ret = InterpretDataMessage(message, subMessageHeader, messageReceiver);
@@ -552,6 +587,203 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 			case INFO_REPLY:
 				ret = InterpretINFOREPLYMessage(message, subMessageHeader, messageReceiver);
 				break;
+#ifdef DDSSECURITY
+        case SEC_SUB_MSG: //不作处理，上面已经累计长度了
+        {
+            if (!participantImpl_->enableDDSSec_)
+            {
+                break;
+            }
+            else
+            {
+                break;
+            }
+        }
+        // 遇到SEC_POSTFIX，开始处理之前累计的安全数据
+        case SEC_POSTFIX:
+        {
+            if (!participantImpl_->enableDDSSec_ || senderCryptoHdl == SEC_NIL_HANDLE)
+            {
+                // not supporting security or not ready
+                break;
+            }
+            if (!procingSecSubmsg)
+            {
+                // 异常状况，没有与之对应的SEC_PREFIX
+                break;
+            }
+            //secDataLength为PREFIX到POSTFIX总长度
+            DatawriterCryptoHandle writerCryptoHdl;
+            DatareaderCryptoHandle readerCryptoHdl;
+            SecureSubmessageCategory_t submsgCategorty;
+            SerializedBuffer plainData;
+            SerializedBuffer encodedData; //指向message即需要被解密的数据
+            plainData.buffer_size = secDataLength; //预留secDataLength空间，最终解密肯定会小于secDataLength
+            plainData.buffer = new char[secDataLength];
+            encodedData.buffer = message - secDataLength; //指向从PREFIX子消息开始的整体区域
+            secDataLength += (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            encodedData.buffer_size = secDataLength;
+
+            if (!participantImpl_->secPlugin_.crypto_transform->preprocess_secure_submsg(
+                &writerCryptoHdl,
+                &readerCryptoHdl,
+                &submsgCategorty,
+                &encodedData,
+                1,
+                receiverCryptoHdl,
+                senderCryptoHdl,
+                &secExce))
+            {
+				TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
+                    "\n  Code: %d"
+                    "\n  Minor code: %d"
+                    "\n  Message: %s",
+                    secExce.code,
+                    secExce.minor_code,
+                    secExce.message);
+                break;
+            }
+            switch (submsgCategorty)
+            {
+            case DATAWRITER_SUBMESSAGE:
+            {
+                CryptoWriterSubmessageAttributes writerEncodeAttr;
+                if (!participantImpl_->secPlugin_.crypto_transform->get_datawriter_submessage_encode_attributes(
+                    SEC_NIL_HANDLE, &writerEncodeAttr))
+                {
+					TRAVODDS_LOG(LOG_ERROR, "get_datawriter_submessage_encode_attributes failed.");
+                    break;
+                }
+                if (!participantImpl_->secPlugin_.crypto_transform->decode_datawriter_submessage(
+                    &plainData,
+                    &encodedData,
+                    1,
+                    readerCryptoHdl,
+                    writerCryptoHdl,
+                    &secExce))
+                {
+					delete[]plainData.buffer;
+                    return -2;
+                }
+                procingSecSubmsg = false; //表示此次处理安全子消息结束
+
+                SubMessageHeader_t tmpSubMessageHeader;
+                memcpy(&tmpSubMessageHeader, plainData.buffer, sizeof(SubMessageHeader_t));
+
+                //message减去SEC_POSTFIX
+                message += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+                messageLen -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+
+                //拷贝plainData代表的子消息缓存到message
+                message -= sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                messageLen += sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                memcpy(message, plainData.buffer, plainData.buffer_size);
+                delete[]plainData.buffer;
+                continue;
+            }
+            case DATAREADER_SUBMESSAGE:
+            {
+                CryptoReaderSubmessageAttributes readerEncodeAttr;
+                if (!participantImpl_->secPlugin_.crypto_transform->get_datareader_submessage_encode_attributes(
+                    SEC_NIL_HANDLE, &readerEncodeAttr))
+                {
+					TRAVODDS_LOG(LOG_ERROR, "get_datareader_submessage_encode_attributes failed.");
+                    break;
+                }
+                if (!participantImpl_->secPlugin_.crypto_transform->decode_datareader_submessage(
+                    &plainData,
+                    &encodedData,
+                    1,
+                    writerCryptoHdl,
+                    readerCryptoHdl,
+                    &secExce))
+                {
+					delete[]plainData.buffer;
+                    return -2;
+                }
+                procingSecSubmsg = false; //表示此次处理安全子消息结束
+
+                SubMessageHeader_t tmpSubMessageHeader;
+                memcpy(&tmpSubMessageHeader, plainData.buffer, sizeof(SubMessageHeader_t));
+
+                //message减去SEC_POSTFIX
+                message += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+                messageLen -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+
+                //拷贝plainData代表的子消息缓存到message
+                message -= sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                messageLen += sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                memcpy(message, plainData.buffer, plainData.buffer_size);
+                delete[]plainData.buffer;
+                continue;
+            }
+            default:
+            {
+                break;
+            }
+            //procingSecSubmsg = false;
+            }
+            break;
+        }
+        case SEC_PREFIX:
+        {
+            if (!participantImpl_->enableDDSSec_)
+            {
+                break;
+            }
+            //累计SEC_PREFIX子消息长度到安全消息长度
+            secDataLength = (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            procingSecSubmsg = true; //表明正在处理安全子消息
+            break;
+        }
+        //解析RTPS报文的前缀
+        case SRTPS_PREFIX:
+        {
+            //decode_rtps_message
+            if (!participantImpl_->enableDDSSec_
+                || !participantImpl_->secAttributes_.is_rtps_protected
+                || senderCryptoHdl == SEC_NIL_HANDLE
+                || senderCryptoHdl == NULL)
+            {
+                return ret;
+                // not supporting security or not ready
+                break;
+            }
+            SerializedBuffer plainData;
+            SerializedBuffer encodedData; //指向message即需要被解密的数据
+
+            plainData.buffer_size = messageLen + 28;
+            plainData.buffer = new char[messageLen + 28];
+
+            // 需要带上消息头解析
+            encodedData.buffer = message - sizeof(MessageHeader_t);
+            encodedData.buffer_size = messageLen + 28;
+            if (!participantImpl_->secPlugin_.crypto_transform->decode_rtps_message(
+                &plainData,
+                &encodedData,
+                1,
+                receiverCryptoHdl,
+                senderCryptoHdl,
+                &secExce))
+            {
+				delete[]plainData.buffer;
+                return -2;
+            }
+
+            //将plainData拷贝到message，然后再遍历解析已经解析好的rtps报文的子报文
+            //当前message指向rtps头部之后, plainData缓冲区拷贝到新的rtps起始位置
+            memcpy(message - sizeof(MessageHeader_t) + messageLen - plainData.buffer_size,
+                plainData.buffer,
+                plainData.buffer_size);
+            //指向新的rtps header之后区域
+            message = message + messageLen - plainData.buffer_size;
+            messageLen = plainData.buffer_size - sizeof(MessageHeader_t);
+            continue;
+        }
+        case SRTPS_POSTFIX:
+            //ret = InterpretSRTPSPOSTFIXMessage(message, subMessageHeader, messageReceiver);
+            break;
+#endif // DDSSECURITY
 			default:
 				ret = RETCODE_SUBMESSAGE_INVALID;
 				break;
@@ -637,12 +869,22 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 		//TODO 添加处理
 		GUID_t guid(messageReceiver.sourceGuidPrefix, dataSubMessage.writerId);
 		participant_->GetMacthList(guid, readerList);
+		
+		//if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER && readerList.size() == 0) {
+		//	TRAVODDS_LOG(LOG_ERROR, "GetMacthList of statelessMessageWriter failed");
+		//}
+		//else if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		//	TRAVODDS_LOG(LOG_DEBUG, "GetMacthList of statelessMessageWriter success");
+		//}
 	} else {
 		readerList.push_back(dataSubMessage.readerId);
 	}
 	for (auto entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
+			if (reader->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
+				TRAVODDS_LOG(LOG_DEBUG, "Match reader of statelessMsg ReceiveDataMessage");
+			}
 			reader->ReceiveDataMessage(messageReceiver, dataSubMessage, dataSubMessage.serializedPayload, serializedPayloadLen);
 		}
 	}

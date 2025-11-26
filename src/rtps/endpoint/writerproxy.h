@@ -17,7 +17,9 @@
 #include "rtps/endpoint/changefromwriter.h"
 #include "rtps/messages/cdrmessage_t.h"
 #include <atomic>
-
+#ifdef DDSSECURITY
+#include "security/crycommonsource.h"
+#endif // DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 /**
@@ -92,7 +94,7 @@ public:
 	/**
 	 * @brief 获取GUID。
 	 *
-	 * @return 丢失状态请求序列号集合。
+	 * @return GUID_t。
 	 */
 	GUID_t GetGuid();
 
@@ -199,6 +201,15 @@ public:
 	 * @return 已提交返回true，未提交返回false。
 	 */
 	bool IsSubmitted(const SequenceNumber_t & seq);
+
+#ifdef DDSSECURITY
+	/** @brief DomainParticipant所使用的加密/解密句柄 */
+	ParticipantCryptoHandle partCryptoHdl_ = nullptr;
+	/** @brief 该DataWriter所使用的加密/解密句柄 */
+	DatawriterCryptoHandle cryptoHdl_ = nullptr;
+	/** @brief 指明该DataWriter是否已经准备好进行通信的加密/解密，即是否已经完整获取该DataWriter的安全相关属性 */
+	bool readyForSecComm_ = false;
+#endif // DDSSECURITY
 
 private:
 	GUID_t remoteWriterGuid_;

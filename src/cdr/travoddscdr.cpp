@@ -33,7 +33,7 @@ SerializedBuffer* SerializedBuffer::writeData(char* data, uint32_t length)
     // 看总体的空间是否足够
     uint32_t curTotalSpace = bufferTotalSpace();
     if (curTotalSpace < length) {
-        TRAVODDS_LOG(LOG_ERROR, "AGIDDSCdrSerializer", "Not enough space to write data, need %u, but only %u", length, curTotalSpace);
+        TRAVODDS_LOG(LOG_ERROR, "CdrSerializer", "Not enough space to write data, need %u, but only %u", length, curTotalSpace);
         return NULL;
     }
     // 总体空间足够，依次写入
@@ -73,7 +73,7 @@ SerializedBuffer* SerializedBuffer::readData(char* data, uint32_t length)
     // 看总体的长度是否足够
     uint32_t curTotalLength = bufferTotalLength();
     if (curTotalLength < length) {
-        TRAVODDS_LOG(LOG_ERROR, "AGIDDSCdrSerializer", "Not enough length to read data, need %u, but only %u", length, curTotalLength);
+        TRAVODDS_LOG(LOG_ERROR, "CdrSerializer", "Not enough length to read data, need %u, but only %u", length, curTotalLength);
         return NULL;
     }
     // 总体长度足够，依次读取

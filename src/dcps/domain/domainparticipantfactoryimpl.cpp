@@ -4,7 +4,16 @@
 #include "common/log/logger.h"
 #include "rtps/transport/asiocontext.h"
 #include "common/sys/sysinfo.h"
+#ifdef DDSSECURITY
+#include "security/propertyqospolicy.h"
+#endif // DDSSECURITY
 #include <iostream>
+#ifdef _WIN32
+
+#else
+#include <dlfcn.h>
+#endif
+
 USING_TRAVODDS_NAMESPACE
 
 DomainParticipantFactory* DomainParticipantFactory::get_instance()
@@ -34,8 +43,41 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 		return nullptr;
 	}
 	DomainParticipant* domainPart = nullptr;
-	std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask);
-	if (!domainParticipant.get()) {
+
+#ifdef DDSSECURITY
+
+	DDSSecurityPluginInstance* pluginPtr = NULL;
+    Property_t pluginNameProperty;
+    bool hasPluginConfig = false; // 是否配置了插件
+    for (int index = 0; index < qos.property.value.size(); ++index)
+    {
+        Property_t tmpProperty = qos.property.value[index];
+        // 如果有使用的插件名称属性
+        if (tmpProperty.name == std::string("dds.sec.plugin_name"))
+        {
+            hasPluginConfig = true;
+            pluginNameProperty = tmpProperty; //找到插件键值对对象，即使用的插件，比如BuiltinPlugin
+            break;
+        }
+    }
+    if (hasPluginConfig) {
+        // 从安全插件数组secPlugins_中找到对应的插件实例
+        auto it = secPlugins_.find(pluginNameProperty.value);
+        if (it != secPlugins_.end()) {
+            pluginPtr = &(it->second.inst);
+            TRAVODDS_LOG(LOG_DEBUG, "Find plugin in secPlugins_");
+        }
+        else { //未找到此域参与者对应的安全插件模块,域参与者创建失败
+            TRAVODDS_LOG(LOG_ERROR, "Not find plugin in secPlugins_");
+            return nullptr;
+        }
+    }
+    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, pluginPtr);
+#else
+    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask);
+#endif // DDSSECURITY
+
+    if (!domainParticipant.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "Make DP Err");
 		return nullptr;
 	}
@@ -59,6 +101,12 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 DomainParticipantFactoryImpl::~DomainParticipantFactoryImpl()
 {
 	participants_.clear();
+#ifdef DDSSECURITY
+    for (const auto& it : secPlugins_) {
+        it.second.finalizeInstFunc();
+    }
+    secPlugins_.clear();
+#endif // DDSSECURITY
 }
 
 ReturnCode_t DomainParticipantFactoryImpl::delete_participant(DomainParticipant*& participant)
@@ -155,3 +203,161 @@ void DomainParticipantFactoryImpl::finalize()
     DomainParticipantQos qos;
     get_instance()->set_default_participant_qos(qos);
 }
+
+#ifdef DDSSECURITY
+
+int DomainParticipantFactoryImpl::load_security_plugin(
+    const char* plugin_name,
+    const char* file_name,
+    const char* retrieve_instance_func_name,
+    const char* finalize_instance_func_name)
+{
+    DomainParticipantFactoryImpl::SecurityPluginModule newModule;
+    if (secPlugins_.find(plugin_name) != secPlugins_.end())
+    {
+        return -1;
+    }
+#ifdef _WIN32
+    HMODULE libModule = LoadLibraryA(file_name);
+    if (libModule == NULL)
+    {
+        return -2;
+    }
+    // 找到函数接口地址
+    GetSecurityPlugInstance getInstProc = (GetSecurityPlugInstance)GetProcAddress(libModule, retrieve_instance_func_name);
+    if (getInstProc == NULL)
+    {
+        FreeLibrary(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Not find retrieve_instance_func_name in Plugin");
+        return -3;
+    }
+    newModule.finalizeInstFunc = (FinalizeSecurityPlugInstance)GetProcAddress(libModule, finalize_instance_func_name);
+    if (newModule.finalizeInstFunc == NULL)
+    {
+        FreeLibrary(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Not find finalize_instance_func_name in Plugin");
+        return -4;
+    }
+    if (!getInstProc(&newModule.inst)) //创建实例
+    {
+        FreeLibrary(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "create PluginModule instance fail");
+        return -5;
+    }
+    newModule.libModule = libModule;
+#elif defined(_LINUX)
+    TRAVODDS_LOG(LOG_DEBUG, "LINUX load security library");
+    void* libModule = dlopen(file_name, RTLD_LAZY);
+    const char* errorInfo = NULL;
+    if (libModule == NULL)
+    {
+        errorInfo = dlerror();
+        TRAVODDS_LOG(LOG_ERROR, "Failed to load security library \"%s\": %s.", file_name, errorInfo);
+        return -6;
+    }
+    GetSecurityPlugInstance getInstProc = (GetSecurityPlugInstance)dlsym(libModule, retrieve_instance_func_name);
+    if (getInstProc == NULL || (errorInfo = dlerror()) != NULL)
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\": %s.",
+            retrieve_instance_func_name, errorInfo);
+        return -7;
+    }
+    newModule.finalizeInstFunc = (FinalizeSecurityPlugInstance)dlsym(libModule, finalize_instance_func_name);
+    if (newModule.finalizeInstFunc == NULL || (errorInfo = dlerror()) != NULL)
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\": %s.",
+            finalize_instance_func_name, errorInfo);
+        return -8;
+    }
+    if (!getInstProc(&newModule.inst))
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
+        return -9;
+    }
+    newModule.libModule = libModule;
+#elif defined(_REWORKS)
+    GetSecurityPlugInstance getInstProc = NULL;
+    SymType type;
+    if (symbol_lkup(retrieve_instance_func_name, (void**)&getInstProc, &type) != 0)
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\".",
+            retrieve_instance_func_name);
+        return -10;
+    }
+    if (symbol_lkup(finalize_instance_func_name, (void**)&newModule.finalizeInstFunc, &type) != 0)
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\".",
+            finalize_instance_func_name);
+        return -11;
+    }
+    if (!getInstProc(&newModule.inst))
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
+        return -12;
+    }
+#elif defined(_VXWORKS_66)
+    GetSecurityPlugInstance getInstProc = NULL;
+    SYM_TYPE type;
+    if (symFindByName(sysSymTbl, (char*)retrieve_instance_func_name, (char**)&getInstProc, &type) != OK)
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\".",
+            retrieve_instance_func_name);
+        return -13;
+    }
+    if (symFindByName(sysSymTbl, (char*)finalize_instance_func_name, (char**)&newModule.finalizeInstFunc, &type) != OK)
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\".",
+            finalize_instance_func_name);
+        return -14;
+    }
+    if (!getInstProc(&newModule.inst))
+    {
+        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
+        return DDS_RETCODE_ERROR;
+    }
+#else
+    TRAVODDS_LOG(LOG_DEBUG, "Ubuntu  load security library");
+    void* libModule = dlopen(file_name, RTLD_LAZY);
+    const char* errorInfo = NULL;
+    if (libModule == NULL)
+    {
+        errorInfo = dlerror();
+        TRAVODDS_LOG(LOG_ERROR, "Failed to load security library \"%s\": %s.", file_name, errorInfo);
+        return -6;
+    }
+    GetSecurityPlugInstance getInstProc = (GetSecurityPlugInstance)dlsym(libModule, retrieve_instance_func_name);
+    if (getInstProc == NULL || (errorInfo = dlerror()) != NULL)
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\": %s.",
+            retrieve_instance_func_name, errorInfo);
+        return -7;
+    }
+    newModule.finalizeInstFunc = (FinalizeSecurityPlugInstance)dlsym(libModule, finalize_instance_func_name);
+    if (newModule.finalizeInstFunc == NULL || (errorInfo = dlerror()) != NULL)
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\": %s.",
+            finalize_instance_func_name, errorInfo);
+        return -8;
+    }
+    if (!getInstProc(&newModule.inst))
+    {
+        dlclose(libModule);
+        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
+        return -9;
+    }
+    newModule.libModule = libModule;
+    TRAVODDS_LOG(LOG_DEBUG, "Ubuntu generate PluginModule");
+#endif
+    char* key = (char*)malloc(strlen(plugin_name) + 1);
+    strcpy(key, plugin_name);
+    (secPlugins_)[key] = newModule;
+    TRAVODDS_LOG(LOG_DEBUG, "insert PluginModule into secPlugins_");
+    return 1;
+}
+
+#endif // DDSSECURITY

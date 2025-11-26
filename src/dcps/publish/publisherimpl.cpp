@@ -90,8 +90,32 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 		TRAVODDS_LOG(LOG_ERROR, "typeSupport[%s] is nullptr", topic->get_type_name());
 		return nullptr;
 	}
+
+#ifdef DDSSECURITY
+	SecurityException secExce;
+	if (participant_->enableDDSSec_) {
+		if (!participant_->secPlugin_.access_control->check_create_datawriter(
+			participant_->permissionHdl_,
+			participant_->GetDomainId(),
+			topic->get_name(),
+			&qosT,
+			&qos_.partition,
+			NULL,
+			&secExce)) {
+			TRAVODDS_LOG(LOG_ERROR, "Create DataWrier failed on Publisher %s: rejected by access control plugin.");
+			return nullptr;
+		}
+	}
+#endif // DDSSECURITY
+
 	DataWriter* datawriter = nullptr;
 	std::unique_ptr<DataWriterImpl> datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
+#ifdef DDSSECURITY
+	//数据读者获取安全属性
+	datawriterPtr->GetSecAttributes();
+	//填充缓存的builtinSecureData_
+	datawriterPtr->FillSecureData();
+#endif
 	if (!datawriterPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datawriter Err");
 		return nullptr;
