@@ -71,23 +71,26 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 		return RETCODE_ERROR;
 	}
 
-	if (writerCache_->IsFull(cacheChange->instanceHandle)) {
-		if (KEEP_LAST_HISTORY_QOS == qos_.history.kind || BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
-			/*  满了，删除最旧的数据  */
-			writerCache_->RemoveOldestChangeByInstance(cacheChange->instanceHandle);
-		}
-		else {
-			std::chrono::nanoseconds time_out = std::chrono::seconds(qos_.reliability.max_blocking_time.sec) + std::chrono::nanoseconds(qos_.reliability.max_blocking_time.nanosec);
-			bool ret0 = writerCache_->WriterWaitFor(time_out, this, cacheChange->instanceHandle, TRANSIENT_LOCAL_DURABILITY_QOS == qos_.durability.kind);
+	{
+		std::lock_guard<std::mutex> lock(wirterMtx_);
+		if (writerCache_->IsFull(cacheChange->instanceHandle)) {
+			if (KEEP_LAST_HISTORY_QOS == qos_.history.kind || BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
+				/*  满了，删除最旧的数据  */
+				writerCache_->RemoveOldestChangeByInstance(cacheChange->instanceHandle);
+			}
+			else {
+				std::chrono::nanoseconds time_out = std::chrono::seconds(qos_.reliability.max_blocking_time.sec) + std::chrono::nanoseconds(qos_.reliability.max_blocking_time.nanosec);
+				bool ret0 = writerCache_->WriterWaitFor(time_out, this, cacheChange->instanceHandle, TRANSIENT_LOCAL_DURABILITY_QOS == qos_.durability.kind);
 
-			if (!ret0) {
-				TRAVODDS_LOG(LOG_ERROR, "WriterWaitFor timeout");
-				return RETCODE_TIMEOUT;
+				if (!ret0) {
+					TRAVODDS_LOG(LOG_ERROR, "WriterWaitFor timeout");
+					return RETCODE_TIMEOUT;
+				}
 			}
 		}
-	}
 
-	writerCache_->AddChange(cacheChange);
+		writerCache_->AddChange(cacheChange);
+	}
 
 	flowController_->AddNewData(this, cacheChange);
 

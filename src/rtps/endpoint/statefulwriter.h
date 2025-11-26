@@ -16,7 +16,6 @@
 
 TRAVODDS_NAMESPACE_BEGIN
 
-class Timer;
 
 /**
  * StatefulWriter类，Writer子类,管理使用可靠传输模式向匹配的Reader发送的数据。
@@ -219,8 +218,6 @@ private:
 #endif // DDSSECURITY
 private:
 	std::map<GUID_t, std::shared_ptr<ReaderProxy>> matchedReaders_;
-
-	std::shared_ptr<Timer> timer_;
 
 	std::mutex readerPorxyMutex_;
 
