@@ -106,7 +106,7 @@ public:
 	 * 
 	 * @return 添加成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	int32_t AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag = true);
+	int32_t AddReliableDataCache(std::shared_ptr<CacheChange> cache, const DurabilityQosPolicyKind& durabilityKind, bool notFrag = true);
 
 	/**
 	 * @brief 添加可靠通信模式下的数据缓存。

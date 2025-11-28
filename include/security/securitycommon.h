@@ -46,9 +46,9 @@ extern std::string GMCLASSID_SECURITY_DATAREADER_CRYPTO_TOKENS;
 struct SecurityException
 {
     /** @brief   异常代码。 */
-    char code;
+    long code;
     /** @brief   异常子码。 */
-    char minor_code;
+    long minor_code;
     /** @brief   异常信息。 */
     char message[256];
 };

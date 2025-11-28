@@ -2,8 +2,6 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
-#include "common/time/ddstimer.h"
-#include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/flowcontrol/flowcontroller.h"
@@ -23,17 +21,10 @@ StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, con
 	: Writer(qos, kind)
 {
 	guid_ = guid;
-
-	Time_t heartBeatPeriod = { 0, 200 * 1000 * 1000 };
-	std::string n = "sfw" + std::to_string(guid.entityId.entityKind);
-	timer_ = TimerManager::CreateTimer(heartBeatPeriod, [&]() { this->WriteHeartbeat(); }, n);
-	//timer_->Start();
 }
 
 StatefulWriter::~StatefulWriter() {
-	if (timer_) {
-		timer_->Exit();
-	}
+
 }
 void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
@@ -427,9 +418,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	if (nullptr == change || 0 == readerProxys.size()) {
 		return RETCODE_OK;
 	}
-
 	DataSubMessage_t dataSubMessage;
-
 	SerializedBuffer* buffer = change->serializedBuffer;
 
 #ifdef DDSSECURITY
@@ -869,18 +858,30 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	LocatorSeq unicastList = readerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = readerProxy->GetMulticastLocatorList();
 
-	char data[1224] = { 0 };
+	char data[1224] = { 0 }; //开辟消息空间
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
+
+	//加密前的子消息长度
+	uint32_t lengthHeartBeatMsgBefore = 0;
+	uint32_t lengthGapMsgBefore = 0;
 
 #ifdef DDSSECURITY
+	bool encodeSubMsg = datawriter_->statistic_.enableSec
+		&& datawriter_->statistic_.secAttributes.is_submessage_protected
+		&& guid_.IsUserDefinedEntity();
+	bool encodeRtpsMsg = datawriter_->statistic_.enableSec
+		&& datawriter_->statistic_.rtpsMsgProtected
+		&& guid_.IsUserDefinedEntity();
+	//encodeSubMsg = false;
+	//encodeRtpsMsg = false;
 	SerializedBuffer encodeBufffer; //加密情况发送的buffer
 	SerializedBuffer tmpPlainBuffer;
 	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
-	char encodeData[1224 * 2] = { 0 }; //缓存被加密的消息
+	char encodeData[1224 * 2] = { 0 }; //开辟加密消息空间
 #endif // DDSSECURITY
 
 /*	HeartbeatMsgFlag_t flag;
@@ -897,8 +898,9 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	hbMsg.lastSN = maxSeq;
 	hbMsg.count = readerProxy->HeaertSendCountAdd();
 
+	// 序列化Heartbeat, bufffer指向Heartbeat头部位置
 	MessageProcessor::EncapsulateHeartBeatMessage(bufffer, shift, hbMsg);
-
+	lengthHeartBeatMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
 
@@ -908,13 +910,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	uint32_t lengthHeartBeatMsg = 0;
 	uint32_t lengthGapMsg = 0;
 	uint32_t lengthHeaderMsg = 0;
-	bool encodeSubMsg = datawriter_->statistic_.enableSec
-		&& datawriter_->statistic_.secAttributes.is_submessage_protected
-		&& guid_.IsUserDefinedEntity();
-	bool encodeRtpsMsg = datawriter_->statistic_.enableSec
-		&& datawriter_->statistic_.rtpsMsgProtected
-		&& guid_.IsUserDefinedEntity();
-	//加密子消息encode
+	//加密heartbeat子消息
 	if (encodeSubMsg) {
 		tmpEncodeBuffer.buffer_size = bufffer.buffer_size * 10; //TODO 长度计算
 		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
@@ -930,9 +926,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	/* 封装一个Gap报文 */
 	if (relateSeq > minSeq) {
 		/*  minseq 和 relateSeq 之间的序号与对应的代理无关，发送Gap报文 */
-		if (readerProxy->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
-			int a = 0;
-		}
 		GapSubMessage_t gapMsg;
 		gapMsg.header.subMessageId = GAP;
 		gapMsg.header.subMessageLength = SUB_MESSAGE_LEN_GAP; //TODO
@@ -946,15 +939,16 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		
 		size = sizeof(gapMsg.header) +  sizeof(gapMsg.writerId) * 2 +  sizeof(gapMsg.gapStart) + sizeof(gapMsg.gapList.bitmapBase)
 			+ sizeof(gapMsg.gapList.bitmap.size);
-		bufffer.buffer = bufffer.buffer - size;
+		bufffer.buffer = bufffer.buffer - size;  //bufffer指向gapMsg起始位置
 		
-		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
-		bufffer.buffer_size += shift;
+		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg); // 出参shift为gapMsg长度
+		lengthGapMsgBefore = shift;
+		bufffer.buffer_size += shift; //bufffer长度gap+heartbeat
 		shift = 0;
 
 #ifdef DDSSECURITY
 		//被加密的Gap消息明文
-		tmpPlainBuffer.buffer_size = shift;
+		tmpPlainBuffer.buffer_size = lengthGapMsgBefore;
 		tmpPlainBuffer.buffer = bufffer.buffer;
 		//加密子消息encode
 		if (encodeSubMsg) {
@@ -972,18 +966,17 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 #endif // DDSSECURITY
 	}
 
-	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
-
 #ifdef DDSSECURITY
-	bufffer.buffer_size += shift;
-	bufffer.buffer = bufffer.buffer - shift;
-
-	if (encodeSubMsg) {
-		memcpy(encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - shift,
-			bufffer.buffer,
-			shift);
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
+	if (encodeSubMsg) { //如果之前加密了子消息
+		// tmpPlainBuffer指向加密后的消息(包含Heartbeat和Gap)
+		tmpPlainBuffer.buffer_size = lengthHeartBeatMsg + lengthGapMsg;
+		tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg;
+		MessageProcessor::EncapsulateMessageHeader(tmpPlainBuffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
 	}
-
+	else {
+		MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+	}
 	if (encodeRtpsMsg) {
 		ParticipantCryptoHandle* partCryptoHdls = NULL;
 		uint32_t partCryptoHdlsCount = 0;
@@ -991,18 +984,15 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		partCryptoHdls = participant->secParticipants_.data();
 		partCryptoHdlsCount = participant->secParticipants_.size();
 		SecurityException secExce;
-
-		char* tmpChar = NULL; //指向消息头
-		if (encodeSubMsg) {
-			tmpChar = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - shift;
-			tmpPlainBuffer.buffer = tmpChar;
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - shift;
 			tmpPlainBuffer.buffer_size = lengthHeartBeatMsg + lengthGapMsg + shift;
 		}
-		else {
-			tmpPlainBuffer.buffer_size = bufffer.buffer_size;
-			tmpPlainBuffer.buffer = bufffer.buffer;
+		else { //不加密子消息情况下使用bufffer,bufffer指向gap,需要往前偏移shift(rtpsHeader)
+			tmpPlainBuffer.buffer_size = bufffer.buffer_size + shift;
+			tmpPlainBuffer.buffer = bufffer.buffer - shift;
 		}
-
+		// tmpEncodeBuffer开辟对整个消息加密后空间
 		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
 		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
 		if (datawriter_->secPlugin_ && !datawriter_->secPlugin_->crypto_transform->encode_rtps_message(
@@ -1017,20 +1007,30 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 			delete[]tmpEncodeBuffer.buffer;
 			return -1;
 		}
+		// 存到encodeData
 		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
+		// encodeBuffer指向对应的数据
 		encodeBufffer.buffer = encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size;
 		encodeBufffer.buffer_size = tmpEncodeBuffer.buffer_size;
 		delete[]tmpEncodeBuffer.buffer;
 	}
-	else {
-		encodeBufffer.buffer = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - shift;
-		encodeBufffer.buffer_size = lengthHeartBeatMsg + lengthGapMsg + shift;
+	else { // 不Rtps加密
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			encodeBufffer.buffer = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - sizeof(MessageHeader_t);;
+			encodeBufffer.buffer_size = lengthHeartBeatMsg + lengthGapMsg + sizeof(MessageHeader_t);
+		}
 	}
+#else
+	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+#endif
+
+
+#ifdef DDSSECURITY
 	if (encodeSubMsg || encodeRtpsMsg) {
 		participant_->TransmittersSendMessage(unicastList, encodeBufffer.buffer, encodeBufffer.buffer_size);
 	}
 	else {
-		participant_->TransmittersSendMessage(unicastList, bufffer.buffer, bufffer.buffer_size);
+		participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 	}
 #else
 	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
@@ -1127,18 +1127,116 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 
 	uint32_t shift = 0;	
 	SerializedBuffer bufffer;
-	char data[1224] = { 0 };
+	char data[1224] = { 0 }; //开辟消息空间
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
+	uint32_t lengthGapMsgBefore = 0;
 
+#ifdef DDSSECURITY
+	bool encodeSubMsg = datawriter_->statistic_.enableSec
+		&& datawriter_->statistic_.secAttributes.is_submessage_protected
+		&& guid_.IsUserDefinedEntity();
+	bool encodeRtpsMsg = datawriter_->statistic_.enableSec
+		&& datawriter_->statistic_.rtpsMsgProtected
+		&& guid_.IsUserDefinedEntity();
+	SerializedBuffer encodeBufffer; //加密情况发送的buffer
+	SerializedBuffer tmpPlainBuffer;
+	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
+	char encodeData[1224 * 2] = { 0 }; //开辟加密消息空间
+#endif // DDSSECURITY
+	// 序列化Gap, bufffer指向Gap头部位置
 	MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
-
+	lengthGapMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
-	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
+#ifdef DDSSECURITY
+	int dataRet;
+	//加密后的子消息长度
+	uint32_t lengthGapMsg = 0;
+	//加密heartbeat子消息
+	if (encodeSubMsg) {
+		tmpEncodeBuffer.buffer_size = bufffer.buffer_size * 10; //TODO 长度计算
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		//encode_datawriter_message
+		dataRet = EncodeSubMsgBuffer(proxy, bufffer, tmpEncodeBuffer);
+		lengthGapMsg = tmpEncodeBuffer.buffer_size;
+		//拷贝到encodeData末尾
+		memcpy(encodeData + 1224 * 2 - lengthGapMsg, tmpEncodeBuffer.buffer, lengthGapMsg);
+		delete[] tmpEncodeBuffer.buffer;
+	}
+#endif // DDSSECURITY
+
+#ifdef DDSSECURITY
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
+	if (encodeSubMsg) { //如果之前加密了子消息
+		// tmpPlainBuffer指向加密后的消息(包含Gap)
+		tmpPlainBuffer.buffer_size = lengthGapMsg;
+		tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthGapMsg;
+		MessageProcessor::EncapsulateMessageHeader(tmpPlainBuffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+}
+	else {
+		MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+	}
+	if (encodeRtpsMsg) {
+		ParticipantCryptoHandle* partCryptoHdls = NULL;
+		uint32_t partCryptoHdlsCount = 0;
+		DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
+		partCryptoHdls = participant->secParticipants_.data();
+		partCryptoHdlsCount = participant->secParticipants_.size();
+		SecurityException secExce;
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			tmpPlainBuffer.buffer = encodeData + 1224 * 2  - lengthGapMsg - shift;
+			tmpPlainBuffer.buffer_size = lengthGapMsg + shift;
+		}
+		else { //不加密子消息情况下使用bufffer,bufffer指向gap,需要往前偏移shift(rtpsHeader)
+			tmpPlainBuffer.buffer_size = bufffer.buffer_size + shift;
+			tmpPlainBuffer.buffer = bufffer.buffer - shift;
+		}
+		// tmpEncodeBuffer开辟对整个消息加密后空间
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		if (datawriter_->secPlugin_ && !datawriter_->secPlugin_->crypto_transform->encode_rtps_message(
+			&tmpEncodeBuffer,
+			&tmpPlainBuffer,
+			1, //TODO
+			participant->cryptoHdl_,
+			partCryptoHdls,
+			partCryptoHdlsCount,
+			&secExce))
+		{
+			delete[]tmpEncodeBuffer.buffer;
+			return;
+		}
+		// 存到encodeData
+		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
+		// encodeBuffer指向对应的数据
+		encodeBufffer.buffer = encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size;
+		encodeBufffer.buffer_size = tmpEncodeBuffer.buffer_size;
+		delete[]tmpEncodeBuffer.buffer;
+	}
+	else { // 不Rtps加密
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			encodeBufffer.buffer = encodeData + 1224 * 2 - lengthGapMsg - sizeof(MessageHeader_t);;
+			encodeBufffer.buffer_size = lengthGapMsg + sizeof(MessageHeader_t);
+		}
+	}
+#else
+	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+#endif
+
+#ifdef DDSSECURITY
+	if (encodeSubMsg || encodeRtpsMsg) {
+		participant_->TransmittersSendMessage(dstLocators, encodeBufffer.buffer, encodeBufffer.buffer_size);
+	}
+	else {
+		participant_->TransmittersSendMessage(dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	}
+#else
 	participant_->TransmittersSendMessage(dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
+#endif // DDSSECURITY
+	//participant_->TransmittersSendMessage(dstLocators, bufffer.buffer - shift, bufffer.buffer_size + shift);
 }
 
 /* 重传分片数据 */

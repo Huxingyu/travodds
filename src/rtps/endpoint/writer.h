@@ -241,6 +241,9 @@ public:
 #ifdef DDSSECURITY
 	 void ResetLastChangeSequenceNumber();
 #endif // DDSSECURITY
+private:
+    /* 写入锁  */
+    mutable std::mutex wirterMtx_;
 protected:
 
 	bool pushMode_ = true;

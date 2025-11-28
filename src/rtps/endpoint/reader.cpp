@@ -164,6 +164,7 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	for (; itor != instanceHandles_.end(); itor++) {
 		if (handle < *itor) {
 			instanceHandles_.insert(itor, handle);
+			readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
 			break;
 		}
 		if (handle == *itor) {
@@ -172,6 +173,7 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	}
 
 	if (itor == instanceHandles_.end()) {
+		readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
 		instanceHandles_.insert(itor, handle);
 	}
 

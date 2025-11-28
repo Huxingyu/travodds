@@ -25,6 +25,7 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class Timer;
 class FlowControlManager;
 class FlowRateLimitedManager;
 
@@ -480,6 +481,8 @@ private:
     std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
 
     std::unique_ptr<FlowControlManager> flowControlManager_;
+
+	std::shared_ptr<Timer> hbTimer_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	

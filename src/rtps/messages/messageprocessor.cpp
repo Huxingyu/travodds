@@ -634,6 +634,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
                 senderCryptoHdl,
                 &secExce))
             {
+				delete[]plainData.buffer;
 				TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
                     "\n  Code: %d"
                     "\n  Minor code: %d"
@@ -882,9 +883,6 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	for (auto entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
-			if (reader->GetGuid().entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
-				TRAVODDS_LOG(LOG_DEBUG, "Match reader of statelessMsg ReceiveDataMessage");
-			}
 			reader->ReceiveDataMessage(messageReceiver, dataSubMessage, dataSubMessage.serializedPayload, serializedPayloadLen);
 		}
 	}
