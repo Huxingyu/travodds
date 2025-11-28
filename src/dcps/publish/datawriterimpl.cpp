@@ -390,9 +390,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		TRAVODDS_LOG(LOG_ERROR, "Writer can not get_participant from Publisher", ret);
 		return RETCODE_ERROR;
 	}
-	//if (dp->enableDDSSec_) {
-	//	dpSecPlugin_ = &(dp->secPlugin_);
-	//}
 
 	SecurityException secExce;
 	SerializedBuffer inlineQos;
@@ -468,8 +465,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 				TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 				return ret;
 			}
-			std::cout << "curEncodeSubBuffer = " << (void*)curEncodeSubBuffer->buffer <<
-				" " << "curEncodeSubBuffer Len = " << curEncodeSubBuffer->buffer_size << std::endl;
 			memcpy(curEncodeSubBuffer->buffer, encodeBuffer->buffer + encodeBufferShift, curEncodeSubBufferSize);
 			encodeBufferShift += curEncodeSubBufferSize;
 			if (i == 0) {
@@ -965,7 +960,7 @@ ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHea
 ReturnCode_t DataWriterImpl::DeleteSerializedBuffer(SerializedBuffer* buffer)
 {
 	if (!buffer) {
-		TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
+		// TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
 		return RETCODE_ERROR;
 	}
 
