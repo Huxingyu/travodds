@@ -2,8 +2,6 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
-#include "common/time/ddstimer.h"
-#include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/flowcontrol/flowcontroller.h"
@@ -23,17 +21,10 @@ StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, con
 	: Writer(qos, kind)
 {
 	guid_ = guid;
-
-	Time_t heartBeatPeriod = { 0, 200 * 1000 * 1000 };
-	std::string n = "sfw" + std::to_string(guid.entityId.entityKind);
-	timer_ = TimerManager::CreateTimer(heartBeatPeriod, [&]() { this->WriteHeartbeat(); }, n);
-	//timer_->Start();
 }
 
 StatefulWriter::~StatefulWriter() {
-	if (timer_) {
-		timer_->Exit();
-	}
+
 }
 void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {

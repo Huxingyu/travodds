@@ -52,10 +52,31 @@ Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
 {
 	GenerateGuidPrefix(domainId_, domainId_);
 	guid_.entityId = ENTITYID_PARTICIPANT;
+
+	Time_t heartBeatPeriod = { 0, 200 * 1000 * 1000 };
+	hbTimer_ = TimerManager::CreateTimer(heartBeatPeriod, 
+	    [&, this]() {
+			std::vector<std::shared_ptr<Writer>> reliable_writers;
+			{
+				std::lock_guard<std::mutex> lock(mtxWriters_);
+				for (auto& it : writers_) {
+					if (it.second->GetQos().reliability.kind == RELIABLE_RELIABILITY_QOS) {
+						reliable_writers.push_back(it.second);
+					}
+				}
+			}
+			for (auto& writer : reliable_writers) {
+				std::static_pointer_cast<StatefulWriter>(writer)->WriteHeartbeat();
+			}
+	    }, 
+	    "hb");
 }
 
 Participant::~Participant()
 {
+	if (hbTimer_) {
+		hbTimer_->Exit();
+	}
 	StopReceiveThread();
 
 	//if (userDataRecvThread_.joinable()) {

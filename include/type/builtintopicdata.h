@@ -76,6 +76,9 @@ struct PublicationBuiltinTopicData {
 	PartitionQosPolicy 			partition;
 	TopicDataQosPolicy 			topic_data;
 	GroupDataQosPolicy 			group_data;
+	PublicationBuiltinTopicData() {
+		reliability.kind = RELIABLE_RELIABILITY_QOS;
+	}
 };
 
 #ifdef DDSSECURITY

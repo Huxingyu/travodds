@@ -147,7 +147,8 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	}
 
 	ReturnCode_t ret = RETCODE_OK;
-	ret = proxy->AddReliableDataCache(cache);
+
+	ret = proxy->AddReliableDataCache(cache, qos_.durability.kind);
 		
 	if (RETCODE_OK == ret) {
 		Notify(proxy);
@@ -222,7 +223,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
 			dataFragCache->fragmentSeq.insert(i);
 		}
-		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, false);
+		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, qos_.durability.kind, false);
 
 		/* wangyi 记录最新信息 */
 		if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
@@ -499,7 +500,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		}
 
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
-		if (!datareader_->CheckLifespan(cache)) {
+		if (datareader_ && !datareader_->CheckLifespan(cache)) {
 			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
 				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader CheckLifespan");
 			}
