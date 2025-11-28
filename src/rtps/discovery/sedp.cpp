@@ -1135,7 +1135,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				(char*)spdp_->bigEndianMsgData_->buffer,
 				spdp_->bigEndianMsgData_->buffer_size,
 				&secExce);
-		TRAVODDS_LOG(LOG_INFO, "TESTINFO if in WAITING_REQUEST and receive request, begin_handshake_reply.");
 		auto now = std::chrono::system_clock::now();
 		std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
 		//std::cout << "now time after begin_handshake_reply: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
@@ -1148,7 +1147,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			messageData.push_back(handshakeToken);
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			dpInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
-			TRAVODDS_LOG(LOG_INFO, "TESTINFO send reply TOKEN.");
 			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, REPLY);
 			//reply响应完对端request之后置为DDSSEC_HANDSHAKE_WAITING_FINAL，等待processhandshake
 			dpInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_FINAL;
@@ -1201,14 +1199,12 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				&secExce);
 		
 		if (validationRst == VALIDATION_OK_FINAL_MESSAGE) {
-			TRAVODDS_LOG(LOG_INFO, "waiting reply and receive reply, process_handshake success.");
 			dpInfo->handshakeMsg_->messageData[0] = handshakeToken;
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			//请求发发送processhandshake之后的msg，通知对端processhandshake
 			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, FINAL);
 		}
 		else {
-			TRAVODDS_LOG(LOG_INFO, "waiting reply and receive reply, process_handshake but failed.");
 			if (dp->secAttributes_.allow_unauthenticated_participants) {
 				dpInfo->enableDDSSec_ = false;
 				dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
@@ -1272,7 +1268,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				return;
 			}
 		}
-		TRAVODDS_LOG(LOG_INFO, "waiting final and receive final, process_handshake success into DDSSEC_HANDSHAKE_OK.");
 		// handshake finished
 		dpInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_OK;
 		break;
@@ -1351,9 +1346,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
 			return;
 		}
-		TRAVODDS_LOG(LOG_INFO, "TESTINFO get_shared_secret success.");
 		// try to get and exchange crypto tokens
-
 		dpInfo->cryptoHdl_ = dp->secPlugin_.crypto_key_factory->register_matched_remote_participant(
 			dpInfo->identityHdl_,
 			dp->cryptoHdl_,

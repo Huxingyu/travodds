@@ -874,7 +874,7 @@ InstanceHandle_t DomainParticipantImpl::GenerateInstanceHandle(const GUID_t& gui
 ReturnCode_t DomainParticipantImpl::security_check()
 {
     if (!enableDDSSec_) {
-        TRAVODDS_LOG(LOG_ERROR, "need not security_check");
+        TRAVODDS_LOG(LOG_DEBUG, "need not security_check");
         return VALIDATION_OK;
     }
     else {
@@ -885,7 +885,7 @@ ReturnCode_t DomainParticipantImpl::security_check()
         handle_.keyHash.value[0];
         BuiltinTopicKey_t adjustedKey;
         if (secPlugin_.authentication == nullptr) {
-            TRAVODDS_LOG(LOG_ERROR, "validate_local_identity\n");
+            TRAVODDS_LOG(LOG_ERROR, "validate_local_identity failed because authentication is null!\n");
             return VALIDATION_FAILED;
         }
         ValidationResult_t validataRst = secPlugin_.authentication->validate_local_identity(
