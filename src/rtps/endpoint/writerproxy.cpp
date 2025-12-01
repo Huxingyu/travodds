@@ -291,7 +291,7 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 		    }
 		    insertSeq_ = insertSeq_ - 1;
 		}
-		changesFromWriters_.begin()->second.sequenceNumber = cache->sequenceNumber;
+
 		changesFromWriters_[insertSeq_].cache = cache;
 		if (notFrag) {
 			changesFromWriters_[insertSeq_].status = RECEIVED;
