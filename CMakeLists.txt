@@ -27,7 +27,7 @@ endif()
 ###############################################################################
 # 项 目
 ###############################################################################
-project(travodds VERSION "1.0.0" LANGUAGES C CXX)
+project(travodds VERSION "1.1.0" LANGUAGES C CXX)
 set(PROJECT_NAME_LARGE "TRAVODDS")
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_NAME_UPPER)
