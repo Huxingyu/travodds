@@ -75,7 +75,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
-		TRAVODDS_LOG(LOG_ERROR, "writerGuid not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "writerGuid not exist");
 		return nullptr;
 	}
 		
