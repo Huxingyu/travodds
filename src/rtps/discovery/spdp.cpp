@@ -748,7 +748,7 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
 	if (0 == remoteParticipantStatus_.count(key)) {
-		TRAVODDS_LOG(LOG_ERROR, "guid not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "guid not exist");
 		return;
 	}
 		

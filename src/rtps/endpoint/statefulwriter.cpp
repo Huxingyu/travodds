@@ -240,7 +240,7 @@ std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGu
 
 	auto itor = matchedReaders_.find(readerGuid);
 	if (itor == matchedReaders_.end()) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return nullptr;
 	}
 	return itor->second;
@@ -339,7 +339,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
@@ -387,7 +387,7 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
