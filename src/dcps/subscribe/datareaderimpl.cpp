@@ -118,8 +118,9 @@ DataReaderImpl::~DataReaderImpl()
 	if (lifespanTimer_) {
 		lifespanTimer_->Exit();
 	}
-
-	reader_->SetRelatedDataReader(nullptr);
+	if (enable_) {
+		reader_->SetRelatedDataReader(nullptr);
+	}
 	topic_->Dereference();
 	readcdts_.clear();
 	querycdts_.clear();
@@ -224,6 +225,10 @@ const DataReaderListener * DataReaderImpl::get_listener() const
 ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, SampleStateMask sample_states,
 	ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
@@ -253,6 +258,10 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 
 ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
@@ -284,6 +293,10 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 
 ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, ReadCondition* condition)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
@@ -311,6 +324,10 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 
 ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, ReadCondition* condition)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
@@ -342,6 +359,10 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 
 ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &sample_info)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
     ReturnCode_t ret = RETCODE_OK;
 	SerializedBufferSeq datas;
 	SampleInfoSeq sample_infos;
@@ -364,6 +385,10 @@ ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &samp
 
 ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &sample_info)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	ReturnCode_t ret = RETCODE_OK;
 	SerializedBufferSeq datas;
 	SampleInfoSeq sample_infos;
@@ -390,6 +415,10 @@ ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &samp
 
 ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& a_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, a_handle, sample_states, view_states, instance_states);
@@ -415,6 +444,10 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 
 ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, handle, sample_states, view_states, instance_states,true);
@@ -443,6 +476,10 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 
 ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states);
@@ -467,6 +504,10 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 
 ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states,true);
@@ -496,6 +537,10 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 
 ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, ReadCondition* condition)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
@@ -522,6 +567,10 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 
 ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, ReadCondition* condition)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	SerializedBufferSeq  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
@@ -556,6 +605,10 @@ ReturnCode_t DataReaderImpl::return_loan(DataSeq& data_values, SampleInfoSeq& sa
 
 ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	if (!typeSupport_->has_key()) {
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
@@ -686,7 +739,8 @@ ReturnCode_t DataReaderImpl::wait_for_historical_data(const Duration_t &max_wait
 
 ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopicData &publication_data, const InstanceHandle_t &publication_handle) const
 {
-	if (nullptr == reader_) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	if (reader_->GetMatchedPublicationData(publication_data, publication_handle)) {
@@ -697,10 +751,10 @@ ReturnCode_t DataReaderImpl::get_matched_publication_data(PublicationBuiltinTopi
 
 ReturnCode_t DataReaderImpl::get_matched_publications(InstanceHandleSeq &publication_handles) const
 {
-    if(!reader_) {
-		TRAVODDS_LOG(LOG_ERROR, "datareader releated reader is nullptr");
-        return RETCODE_NOT_ENABLED;
-    }
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
+		return RETCODE_NOT_ENABLED;
+	}
     reader_->GetMatchedPublications(publication_handles);
     return RETCODE_OK;
 }

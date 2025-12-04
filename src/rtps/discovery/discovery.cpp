@@ -192,7 +192,7 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 
 void Discovery::RemoveSpdPdiscoveredParticipantData()
 {
-	std::shared_ptr<Participant> participant = domainParticipant_->GetRelatedParticipant();
+    std::shared_ptr<Participant> participant = domainParticipant_->GetRelatedParticipant();
 	GUID_t guid = participant->GetGuid();
 	spdp_->RemoveSpdPdiscoveredParticipantData(guid);
 }
