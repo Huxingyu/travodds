@@ -768,7 +768,7 @@ ReturnCode_t DataWriterImpl::enable()
 		discovery->WritePublicationData(writerData);
 	}
 	
-#elif
+#else
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredWriterData writerData;
 	writerData.ddsPublicationData = GetBuiltinTopicData();

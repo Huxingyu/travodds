@@ -390,9 +390,6 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	auto itor = matchedWriters_.find(guid);
 	if (matchedWriters_.end() == itor) {
 		//AGILOG(AGILOG_ERROR, "no match writer")
-		if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
-			TRAVODDS_LOG(LOG_ERROR, "GetMacthList of statelessMessageWriter failed");
-		}
 		return RETCODE_ERROR;
 	}
 	std::shared_ptr<WriterProxy> proxy = itor->second;
@@ -500,9 +497,6 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
 		if (!datareader_->CheckLifespan(cache)) {
-			if (readerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER) {
-				TRAVODDS_LOG(LOG_DEBUG, "statelessMessageReader CheckLifespan");
-			}
 			cache = proxy->GetSubmitCache();
 			continue;
 		}

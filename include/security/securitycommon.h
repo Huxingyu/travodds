@@ -16,7 +16,6 @@
 #include "dcps/topic/typesupport.h"
 #include "type/basictype.h"
 #include <string>
-#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 typedef struct DDSSecurityPluginInstance
@@ -272,5 +271,4 @@ ParticipantSecurityAttributesMask ParticipantSecurityAttributesToMask(Participan
 EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurityAttributes* secAttr);
 
 TRAVODDS_NAMESPACE_END
-#endif // DDSSECURITY
 #endif // SECURITY_COMMON_H
