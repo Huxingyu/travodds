@@ -26,10 +26,9 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
     subId_ = 0;
     topicId_ = 0;
 
+    handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
     participant_ = std::make_shared<Participant>(domainId, threadPool_);
-#ifdef DDSSECURITY
     participant_->participantImpl_ = this;
-#endif
     assert(participant_.get());
 
     discovery_ = std::make_shared<Discovery>(this, threadPool_);

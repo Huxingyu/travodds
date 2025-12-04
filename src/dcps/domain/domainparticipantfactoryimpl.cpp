@@ -220,9 +220,27 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     }
 #ifdef _WIN32
     HMODULE libModule = LoadLibraryA(file_name);
+    if (libModule == NULL) {
+        DWORD errorCode = GetLastError();
+        char errorMsg[256];
+        DWORD charsWritten = FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL,
+            errorCode,
+            0, // 默认语言
+            errorMsg,
+            sizeof(errorMsg),
+            NULL
+        );
+        if (charsWritten > 0) {
+            TRAVODDS_LOG(LOG_ERROR, "Load DLL '%s' failed (code: %lu):\n%s", plugin_name, errorCode, errorMsg);
+        }
+        else {
+            TRAVODDS_LOG(LOG_ERROR, "Load DLL '%s' failed (code: %lu):\n", plugin_name, errorCode);
+        }
+    }
     if (libModule == NULL)
     {
-        TRAVODDS_LOG(LOG_DEBUG, "%s load fail.", plugin_name);
         return RETCODE_ERROR;
     }
     // 找到函数接口地址
