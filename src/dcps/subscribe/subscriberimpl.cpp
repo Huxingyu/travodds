@@ -149,10 +149,11 @@ ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = a_dataReader->get_instance_handle();
-
-	participant_->GetRelatedParticipant()->DeleteReader(handle);
-	std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-	discovery->RemoveSubscriptionData(handle);
+    if (dynamic_cast<DataReaderImpl*>(a_dataReader)->IsEnable()) {
+        participant_->GetRelatedParticipant()->DeleteReader(handle);
+        std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+        discovery->RemoveSubscriptionData(handle);
+    }
 
     std::lock_guard<std::mutex> lock(mtxReaders_);
     auto it = readerHandles_.find(handle);
@@ -238,12 +239,12 @@ ReturnCode_t SubscriberImpl::delete_contained_entities()
 
 	for (auto itor = readerHandles_.begin(); itor != readerHandles_.end(); itor++) {
 		DataReader* datareader = itor->second.get();
-
-		InstanceHandle_t handle = datareader->get_instance_handle();
-		participant_->GetRelatedParticipant()->DeleteReader(handle);
-		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-		discovery->RemoveSubscriptionData(handle);
-
+        if (dynamic_cast<DataReaderImpl*>(datareader)->IsEnable()) {
+            InstanceHandle_t handle = datareader->get_instance_handle();
+            participant_->GetRelatedParticipant()->DeleteReader(handle);
+            std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+            discovery->RemoveSubscriptionData(handle);
+        }
 		if (RETCODE_OK != datareader->delete_contained_entities()) {
 			TRAVODDS_LOG(LOG_ERROR, "delete_contained_entities Err")
 			return RETCODE_PRECONDITION_NOT_MET;

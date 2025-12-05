@@ -42,6 +42,10 @@ ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq
 
 bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, DynamicType* type)
 {
+	if (!type) {
+   	    TRAVODDS_LOG(LOG_ERROR, "DynamicType is nullptr");
+        return false;
+    }
     DDSSQL::DDSSQLFilter filter(type);
     ReturnCode_t ret = filter.InputSQL(filter_expression, expression_parameters);
     return ret == RETCODE_OK ? true : false;
