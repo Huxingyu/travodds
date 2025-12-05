@@ -95,8 +95,9 @@ DataWriterImpl::~DataWriterImpl()
 	if (lifespanTimer_) {
 		lifespanTimer_->Exit();
 	}
-
-	writer_->SetRelatedDataWriter(nullptr);
+	if (enable_) {
+		writer_->SetRelatedDataWriter(nullptr);
+	}
 	topic_->Dereference();
 
     if (listener_) {
@@ -213,6 +214,11 @@ InstanceHandle_t DataWriterImpl::register_instance(const void* const instance_da
 
 InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const instance_data, const Time_t& source_timestamp)
 {
+	if (enable_ == false){
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return HANDLE_NIL;
+	}
+
     InstanceHandle_t handle;
 	if (source_timestamp.sec < 0 ) {
 		return HANDLE_NIL;
@@ -264,11 +270,19 @@ ReturnCode_t DataWriterImpl::unregister_instance(const void* const instance_data
 
 ReturnCode_t DataWriterImpl::unregister_instance_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	return UnRegisteOrDispose(instance_data, handle, source_timestamp);
 }
 
 ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	if (!typeSupport_->has_key()) {
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
@@ -290,6 +304,10 @@ ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandl
 
 InstanceHandle_t DataWriterImpl::lookup_instance(const void* const instance) const
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return HANDLE_NIL;
+	}
 	InstanceHandle_t handle = HANDLE_NIL;
 
 	if (typeSupport_->has_key()) {
@@ -312,6 +330,10 @@ ReturnCode_t DataWriterImpl::write(const void* const instance_data, const Instan
 
 ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return RETCODE_NOT_ENABLED;
+    }
 	ReturnCode_t ret = RETCODE_ERROR;
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 
@@ -539,6 +561,10 @@ ReturnCode_t DataWriterImpl::dispose(const void* const instance_data, const Inst
 
 ReturnCode_t DataWriterImpl::dispose_w_timestamp(const void* const data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (!enable_) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return RETCODE_NOT_ENABLED;
+	}
     return UnRegisteOrDispose(data, handle, source_timestamp, true);
 }
 ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const InstanceHandle_t& handle, const Time_t& timespace, bool dispose)
@@ -623,7 +649,8 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 
 ReturnCode_t DataWriterImpl::wait_for_acknowledgments(const Duration_t& max_wait)
 {
-	if (nullptr == writer_) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	return writer_->WaitForAcknowledgments(max_wait);
@@ -661,8 +688,8 @@ const Publisher* DataWriterImpl::get_publisher() const
 
 ReturnCode_t DataWriterImpl::assert_liveliness()
 {
-	if (writer_ == nullptr) {
-		TRAVODDS_LOG(LOG_ERROR, "writer_ is nullptr");
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 
@@ -684,7 +711,8 @@ ReturnCode_t DataWriterImpl::assert_liveliness()
 
 ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTopicData& subscription_data, const InstanceHandle_t& subscription_handle)
 {
-	if (nullptr == writer_) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	if (writer_->GetMatchedSubscriptionData(subscription_data, subscription_handle)) {
@@ -695,7 +723,8 @@ ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTo
 
 ReturnCode_t DataWriterImpl::get_matched_subscriptions(InstanceHandleSeq& subscription_handles)
 {
-	if(nullptr == writer_ ) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	writer_->GetMatchedSubscriptions(subscription_handles);

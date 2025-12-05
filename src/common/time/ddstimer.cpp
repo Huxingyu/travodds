@@ -43,7 +43,7 @@ std::shared_ptr<Timer> TimerManager::PrivateCreateTimer(const Time_t& time, Time
 
 Timer::Timer(std::chrono::milliseconds period, TimerCallBack callback, TimerType type, const std::string& name)
 	: run_(false), exit_(false), restart_(false), 
-	  callback_(callback), period_(period), type_(type), runs_(0), name_(name)
+	  callback_(callback), period_(period), type_(type), name_(name)
 {
 	nextTime_ = std::chrono::steady_clock::now() + period_;
 }
@@ -94,14 +94,10 @@ void  Timer::Exit()
 	if (TIMER_MULTIPLE == type_ && thread_->joinable()) {
 		thread_->join();
 	}
-	while (runs_) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
 }
 
 void Timer::Run()
 {
-	runs_++;
 	std::unique_lock<std::mutex> lock(mutex_);
 
 	if(!restart_.load())
@@ -110,8 +106,6 @@ void Timer::Run()
 	if (restart_.load()) {
 		restart_.store(false);
 		nextTime_ = std::chrono::steady_clock::now() + period_;
-		runs_--;
-
 		return;
 	}
 
@@ -120,8 +114,6 @@ void Timer::Run()
 	}
 
 	UpdateNextTime();
-
-	runs_--;
 }
 
 void Timer::SetThreadName()

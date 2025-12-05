@@ -150,10 +150,11 @@ ReturnCode_t PublisherImpl::delete_datawriter(DataWriter*& datawriter)
     }
 	
     InstanceHandle_t handle = datawriter->get_instance_handle();
-
-	participant_->GetRelatedParticipant()->DeleteWriter(handle);
-	std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-	discovery->RemovePublicationData(handle);
+	if (dynamic_cast<DataWriterImpl*>(datawriter)->IsEnable()) {
+		participant_->GetRelatedParticipant()->DeleteWriter(handle);
+		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+		discovery->RemovePublicationData(handle);
+	}
 
     std::lock_guard<std::mutex> lock(mtxWriters_);
     auto it = writerHandles_.find(handle);
@@ -237,11 +238,12 @@ ReturnCode_t PublisherImpl::delete_contained_entities()
 
 	for (auto itor = writerHandles_.begin(); itor != writerHandles_.end(); itor++) {
 		DataWriter* datawriter = itor->second.get();
-
-		InstanceHandle_t handle = datawriter->get_instance_handle();
-		participant_->GetRelatedParticipant()->DeleteWriter(handle);
-		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-		discovery->RemovePublicationData(handle);
+		if (dynamic_cast<DataWriterImpl*>(datawriter)->IsEnable()) {
+			InstanceHandle_t handle = datawriter->get_instance_handle();
+			participant_->GetRelatedParticipant()->DeleteWriter(handle);
+			std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+			discovery->RemovePublicationData(handle);
+		}
 	}
 	
 	writerHandles_.clear();
