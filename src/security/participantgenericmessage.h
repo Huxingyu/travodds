@@ -1,6 +1,7 @@
 #ifndef PARTICIPANT_GENERIC_MESSAGE_H
 #define PARTICIPANT_GENERIC_MESSAGE_H
 
+#ifdef DDSSECURITY
 #include "security/securitycommon.h"
 #include "rtps/basictypertps.h"
 #include <string>
@@ -29,4 +30,5 @@ typedef ParticipantGenericMessage ParticipantStatelessMessage;
 typedef ParticipantGenericMessage ParticipantVolatileSecureMessage;
 
 TRAVODDS_NAMESPACE_END
+#endif // DDSSECURITY
 #endif //PARTICIPANT_GENERIC_MESSAGE_H

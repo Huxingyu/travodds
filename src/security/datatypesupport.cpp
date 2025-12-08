@@ -1,8 +1,9 @@
 #include "rtps/basictypertps.h"
 #include "security/datatypesupport.h"
 #include "security/participantgenericmessage.h"
-#ifdef DDSSECURITY
+
 TRAVODDS_NAMESPACE_BEGIN
+#ifdef DDSSECURITY
 BuiltinTopicKey_tTypeSupport* BuiltinTopicKey_tTypeSupport::get_instance() {
     static BuiltinTopicKey_tTypeSupport instance;
     return &instance;
