@@ -1,6 +1,6 @@
 #include "security/securitycommon.h"
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
-
 const DDSSecHandle SEC_NIL_HANDLE = (void*)0;
 
 std::string GMCLASSID_SECURITY_AUTH_HANDSHAKE = "dds.sec.auth";
@@ -74,3 +74,4 @@ EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurity
 }
 
 TRAVODDS_NAMESPACE_END
+#endif // DDSSECURITY
