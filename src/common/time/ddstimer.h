@@ -178,8 +178,6 @@ private:
 	std::atomic_bool exit_;
 
 	std::atomic_bool restart_;
-	/* run计数 */
-	std::atomic_size_t runs_;
 	
 	std::condition_variable_any cva_;
 

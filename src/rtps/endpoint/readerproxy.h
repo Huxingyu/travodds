@@ -210,6 +210,7 @@ private:
 	SequenceNumber_t highestSentChangeSN_;
 	SeqNumberVec requestedChanges_;
 	SeqNumberVec acknowledgeChanges_;
+	std::mutex ackmtex_;
 	bool expectsInlineQos_;
 
 	// true: statefulreader false: statelessreader

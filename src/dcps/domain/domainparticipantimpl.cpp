@@ -76,8 +76,10 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
 DomainParticipantImpl::~DomainParticipantImpl()
 {
 	threadPool_->shutdown();
-	discovery_->RemoveSpdPdiscoveredParticipantData();
-    participant_->StopReceiveThread();
+    if (enable_) {
+        discovery_->RemoveSpdPdiscoveredParticipantData();
+        participant_->StopReceiveThread();
+    }
     if (listener_) {
         //delete listener_;
         listener_ = nullptr;
@@ -660,7 +662,11 @@ ReturnCode_t DomainParticipantImpl::get_default_topic_qos(TopicQos& qos) const
 }
 
 ReturnCode_t DomainParticipantImpl::get_discovered_participants(InstanceHandleSeq& participant_handles) const
-{
+{   
+	if (enable_ == false) {
+        TRAVODDS_LOG(LOG_WARNING, "DomainParticipant is not enabled");
+        return RETCODE_NOT_ENABLED;
+    }
 	discovery_->GetDiscoveredParticipants(participant_handles);
     return RETCODE_OK;
 }

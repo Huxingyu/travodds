@@ -2,8 +2,6 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
-#include "common/time/ddstimer.h"
-#include "common/threads/threadpool.h"
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/flowcontrol/flowcontroller.h"
@@ -23,17 +21,10 @@ StatefulWriter::StatefulWriter(const DataWriterQos& qos, const GUID_t& guid, con
 	: Writer(qos, kind)
 {
 	guid_ = guid;
-
-	Time_t heartBeatPeriod = { 0, 200 * 1000 * 1000 };
-	std::string n = "sfw" + std::to_string(guid.entityId.entityKind);
-	timer_ = TimerManager::CreateTimer(heartBeatPeriod, [&]() { this->WriteHeartbeat(); }, n);
-	//timer_->Start();
 }
 
 StatefulWriter::~StatefulWriter() {
-	if (timer_) {
-		timer_->Exit();
-	}
+
 }
 void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
@@ -249,7 +240,7 @@ std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGu
 
 	auto itor = matchedReaders_.find(readerGuid);
 	if (itor == matchedReaders_.end()) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return nullptr;
 	}
 	return itor->second;
@@ -348,7 +339,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;
@@ -396,7 +387,7 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 
 	auto itor = matchedReaders_.find(guid);
 	if (matchedReaders_.end() == itor) {
-		TRAVODDS_LOG(LOG_ERROR, "no match reader");
+		TRAVODDS_LOG(LOG_DEBUG, "no match reader");
 		return RETCODE_ERROR;
 	}
 	proxy = itor->second;

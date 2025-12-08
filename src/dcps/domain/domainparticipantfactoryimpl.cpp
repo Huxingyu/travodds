@@ -205,7 +205,6 @@ void DomainParticipantFactoryImpl::finalize()
 }
 
 #ifdef DDSSECURITY
-
 ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     const char* plugin_name,
     const char* file_name,
@@ -369,7 +368,6 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
         return RETCODE_ERROR;
     }
     newModule.libModule = libModule;
-    TRAVODDS_LOG(LOG_DEBUG, "Ubuntu generate PluginModule");
 #endif
     char* key = (char*)malloc(strlen(plugin_name) + 1);
     strcpy(key, plugin_name);
@@ -377,4 +375,14 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     return RETCODE_OK;
 }
 
+#else
+ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
+    const char* plugin_name,
+    const char* file_name,
+    const char* retrieve_instance_func_name,
+    const char* finalize_instance_func_name)
+{
+    TRAVODDS_LOG(LOG_WARNING, "only ddssecurity mode can call load_security_plugin");
+    return RETCODE_UNSUPPORTED;
+}
 #endif // DDSSECURITY

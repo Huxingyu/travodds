@@ -150,6 +150,15 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 	data.ddsParticipantData.key = Conversion::ToBuiltinTopicKey(participant->GetGuid());
 	data.ddsParticipantData.user_data = dpQos.user_data;
 	data.ddsParticipantData.sys_info = SysInfo::GetSysInfoProperties();
+	for (auto locator : participant->GetMetatrafficUnicastLocators()) {
+		if (LOCATOR_KIND_UDPv4 == locator.kind) {
+
+			std::string hostip = std::to_string(locator.address[12]) + "." + std::to_string(locator.address[13]) + "." +
+				std::to_string(locator.address[14]) + "." + std::to_string(locator.address[15]);
+			data.ddsParticipantData.sys_info.push_back({ "dds.sys_info.hostip", hostip });
+			break;
+		}
+	}
 	data.domainId = domainParticipant_->get_domain_id();
 	data.protocolVersion = PROTOCOLVERSION_2_5;
 	data.vendorId = VENDORID_PROSIMA;
@@ -183,7 +192,7 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 
 void Discovery::RemoveSpdPdiscoveredParticipantData()
 {
-	std::shared_ptr<Participant> participant = domainParticipant_->GetRelatedParticipant();
+    std::shared_ptr<Participant> participant = domainParticipant_->GetRelatedParticipant();
 	GUID_t guid = participant->GetGuid();
 	spdp_->RemoveSpdPdiscoveredParticipantData(guid);
 }
