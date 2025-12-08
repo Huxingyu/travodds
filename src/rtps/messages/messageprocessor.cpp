@@ -634,14 +634,16 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
                 senderCryptoHdl,
                 &secExce))
             {
+				if (secExce.minor_code != 5) {
+					TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
+						"\n  Code: %d"
+						"\n  Minor code: %d"
+						"\n  Message: %s",
+						secExce.code,
+						secExce.minor_code,
+						secExce.message);
+				}
 				delete[]plainData.buffer;
-				TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
-                    "\n  Code: %d"
-                    "\n  Minor code: %d"
-                    "\n  Message: %s",
-                    secExce.code,
-                    secExce.minor_code,
-                    secExce.message);
                 break;
             }
             switch (submsgCategorty)

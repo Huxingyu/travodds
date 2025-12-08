@@ -406,21 +406,18 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	//SerializedBuffer* encodeBuffer = new SerializedBuffer;
 	SerializedBuffer* encodeBuffer = nullptr;
 	SerializedBuffer* encodeBufferHeader = nullptr;
-	// 获取所属域参与者的插件
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
 	if (!dp) {
 		TRAVODDS_LOG(LOG_ERROR, "Writer can not get_participant from Publisher", ret);
 		return RETCODE_ERROR;
 	}
-
 	SecurityException secExce;
 	SerializedBuffer inlineQos;
-
 	if (statistic_.secAttributes.is_payload_protected)
 	{
 		//计算需要加密的buffer链表长度
-		uint32_t bufferNum = 1;
-		uint32_t totalLen = bufferHeader->buffer_size;
+		uint32_t bufferNum = 1; //需要加密的buffer链表长度
+		uint32_t totalLen = bufferHeader->buffer_size; //链表字节总数
 		SerializedBuffer* curBuffer = bufferHeader;
 		while (curBuffer->next) {
 			curBuffer = curBuffer->next;
@@ -429,9 +426,10 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		}
 
 		CryptoTransform* cryptoTransPtr = dp->secPlugin_.crypto_transform;
-		int encodeSize = totalLen * 10 + 500;
+		//开辟加密后缓存空间
 		//encodeBuffer->buffer = new char[encodeSize];
 		//encodeBuffer->buffer_size = encodeSize;
+		int encodeSize = totalLen * 10 + 500;
 		ret = CreateSerializedBuffer(encodeBuffer, encodeSize);
 		if (RETCODE_OK != ret) {
 			DeleteSerializedBuffer(encodeBuffer);
@@ -459,8 +457,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 			DeleteSerializedBuffer(encodeBuffer);
 			return RETCODE_ERROR;
 		}
-		size = encodeBuffer->buffer_size - 4; //不加密的情况下没算4字节端序，TOCHECK
-		//单个encodeBuffer变为链表
+		size = encodeBuffer->buffer_size - 4; //size为减去长为CDR_ENDIANNESS_LEN的端序信息
+		//加密后的单个encodeBuffer长度超限变为链表
 		int encodeSubBufferNum = encodeBuffer->buffer_size / DATAMESSAGE_LIMIT;//size / DATAMESSAGE_LIMIT;
 		encodeSubBufferNum += 1;
 
@@ -470,9 +468,10 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		int encodeBufferShift = 0;
 		int encodeBufferSize = encodeBuffer->buffer_size;
 		//SerializedBuffer* encodeBufferHeader = new SerializedBuffer;
+		//逐个构造链表的每一部分buffer
 		for (int i = 0; i < encodeSubBufferNum; ++i) {
 			//curEncodeSubBuffer = new SerializedBuffer;
-			curEncodeSubBuffer = nullptr;
+			curEncodeSubBuffer = nullptr; //curEncodeSubBuffer指向当前部分buffer
 			if (encodeBufferSize >= DATAMESSAGE_LIMIT * (i + 1)) {
 				curEncodeSubBufferSize = DATAMESSAGE_LIMIT;
 			}
@@ -481,15 +480,16 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 			}
 			//curEncodeSubBuffer->buffer = new char[curEncodeSubBufferSize];
 			//curEncodeSubBuffer->buffer_size = curEncodeSubBufferSize;
-			ret = CreateSerializedBuffer(curEncodeSubBuffer, curEncodeSubBufferSize);
+			ret = CreateSerializedBuffer(curEncodeSubBuffer, curEncodeSubBufferSize); //创建当前部分buffer
 			if (RETCODE_OK != ret) {
 				DeleteSerializedBuffer(curEncodeSubBuffer);
 				TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 				return ret;
 			}
+			//从encodeBuffer指向的buffer取出对应部分（根据偏移encodeBufferShift和计算出的长度curEncodeSubBufferSize），赋值给当前buffer
 			memcpy(curEncodeSubBuffer->buffer, encodeBuffer->buffer + encodeBufferShift, curEncodeSubBufferSize);
-			encodeBufferShift += curEncodeSubBufferSize;
-			if (i == 0) {
+			encodeBufferShift += curEncodeSubBufferSize; //更新偏移值encodeBufferShift
+			if (i == 0) { //如果当前部分buffer是第一个
 				encodeBufferHeader = curEncodeSubBuffer;
 				preEncodeSubBuffer = curEncodeSubBuffer;
 			}
@@ -780,16 +780,28 @@ ReturnCode_t DataWriterImpl::enable()
 
 	enable_ = true;
 
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+#ifdef DDSSECURITY
+	if (builtinSecureData_.security_info.endpoint_security_attributes != 0) {
+		DiscoveredWriterData writerData;
+		writerData.ddsPublicationData = GetBuiltinTopicData();
+		discovery->WritePublicationData(writerData);
+
+		DiscoveredWriterSecureData writerSecureData;
+		writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
+		discovery->WritePublicationSecureData(writerSecureData);
+	}
+	else {
+		DiscoveredWriterData writerData;
+		writerData.ddsPublicationData = GetBuiltinTopicData();
+		discovery->WritePublicationData(writerData);
+	}
+	
+#else
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredWriterData writerData;
 	writerData.ddsPublicationData = GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 	discovery->WritePublicationData(writerData);
-
-#ifdef DDSSECURITY
-	DiscoveredWriterSecureData writerSecureData;
-	writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
-	discovery->WritePublicationSecureData(writerSecureData);
 #endif // DDSSECURITY
 
 	return RETCODE_OK;

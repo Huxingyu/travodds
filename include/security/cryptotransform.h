@@ -11,7 +11,7 @@
 //See the Mulan PSL v2 for more details.
 #ifndef CRYPTO_KEY_TRANSFORM_H
 #define CRYPTO_KEY_TRANSFORM_H
-
+#ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -290,4 +290,5 @@ public:
 };
 
 TRAVODDS_NAMESPACE_END
+#endif
 #endif // CRYPTO_KEY_TRANSFORM_H

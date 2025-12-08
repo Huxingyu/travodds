@@ -11,7 +11,7 @@
 //See the Mulan PSL v2 for more details.
 #ifndef CRYCOMMON_SOURCE_H
 #define CRYCOMMON_SOURCE_H
-
+#ifdef DDSSECURITY
 #include "security/securitycommon.h"
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -37,4 +37,5 @@ enum SecureSubmessageCategory_t
 };
 
 TRAVODDS_NAMESPACE_END
+#endif //DDSSECURITY
 #endif // CRYCOMMON_SOURCE_H
