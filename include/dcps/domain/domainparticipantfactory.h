@@ -42,6 +42,23 @@ public:
                                                   const StatusMask& mask) = 0;
 
     /**
+	 * @brief 创建域参与者，并绑定参数中的QoS和监听器。创建完成的域参与者可用于后续对发布者和订阅者等进行管理。
+     * 
+	 * @param [in] domain_id 域id。
+     * @param [in] qos       DomainParticipantQos参考。
+     * @param [in] listener  域参与者监听器指针。
+     * @param [in] mask      StatusMask位掩码参考，用于指定哪些特定事件会触发监听器的回调。
+	 * @param [in] guid      GUID_t参考，用于指定创建的DomainParticipant的全局唯一标识符。
+     *
+     * @return DomainParticipant指针（如果未创建，则为nullptr）。
+     */
+    virtual DomainParticipant* create_participant(DomainId_t domain_id,
+        const DomainParticipantQos& qos,
+        DomainParticipantListener* listener,
+        const StatusMask& mask,
+        const GUID_t& guid) = 0;
+
+    /**
      * @brief 删除参与者以及所有关联的发布者和订阅者。
      *
      * @param [in] participant 指向参与者的指针。

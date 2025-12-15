@@ -488,6 +488,24 @@ bool DDSXMLRepo::parseDomainParticipantQos(XMLElement* element, DomainParticipan
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos property\n", child->GetLineNum());
                 return false;
             }
+        } else if (strcmp(nodeName, "transport") == 0) {
+            bool ret = parseTransportQosPolicy(child, qos.transport);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos transport\n", child->GetLineNum());
+                return false;
+            }
+        } else if (strcmp(nodeName, "dicovery") == 0) {
+            bool ret = parseDiscoveredMethodQosPolicy(child, qos.discovery);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos discovery\n", child->GetLineNum());
+                return false;
+			}
+        } else if (strcmp(nodeName, "network_interface") == 0) {
+            bool ret = parseNetworkInterfaceQosPolicy(child, qos.network_interface);
+            if (!ret) {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DomainParticipantQos network_interface\n", child->GetLineNum());
+                return false;
+			}
         } else {
             TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown Qos policy %s\n", child->GetLineNum(), nodeName);
             return false;
@@ -1795,6 +1813,110 @@ bool DDSXMLRepo::parseDurabilityServiceQosPolicy(XMLElement* element, Durability
             }
         } else {
             TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DurabilityServiceQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parseTransportQosPolicy(XMLElement* element, TransportQosPolicy& qos)
+{
+    if (!element) {
+        return true;
+    }
+    qos.removeTransport(TRANSPORT_UDPv4_QOS);
+    for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
+        const char* nodeName = child->Name();
+        if (strcmp(nodeName, "kinds") == 0) {
+            for (XMLElement* item = child->FirstChildElement(); item; item = item->NextSiblingElement()) {
+                const char* itemName = item->Name();
+                if (strcmp(itemName, "element") != 0) {
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown TransportQosPolicy element %s\n", item->GetLineNum(), itemName);
+                    return false;
+                }
+                const char* transport_type = item->GetText();
+                if (strcmp(transport_type, "TRANSPORT_UDPv4_QOS") == 0) {
+                    qos.addTransport(TRANSPORT_UDPv4_QOS);
+                }
+                else if (strcmp(transport_type, "TRANSPORT_UDPv6_QOS") == 0) {
+                    qos.addTransport(TRANSPORT_UDPv6_QOS);
+                }
+                else if (strcmp(transport_type, "TRANSPORT_TCPv4_QOS") == 0) {
+                    qos.addTransport(TRANSPORT_TCPv4_QOS);
+                }
+                else if (strcmp(transport_type, "TRANSPORT_TCPv6_QOS") == 0) {
+                    qos.addTransport(TRANSPORT_TCPv6_QOS);
+                }
+                else if (strcmp(transport_type, "TRANSPORT_SHM_QOS") == 0) {
+                    qos.addTransport(TRANSPORT_SHM_QOS);
+                }
+                else {
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid TransportQosPolicy kind: %s\n", child->GetLineNum(), transport_type);
+                    return false;
+                }
+            }
+
+
+        }
+        else {
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown TransportQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool DDSXMLRepo::parseDiscoveredMethodQosPolicy(XMLElement* element, DiscoveredMethodQosPolicy& qos)
+{
+    if (!element) {
+        return true;
+    }
+    for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
+        const char* nodeName = child->Name();
+        if (strcmp(nodeName, "kind") == 0) {
+            const char* type = child->GetText();
+            if (strcmp(type, "DISCOVER_UDPv4_QOS") == 0) {
+                qos.kind = DISCOVER_UDPv4_QOS;
+            }
+            else if (strcmp(type, "DISCOVER_UDPv6_QOS") == 0) {
+                qos.kind = DISCOVER_UDPv6_QOS;
+            }
+            else if (strcmp(type, "DISCOVER_UDPv4_AND_UDPv6_QOS") == 0) {
+                qos.kind = DISCOVER_UDPv4_AND_UDPv6_QOS;
+            }
+            else {
+                TRAVODDS_LOG(LOG_ERROR, "Line[%d] Invalid DiscoveredMethodQosPolicy kind: %s\n", child->GetLineNum(), type);
+                return false;
+            }
+        }
+        else {
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown DiscoveredMethodQosPolicy element %s\n", child->GetLineNum(), nodeName);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool DDSXMLRepo::parseNetworkInterfaceQosPolicy(XMLElement* element, NetworkInterfaceQosPolicy& qos)
+{
+    if (!element) {
+        return true;
+    }
+    for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
+        const char* nodeName = child->Name();
+        if (strcmp(nodeName, "interface_whitelist") == 0) {
+            for (XMLElement* item = child->FirstChildElement(); item; item = item->NextSiblingElement()) {
+                const char* itemName = item->Name();
+                if (strcmp(itemName, "element") != 0) {
+                    TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown NetworkInterfaceQosPolicy interface_whitelist element %s\n", item->GetLineNum(), itemName);
+                    return false;
+                }
+                qos.interface_whitelist.push_back(std::string(item->GetText()));
+            }
+        }
+        else {
+            TRAVODDS_LOG(LOG_ERROR, "Line[%d] Unknown NetworkInterfaceQosPolicy element %s\n", child->GetLineNum(), nodeName);
             return false;
         }
     }
