@@ -16,7 +16,8 @@ TRAVODDS_NAMESPACE_BEGIN
 DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId, 
     const DomainParticipantQos& qos, 
     DomainParticipantListener* listener, 
-    StatusMask mask, 
+    StatusMask mask,
+    const GUID_t& guid,
     DDSSecurityPluginInstance* secPlugin)
     : EntityImpl(mask), domainId_(domainId), qos_(qos), listener_(listener), threadPool_(new ThreadPool(1))
 {
@@ -25,9 +26,8 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
     pubId_ = 0;
     subId_ = 0;
     topicId_ = 0;
-
-    participant_ = std::make_shared<Participant>(domainId, threadPool_);
-    handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
+    handle_ = Conversion::ToInstanceHandle(guid);
+    participant_ = std::make_shared<Participant>(domainId, guid,threadPool_);
     participant_->participantImpl_ = this;
     assert(participant_.get());
 
@@ -56,7 +56,8 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
 DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId, 
     const DomainParticipantQos& qos, 
     DomainParticipantListener* listener, 
-    StatusMask mask)
+    StatusMask mask,
+    const GUID_t& guid)
     : EntityImpl(mask), domainId_(domainId), qos_(qos), listener_(listener), threadPool_(new ThreadPool(1))
 {
 	readerId_ = 0;
@@ -65,8 +66,8 @@ DomainParticipantImpl::DomainParticipantImpl(DomainId_t domainId,
 	subId_ = 0;
 	topicId_ = 0;
 	
-	participant_ = std::make_shared<Participant>(domainId, threadPool_);
-    handle_ = Conversion::ToInstanceHandle(participant_->GetGuid());
+    handle_ = Conversion::ToInstanceHandle(guid);
+    participant_ = std::make_shared<Participant>(domainId, guid, threadPool_);
 	assert(participant_.get());
 
 	discovery_ = std::make_shared<Discovery>(this, threadPool_);

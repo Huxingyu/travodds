@@ -74,7 +74,7 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 	DomainParticipantQos dpqos;
 	dataWriter->get_publisher()->get_participant()->get_qos(dpqos);
 	//TODO 补充locator与ip的装换函数
-	if (dpqos.dicovery.kind == DISCOVER_UDPv4_QOS || dpqos.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+	if (dpqos.discovery.kind == DISCOVER_UDPv4_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		Locator_t locator;
 		locator.kind = LOCATOR_KIND_UDPv4;
 		locator.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
@@ -85,7 +85,7 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 
 		writer_->ReaderLocatorAdd(locator);
 	}
-	if (dpqos.dicovery.kind == DISCOVER_UDPv6_QOS || dpqos.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+	if (dpqos.discovery.kind == DISCOVER_UDPv6_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		Locator_t locatorv6;
 		locatorv6.kind = LOCATOR_KIND_UDPv6;
 		locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
