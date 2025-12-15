@@ -44,6 +44,8 @@ public:
 		uint32_t length,
 		uint16_t priority = -1);
 
+	virtual void SetStop() override;
+
 	static const std::array<char, 16>& GetAddress() { return uuid_; }
 
 private:
@@ -60,6 +62,8 @@ private:
 	std::shared_ptr<SharedMemAccept> acceptor_;
 
 	std::map<Locator_t, std::shared_ptr<SharedMemSocket>> sendSockets_;
+
+	std::set<std::shared_ptr<SharedMemSocket>> recvSockets_;
 	std::mutex sendSocketsMtx_;
 };
 

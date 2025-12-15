@@ -70,6 +70,11 @@ public:
 		uint32_t length,
 		uint16_t priority = -1);
 
+	/**
+	 * @brief 设置当前发送线程运行状态为停止，即更改runFlag_变量值为false。
+	 */
+	virtual void SetStop() override;
+
 protected:
 	/**
      * @brief 构造函数。

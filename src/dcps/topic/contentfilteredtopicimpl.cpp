@@ -31,6 +31,7 @@ ReturnCode_t ContentFilteredTopicImpl::get_expression_parameters(StringSeq& expr
 
 ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq& expression_parameters)
 {
+    return RETCODE_UNSUPPORTED;
     if (expression_parameters.size()) {
         expressionParameters_ = expression_parameters;
         return RETCODE_OK;

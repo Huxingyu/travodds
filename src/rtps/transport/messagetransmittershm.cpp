@@ -28,6 +28,11 @@ MessageTransmitterSHM::~MessageTransmitterSHM()
 		acceptor_->Close();
 		acceptor_.reset();
 	}
+
+	for (auto& it : recvSockets_) {
+		it->Close();
+	}
+	sendSockets_.clear();
 }
 
 
@@ -122,6 +127,24 @@ ReturnCode_t MessageTransmitterSHM::MessageSend(
 	return RETCODE_OK;
 }
 
+void MessageTransmitterSHM::SetStop()
+{
+	MessageTransmitter::SetStop();
+	acceptor_->Shutdown();
+
+	for (auto& socketItor : sendSockets_) {
+		socketItor.second->Shutdown();
+	}
+
+	for (auto& socketItor : recvSockets_) {
+		socketItor->Shutdown();
+	}
+	uint32_t tries = 0;
+	while (flagNum_.load() > 0 && tries++ < 20) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
 bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
 {
 	return memcmp(locator.address, uuid_.data(), uuid_.size()) == 0;
@@ -142,6 +165,7 @@ void MessageTransmitterSHM::AsyncAccept()
 		acceptor_->AsyncAccept(newSocket,
 			[this, newSocket](const std::exception* ec) {
 				if (!ec) {
+				    recvSockets_.insert(newSocket);
 					AsyncReceive(newSocket);
 				} else {
 					TRAVODDS_LOG(LOG_ERROR,
@@ -166,6 +190,7 @@ void MessageTransmitterSHM::AsyncReceive(std::shared_ptr<SharedMemSocket> socket
 {
 	flagNum_.fetch_add(1);
 	if (!socket || !IsRun()) {
+		recvSockets_.erase(socket);
 		flagNum_.fetch_sub(1);
 		return;
 	}
@@ -185,11 +210,14 @@ void MessageTransmitterSHM::AsyncReceive(std::shared_ptr<SharedMemSocket> socket
 				flagNum_.fetch_sub(1);
 				if (IsRun() && !socket->IsShutdown()) {
 					AsyncReceive(socket);
+				} else {
+					recvSockets_.erase(socket);
 				}
 			});
 	} catch (const std::exception& e) {
 		TRAVODDS_LOG(LOG_ERROR,
 			"socket_receive exception: %s", e.what());
+		recvSockets_.erase(socket);
 		flagNum_.fetch_sub(1);
 		return;
 	}

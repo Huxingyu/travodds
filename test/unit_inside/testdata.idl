@@ -1,0 +1,17 @@
+module TestModule{
+    // 1. 基础数据类型
+    struct BasicData {
+        long id;
+        string name;
+    };
+    // 2. 带Key的结构
+    struct KeyData {
+        @key long userId;
+        string data;
+    };
+
+    // 3. 序列类型
+    struct SequenceData {
+        sequence<long> numbers;
+    };
+};

@@ -46,6 +46,15 @@ source_group("DDS" FILES ${DDS_CPP})
 
 add_executable(${PROJECT_NAME} ${SOURCES_CPP} ${HEADERS_CPP} ${DDS_CPP})
 
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # GCC/Clang 覆盖率核心选项
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+    # 链接时也需添加（否则无法生成 .gcda 文件）
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
+#endif()
+
 # 添加头文件路径
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include

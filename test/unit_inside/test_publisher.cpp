@@ -1,7 +1,12 @@
-#ifdef TEST_PUBLISHER
-#include "test_head.hpp"
+#include "gtest/gtest.h"
+#include "dcps/domain/domainparticipantfactory.h"
+#include "dcps/domain/domainparticipant.h"
+#include "dcps/publish/publisher.h"
+#include "testdataTypeSupport.h"
+USING_TRAVODDS_NAMESPACE
+
 /****************************** Publisher *********************************************/
-TEST(DDSTest, Publisher_get_qos) {
+TEST(PublisherTest, Publisher_get_qos) {
     PublisherQos qos;
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(qos, nullptr, 0);
@@ -17,7 +22,7 @@ TEST(DDSTest, Publisher_get_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_set_get_qos) {
+TEST(PublisherTest, Publisher_set_get_qos) {
 
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
@@ -37,7 +42,7 @@ TEST(DDSTest, Publisher_set_get_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_set_qos) {
+TEST(PublisherTest, Publisher_set_qos) {
 
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
@@ -48,7 +53,7 @@ TEST(DDSTest, Publisher_set_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_get_listener) {
+TEST(PublisherTest, Publisher_get_listener) {
     PublisherListener* listener = new PublisherListener();
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, listener, 0);
@@ -57,7 +62,7 @@ TEST(DDSTest, Publisher_get_listener) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_set_get_listener) {
+TEST(PublisherTest, Publisher_set_get_listener) {
     PublisherListener* listener = new PublisherListener();
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
@@ -68,33 +73,36 @@ TEST(DDSTest, Publisher_set_get_listener) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_create_datawriter1) {
+TEST(PublisherTest, Publisher_create_datawriter1) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* result = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     EXPECT_NE(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_create_datawriter2) {
+TEST(PublisherTest, Publisher_create_datawriter2) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* result = publisher->create_datawriter(nullptr, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     EXPECT_EQ(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_create_datawriter3) {
+TEST(PublisherTest, Publisher_create_datawriter3) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     DomainParticipant* par_ = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par_->registe_type("data", type);
-    Topic* topic_ = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic_ = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* result = publisher->create_datawriter(topic_, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     EXPECT_EQ(result, nullptr);
@@ -103,10 +111,11 @@ TEST(DDSTest, Publisher_create_datawriter3) {
     par_->delete_contained_entities();
     TheParticipantFactory->delete_participant(par_);
 }
-TEST(DDSTest, Publisher_create_datawriter4) {
+TEST(PublisherTest, Publisher_create_datawriter4) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriterQos qos;
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
@@ -116,10 +125,11 @@ TEST(DDSTest, Publisher_create_datawriter4) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_delete_datawriter1) {
+TEST(PublisherTest, Publisher_delete_datawriter1) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     ReturnCode_t result = publisher->delete_datawriter(dw);
@@ -127,10 +137,11 @@ TEST(DDSTest, Publisher_delete_datawriter1) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_delete_datawriter2) {
+TEST(PublisherTest, Publisher_delete_datawriter2) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = nullptr;
     ReturnCode_t result = publisher->delete_datawriter(dw);
@@ -138,10 +149,11 @@ TEST(DDSTest, Publisher_delete_datawriter2) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_delete_datawriter3) {
+TEST(PublisherTest, Publisher_delete_datawriter3) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* pub = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     Publisher* pub_ = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = pub->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
@@ -150,10 +162,11 @@ TEST(DDSTest, Publisher_delete_datawriter3) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_lookup_datawriter1) {
+TEST(PublisherTest, Publisher_lookup_datawriter1) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     DataWriter* result = publisher->lookup_datawriter("topicname");
@@ -162,10 +175,11 @@ TEST(DDSTest, Publisher_lookup_datawriter1) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_lookup_datawriter2) {
+TEST(PublisherTest, Publisher_lookup_datawriter2) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     DataWriter* result = publisher->lookup_datawriter("A");
@@ -173,10 +187,56 @@ TEST(DDSTest, Publisher_lookup_datawriter2) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_get_participant) {
+TEST(PublisheTest, Publisher_suspend_publications) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
+	// 暂时未支持该接口
+    ReturnCode_t result = publisher->suspend_publications();
+    EXPECT_EQ(result, RETCODE_UNSUPPORTED);
+    par->delete_contained_entities();
+	TheParticipantFactory->delete_participant(par);
+}
+TEST(PublisheTest, Publisher_resume_publications) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
+    // 暂时未支持该接口
+    ReturnCode_t result = publisher->resume_publications();
+    EXPECT_EQ(result, RETCODE_UNSUPPORTED);
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+TEST(PublisheTest, Publisher_begin_coherent_changes) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
+    // 暂时未支持该接口
+    ReturnCode_t result = publisher->begin_coherent_changes();
+    EXPECT_EQ(result, RETCODE_UNSUPPORTED);
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+TEST(PublisheTest, Publisher_end_coherent_changes) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
+    // 暂时未支持该接口
+    ReturnCode_t result = publisher->end_coherent_changes();
+    EXPECT_EQ(result, RETCODE_UNSUPPORTED);
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+// TODO: 可靠和不可靠的通信测试
+TEST(PublisheTest, Publisher_wait_for_acknowledgments) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
+    ReturnCode_t result = publisher->wait_for_acknowledgments({5,0});
+    EXPECT_EQ(result, RETCODE_OK);
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+TEST(PublisherTest, Publisher_get_participant) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     const DomainParticipant* result = publisher->get_participant();
@@ -184,10 +244,11 @@ TEST(DDSTest, Publisher_get_participant) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_delete_contained_entities) {
+TEST(PublisherTest, Publisher_delete_contained_entities) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriter* dw = publisher->create_datawriter(top, DATAWRITER_QOS_DEFAULT, nullptr, 0);
     ReturnCode_t result = publisher->delete_contained_entities();
@@ -197,10 +258,11 @@ TEST(DDSTest, Publisher_delete_contained_entities) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_set_get_default_datawriter_qos) {
+TEST(PublisherTest, Publisher_set_get_default_datawriter_qos) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriterQos qos;
     ReturnCode_t result = publisher->set_default_datawriter_qos(qos);
@@ -238,10 +300,11 @@ TEST(DDSTest, Publisher_set_get_default_datawriter_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Publisher_set_default_datawriter_qos2) {
+TEST(PublisherTest, Publisher_set_default_datawriter_qos2) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     DataWriterQos qos;
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
@@ -252,7 +315,7 @@ TEST(DDSTest, Publisher_set_default_datawriter_qos2) {
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTest, Publisher_copy_from_topic_qos) {
+TEST(PublisherTest, Publisher_copy_from_topic_qos) {
     DataWriterQos dwqos;
     TopicQos tqos;
     ReturnCode_t result = Publisher::copy_from_topic_qos(dwqos, tqos);
@@ -280,10 +343,12 @@ TEST(DDSTest, Publisher_copy_from_topic_qos) {
     EXPECT_EQ(dwqos.lifespan.duration, tqos.lifespan.duration);
     EXPECT_EQ(dwqos.ownership.kind, tqos.ownership.kind);
 }
-TEST(DDSTest, Publisher_get_instance_handle) {
+
+TEST(PublisherTest, Publisher_get_instance_handle) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, 0);
     InstanceHandle_t handle = publisher->get_instance_handle();
     bool result = par->contains_entity(handle);
@@ -291,4 +356,3 @@ TEST(DDSTest, Publisher_get_instance_handle) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-#endif // TEST_PUBLISHER

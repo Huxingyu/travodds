@@ -212,6 +212,24 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 	return RETCODE_OK;
 }
 
+void MessageTransmitterTCP::SetStop()
+{
+	MessageTransmitter::SetStop();
+	acceptor_->cancel();
+
+	for (auto& socketItor : sessions_) {
+		socketItor.first->cancel();
+	}
+
+	for (auto& socketItor : sendSocketMap_) {
+		socketItor.second->socket->cancel();
+	}
+	uint32_t tries = 0;
+	while (flagNum_.load() > 0 && tries++ < 20) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
 void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> session, const asio::error_code& ec, size_t bytesTransferred)
 {
 	if (ec) {
