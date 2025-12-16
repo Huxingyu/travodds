@@ -52,7 +52,7 @@ public:
 	 * @param [in] id 域ID。
 	 * @param [in] threadPool 线程池指针。
 	 */
-	Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool);
+	Participant(DomainId_t id, const GUID_t& guid, std::shared_ptr<ThreadPool> threadPool);
 
 	// Participant(const Participant&) = delete ;
 	/**
@@ -237,17 +237,6 @@ public:
 	 * @return RETCODE_OK。
 	 */
 	GUID_t GenerateGuid(const InstanceHandle_t& handle);
-
-	/**
-	 * @brief GUID前缀GuidPrefix_t生成。
-	 *	根据domainId和instanceId生成对应的GUID前缀。
-	 *
-	 * @param [in] domainId 域ID。
-	 * @param [in] instanceId 实例ID 。
-	 *
-	 * @return RETCODE_OK。
-	 */
-	ReturnCode_t GenerateGuidPrefix(int32_t domainId, int32_t instanceId);
 
 	/**
 	 * @brief 获取GUID前缀。

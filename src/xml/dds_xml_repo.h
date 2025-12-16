@@ -552,6 +552,33 @@ private:
      */
     static bool parseDurabilityServiceQosPolicy(XMLElement* element, DurabilityServiceQosPolicy& qos);
     /**
+     * @brief 遍历配置文件TransportQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseTransportQosPolicy(XMLElement* element, TransportQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DiscoveredMethodQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseDiscoveredMethodQosPolicy(XMLElement* element, DiscoveredMethodQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件NetworkInterfaceQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseNetworkInterfaceQosPolicy(XMLElement* element, NetworkInterfaceQosPolicy& qos);
+    /**
      * @brief 遍历配置文件Duration_t标签节点值获取。
      *
      * @param [in]      element     XML配置文件句柄。

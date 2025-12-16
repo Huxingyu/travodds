@@ -1202,9 +1202,9 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			dpInfo->handshakeMsg_->messageData[0] = handshakeToken;
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			//请求发发送processhandshake之后的msg，通知对端processhandshake
-			printf("begin_handshake_final local %s remote %s.\n",
-				this->participant_->GetGuid().prefix.toString().c_str(),
-				sourceParticipantGuid.prefix.toString().c_str());
+			//printf("begin_handshake_final local %s remote %s.\n",
+			//	this->participant_->GetGuid().prefix.toString().c_str(),
+			//	sourceParticipantGuid.prefix.toString().c_str());
 			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_); //final
 		}
 		else {

@@ -73,13 +73,15 @@ public:
         const DomainParticipantQos& qos,
         DomainParticipantListener* listener,
         StatusMask mask,
+        const GUID_t& guid,
         DDSSecurityPluginInstance* secPlugin);
 #endif // DDSSECURITY
 
     DomainParticipantImpl(DomainId_t domainId,
         const DomainParticipantQos& qos,
         DomainParticipantListener* listener,
-        StatusMask mask);
+        StatusMask mask,
+        const GUID_t& guid);
 
     /**
      * @brief 析构函数。
