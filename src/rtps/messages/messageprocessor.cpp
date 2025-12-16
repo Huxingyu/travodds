@@ -80,6 +80,13 @@ ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageB
 	shift += sizeof(EntityId_t);
 	memcpy(messageBuf.buffer - shift, &dataSubMessage.writerId, sizeof(EntityId_t));
 	
+	//PND 跟fastdds保持一致
+#ifdef DDSSECURITY
+	if (dataSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
+	}
+#endif
+	
 	shift += sizeof(EntityId_t);
 	memcpy(messageBuf.buffer - shift, &dataSubMessage.readerId, sizeof(EntityId_t));
 	
@@ -634,16 +641,17 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
                 senderCryptoHdl,
                 &secExce))
             {
-				if (secExce.minor_code != 5) {
-					TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
-						"\n  Code: %d"
-						"\n  Minor code: %d"
-						"\n  Message: %s",
-						secExce.code,
-						secExce.minor_code,
-						secExce.message);
-				}
 				delete[]plainData.buffer;
+				if (secExce.minor_code == 5) {
+					break; //wait to init remote_participant->writers_key or readers_key
+				}
+				TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
+                    "\n  Code: %d"
+                    "\n  Minor code: %d"
+                    "\n  Message: %s",
+                    secExce.code,
+                    secExce.minor_code,
+                    secExce.message);
                 break;
             }
             switch (submsgCategorty)
@@ -872,13 +880,6 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 		//TODO 添加处理
 		GUID_t guid(messageReceiver.sourceGuidPrefix, dataSubMessage.writerId);
 		participant_->GetMacthList(guid, readerList);
-		
-		//if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER && readerList.size() == 0) {
-		//	TRAVODDS_LOG(LOG_ERROR, "GetMacthList of statelessMessageWriter failed");
-		//}
-		//else if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
-		//	TRAVODDS_LOG(LOG_DEBUG, "GetMacthList of statelessMessageWriter success");
-		//}
 	} else {
 		readerList.push_back(dataSubMessage.readerId);
 	}

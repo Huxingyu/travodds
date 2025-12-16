@@ -128,16 +128,10 @@ public:
 	void WriteSubscriptionData(DiscoveredReaderData& data);
 
 #ifdef DDSSECURITY
-	enum StatelessMessageDataKind {
-		REQUEST,
-		REPLY,
-		FINAL,
-		OTHER
-	};
 	void WriteSubscriptionSecureData(DiscoveredReaderSecureData& data);
 	void WriteParticipantMessageSecureData(ParticipantMessageSecureData& data);
 	
-	void WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, StatelessMessageDataKind kind);
+	ReturnCode_t WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data);
 	void WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data);
 #endif // DDSSECURITY
 
@@ -227,6 +221,7 @@ private:
 	std::shared_ptr<StatefulReader> participantStatelessMessageReader_ = nullptr;
 	std::shared_ptr<StatefulReader> participantVolatileSecureMessageReader_ = nullptr;
 	SequenceNumber_t statelessMsgSeqNum_;
+
 #endif // DDSSECURITY
 	std::shared_ptr<MemoryPool> memoryPool_;
 };

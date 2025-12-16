@@ -79,7 +79,7 @@ public:
      */
     void WriteSubscriptionSecureData(DiscoveredReaderSecureData& data);
     void WriteParticipantMessageSecureData(ParticipantMessageSecureData& data);
-    void WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, Sedp::StatelessMessageDataKind kind);
+	ReturnCode_t WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data);
     void WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data);
 #endif // DDSSECURITY
 	/**

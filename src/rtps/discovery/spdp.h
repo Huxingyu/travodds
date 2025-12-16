@@ -22,6 +22,7 @@
 #ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 #include "security/authentication.h"
+#include <set>
 #endif // DDSSECURITY
 
 TRAVODDS_NAMESPACE_BEGIN
@@ -227,9 +228,22 @@ public:
 
 	SharedSecretHandle GetRemoteParticipantSharedSecret(const GuidPrefix_t* remotePrefix);
 
+	//void AddHandShakeRetryTimer(const Time_t& time, const GUID_t& guid);
+	//void RemoveHandShakeRetryTimer(const GUID_t& guid);
+	void AddHandShakeMsg(const GUID_t& guid);
+	void RemoveHandShakeMsg(const GUID_t& guid);
+	//void HandShakeRetry(GUID_t remoteGuid, ParticipantStatelessMessage* handshakeMsg);
+	void HandShakeRetrys();
+	// 远端域参与者对应的DiscoveryDPInfo TODO域参与者下线移除
 	std::map<GuidPrefix_t, DiscoveryDPInfo*> discParts_;
 
+	//std::map<GUID_t, int> handshakeRetryCounts_;
+	//std::map<GUID_t, std::shared_ptr<Timer>> handshakeTimers_;
+	std::shared_ptr<Timer> handshakeTimer_;
+	std::set<GUID_t> remoteGuidRetrySet;
+	std::mutex remoteGuidRetrySetMutex;
 	SerializedBuffer* bigEndianMsgData_;
+
 #endif // DDSSECURITY
 
 private:
@@ -268,7 +282,6 @@ private:
 	
 	std::shared_ptr<MemoryPool> memoryPool_;
 
-	
 	Duration_t leaseDuration_;
 	std::shared_ptr<Timer> timer_;
 };
