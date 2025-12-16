@@ -61,7 +61,17 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
             char ipStr[INET6_ADDRSTRLEN] = { 0 };
             DWORD ipStrLength = sizeof(ipStr);
             InfoIP_t info;
-            info.dev = std::string(aa->AdapterName);
+            int size_needed = WideCharToMultiByte(CP_UTF8, 0, aa->FriendlyName, -1, NULL, 0, NULL, NULL);
+            if (size_needed > 0) {
+                info.dev.resize(size_needed, 0);
+                WideCharToMultiByte(CP_UTF8, 0, aa->FriendlyName, -1, &info.dev[0], size_needed, NULL, NULL);
+
+            }
+
+            // 移除末尾的 null 终止符
+            if (!info.dev.empty() && info.dev.back() == '\0') {
+                info.dev.pop_back();
+            }
 
             if (family == AF_INET) {
                 info.type = IPV4;

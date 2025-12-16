@@ -315,6 +315,10 @@ struct DiscoveredMethodQosPolicy {
 	DiscoveryProtocolQosPolicyKind kind { DISCOVER_UDPv4_QOS };
 };
 
+struct NetworkInterfaceQosPolicy {
+	StringSeq interface_whitelist;
+};
+
 struct DomainParticipantFactoryQos {
     EntityFactoryQosPolicy entity_factory;
     /* 属性列表 */
@@ -329,7 +333,8 @@ struct DomainParticipantQos {
     /* 属性列表 */
     PropertyQosPolicy property;
 	TransportQosPolicy transport;
-	DiscoveredMethodQosPolicy dicovery;
+	DiscoveredMethodQosPolicy discovery;
+	NetworkInterfaceQosPolicy network_interface;
 	DomainParticipantQos() {
 	}
 };
