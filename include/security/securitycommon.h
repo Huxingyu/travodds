@@ -66,6 +66,56 @@ typedef struct DataHolder
 typedef unsigned int ParticipantSecurityAttributesMask;
 typedef unsigned int PluginParticipantSecurityAttributesMask;
 
+//PND
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ENCRYPTED                  (0x00000001UL << 0)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_BUILTIN_IS_DISCOVERY_ENCRYPTED     (0x00000001UL << 1)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ENCRYPTED            (0x00000001UL << 2)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ORIGIN_AUTHENTICATED       (0x00000001UL << 3)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_ORIGIN_AUTHENTICATED  (0x00000001UL << 4)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ORIGIN_AUTHENTICATED (0x00000001UL << 5)
+#define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID                           (0x00000001UL << 31)
+struct PluginParticipantSecurityAttributes
+{
+    PluginParticipantSecurityAttributes() :
+        is_rtps_encrypted(false), is_discovery_encrypted(false), is_liveliness_encrypted(false),
+        is_rtps_origin_authenticated(false), is_discovery_origin_authenticated(false),
+        is_liveliness_origin_authenticated(false)
+    {}
+
+    explicit PluginParticipantSecurityAttributes(const PluginParticipantSecurityAttributesMask mask) :
+        is_rtps_encrypted((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ENCRYPTED) != 0),
+        is_discovery_encrypted((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_BUILTIN_IS_DISCOVERY_ENCRYPTED) != 0),
+        is_liveliness_encrypted((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ENCRYPTED) != 0),
+        is_rtps_origin_authenticated((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ORIGIN_AUTHENTICATED) != 0),
+        is_discovery_origin_authenticated((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_ORIGIN_AUTHENTICATED) != 0),
+        is_liveliness_origin_authenticated((mask& PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ORIGIN_AUTHENTICATED) != 0)
+    {}
+
+    bool is_rtps_encrypted;
+
+    bool is_discovery_encrypted;
+
+    bool is_liveliness_encrypted;
+
+    bool is_rtps_origin_authenticated;
+
+    bool is_discovery_origin_authenticated;
+
+    bool is_liveliness_origin_authenticated;
+
+    inline PluginParticipantSecurityAttributesMask mask() const
+    {
+        PluginParticipantSecurityAttributesMask rv = PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID;
+        if (is_rtps_encrypted) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ENCRYPTED;
+        if (is_discovery_encrypted) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_BUILTIN_IS_DISCOVERY_ENCRYPTED;
+        if (is_liveliness_encrypted) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ENCRYPTED;
+        if (is_rtps_origin_authenticated) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_ORIGIN_AUTHENTICATED;
+        if (is_discovery_origin_authenticated) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_ORIGIN_AUTHENTICATED;
+        if (is_liveliness_origin_authenticated) rv |= PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ORIGIN_AUTHENTICATED;
+        return rv;
+    }
+};
+
 typedef struct ParticipantSecurityInfo
 {
     ParticipantSecurityAttributesMask  participant_security_atributes;
@@ -105,15 +155,15 @@ extern const EndpointSecurityInfo ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 typedef struct ParticipantSecurityAttributes
 {
     /** @brief   是否允许与未验证身份的DomainParticipant匹配 */
-    bool allow_unauthenticated_participants;
+    bool allow_unauthenticated_participants = false;
     /** @brief   两个DomainParticipant匹配是否需要AccessControl插件的授权 */
-    bool is_access_protected;
+    bool is_access_protected = false;
     /** @brief   整个RTPS Message是否需要被CryptoTransform的encode_rtps_message操作进行转换. */
-    bool is_rtps_protected;
+    bool is_rtps_protected = false;
     /** @brief   发现消息是否需要被保护. */
-    bool is_discovery_protected;
+    bool is_discovery_protected = false;
     /** @brief   Liveliness消息是否需要被保护. */
-    bool is_liveliness_protected;
+    bool is_liveliness_protected = false;
     /** @brief   为CryptoKeyFactory的register_local_participant操作中的参数participant_properties附加的属性. */
     PropertySeq ac_participant_properties;
     /** @brief The plugin participant attributes */
@@ -270,6 +320,14 @@ ParticipantSecurityAttributesMask ParticipantSecurityAttributesToMask(Participan
 //EndpointSecurityAttributesMask TopicSecurityAttributesToMask(TopicSecurityAttributes* secAttr);
 
 EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurityAttributes* secAttr);
+
+/**
+ * @brief ConditionImpl，compare BuiltinTopicKey_t。
+ * @return 如果key1 < key2 ，则为-1，key1 > key2，则为1，相等为0。
+ */
+int compareBuiltinTopicKey_impl(BuiltinTopicKey_t key1, BuiltinTopicKey_t key2);
+#define compareBuiltinTopicKey(key1, key2) \
+    (compareBuiltinTopicKey_impl((key1), (key2)))
 
 TRAVODDS_NAMESPACE_END
 #endif // DDSSECURITY

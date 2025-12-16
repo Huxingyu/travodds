@@ -61,7 +61,6 @@ struct ReaderInfo
 {
 	ReaderInfo()
 		:guid(GUID_UNKNOWN),
-		rdData(NULL),
 		//epRef(NULL),
 		ackNackCount(0),
 		fragNackCount(0)
@@ -69,7 +68,6 @@ struct ReaderInfo
 		readyForSecComm = false;
 	}
 	GUID_t guid;
-	const DiscoveredReaderData* rdData;
 	//RemoteDREndpoint* epRef;
 	SequenceNumber_t ackedSN;
 	SequenceNumber_t ackedBatchSN;
@@ -578,13 +576,13 @@ public:
 	PublicationBuiltinTopicSecureData builtinSecureData_;
 	WriterInfo statistic_;
 	/** @brief The crypto handle for the DataWriter */
-	DatawriterCryptoHandle cryptoHdl_;
+	DatawriterCryptoHandle cryptoHdl_ = NULL;
 	/** @brief The security plugin instance */
 	SecurityPluginInstanceImpl* secPlugin_ = NULL;
 	/** @brief The list of DataReader which are enabled security */
 	std::vector<DatareaderCryptoHandle> secReaders_;
 
-	SecurityPluginInstanceImpl* dpSecPlugin_;
+	SecurityPluginInstanceImpl* dpSecPlugin_ = NULL;
 	//TODO 安全扩展，维护几个远端的guid和信息的map
 	RemoteReaderList remoteReaders_;
 #endif // DDSSECURITY

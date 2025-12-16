@@ -619,6 +619,7 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 
 void Sedp::WritePublicationData(DiscoveredWriterData& data)
 {
+	std::cout << __FUNCTION__ << std::endl;
 	SerializedBuffer *buffer = new SerializedBuffer;
 	ParameterList list(data);
 	unsigned short size = list.GetMessageSize();
@@ -674,6 +675,7 @@ void Sedp::WriteSubscriptionData(DiscoveredReaderData& data)
 #ifdef DDSSECURITY
 void Sedp::WritePublicationSecureData(DiscoveredWriterSecureData& data)
 {
+	std::cout << __FUNCTION__ << std::endl;
     SerializedBuffer *buffer = new SerializedBuffer;
     ParameterList list(data);
     unsigned short size = list.GetMessageSize();
@@ -750,7 +752,7 @@ void Sedp::WriteParticipantMessageSecureData(ParticipantMessageSecureData& data)
 	}
 }
 
-void Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, Sedp::StatelessMessageDataKind kind)
+ReturnCode_t Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data)
 {
 	if (remoteGuid != NULL)
 	{
@@ -774,7 +776,8 @@ void Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, Partic
 	}
 	data.messageIdentity.sequenceNumber = statelessMsgSeqNum_;
 	SerializedBuffer* buffer = new SerializedBuffer;
-
+	// buffer->buffer_size = 4; //端序CDR编码的数据封装 已经放在了serialized的size计算中了
+	// buffer->buffer_size += ParticipantGenericMessageTypeSupport::get_instance()->get_serialized_data_size(&data, 0); //ParticipantGenericMessageGetSerializedSampleSize(&data);
 	buffer->buffer_size = ParticipantGenericMessageTypeSupport::get_instance()->get_serialized_data_size(&data, 0); //ParticipantGenericMessageGetSerializedSampleSize(&data);
 	memoryPool_->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->origin_buffer);
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
@@ -793,9 +796,6 @@ void Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, Partic
 		value[i] = key.value[i];
 	}
 	memcpy(handle.keyHash.value, value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-	if (kind == REQUEST || kind == REPLY) {
-		participantStatelessMessageWriter_->ResetLastChangeSequenceNumber();
-	}
 	std::shared_ptr<CacheChange> change = participantStatelessMessageWriter_->NewChange(ALIVE, buffer, handle, cur_time);
 
 	ReturnCode_t ret = participantStatelessMessageWriter_->AddBuiltinCache(change);
@@ -804,6 +804,7 @@ void Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, Partic
 		//TODO 记录日志
 		TRAVODDS_LOG(LOG_ERROR, "subscriptionsWriter_ AddBuiltinCache Err ret = %d", ret);
 	}
+	return ret;
 }
 
 void Sedp::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data) {
@@ -966,7 +967,6 @@ void Sedp::TakeDiscoveredWriterSecureData(DiscoveredWriterSecureData& data, Seri
 #endif // DDSSECURITY
 void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data)
 {
-
 	SPDPdiscoveredParticipantData participantData;
 	if (RETCODE_OK == spdp_->GetParticipantData(data.ddsPublicationData.participant_key, participantData)) {
 		data.unicastLocatorList = participantData.defaultUnicastLocatorList;
@@ -976,10 +976,6 @@ void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data)
 }
 #ifdef DDSSECURITY
 void Sedp::ReceiveDiscoveredWriterSecureData(DiscoveredWriterSecureData& data) {
-	//TEST
-	if (data.remoteWriterGuid.IsUserDefinedEntity()) {
-		int tmp = 0;
-	}
 
     SPDPdiscoveredParticipantData participantData;
     if (RETCODE_OK == spdp_->GetParticipantData(data.ddsPublicationData.participant_key, participantData)) {
@@ -1076,17 +1072,17 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	memcpy(&sourceParticipantGuid, data.messageIdentity.sourceGuid.value, 12);
 	sourceParticipantGuid.entityId = ENTITYID_PARTICIPANT;
 	
-	//// 此ParticipantGenericMessage与本内置实体读者无关
-	//if (!spdp_->discParts_.count(sourceParticipantGuid.prefix))
+	// 此ParticipantGenericMessage对应的远端域参与者未在本地维护
+	//if (!spdp_->remoteDPInfo_.count(sourceParticipantGuid))
 	//{
 	//	return;
 	//}
 	
 	// dpInfo是对应的远端域参与者信息
 	DiscoveryDPInfo* dpInfo = spdp_->discParts_[sourceParticipantGuid.prefix];
-	
-	if (!dpInfo->enableDDSSec_)
+	if (!dpInfo || !dpInfo->enableDDSSec_)
 	{
+		TRAVODDS_LOG(LOG_ERROR, "match dpInfo is null or match dpinfo disableddssec.");
 		return;
 	}
 	SecurityException secExce;
@@ -1124,7 +1120,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			return;
 		}
 		HandshakeMessageToken handshakeToken;
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //考虑时序性
 		ValidationResult_t validationRst =
 			dp->secPlugin_.authentication->begin_handshake_reply(
 				&dpInfo->handshakeHdl_, //与远端的握手标识，域发现时生成
@@ -1137,7 +1132,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				&secExce);
 		auto now = std::chrono::system_clock::now();
 		std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
-		//std::cout << "now time after begin_handshake_reply: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
 		if (validationRst == VALIDATION_PENDING_HANDSHAKE_MESSAGE) { //HandshakeMsgSend
 			ParticipantStatelessMessage* handshakeMsg = dpInfo->handshakeMsg_;
 			if (handshakeMsg == NULL) {
@@ -1147,7 +1141,13 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			messageData.push_back(handshakeToken);
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			dpInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, REPLY);
+			//printf("begin_handshake_reply local %s remote %s.\n",
+			//	this->participant_->GetGuid().prefix.toString().c_str(),
+			//	sourceParticipantGuid.prefix.toString().c_str());
+			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_); //reply
+			Time_t time = { 1, 0 };
+			//this->spdp_->AddHandShakeRetryTimer(time, sourceParticipantGuid);
+			this->spdp_->AddHandShakeMsg(sourceParticipantGuid); // 定时器重发reply
 			//reply响应完对端request之后置为DDSSEC_HANDSHAKE_WAITING_FINAL，等待processhandshake
 			dpInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_FINAL;
 		}
@@ -1197,12 +1197,15 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				&data.messageData[0],
 				dpInfo->handshakeHdl_,
 				&secExce);
-		
+		std::this_thread::sleep_for(std::chrono::milliseconds(200)); //考虑时序性
 		if (validationRst == VALIDATION_OK_FINAL_MESSAGE) {
 			dpInfo->handshakeMsg_->messageData[0] = handshakeToken;
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			//请求发发送processhandshake之后的msg，通知对端processhandshake
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, FINAL);
+			//printf("begin_handshake_final local %s remote %s.\n",
+			//	this->participant_->GetGuid().prefix.toString().c_str(),
+			//	sourceParticipantGuid.prefix.toString().c_str());
+			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_); //final
 		}
 		else {
 			if (dp->secAttributes_.allow_unauthenticated_participants) {
@@ -1270,6 +1273,9 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 		}
 		// handshake finished
 		dpInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_OK;
+		//printf("process_handshake local %s remote %s.\n",
+		//	this->participant_->GetGuid().prefix.toString().c_str(),
+		//	sourceParticipantGuid.prefix.toString().c_str());
 		break;
 	}
 	case DiscoveryDPInfo::DDSSEC_WAITING_CRYPTO_TOKEN: {
@@ -1278,7 +1284,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 		}
 		if (data.messageClassId != GMCLASSID_SECURITY_PARTICIPANT_CRYPTO_TOKENS) {
 			if (data.messageClassId == GMCLASSID_SECURITY_AUTH_HANDSHAKE) {
-				WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, OTHER);
+				WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 				return;
 			}
 			TRAVODDS_LOG(LOG_ERROR, "Invalid MessageClassId.");
@@ -1299,7 +1305,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	case DiscoveryDPInfo::DDSSEC_HANDSHAKE_OK: {
 		if (data.messageClassId == GMCLASSID_SECURITY_AUTH_HANDSHAKE)
 		{
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, OTHER);
+			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 			return;
 		}
 		return;
@@ -1315,7 +1321,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 		}
 		else if (data.messageClassId == GMCLASSID_SECURITY_AUTH_HANDSHAKE) {
 			//TODO
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_, OTHER);
+			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 		}
 		return;
 	}
@@ -1329,6 +1335,8 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	// only when handshaking or crypto tokens exchanging finished will be here
 	if (dpInfo->endpointState_ == DiscoveryDPInfo::DDSSEC_HANDSHAKE_OK)
 	{
+		//this->spdp_->RemoveHandShakeRetryTimer(sourceParticipantGuid);
+		this->spdp_->RemoveHandShakeMsg(sourceParticipantGuid);
 		ret = spdp_->ValidateRemoteParticipant(dpInfo);
 		if (ret != 0)
 		{
@@ -1346,6 +1354,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
 			return;
 		}
+		//std::cout << __FUNCTION__  << " get_shared_secret " << std::endl;
 		// try to get and exchange crypto tokens
 		dpInfo->cryptoHdl_ = dp->secPlugin_.crypto_key_factory->register_matched_remote_participant(
 			dpInfo->identityHdl_,
@@ -1387,7 +1396,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			memset(cryptoTokensSample.destinationEndpointKey.value, 0, 16);
 			memset(cryptoTokensSample.sourceEndpointKey.value, 0, 16);
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(800)); //考虑时序性
+			std::this_thread::sleep_for(std::chrono::milliseconds(200)); //考虑时序性
 
 			WriteParticipantVolatileSecureMessage(&sourceParticipantGuid, cryptoTokensSample);
 			dp->secPlugin_.crypto_key_exchange->return_crypto_tokens(&cryptoTokensSample.messageData, &secExce);

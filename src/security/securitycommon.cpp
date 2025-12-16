@@ -1,5 +1,6 @@
 #include "security/securitycommon.h"
 #ifdef DDSSECURITY
+#include "rtps/basictypertps.h"
 TRAVODDS_NAMESPACE_BEGIN
 const DDSSecHandle SEC_NIL_HANDLE = (void*)0;
 
@@ -71,6 +72,21 @@ EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurity
 		rst = 0;
 	}
 	return rst;
+}
+
+int compareBuiltinTopicKey_impl(BuiltinTopicKey_t key1, BuiltinTopicKey_t key2)
+{
+	GUID_t g1 = Conversion::ToGuid(key1);
+	GUID_t g2 = Conversion::ToGuid(key2);
+	if (g1 == g2) {
+		return 0;
+	}
+	else if(g1 > g2) {
+		return 1;
+	}
+	else {
+		return -1;
+	}
 }
 
 TRAVODDS_NAMESPACE_END
