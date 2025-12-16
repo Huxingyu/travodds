@@ -15,13 +15,7 @@
 #include "rtps/flowcontrol/flowcontrolmanager.h"
 #include "rtps/flowcontrol/flowratelimitedmanager.h"
 #include "common/log/logger.h"
-#include <random>
 #include <regex>
-#if defined(_WIN32)
-#include <process.h>
-#else
-#include <unistd.h>
-#endif // if defined(_WIN32)
 #ifdef DDSSECURITY
 #include "security/securitycommon.h"
 #include "rtps/discovery/discovery.h"
@@ -42,7 +36,7 @@ USING_TRAVODDS_NAMESPACE;
 // 	//protocolVersion_ = 0
 // }
 
-Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
+Participant::Participant(DomainId_t id, const GUID_t& guid,std::shared_ptr<ThreadPool> threadPool)
 	: domainId_(id), readerId_(0), writerId_(0), nextId_(0),
 	  protocolVersion_(PROTOCOLVERSION),
 	  vendorId_(VENDORID_PROSIMA),
@@ -50,8 +44,7 @@ Participant::Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool)
 	  flowControlManager_(nullptr),
 	  flowRateLimitedManager_(nullptr)
 {
-	GenerateGuidPrefix(domainId_, domainId_);
-	guid_.entityId = ENTITYID_PARTICIPANT;
+	guid_ = guid;
 
 	Time_t heartBeatPeriod = { 0, 200 * 1000 * 1000 };
 	hbTimer_ = TimerManager::CreateTimer(heartBeatPeriod, 
@@ -102,10 +95,10 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
-	if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS) || qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+	if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS) || qos_.discovery.kind == DISCOVER_UDPv4_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
 	}
-	if (qos_.transport.hasTransport(TRANSPORT_UDPv6_QOS) || qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+	if (qos_.transport.hasTransport(TRANSPORT_UDPv6_QOS) || qos_.discovery.kind == DISCOVER_UDPv6_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv6>(messageProcessor_));
 	}
 	if (qos_.transport.hasTransport(TRANSPORT_TCPv4_QOS)) {
@@ -126,13 +119,30 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
 
+	/* 若是指定网卡，过滤未选中的网卡 */
+	if (!qos_.network_interface.interface_whitelist.empty()) {
+		std::vector<InfoIP_t> filteredIps;
+		for (const auto& pattern : qos_.network_interface.interface_whitelist) {
+			for (const auto& ip : localIps) {
+				if (pattern == ip.dev) {
+					filteredIps.push_back(ip);
+				}
+			}
+		}
+		if (!filteredIps.empty()) {
+			localIps = filteredIps;
+		} else {
+			TRAVODDS_LOG(LOG_WARNING, "No matching network interfaces found for the specified whitelist.");
+		}
+	}
+
 	for (auto& ip : localIps) {
 		Locator_t ipLoc;
 		memcpy(ipLoc.address, ip.address, sizeof(Locator_t::address));
 		if (ip.type == IPV4) {
 			IPv4LocatorList_.push_back(ipLoc);
 			ipLoc.kind = LOCATOR_KIND_UDPv4;
-			if (qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+			if (qos_.discovery.kind == DISCOVER_UDPv4_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 				ipLoc.port = spdpPort;
 				metatrafficUnicastLocatorList_.push_back(ipLoc);
 			}
@@ -148,7 +158,7 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 		} else if (ip.type == IPV6){
 			IPv6LocatorList_.push_back(ipLoc);
 			ipLoc.kind = LOCATOR_KIND_UDPv6;
-			if (qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+			if (qos_.discovery.kind == DISCOVER_UDPv6_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 				ipLoc.port = spdpPort;
 				metatrafficUnicastLocatorList_.push_back(ipLoc);
 			}
@@ -199,7 +209,7 @@ ReturnCode_t Participant::InitNetwork()
 		/* UDPv4、UDPv6 组播设置 */
 		Locator_t multicastAaddresses;
 		multicastAaddresses.port = multicPort;
-		if (LOCATOR_KIND_UDPv4 == messageTransmitter->GetTransmitterKind() && (qos_.dicovery.kind == DISCOVER_UDPv4_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
+		if (LOCATOR_KIND_UDPv4 == messageTransmitter->GetTransmitterKind() && (qos_.discovery.kind == DISCOVER_UDPv4_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
 			multicastAaddresses.kind = LOCATOR_KIND_UDPv4;
 			multicastAaddresses.address[12] = 239;
 			multicastAaddresses.address[13] = 255;
@@ -207,7 +217,7 @@ ReturnCode_t Participant::InitNetwork()
 			multicastAaddresses.address[15] = 1;
 			messageTransmitter->ReceiveAddrAdd(multicastAaddresses);
 			metatrafficMulticastLocatorList_.push_back(multicastAaddresses);
-		} else if(LOCATOR_KIND_UDPv6 == messageTransmitter->GetTransmitterKind() && (qos_.dicovery.kind == DISCOVER_UDPv6_QOS || qos_.dicovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
+		} else if(LOCATOR_KIND_UDPv6 == messageTransmitter->GetTransmitterKind() && (qos_.discovery.kind == DISCOVER_UDPv6_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS)) {
 
 			multicastAaddresses.kind = LOCATOR_KIND_UDPv6;
 			multicastAaddresses.address[0] = 0xff;
@@ -811,56 +821,6 @@ GUID_t Participant::GenerateGuid(const InstanceHandle_t& handle)
 	memcpy(&guid, handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	return guid;
 }
-
-ReturnCode_t Participant::GenerateGuidPrefix(int32_t domainId, int32_t instanceId)
-{
-	int32_t processId = 0;
-	
-	//12 个字节
-	GuidPrefix_t &prefix = guid_.prefix;
-
-	//threadId = std::threa);
-
-
-	//std::this_thread::get_id();
-
-
-#if defined(_WIN32)
-	processId = (int32_t)_getpid();
-#else
-	processId = (int32_t)getpid();
-#endif // platform selection
-
-	std::random_device generator;
-	std::uniform_int_distribution<uint16_t> distribution(0, 65535);
-	uint16_t rand_value = distribution(generator);
-
-	// TODO host_id的处理方式
-	uint16_t host_id = distribution(generator);
-	prefix.value[0] = vendorId_[0];
-	prefix.value[1] = vendorId_[1];
-
-	char* temp = (char*)&host_id;
-	prefix.value[2] = temp[0];
-	prefix.value[3] = temp[1];
-
-	temp = (char*)&processId;
-	prefix.value[4] = temp[0];
-	prefix.value[5] = temp[1];
-
-	temp = (char*)&rand_value;
-	prefix.value[6] = temp[0];
-	prefix.value[7] = temp[1];
-
-	temp = (char*)&instanceId;
-	prefix.value[8] = temp[0];
-	prefix.value[9] = temp[1];
-	prefix.value[10] = temp[2];
-	prefix.value[11] = temp[3];
-
-	return RETCODE_OK;
-}
-
 
 GuidPrefix_t Participant::GetGuidPrefix()
 {
