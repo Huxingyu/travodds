@@ -99,7 +99,7 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
     }
     std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, guidt,pluginPtr);
 #else
-    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask，guidt);
+    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, guidt);
 #endif // DDSSECURITY
 
     if (!domainParticipant.get()) {
