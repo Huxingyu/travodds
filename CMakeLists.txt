@@ -101,9 +101,9 @@ set(LICENSE_INSTALL_DIR ${DATA_INSTALL_DIR}/${PROJECT_NAME} CACHE PATH "Installa
 option(BUILD_SHARED_LIBS "Create shared libraries by default" ON)
 
 ###############################################################################
-# 默认DDS 安全配置选项不启用
+# 默认DDS 安全配置选项启用
 ###############################################################################
-option(ENABLE_DDS_SECURITY "Enable DDS Security features" OFF)
+option(ENABLE_DDS_SECURITY "Enable DDS Security features" ON)
 
 ###############################################################################
 # 加载外部项目

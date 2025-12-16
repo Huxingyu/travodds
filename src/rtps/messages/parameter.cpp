@@ -435,6 +435,7 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 	GetParameter(ParameterId::PID_IDENTITY_TOKEN, data.ddsParticipantData.identity_token);
 	GetParameter(ParameterId::PID_PERMISSIONS_TOKEN, data.ddsParticipantData.permissions_token);
 	GetParameter(ParameterId::PID_PARTICIPANT_SECURITY_INFO, data.ddsParticipantData.security_info);
+	//contains_security_data由域参与者是否带安全决定
 	data.ddsParticipantData.contains_security_data = data.ddsParticipantData.security_info.participant_security_atributes != 0;
 #endif // DDSSECURITY
 	//PID_DOMAIN_ID : DomainId_t

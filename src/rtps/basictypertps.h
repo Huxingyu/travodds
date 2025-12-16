@@ -13,6 +13,7 @@
 #define TRAVODDS_RTPS_BASICTYPERTPS_H
 
 #include "type/basictype.h"
+#include <string>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -56,6 +57,14 @@ struct GuidPrefix_t {
 			}
 		}
 		return false;
+	}
+
+	std::string toString() const {
+		char tmpBuffer[128] = { 0 };
+		for (int32_t i = 0; i < 12; ++i) {
+			sprintf(tmpBuffer + i * 2, "%02x", value[i]);
+		}
+		return std::string(tmpBuffer);
 	}
 #endif // DDSSECURITY
 };

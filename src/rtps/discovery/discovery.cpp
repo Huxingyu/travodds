@@ -171,11 +171,13 @@ void Discovery::WriteSpdPdiscoveredParticipantData()
 #ifdef DDSSECURITY
 	//构造自身Participant中安全扩展相关
 	if (domainParticipant_->enableDDSSec_) {
-		data.ddsParticipantData.contains_security_data = true;
 		data.ddsParticipantData.identity_token = domainParticipant_->identityToken_;
 		data.ddsParticipantData.permissions_token = domainParticipant_->permissionsToken_;
 		data.ddsParticipantData.security_info.participant_security_atributes =
-			ParticipantSecurityAttributesToMask(&domainParticipant_->secAttributes_);
+			ParticipantSecurityAttributesToMask(&domainParticipant_->secAttributes_); 
+		// data.ddsParticipantData.contains_security_data = true;
+		data.ddsParticipantData.contains_security_data = data.ddsParticipantData.security_info.participant_security_atributes != 0;
+		data.ddsParticipantData.security_info.plugin_participant_security_attributes = domainParticipant_->secAttributes_.plugin_participant_attributes;
 	}
 	else
 	{
@@ -224,8 +226,8 @@ void Discovery::WriteParticipantMessageSecureData(ParticipantMessageSecureData& 
 	sedp_->WriteParticipantMessageSecureData(data);
 }
 
-void Discovery::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, Sedp::StatelessMessageDataKind kind) {
-	sedp_->WriteParticipantStatelessMessageData(remoteGuid, data, kind);
+ReturnCode_t Discovery::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data) {
+	return sedp_->WriteParticipantStatelessMessageData(remoteGuid, data);
 }
 
 void Discovery::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data) {

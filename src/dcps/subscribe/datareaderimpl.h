@@ -965,7 +965,7 @@ public:
 	/** @brief DataReader所对应的安全相关属性 */
 	EndpointSecurityAttributes secAttributes_;
 	/** @brief DataReader使用的加密/解密句柄 */
-	DatareaderCryptoHandle cryptoHdl_;
+	DatareaderCryptoHandle cryptoHdl_ = NULL;
 	/** @brief 子消息加密相关属性 get_datareader_submessage_encode_attributes获得*/
 	CryptoReaderSubmessageAttributes submsgEncodeAttr_;
 	/** @brief 安全插件实例 */

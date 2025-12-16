@@ -460,7 +460,9 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		size = encodeBuffer->buffer_size - 4; //size为减去长为CDR_ENDIANNESS_LEN的端序信息
 		//加密后的单个encodeBuffer长度超限变为链表
 		int encodeSubBufferNum = encodeBuffer->buffer_size / DATAMESSAGE_LIMIT;//size / DATAMESSAGE_LIMIT;
-		encodeSubBufferNum += 1;
+		if (encodeBuffer->buffer_size % DATAMESSAGE_LIMIT != 0) {
+			encodeSubBufferNum += 1;
+		}
 
 		SerializedBuffer* curEncodeSubBuffer = NULL;
 		SerializedBuffer* preEncodeSubBuffer = NULL;
@@ -1099,7 +1101,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			|| statistic_.secAttributes.is_write_protected
 			|| statistic_.secAttributes.is_read_protected
 			|| statistic_.secAttributes.is_discovery_protected
-			|| statistic_.secAttributes.is_liveliness_protected
+			//|| statistic_.secAttributes.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| statistic_.secAttributes.is_submessage_protected
 			|| statistic_.secAttributes.is_payload_protected
 			|| statistic_.secAttributes.is_key_protected)

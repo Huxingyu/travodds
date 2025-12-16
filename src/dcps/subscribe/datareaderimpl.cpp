@@ -947,7 +947,7 @@ bool DataReaderImpl::GetSecAttributes()
 		if (secAttributes_.is_write_protected
 			|| secAttributes_.is_read_protected
 			|| secAttributes_.is_discovery_protected
-			|| secAttributes_.is_liveliness_protected
+			//|| secAttributes_.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| secAttributes_.is_submessage_protected
 			|| secAttributes_.is_payload_protected
 			|| secAttributes_.is_key_protected)

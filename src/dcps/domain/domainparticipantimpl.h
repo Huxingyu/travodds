@@ -767,16 +767,16 @@ private:
 public:
 #ifdef DDSSECURITY
 
-    /** @brief 指明该DomainParticipant是否启用了安全插件 */
+    /** @brief 指明该DomainParticipant是否启用了安全插件 配置正确的安全插件和安全配置则为true */
     bool enableDDSSec_;
     /** @brief 安全插件实例 */
     SecurityPluginInstanceImpl secPlugin_;
     /** @brief 身份验证相关句柄 唯一标识域参与者认证状态 通过插件接口validate_local_identity生成*/
-    IdentityHandle identityHdl_;
+    IdentityHandle identityHdl_ = NULL;
     /** @brief 访问控制相关句柄 */
     PermissionsHandle permissionHdl_ = NULL;
     /** @brief 加密相关句柄 */
-    ParticipantCryptoHandle cryptoHdl_;
+    ParticipantCryptoHandle cryptoHdl_ = NULL;
     /** @brief 身份验证令牌 包含身份摘要信息(初步身份标识)*/
     IdentityToken identityToken_;
     /** @brief 访问控制令牌 */
