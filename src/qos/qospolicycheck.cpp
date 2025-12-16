@@ -194,8 +194,16 @@ bool QosPolicyCheck::CanQosBeUpdated(const DomainParticipantFactoryQos& curQos, 
 
 bool QosPolicyCheck::CanQosBeUpdated(const DomainParticipantQos& curQos, const DomainParticipantQos& tagQos)
 {
-	/* yuguxu 所包含QoS无不可更改 */
-	return true;
+	if (curQos.network_interface.interface_whitelist.size() != tagQos.network_interface.interface_whitelist.size()) {
+		return false;
+	}
+	for (size_t i = 0; i < curQos.network_interface.interface_whitelist.size(); ++i) {
+		if (curQos.network_interface.interface_whitelist[i] != tagQos.network_interface.interface_whitelist[i]) {
+			return false;
+		}
+	}
+	return (curQos.discovery.kind == tagQos.discovery.kind) &&
+		(curQos.transport.kinds == tagQos.transport.kinds);
 }
 
 bool QosPolicyCheck::CanQosBeUpdated(const PublisherQos& curQos, const PublisherQos& tagQos)
