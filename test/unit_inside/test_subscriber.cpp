@@ -1,10 +1,16 @@
-#ifdef TEST_SUBSCRIBER
-#include "test_head.hpp"
+#include "gtest/gtest.h"
+#include "dcps/domain/domainparticipantfactory.h"
+#include "dcps/domain/domainparticipant.h"
+#include "dcps/subscribe/subscriber.h"
+#include "testdataTypeSupport.h"
+
+USING_TRAVODDS_NAMESPACE
+
 /****************************** Subscriber *********************************************/
-TEST(DDSTest, Subscriber_get_qos) {
+TEST(SubscriberTest, Subscriber_get_qos) {
     SubscriberQos qos;
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(qos, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(qos, nullptr, STATUS_MASK_NONE);
     SubscriberQos qosGet;
     ReturnCode_t result = subscriber->get_qos(qosGet);
     EXPECT_EQ(result, RETCODE_OK);
@@ -18,9 +24,9 @@ TEST(DDSTest, Subscriber_get_qos) {
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTest, Subscriber_set_get_qos) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+TEST(SubscriberTest, Subscriber_set_get_qos) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     SubscriberQos qos;
     ReturnCode_t result = subscriber->set_qos(qos);
     EXPECT_EQ(result, RETCODE_OK);
@@ -38,9 +44,9 @@ TEST(DDSTest, Subscriber_set_get_qos) {
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTest, Subscriber_se_qos) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+TEST(SubscriberTest, Subscriber_set_qos) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     SubscriberQos qos;
     qos.presentation.access_scope = TOPIC_PRESENTATION_QOS;
     ReturnCode_t result = subscriber->set_qos(qos);
@@ -49,63 +55,67 @@ TEST(DDSTest, Subscriber_se_qos) {
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTest, Subscriber_get_listener) {
+TEST(SubscriberTest, Subscriber_get_listener) {
     SubscriberListener* listener = new SubscriberListener();
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, listener, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, listener, STATUS_MASK_NONE);
     const SubscriberListener* result = subscriber->get_listener();
     EXPECT_EQ(result, listener);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Subscriber_set_get_listener) {
+TEST(SubscriberTest, Subscriber_set_get_listener) {
     SubscriberListener* listener = new SubscriberListener();
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    ReturnCode_t ret = subscriber->set_listener(listener, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    ReturnCode_t ret = subscriber->set_listener(listener, STATUS_MASK_ALL);
     EXPECT_EQ(ret, RETCODE_OK);
     const SubscriberListener* result = subscriber->get_listener();
     EXPECT_EQ(result, listener);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
+    delete listener;
 }
-TEST(DDSTEST, Subscriber_create_datareader)
+TEST(SubscriberTest, Subscriber_create_datareader)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* result = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* result = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     EXPECT_NE(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_create_datareader1)
+TEST(SubscriberTest, Subscriber_create_datareader1)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReaderQos qos;
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
     qos.history.depth = -1;
-    DataReader* result = subscriber->create_datareader(top, qos, nullptr, 0);
+    DataReader* result = subscriber->create_datareader(top, qos, nullptr, STATUS_MASK_NONE);
     EXPECT_EQ(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_create_datareader2)
+TEST(SubscriberTest, Subscriber_create_datareader2)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    DomainParticipant* par_ = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par_->registe_type("data", type);
-    Topic* topic_ = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* result = subscriber->create_datareader(topic_, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DomainParticipant* par_ = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par_->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic_ = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* result = subscriber->create_datareader(topic_, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     EXPECT_EQ(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
@@ -113,35 +123,38 @@ TEST(DDSTEST, Subscriber_create_datareader2)
     TheParticipantFactory->delete_participant(par_);
 }
 
-TEST(DDSTEST, Subscriber_create_datareader3)
+TEST(SubscriberTest, Subscriber_create_datareader3)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* result = subscriber->create_datareader(nullptr, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* result = subscriber->create_datareader(nullptr, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     EXPECT_EQ(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTEST, Subscriber_delete_datareader)
+TEST(SubscriberTest, Subscriber_delete_datareader)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     ReturnCode_t result = subscriber->delete_datareader(dr);
     EXPECT_EQ(result, RETCODE_OK);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTEST, Subscriber_delete_datareader1)
+TEST(SubscriberTest, Subscriber_delete_datareader1)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReader* dr = nullptr;
     ReturnCode_t result = subscriber->delete_datareader(dr);
     EXPECT_EQ(result, RETCODE_BAD_PARAMETER);
@@ -149,26 +162,28 @@ TEST(DDSTEST, Subscriber_delete_datareader1)
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_delete_datareader2)
+TEST(SubscriberTest, Subscriber_delete_datareader2)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* sub = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    Subscriber* sub_ = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* sub = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* sub_ = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReader* dr = sub->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
     ReturnCode_t result = sub_->delete_datareader(dr);
     EXPECT_EQ(result, RETCODE_PRECONDITION_NOT_MET);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTEST, Subscriber_lookup_datareader)
+TEST(SubscriberTest, Subscriber_lookup_datareader)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReader* result = subscriber->lookup_datareader("topicname");
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(result, dr);
@@ -176,37 +191,40 @@ TEST(DDSTEST, Subscriber_lookup_datareader)
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_lookup_datareader1)
+TEST(SubscriberTest, Subscriber_lookup_datareader1)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReader* result = subscriber->lookup_datareader("A");
     EXPECT_EQ(result, nullptr);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_get_participant)
+TEST(SubscriberTest, Subscriber_get_participant)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     const DomainParticipant* result = subscriber->get_participant();
     EXPECT_EQ(result, par);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTEST, Subscriber_delete_contained_entities)
+TEST(SubscriberTest, Subscriber_delete_contained_entities)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* dr = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     ReturnCode_t result = subscriber->delete_contained_entities();
     EXPECT_EQ(result, RETCODE_OK);
     result = par->delete_subscriber(subscriber);
@@ -215,12 +233,13 @@ TEST(DDSTEST, Subscriber_delete_contained_entities)
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_set_get_default_datareader_qos)
+TEST(SubscriberTest, Subscriber_set_get_default_datareader_qos)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReaderQos qos;
     ReturnCode_t result = subscriber->set_default_datareader_qos(qos);
     EXPECT_EQ(result, RETCODE_OK);
@@ -251,12 +270,13 @@ TEST(DDSTEST, Subscriber_set_get_default_datareader_qos)
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_set_default_datareader_qos1)
+TEST(SubscriberTest, Subscriber_set_default_datareader_qos1)
 {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     DataReaderQos qos;
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
     qos.history.depth = -1;
@@ -267,7 +287,7 @@ TEST(DDSTEST, Subscriber_set_default_datareader_qos1)
     TheParticipantFactory->delete_participant(par);
 }
 
-TEST(DDSTEST, Subscriber_copy_from_topic_qos)
+TEST(SubscriberTest, Subscriber_copy_from_topic_qos)
 {
     DataReaderQos datareader_qos;
     TopicQos topic_qos;
@@ -288,16 +308,119 @@ TEST(DDSTEST, Subscriber_copy_from_topic_qos)
     EXPECT_EQ(datareader_qos.resource_limits.max_samples_per_instance, topic_qos.resource_limits.max_samples_per_instance);
     EXPECT_EQ(datareader_qos.ownership.kind, topic_qos.ownership.kind);
 }
-TEST(DDSTEST, Subscriber_get_instance_handle)
-{
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, 0);
-    InstanceHandle_t handle = subscriber->get_instance_handle();
-    bool result = par->contains_entity(handle);
-    EXPECT_EQ(result, true);
+
+TEST(SubscriberTest, Subscriber_create_datareader_k) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(top, nullptr);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(subscriber, nullptr);
+    DataReader* reader = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(reader, nullptr);
+
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-#endif // TEST_SUBSCRIBER
+
+//
+TEST(SubscriberTest, Subscriber_set_qos_k) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, 0);
+    EXPECT_NE(top, nullptr);
+    SubscriberQos sub_qos;
+    sub_qos.partition.name.resize(11);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(subscriber, nullptr);
+    subscriber->set_qos(sub_qos);
+    DataReader* reader = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_ALL);
+    EXPECT_NE(reader, nullptr);
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+
+TEST(SubscriberTest, Subscriber_get_datareaders_k) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, 0);
+    EXPECT_NE(top, nullptr);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(subscriber, nullptr);
+    DataReader* reader = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(reader, nullptr);
+
+    DataReaderSeq readers;
+    SampleStateMask sample_states = 1;
+    const ViewStateMask view_states = 1;
+    const InstanceStateMask instance_states = 1;
+    subscriber->get_datareaders(readers, sample_states, view_states, instance_states);
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+
+
+TEST(SubscriberTest, Subscriber_notify_datareaders) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(top, nullptr);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(subscriber, nullptr);
+    DataReader* reader = subscriber->create_datareader(top, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(reader, nullptr);
+
+    subscriber->notify_datareaders();
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+
+
+TEST(SubscriberTest, Subscriber_GetListener) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(top, nullptr);
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(subscriber, nullptr);
+    subscriber->enable();
+
+    //SubscriberImpl* pImpl = dynamic_cast<SubscriberImpl*> (subscriber);
+    //if (pImpl)
+    //{
+    //    const SubscriberListener* reader = pImpl->GetListener();
+    //}
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}
+
+TEST(SubscriberTest, Subscriber_begin_end) {
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par->registe_type("KeyData", TestModule::KeyDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", "KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    EXPECT_NE(top, nullptr);
+    SubscriberListener* pSubscriberListener = new SubscriberListener();
+    Subscriber* subscriber = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, pSubscriberListener, STATUS_MASK_ALL);
+    EXPECT_NE(subscriber, nullptr);
+    subscriber->enable();
+
+    //SubscriberImpl* pImpl = dynamic_cast<SubscriberImpl*> (subscriber);
+    //if (pImpl)
+    //{
+    //    const SubscriberListener* reader = pImpl->GetListener();
+    //}
+
+    pSubscriberListener->on_data_on_readers(subscriber);
+
+    subscriber->begin_access();
+    subscriber->end_access();
+
+    subscriber->set_default_datareader_qos(DATAREADER_QOS_DEFAULT);
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+}

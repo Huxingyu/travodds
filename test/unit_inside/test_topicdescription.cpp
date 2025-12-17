@@ -1,95 +1,65 @@
-#ifdef TEST_TOPICDESCRIPTION
-#include "test_head.hpp"
+#include "gtest/gtest.h"
+#include "dcps/domain/domainparticipantfactory.h"
+#include "dcps/domain/domainparticipant.h"
+#include "testdataTypeSupport.h"
+
+USING_TRAVODDS_NAMESPACE
+
 /****************************** TopicDescription *********************************************/
-TEST(DDSTest, TopicDescription_get_participant1) {
+TEST(TopicDescriptionTest, TopicDescription_topic_get) {
     DomainParticipantFactoryQos qos;
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    DomainParticipant* result = top->get_participant();
-    EXPECT_EQ(result, par);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* par_get = top->get_participant();
+    EXPECT_EQ(par_get, par);
+
+    std::string type_name_get = top->get_type_name();
+    EXPECT_EQ(type_name_get, type_name);
+
+    std::string name_get = top->get_name();
+    EXPECT_EQ(name_get, "topicname");
+
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, TopicDescription_get_participant2) {
+TEST(TopicDescriptionTest, TopicDescription_contentFiltered_get) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* related_topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    ContentFilteredTopic* cftop = par->create_contentfilteredtopic("ContentFilteredTopicname", related_topic, "expression", strSeq);
-    DomainParticipant* result = cftop->get_participant();
-    EXPECT_EQ(result, par);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* related_topic = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
+    std::string filter_expression = "id = 10 AND name = 'abc'";
+    StringSeq expression_parameters;
+    ContentFilteredTopic* cftop = par->create_contentfilteredtopic("ContentFilteredTopicname", related_topic, filter_expression, expression_parameters);
+    DomainParticipant* par_get = cftop->get_participant();
+    EXPECT_EQ(par_get, par);
+
+    std::string type_name_get = cftop->get_type_name();
+    EXPECT_EQ(type_name_get, type_name);
+
+    std::string name_get = cftop->get_name();
+    EXPECT_EQ(name_get, "ContentFilteredTopicname");
+
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, TopicDescription_get_participant3) {
+TEST(TopicDescriptionTest, TopicDescription_multiTopic_get) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    MultiTopic* mtopic = par->create_multitopic("MultiTopicname", "data", "expression", strSeq);
-    DomainParticipant* result = mtopic->get_participant();
-    EXPECT_EQ(result, par);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    StringSeq expression_parameters;
+    MultiTopic* mtopic = par->create_multitopic("MultiTopicname", type_name, "expression", expression_parameters);
+    DomainParticipant* par_get = mtopic->get_participant();
+    EXPECT_EQ(par_get, par);
+
+    std::string type_name_get = mtopic->get_type_name();
+    EXPECT_EQ(type_name_get, type_name);
+
+    std::string name_get = mtopic->get_name();
+    EXPECT_EQ(name_get, "MultiTopicname");
+
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, TopicDescription_get_type_name1) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    std::string name = "data";
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    std::string nameGet = top->get_type_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-TEST(DDSTest, TopicDescription_get_type_name2) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    std::string name = "data";
-    par->registe_type("data", type);
-    Topic* related_topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    ContentFilteredTopic* cftop = par->create_contentfilteredtopic("ContentFilteredTopicname", related_topic, "expression", strSeq);
-    std::string nameGet = cftop->get_type_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-TEST(DDSTest, TopicDescription_get_type_name3) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    std::string name = "data";
-    par->registe_type("data", type);
-    MultiTopic* mtopic = par->create_multitopic("MultiTopicname", "data", "expression", strSeq);
-    std::string nameGet = mtopic->get_type_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-TEST(DDSTest, TopicDescription_get_name1) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    std::string name = "topicname";
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    std::string nameGet = top->get_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-TEST(DDSTest, TopicDescription_get_name2) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* related_topic = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
-    std::string name = "ContentFilteredTopicname";
-    ContentFilteredTopic* cftop = par->create_contentfilteredtopic("ContentFilteredTopicname", related_topic, "expression", strSeq);
-    std::string nameGet = cftop->get_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-TEST(DDSTest, TopicDescription_get_name3) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    std::string name = "MultiTopicname";
-    MultiTopic* mtopic = par->create_multitopic("MultiTopicname", "data", "expression", strSeq);
-    std::string nameGet = mtopic->get_name();
-    EXPECT_EQ(nameGet, name);
-    par->delete_contained_entities();
-    TheParticipantFactory->delete_participant(par);
-}
-#endif // TEST_TOPICDESCRIPTION
+

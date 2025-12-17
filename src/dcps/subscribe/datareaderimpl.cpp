@@ -1223,8 +1223,9 @@ bool DataReaderImpl::LifespanTimeout()
 		}
 		else {
 			// 最早的报文缓存已过期，删除该报文。
-			reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
-			earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+			//reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
+			//earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+			break;
 		}
 	}
 	return false;

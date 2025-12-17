@@ -168,9 +168,7 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
 		if (qos_.lifespan.duration != Duration_t(TIME_INFINITE))
 		{
 			lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
-		}
-		else
-		{
+		} else if(lifespanTimer_) {
 			lifespanTimer_->Exit();
 		}
 	}

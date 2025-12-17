@@ -1,11 +1,17 @@
-#ifdef TEST_TOPIC
-#include "test_head.hpp"
+#include "gtest/gtest.h"
+#include "dcps/domain/domainparticipantfactory.h"
+#include "dcps/domain/domainparticipant.h"
+#include "testdataTypeSupport.h"
+
+USING_TRAVODDS_NAMESPACE
+
 /****************************** Topic *********************************************/
-TEST(DDSTest, Topic_get_qos) {
+TEST(TopicTest, Topic_get_qos) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
     TopicQos qos;
-    Topic* top = par->create_topic("topicname", "data", qos, nullptr, 0);
+    Topic* top = par->create_topic("topicname", type_name, qos, nullptr, 0);
     TopicQos qosGet;
     ReturnCode_t result = top->get_qos(qosGet);
     EXPECT_EQ(result, RETCODE_OK);
@@ -35,23 +41,25 @@ TEST(DDSTest, Topic_get_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Topic_set_qos1) {
+TEST(TopicTest, Topic_set_qos1) {
     TopicQos qos;
     qos.history.kind = KEEP_ALL_HISTORY_QOS;
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", qos, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, qos, nullptr, 0);
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
     ReturnCode_t result = top->set_qos(qos);
     EXPECT_EQ(result, RETCODE_IMMUTABLE_POLICY);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Topic_set_qos2) {
+TEST(TopicTest, Topic_set_qos2) {
     TopicQos qos;
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", qos, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, qos, nullptr, 0);
     qos.history.kind = KEEP_LAST_HISTORY_QOS;
     qos.history.depth = -1;
     ReturnCode_t result = top->set_qos(qos);
@@ -59,11 +67,12 @@ TEST(DDSTest, Topic_set_qos2) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Topic_set_get_qos) {
+TEST(TopicTest, Topic_set_get_qos) {
     TopicQos qos;
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", qos, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, qos, nullptr, 0);
     qos.topic_data.value.push_back('t');
     qos.topic_data.value.push_back('o');
     qos.topic_data.value.push_back('p');
@@ -100,21 +109,23 @@ TEST(DDSTest, Topic_set_get_qos) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Topic_get_listener1) {
+TEST(TopicTest, Topic_get_listener1) {
     TopicListener* tlis = new TopicListener();
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, tlis, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, tlis, 0);
     const TopicListener* result = top->get_listener();
     EXPECT_EQ(result, tlis);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-TEST(DDSTest, Topic_set_get_listener) {
+TEST(TopicTest, Topic_set_get_listener) {
     TopicListener* tlis = new TopicListener();
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    par->registe_type("data", type);
-    Topic* top = par->create_topic("topicname", "data", TOPIC_QOS_DEFAULT, nullptr, 0);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top = par->create_topic("topicname", type_name, TOPIC_QOS_DEFAULT, nullptr, 0);
     ReturnCode_t result = top->set_listener(tlis, 0);
     EXPECT_EQ(result, RETCODE_OK);
 
@@ -123,4 +134,3 @@ TEST(DDSTest, Topic_set_get_listener) {
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-#endif // TEST_TOPIC

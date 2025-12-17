@@ -34,6 +34,8 @@ file(GLOB  HEADERS_CPP
 	"*.h")
 file(GLOB  SOURCES_CPP "*.cpp")
 
+file(GLOB  SOURCES_CPP "*.cpp")
+
 # 添加DDS源码 集成编译
 file(GLOB_RECURSE DDS_CPP 
 "${CMAKE_CURRENT_SOURCE_DIR}/../../include/*.h"
@@ -41,19 +43,27 @@ file(GLOB_RECURSE DDS_CPP
 "${CMAKE_CURRENT_SOURCE_DIR}/../../src/*.cpp"
 )
 
+# 查找以Postive结尾的头文件和源文件
+file(GLOB_RECURSE POSTIVE_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/qos/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/qos/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/TestFrame.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/TestFrame.h"
+)
+
+# 查找以Negative结尾的头文件和源文件
+file(GLOB_RECURSE NEGATIVE_FILES
+   "${CMAKE_CURRENT_SOURCE_DIR}/qos/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/qos/*.cpp"
+)
+
+
 # VS项目中DDS源码单独分类
 source_group("DDS" FILES ${DDS_CPP})
+source_group("QOS" FILES ${POSTIVE_FILES} ${NEGATIVE_FILES})
 
-add_executable(${PROJECT_NAME} ${SOURCES_CPP} ${HEADERS_CPP} ${DDS_CPP})
+add_executable(${PROJECT_NAME} ${SOURCES_CPP} ${HEADERS_CPP} ${DDS_CPP}  ${NEGATIVE_FILES})
 
-#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # GCC/Clang 覆盖率核心选项
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-    # 链接时也需添加（否则无法生成 .gcda 文件）
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
-#endif()
 
 # 添加头文件路径
 include_directories(
@@ -62,6 +72,8 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty
     ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/asio-1.13.0/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/tao
+	${CMAKE_CURRENT_SOURCE_DIR}/
+	${CMAKE_CURRENT_SOURCE_DIR}/qos
 )
 
 if (MSVC)
@@ -77,4 +89,27 @@ target_link_libraries(${PROJECT_NAME}
 
 
 include(GoogleTest)
-gtest_discover_tests(${PROJECT_NAME})
+#gtest_discover_tests(${PROJECT_NAME})
+
+
+
+file(GLOB  POSITIVE_SOURCES_CPP "testdata*.h" "testdata*.cpp" 	"${CMAKE_CURRENT_SOURCE_DIR}/positive/*.cpp")
+
+add_executable(unit_test_qos_positive  ${POSITIVE_SOURCES_CPP}  ${DDS_CPP}  ${POSTIVE_FILES})
+include(GoogleTest)
+#gtest_discover_tests(unit_test_qos_positive)
+
+if (MSVC)
+# windows下设置静态库宏 使导出宏不生效
+target_compile_definitions(unit_test_qos_positive PRIVATE _DDS_STATIC_LIB)
+# windows下添加 /utf-8 处理因编码格式导致的编译问题
+target_compile_options(unit_test_qos_positive PRIVATE /utf-8)
+endif()
+
+target_link_libraries(unit_test_qos_positive
+  GTest::gtest_main   # GTest 核心库
+)
+
+
+
+
