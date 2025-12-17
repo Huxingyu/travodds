@@ -398,6 +398,16 @@ void Spdp::TakeSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data
 
 void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data)
 {
+#ifdef DDSSECURITY
+	if (data.ddsParticipantData.contains_security_data && !participant_->participantImpl_->enableDDSSec_) {
+		//TRAVODDS_LOG(LOG_INFO, "local no security participant ignore remote security participant.");
+		return;
+	}
+	if (!data.ddsParticipantData.contains_security_data && participant_->participantImpl_->enableDDSSec_) {
+		//TRAVODDS_LOG(LOG_INFO, "local security participant ignore remote no security participant.");
+		return;
+	}
+#endif
 	//TODO 新增节点 添加代理
 	if (0 == remoteParticipantData_.count(data.ddsParticipantData.key)) {
 #ifdef DDSSECURITY

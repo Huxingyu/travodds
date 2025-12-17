@@ -1,9 +1,8 @@
 #include "security/participantgenericmessagetypesupport.h"
 #include "security/participantgenericmessage.h"
 #include "security/datatypesupport.h"
-#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
-
+#ifdef DDSSECURITY
 DataHolderTypeSupport* DataHolderTypeSupport::get_instance() {
     static DataHolderTypeSupport instance;
     return &instance;

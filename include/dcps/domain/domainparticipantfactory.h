@@ -363,8 +363,6 @@ public:
 
 #endif // _XML_INTERFACE_CPP
 
-#ifdef DDSSECURITY
-
 	/**
 	 * @fn virtual ReturnCode_t DomainParticipantFactory::load_security_plugin( const Char* plugin_name, const Char* file_name, const Char* retrieve_instance_func_name, const Char* finalize_instance_func_name) = 0;
 	 *
@@ -393,7 +391,6 @@ public:
 		const char* retrieve_instance_func_name,
 		const char* finalize_instance_func_name) = 0;
 
-#endif // DDSSECURITY
 };
 
 TRAVODDS_NAMESPACE_END

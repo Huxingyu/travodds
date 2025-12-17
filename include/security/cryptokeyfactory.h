@@ -12,6 +12,7 @@
 #ifndef CRYPTO_KEY_FACTORY_H
 #define CRYPTO_KEY_FACTORY_H
 
+#ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 #include "security/propertyqospolicy.h"
 TRAVODDS_NAMESPACE_BEGIN
@@ -176,4 +177,5 @@ public:
 };
 
 TRAVODDS_NAMESPACE_END
+#endif // DDSSECURITY
 #endif // CRYPTO_KEY_FACTORY_H

@@ -71,6 +71,17 @@ set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} 
     )
 
+#添加安全宏
+if(ENABLE_DDS_SECURITY)
+    message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
+    target_compile_definitions(${LIB_TARGET_NAME}
+    PRIVATE
+    DDSSECURITY
+    )
+else()
+    message(STATUS "DDS Security disabled")
+endif()
+
 option(INTERNAL_DEBUG "Activate developer debug messages" OFF)
 if(BUILD_SHARED_LIBS)
 target_compile_definitions(${LIB_TARGET_NAME}
