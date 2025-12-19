@@ -531,6 +531,8 @@ public:
 	 */
 	bool AddReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo);
 
+	void UpdateReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo);
+
 	/**
 	 * @brief 移除Reader过滤器。
 	 *

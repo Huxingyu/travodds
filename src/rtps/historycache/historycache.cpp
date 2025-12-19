@@ -179,7 +179,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 				sampleInfo.valid_data = true;
 			}
 			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
-
+			sampleInfo.source_timestamp = (*cache)->sourceTimespace;
 			dataValues.push_back(*(*cache)->serializedBuffer);
 			sampleInfos.push_back(sampleInfo);
 

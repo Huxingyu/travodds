@@ -1022,6 +1022,15 @@ bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilt
 	return ret == RETCODE_OK ? true : false;
 }
 
+void DataWriterImpl::UpdateReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
+{
+	using namespace DDSSQL;
+	auto it = readerFilters_.find(readerGuid);
+	if (it == readerFilters_.end()) {
+		it->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
+	}
+}
+
 void DataWriterImpl::RemoveReaderFilter(const GUID_t& readerGuid)
 {
 	readerFilters_.erase(readerGuid);

@@ -828,11 +828,21 @@ GuidPrefix_t Participant::GetGuidPrefix()
 }
 void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData &subData)
 {
-    DataWriterImpl* dw = writer->GetRelatedDataWriter();
-    if (nullptr == dw) {
+	DataWriterImpl* dw = writer->GetRelatedDataWriter();
+	if (nullptr == dw) {
 		TRAVODDS_LOG(LOG_ERROR, "datawriter is nullptr");
-        return;
-    }
+		return;
+	}
+	{
+		std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
+		auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
+		if (readers != matchRemoteEntitys_.end() && readers->second.find(subData.remoteReaderGuid) != readers->second.end()) {
+		    // 已经匹配过了
+			dw->UpdateReaderFilter(subData.remoteReaderGuid, subData.contentFilter);
+			return;
+		}
+	}
+
     const PublicationBuiltinTopicData& pubData = dw->GetBuiltinTopicData();
 
     if (pubData.topic_name != subData.ddsSubscriptionData.topic_name) {
@@ -879,22 +889,24 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 
 	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
 
-	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
-	if (matchLocalEntitys_.end() == writers) {
-		std::list<EntityId_t> writerList;
-		writerList.push_back(writer->GetGuid().entityId);
-		matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
-	} else {
-		writers->second.push_back(writer->GetGuid().entityId);
-	}
-	auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
-	if (readers == matchRemoteEntitys_.end()) {
-		std::set<GUID_t> remoteWriters;
-		remoteWriters.insert(subData.remoteReaderGuid);
-		matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
-	} else {
-		readers->second.insert(subData.remoteReaderGuid);
+	{
+		std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
+		auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
+		if (matchLocalEntitys_.end() == writers) {
+			std::list<EntityId_t> writerList;
+			writerList.push_back(writer->GetGuid().entityId);
+			matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
+		} else {
+			writers->second.push_back(writer->GetGuid().entityId);
+		}
+		auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
+		if (readers == matchRemoteEntitys_.end()) {
+			std::set<GUID_t> remoteWriters;
+			remoteWriters.insert(subData.remoteReaderGuid);
+			matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
+		} else {
+			readers->second.insert(subData.remoteReaderGuid);
+		}
 	}
 	
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(subData.remoteReaderGuid);

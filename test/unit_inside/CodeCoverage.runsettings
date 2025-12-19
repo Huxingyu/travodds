@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <!-- 添加这些配置 -->
+    <TargetPlatform>x64</TargetPlatform>
+    <EnvironmentVariables>
+      <PATH>D:\agiros\travodds\install\lib;%PATH%</PATH>
+      <_NT_SYMBOL_PATH>D:\agiros\travodds\install\lib</_NT_SYMBOL_PATH>
+    </EnvironmentVariables>
+  </RunConfiguration>
+
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage">
+        <Configuration>
+          <Format>coverage</Format>
+          <IncludeTestAssembly>False</IncludeTestAssembly>
+          <!-- 建议设为False -->
+
+          <CodeCoverage>
+            <!-- 模块包含 -->
+            <ModulePaths>
+              <Include>
+                <!-- 使用正确的正则表达式 -->
+                <ModulePath>.*travoddsd-1\.1\.dll$</ModulePath>
+                <ModulePath>.*unit_test\.exe$</ModulePath>
+              </Include>
+            </ModulePaths>
+
+            <!-- 符号搜索路径 -->
+            <SymbolSearchPaths>
+              <!-- PDB文件目录 -->
+              <Path>D:\agiros\travodds\install\lib</Path>
+              <Path>D:\agiros\travodds\install\bin</Path>
+            </SymbolSearchPaths>
+
+            <!-- 源文件排除 -->
+            <Sources>
+              <Exclude>
+                <!-- 使用双反斜杠 -->
+                <Source>.*\\thirdparty\\.*</Source>
+                <Source>.*\\include\\cdr\\.*</Source>
+                <Source>.*\\include\\security\\.*</Source>
+                <Source>.*\\include\\xtypes\\.*</Source>
+                <Source>.*\\src\\cdr\\.*</Source>
+                <Source>.*\\src\\security\\.*</Source>
+                <Source>.*\\src\\xtypes\\.*</Source>
+                <Source>.*\\src\\xml\\.*</Source>
+              </Exclude>
+            </Sources>
+
+            <!-- 添加详细日志 -->
+            <LogLevel>Verbose</LogLevel>
+            <Verbose>true</Verbose>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

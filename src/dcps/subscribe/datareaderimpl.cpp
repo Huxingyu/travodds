@@ -58,7 +58,7 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 			builtinData_.topic_name = topic->get_name();
 			builtinData_.topic_data = topicQos.topic_data;
 		}
-		ContentFilteredTopic* filteredTopic = dynamic_cast<ContentFilteredTopic*>(topic);
+		ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic);
 		if (filteredTopic) {
 			TopicQos topicQos;
 			filteredTopic->get_related_topic()->get_qos(topicQos);
@@ -70,6 +70,7 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 			contentFilter_.filterClassName = SQL_FILTER_NAME;
 			contentFilter_.filterExpression = filteredTopic->get_filter_expression();
 			filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
+			filteredTopic->AddReader(this);
 		}
 #ifdef DDSSECURITY
 		memcpy(builtinSecureData_.key.value, &handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
@@ -120,6 +121,10 @@ DataReaderImpl::~DataReaderImpl()
 	}
 	if (enable_) {
 		reader_->SetRelatedDataReader(nullptr);
+	}
+	ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic_);
+	if (filteredTopic){
+		filteredTopic->RemoveReader(this);
 	}
 	topic_->Dereference();
 	readcdts_.clear();
@@ -1262,4 +1267,21 @@ void DataReaderImpl::NotifyReadConditions()
 SubscriberImpl* DataReaderImpl::getParent()
 {
 	return sub_;
+}
+
+void DataReaderImpl::ContentFilterUpdate()
+{
+	ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic_);
+	if (filteredTopic == nullptr) {
+	    return;
+	}
+	filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
+	if(enable_) {
+		DiscoveredReaderData readerData;
+		readerData.ddsSubscriptionData = builtinData_;
+		readerData.contentFilter = contentFilter_;
+		DomainParticipantImpl* domainParticipant = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant()));
+		std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+		discovery->WriteSubscriptionData(readerData);
+	}
 }

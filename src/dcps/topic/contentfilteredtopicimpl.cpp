@@ -31,14 +31,17 @@ ReturnCode_t ContentFilteredTopicImpl::get_expression_parameters(StringSeq& expr
 
 ReturnCode_t ContentFilteredTopicImpl::set_expression_parameters(const StringSeq& expression_parameters)
 {
-    return RETCODE_UNSUPPORTED;
-    if (expression_parameters.size()) {
-        expressionParameters_ = expression_parameters;
+    if (expression_parameters == expressionParameters_) {
         return RETCODE_OK;
     }
-
-	TRAVODDS_LOG(LOG_ERROR, "SIZE ERR");
-    return RETCODE_ERROR;
+    if (!ValidFilterExpression(filterExpression_, expression_parameters, participant_->find_type(typeName_)->get_dynamictype())) {
+		return RETCODE_BAD_PARAMETER;
+    }
+	expressionParameters_ = expression_parameters;
+	for (auto& reader : readers_) {
+        reader->ContentFilterUpdate();
+    }
+    return RETCODE_OK;
 }
 
 bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, DynamicType* type)
@@ -50,4 +53,14 @@ bool ContentFilteredTopicImpl::ValidFilterExpression(const std::string& filter_e
     DDSSQL::DDSSQLFilter filter(type);
     ReturnCode_t ret = filter.InputSQL(filter_expression, expression_parameters);
     return ret == RETCODE_OK ? true : false;
+}
+
+void ContentFilteredTopicImpl::AddReader(DataReaderImpl* reader)
+{
+	readers_.insert(reader);
+}
+
+void ContentFilteredTopicImpl::RemoveReader(DataReaderImpl* reader)
+{
+	readers_.erase(reader);
 }

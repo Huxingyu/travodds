@@ -149,10 +149,14 @@ public:
 	ReturnCode_t GetPublicationMatchedStatus(PublicationMatchedStatus& status);
 
 private:
+	void SetStatus(const StatusMask& status, bool addFlag);
+
 	DataWriterImpl* writer_;
 	PublisherImpl* pub_;
 	DomainParticipantImpl* participant_;
-	StatusConditionImpl* condition_;
+	StatusConditionImpl* writercondition_;
+	StatusConditionImpl* pubcondition_;
+	StatusConditionImpl* participantcondition_;
 
 	OfferedDeadlineMissedStatus offeredDeadlineMissedStatus_;
 	LivelinessLostStatus livelinessLostStatus_;
@@ -295,10 +299,14 @@ public:
 	ReturnCode_t GetSubscriptionMatchedStatus(SubscriptionMatchedStatus& status);
 
 private:
+	void SetStatus(const StatusMask& status, bool addFlag);
+
 	DataReaderImpl* reader_;
 	SubscriberImpl* sub_;
 	DomainParticipantImpl* participant_;
-	StatusConditionImpl* condition_;
+	StatusConditionImpl* readercondition_;
+	StatusConditionImpl* subcondition_;
+	StatusConditionImpl* participantcondition_;
 
 	RequestedDeadlineMissedStatus reqDeadlineMissedStatus_;
 	RequestedIncompatibleQosStatus reqIncompatibleQosStatus_;

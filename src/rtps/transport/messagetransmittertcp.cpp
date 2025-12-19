@@ -1,4 +1,5 @@
 #include "rtps/transport/messagetransmittertcp.h"
+#include "rtps/transport/ipcontainer.h"
 #include "common/log/logger.h"
 
 USING_TRAVODDS_NAMESPACE;
@@ -522,7 +523,13 @@ asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetEndpoint(const AsioLocator& 
 	if (recive) {
 		return asio::ip::tcp::endpoint(asio::ip::tcp::v6(), locator.port);
 	}
-	return asio::ip::tcp::endpoint(locator.GetAddress<asio::ip::address_v6>(), locator.port);
+	auto addr = locator.GetAddress<asio::ip::address_v6>();
+
+	if (addr.is_link_local()) {
+		// 链路本地地址 需要设置作用域ID
+		addr.scope_id(IpContainer::GetAdapterScopeId(locator.address));
+	}
+	return asio::ip::tcp::endpoint(addr, locator.port);
 }
 asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetReciveEndpoint(const uint32_t port)
 {

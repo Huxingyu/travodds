@@ -30,10 +30,9 @@ struct InfoIP_t {
     std::string dev;
     octet address[16];
     uint8_t mask;   // 子网掩码长度
+	uint32_t scope_id; // 作用域ID，仅IPv6有效
 
-	InfoIP_t()
-	{
-		memset(address, 0, 16);
+	InfoIP_t() : type(IPV4), address{0}, mask(0), scope_id(0) {
 	}
 };
 
@@ -83,9 +82,13 @@ public:
       * @warning 尚不支持。
       */
     static bool GetAllMACAddress(std::vector<InfoMAC_t>* macs);
+
+
+	static uint32_t GetAdapterScopeId(const octet* address);
+
 private:
-
-
+    static std::mutex mtx_;
+    static std::vector<InfoIP_t> ips_;
 };
 
 
