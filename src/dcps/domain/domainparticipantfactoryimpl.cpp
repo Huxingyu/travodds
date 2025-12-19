@@ -7,7 +7,7 @@
 #ifdef DDSSECURITY
 #include "security/propertyqospolicy.h"
 #endif // DDSSECURITY
-#include <iostream>
+#include <random>
 #ifdef _WIN32
 
 #else
@@ -33,6 +33,11 @@ DomainParticipantFactoryImpl::DomainParticipantFactoryImpl()
 
 DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t domain_id, const DomainParticipantQos& qos, DomainParticipantListener* listener, const StatusMask& mask)
 {
+    return create_participant(domain_id, qos, listener, mask, GUID_UNKNOWN);
+}
+
+DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t domain_id, const DomainParticipantQos& qos, DomainParticipantListener* listener, const StatusMask& mask, const GUID_t& guid) 
+{
     if (domain_id > DOMAIN_ID_MAX) {
 		TRAVODDS_LOG(LOG_ERROR, "DomainId_t is Err, should 0 <= domain_id <= 232 ");
 		return nullptr;
@@ -42,6 +47,26 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
+
+    GUID_t guidt = guid;
+
+    {
+        std::lock_guard<std::mutex> lock(mtxParticipants_);
+        if (guidt == GUID_UNKNOWN) {
+            guidt.entityId = ENTITYID_PARTICIPANT;
+            do {
+                GenerateGuidPrefix(domain_id, guidt);
+            } while (participants_.find(Conversion::ToInstanceHandle(guid)) != participants_.end());
+        } else {
+            guidt.entityId = ENTITYID_PARTICIPANT;
+            if (participants_.find(Conversion::ToInstanceHandle(guidt)) != participants_.end()) {
+                TRAVODDS_LOG(LOG_ERROR, "GUID is exist");
+                return nullptr;
+            }
+        }
+        participants_.insert({ Conversion::ToInstanceHandle(guidt), nullptr });
+    }
+
 	DomainParticipant* domainPart = nullptr;
 
 #ifdef DDSSECURITY
@@ -72,9 +97,9 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
             return nullptr;
         }
     }
-    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, pluginPtr);
+    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, guidt,pluginPtr);
 #else
-    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask);
+    std::unique_ptr<DomainParticipantImpl> domainParticipant = std::make_unique<DomainParticipantImpl>(domain_id, qosT, listener, mask, guidt);
 #endif // DDSSECURITY
 
     if (!domainParticipant.get()) {
@@ -91,10 +116,9 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 			return nullptr;
 		}
 	}
-    {
-        std::lock_guard<std::mutex> lock(mtxParticipants_);
-        participants_.insert({ domainParticipant->get_instance_handle(), std::move(domainParticipant) });
-    }
+
+    participants_[domainParticipant->get_instance_handle()] = std::move(domainParticipant);
+
 	return domainPart;
 }
 
@@ -202,6 +226,44 @@ void DomainParticipantFactoryImpl::finalize()
     get_instance()->set_qos(DomainParticipantFactoryQos());
     DomainParticipantQos qos;
     get_instance()->set_default_participant_qos(qos);
+}
+
+ReturnCode_t DomainParticipantFactoryImpl::GenerateGuidPrefix(int32_t instanceId, GUID_t& guid)
+{
+    int32_t processId = SysInfo::GetProcessIDStatic();
+
+    //12 个字节
+    GuidPrefix_t& prefix = guid.prefix;
+
+    static std::random_device rd;
+    static std::mt19937 generator(rd());  // 使用Mersenne Twister引擎
+    static std::uniform_int_distribution<uint16_t> distribution(0, 65535);
+
+    uint16_t rand_value = distribution(generator);
+    uint16_t host_id = distribution(generator);
+
+    prefix.value[0] = VENDORID_PROSIMA[0];
+    prefix.value[1] = VENDORID_PROSIMA[1];
+
+    char* temp = (char*)&host_id;
+    prefix.value[2] = temp[0];
+    prefix.value[3] = temp[1];
+
+    temp = (char*)&processId;
+    prefix.value[4] = temp[0];
+    prefix.value[5] = temp[1];
+
+    temp = (char*)&rand_value;
+    prefix.value[6] = temp[0];
+    prefix.value[7] = temp[1];
+
+    temp = (char*)&instanceId;
+    prefix.value[8] = temp[0];
+    prefix.value[9] = temp[1];
+    prefix.value[10] = temp[2];
+    prefix.value[11] = temp[3];
+
+    return RETCODE_OK;
 }
 
 #ifdef DDSSECURITY
@@ -385,4 +447,5 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     TRAVODDS_LOG(LOG_WARNING, "only ddssecurity mode can call load_security_plugin");
     return RETCODE_UNSUPPORTED;
 }
+
 #endif // DDSSECURITY

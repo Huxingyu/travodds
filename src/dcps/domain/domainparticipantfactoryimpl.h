@@ -40,6 +40,12 @@ public:
         DomainParticipantListener* listener,
         const StatusMask& mask);
 
+    DomainParticipant* create_participant(DomainId_t domain_id,
+        const DomainParticipantQos& qos,
+        DomainParticipantListener* listener,
+        const StatusMask& mask,
+        const GUID_t& guid);
+
     /**
      * @brief 删除参与者以及所有关联的发布者和订阅者。
      *
@@ -392,6 +398,18 @@ private:
      * @brief 构造函数。
      */
 	DomainParticipantFactoryImpl();
+
+    /**
+     * @brief GUID前缀GuidPrefix_t生成。
+     *	根据domainId和instanceId生成对应的GUID前缀。
+     *
+     * @param [in] instanceId 实例ID 。
+	 * @param [out] guid 生成的GUID。
+     *
+     * @return RETCODE_OK。
+     */
+    static ReturnCode_t GenerateGuidPrefix(int32_t instanceId, GUID_t& guid);
+
 	std::map<InstanceHandle_t, std::unique_ptr<DomainParticipantImpl>> participants_;
 	mutable std::mutex mtxParticipants_;
     DomainParticipantFactoryQos qos_ = {};
