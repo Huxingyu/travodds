@@ -208,7 +208,7 @@ int ParticipantGenericMessageTypeSupport::serialize_data(void* data, CdrSerializ
         fprintf(stderr, "Serialization failed for field: cdr_le\n");
         return -1;
     }
-    if (!cdr->serializeBaseType((uint8_t)1)) {
+    if (!cdr->serializeBaseType((uint8_t)1)) { // DEFAULT_ENCAPSULATION
         fprintf(stderr, "Serialization failed for field: cdr_le\n");
         return -1;
     }

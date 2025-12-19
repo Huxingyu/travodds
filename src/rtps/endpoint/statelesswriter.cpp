@@ -40,7 +40,6 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 #ifdef DDSSECURITY
 void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderSecureData& subData)
 {
-	TRAVODDS_LOG(LOG_DEBUG, "MatchedSecureReader");
 	DataWriterImpl* dw = datawriter_;
 	GUID_t dwGuid = Conversion::ToGuid(dw->get_instance_handle());
 	GUID_t remoteDrGuid = Conversion::ToGuid(subData.ddsSubscriptionData.key);
