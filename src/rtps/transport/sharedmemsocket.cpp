@@ -272,9 +272,7 @@ void SharedMemSocket::ReadFromSharedMem() {
 				temp = data_->msg;
 				continue;
 			}
-			if (msg.dataSize >= buffersize_) {
-				printf("SharedMemSocket::ReadFromSharedMem error: startpos >= buffersize_\n");
-			}
+
 			callback_(msg.data, msg.dataSize);
 			data_->usedBytes.fetch_sub(msg.dataSize + sizeof(uint32_t), std::memory_order_release);
 			startpos += (msg.dataSize + sizeof(uint32_t));
