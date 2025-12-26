@@ -36,7 +36,7 @@ public:
 	 * @param [in] messageProcessor MessageProcessor指针。
 	 */
 	MessageTransmitter(std::shared_ptr<MessageProcessor> messageProcessor)
-		: messageProcessor_(messageProcessor), receivePool_(new MemoryPool(64)), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
+		: messageProcessor_(messageProcessor), receivePool_(MemoryPool::GetInstance()), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
 	{
 	}
 
@@ -203,7 +203,7 @@ public:
 	 *
 	 * @return 报文解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t InterpretMessage(char* message, uint32_t len);
+	virtual ReturnCode_t InterpretMessage(char* message, uint32_t len);
 
 protected:
 	std::atomic_bool runFlag_;

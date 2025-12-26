@@ -118,7 +118,7 @@ public:
 	 *
 	 * @return 添加成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t startNum, int32_t num);
+	ReturnCode_t AddFragData(const SequenceNumber_t& seq, const SerializedPayload& data, int32_t startNum, int32_t num);
 
 	/**
 	 * @brief 根据HB报文判断用户可靠通信模式下用户报文发送情况。

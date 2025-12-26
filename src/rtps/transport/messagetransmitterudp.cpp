@@ -397,7 +397,6 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 			if (!ec) {
 				InterpretMessage(buffer, bytes_transferred);
 			} 
-			receivePool_->releaseBuffer(const_cast<char*&>(buffer));
 			flagNum_.fetch_sub(1);
 			if (IsRun()) {
 				AsyncReceive(socket);

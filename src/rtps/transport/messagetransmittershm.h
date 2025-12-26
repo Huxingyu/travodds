@@ -46,6 +46,8 @@ public:
 
 	virtual void SetStop() override;
 
+	virtual ReturnCode_t InterpretMessage(char* message, uint32_t len);
+
 	static const std::array<char, 16>& GetAddress() { return uuid_; }
 
 private:
@@ -53,7 +55,6 @@ private:
 
 	void AsyncAccept();
 
-	void AsyncReceive(std::shared_ptr<SharedMemSocket> socket);
 private:
 	asio::io_context& ioContext_; // 调用异步功能
 

@@ -295,7 +295,7 @@ void MessageTransmitterTCP::InterpretMessage(std::shared_ptr<ReceiveSession> ses
 		// 重置会话状态，准备接收下一个消息
 		session->phase = ReceivePhase::HEADER;
 		session->bytesReceived = 0;
-		receivePool_->releaseBuffer(session->messageBuffer);
+		session->messageBuffer = nullptr;
 	} else {
 		CleanupSession(session);
 		return;

@@ -3,8 +3,8 @@
 #include "rtps/transport/sharedmemuuid.h"
 #include "rtps/transport/sharedmemaccept.h"
 #include "rtps/transport/sharedmemsocket.h"
+#include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
-#include <iostream>
 USING_TRAVODDS_NAMESPACE;
 
 
@@ -145,6 +145,11 @@ void MessageTransmitterSHM::SetStop()
 	}
 }
 
+ReturnCode_t MessageTransmitterSHM::InterpretMessage(char* message, uint32_t len)
+{
+	return messageProcessor_->InterpretSubmessage(std::make_shared<Message_t>(message, len, true));
+}
+
 bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
 {
 	return memcmp(locator.address, uuid_.data(), uuid_.size()) == 0;
@@ -160,13 +165,16 @@ void MessageTransmitterSHM::AsyncAccept()
 	}
 
 	try {
-		std::shared_ptr<SharedMemSocket> newSocket = std::make_shared<SharedMemSocket>();
+		std::shared_ptr<SharedMemSocket> newSocket = std::make_shared<SharedMemSocket>(
+			[this](char* message, const size_t& len) {
+				this->InterpretMessage(message, len);
+			}
+		);
 
 		acceptor_->AsyncAccept(newSocket,
 			[this, newSocket](const std::exception* ec) {
 				if (!ec) {
 				    recvSockets_.insert(newSocket);
-					AsyncReceive(newSocket);
 				} else {
 					TRAVODDS_LOG(LOG_ERROR,
 						"Accept error: %s", ec->what());
@@ -183,44 +191,5 @@ void MessageTransmitterSHM::AsyncAccept()
 		flagNum_.fetch_sub(1);
 		return;
 	}
-
-}
-
-void MessageTransmitterSHM::AsyncReceive(std::shared_ptr<SharedMemSocket> socket)
-{
-	flagNum_.fetch_add(1);
-	if (!socket || !IsRun()) {
-		recvSockets_.erase(socket);
-		flagNum_.fetch_sub(1);
-		return;
-	}
-	try {
-		socket->AsyncRead(receivePool_, 
-			[this, socket](const std::vector<std::pair<char*, uint32_t>>& messages, char*& buffer,const std::exception* ec) {
-				if (!ec) {
-					for (auto& it : messages) {
-						InterpretMessage(it.first, it.second);
-					}
-					
-					receivePool_->releaseBuffer(buffer);
-				} else {
-					TRAVODDS_LOG(LOG_ERROR,
-						"receive error: %s", ec->what());
-				}
-				flagNum_.fetch_sub(1);
-				if (IsRun() && !socket->IsShutdown()) {
-					AsyncReceive(socket);
-				} else {
-					recvSockets_.erase(socket);
-				}
-			});
-	} catch (const std::exception& e) {
-		TRAVODDS_LOG(LOG_ERROR,
-			"socket_receive exception: %s", e.what());
-		recvSockets_.erase(socket);
-		flagNum_.fetch_sub(1);
-		return;
-	}
-
 
 }

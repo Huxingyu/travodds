@@ -26,6 +26,26 @@ TRAVODDS_NAMESPACE_BEGIN
 
 // const uint32_t DATAMESSAGE_LIMIT = 63 * 1024;
 
+
+struct Message_t {
+	char* buffer;
+	uint32_t length;
+	char* originBuffer;
+	bool onlyCopy;  /* 仅允许拷贝，不允许共享控制权 */
+	Message_t(char* buffer, uint32_t length, bool copy = false)
+	  : buffer(buffer),
+	    length(length),
+	    originBuffer(buffer),
+		onlyCopy(copy) {
+	}
+	Message_t(const Message_t& other)
+	  : buffer(other.buffer),
+		length(other.length),
+		originBuffer(other.originBuffer),
+		onlyCopy(other.onlyCopy) {
+	}
+};
+
 /**
 * @ brief 定义子报文元素 SubmessageElement
 */
@@ -79,7 +99,15 @@ struct FragMentNumberSet_t {
 	}
 };
 
-typedef unsigned char* SerializedPayload;
+struct SerializedPayload {
+    char* data;
+	uint32_t length;
+	std::shared_ptr<Message_t> originMessage;
+
+	SerializedPayload()
+		: data(nullptr), length(0), originMessage(nullptr){
+	}
+};
 
 /**
 * @ brief 定义报文类型

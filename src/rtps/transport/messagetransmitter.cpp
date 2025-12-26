@@ -92,5 +92,11 @@ ReturnCode_t MessageTransmitter::MessageSend(LocatorVec& destinationList, char* 
 
 ReturnCode_t MessageTransmitter::InterpretMessage(char* message, uint32_t len)
 {
-	return messageProcessor_->InterpretSubmessage(message, len);
+	std::shared_ptr<Message_t> messagePtr = std::shared_ptr<Message_t>(
+	    new Message_t(message, len), 
+		[](Message_t* p) {
+			MemoryPool::GetInstance()->releaseBuffer(p->originBuffer);
+			 delete p;
+		});
+	return messageProcessor_->InterpretSubmessage(messagePtr);
 }

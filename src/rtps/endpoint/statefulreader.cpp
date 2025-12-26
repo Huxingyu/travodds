@@ -91,10 +91,10 @@ bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
     return true;
 }
 
-ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len)
+ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data)
 {
 	ChangeKind_t kind = ALIVE;
-	SerializedBuffer* buffer = nullptr;
+	CacheSerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId};
 	InstanceHandle_t pubHandle;
 	InstanceHandle_t dataHandle = HANDLE_NIL;
@@ -126,14 +126,20 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	if (dataFlags.inlineQosFlag) {
 		ProcessInlineQos(kind, dataHandle, dataMsg.inlineQos);
 	}
-	buffer = new SerializedBuffer;
+	buffer = new CacheSerializedBuffer;
 
-	if (!dataFlags.nonStandardPayloadFlag && nullptr != data) {
-		MemoryPool::GetInstance()->getBuffer(len, buffer->origin_buffer);
-		buffer->buffer = buffer->origin_buffer;
-		buffer->writer_position = len;
-		buffer->buffer_size = len;
-		memcpy(buffer->buffer, data, len);
+	if (!dataFlags.nonStandardPayloadFlag && nullptr != data.data) {
+		buffer->writer_position = data.length;
+		buffer->buffer_size = data.length;
+		if (data.originMessage->onlyCopy) {
+			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
+			buffer->buffer = buffer->origin_buffer;
+			memcpy(buffer->buffer, data.data, data.length);
+		} else {
+			buffer->buffer = data.data;
+			buffer->originMessage = data.originMessage;
+		}
+
 	}
 
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
@@ -157,7 +163,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	return ret;
 }
 
-ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, SerializedPayload data, uint32_t len)
+ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data)
 {
 	ChangeKind_t kind = ALIVE;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
@@ -190,7 +196,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		ProcessInlineQos(kind, dataHandle, dataMsg.inlineQos);
 	}
 	/* 理应存在数据，但是实际数据为空 */
-	if (kind != ALIVE || (dfFlags.nonStandardPayloadFlag || nullptr == data) ) {
+	if (kind != ALIVE || (dfFlags.nonStandardPayloadFlag || nullptr == data.data) ) {
 		//TODO  
 		/**  DataFrag必须存在数据，状态为ALIVE  **/
 		TRAVODDS_LOG(LOG_ERROR, "DataFrag msg err ");
@@ -205,13 +211,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 	/* 数据不存在，并且没有被提交过 */
 	if (!proxy->ExistCache(dataMsg.writerSN)) {
 
-		SerializedBuffer *buffer = new SerializedBuffer();
-
-		MemoryPool::GetInstance()->getBuffer(dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN, buffer->origin_buffer);
-		buffer->buffer = buffer->origin_buffer;
-		/* 4字节为CDR信息 */
-		buffer->buffer_size = dataMsg.dataFrag.sampleSize + CDR_ENDIANNESS_LEN;
-		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
+		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, nullptr, dataHandle, pubHandle, headerMsg.timestamp);
 
 		dataFragCache->sequenceNumber = dataMsg.writerSN;
 		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
@@ -232,7 +232,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		}
 	}
 
-	proxy->AddFragData(dataMsg.writerSN, (char*)data, len, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
+	proxy->AddFragData(dataMsg.writerSN, data, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
 
 	Notify(proxy);
 

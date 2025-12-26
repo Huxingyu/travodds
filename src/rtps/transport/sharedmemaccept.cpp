@@ -11,7 +11,8 @@ SharedMemAccept::SharedMemAccept(const std::string& port)
 	: port_(port)
 	, sharedMemoryName_("TravoddsAcceptSharedMemory" + port)
 	, objectName_("TravoddsAcceptsharedAcceptList")
-    , pool_(1) {
+    , pool_(1)
+	, refs_(0) {
 	try {
 		CleanupResources();
 		segment_ = std::make_unique<managed_shared_memory>(

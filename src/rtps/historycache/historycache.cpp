@@ -189,10 +189,6 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 
 			/* 获取后删除数据 */
 			if (shouleTake) {
-				if ((*cache)->serializedBuffer) {
-					delete (*cache)->serializedBuffer;
-					(*cache)->serializedBuffer = nullptr;
-				}
 				cache = itor->second.cacheChanges.erase(cache);
 			}
 			else {
