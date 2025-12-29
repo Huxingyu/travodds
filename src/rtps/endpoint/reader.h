@@ -324,6 +324,12 @@ protected:
 	std::shared_ptr<CacheChange> lastNewCache_;
 	std::shared_ptr<Timer> lastNewCacheTimer_;
 	GUID_t lastNewGuid_;
+
+	/* 报文处理锁 */
+	std::mutex dataMutex_;
+	std::mutex hbMutex_;
+	std::mutex gapMutex_;
+
 	friend class DataReaderImpl;
 };
 

@@ -56,8 +56,6 @@ private:
 	void AsyncAccept();
 
 private:
-	asio::io_context& ioContext_; // 调用异步功能
-
 	static const std::array<char, 16> uuid_;
 
 	std::shared_ptr<SharedMemAccept> acceptor_;

@@ -4,8 +4,16 @@
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
-	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext())
+	: MessageTransmitter(messageProcessor), ioContext_(), workGuard_(ioContext_.get_executor())
 {
+	ioThread_ = std::thread([this]() {
+		try {
+			ioContext_.run();
+		} catch (const std::exception& e) {
+			static_cast<void>(e);
+			TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
+		}
+	});
 }
 
 MessageTransmitterUDP::~MessageTransmitterUDP()
@@ -23,7 +31,13 @@ MessageTransmitterUDP::~MessageTransmitterUDP()
 		}
 		socketItor.second.clear();
 	}
+
 	sendSocketMap_.clear();
+	workGuard_.reset();
+	ioContext_.stop();
+	if (ioThread_.joinable()) {
+		ioThread_.join();
+	}
 }
 
 ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)

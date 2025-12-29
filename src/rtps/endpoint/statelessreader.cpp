@@ -30,6 +30,7 @@ StatelessReader::~StatelessReader()
 
 ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data)
 {
+	std::lock_guard<std::mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	CacheSerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
@@ -172,6 +173,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data)
 {
+	std::lock_guard<std::mutex> guard(dataMutex_);
 	/* wangyi 更新存活性 */
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	AssertWriterLiveliness(guid);

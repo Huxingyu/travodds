@@ -1,6 +1,7 @@
 #include "rtps/transport/messagetransmitter.h"
 #include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
+
 USING_TRAVODDS_NAMESPACE
 
 bool MessageTransmitter::IsRun()
@@ -33,31 +34,6 @@ void MessageTransmitter::SetUnicastLocatorList(const LocatorVec& locatorlist)
 		Locator_t loc = it;
 		loc.kind = kind_;
 		unicastLocatorList_.push_back(loc);
-	}
-}
-
-
-bool MessageTransmitter::CheckSocketPort(uint16_t port, bool checkUdp)
-{
-	asio::io_context io;
-
-	try {
-		if (checkUdp) {
-			asio::ip::udp::socket socket(io);
-			socket.open(asio::ip::udp::v4());
-			socket.bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), port));
-			socket.close();
-		} else {
-			asio::ip::tcp::socket socket(io);
-			socket.open(asio::ip::tcp::v4());
-			socket.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
-			socket.close();
-		}
-		return true;
-	} catch (const std::exception& e) {
-		static_cast<void>(e);
-		TRAVODDS_LOG(LOG_ERROR, "CheckSocketPort Err[%s]", e.what());
-		return false;
 	}
 }
 

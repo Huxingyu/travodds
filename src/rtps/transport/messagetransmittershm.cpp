@@ -11,7 +11,6 @@ USING_TRAVODDS_NAMESPACE;
 const std::array<char, 16> MessageTransmitterSHM::uuid_(SharedMemUUID::GetInstance().GetUUID());
 MessageTransmitterSHM::MessageTransmitterSHM(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitter(messageProcessor)
-	, ioContext_(AsioContext::GetIOContext())
 {
 	kind_ = LOCATOR_KIND_SHM;
 }

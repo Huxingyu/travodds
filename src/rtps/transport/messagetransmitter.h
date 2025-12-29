@@ -17,7 +17,6 @@
 
 #include "type/basictype.h"
 #include "rtps/basictypertps.h"
-#include "rtps/transport/asiocontext.h"
 #include "dcps/base/retcode.h"
 #include "common/memory/memorypool.h"
 
@@ -173,15 +172,6 @@ public:
 	 */
 	void SetUnicastLocatorList(const LocatorVec& locatorlist);
 
-	/**
-	 * @brief 检测端口号是否被占用。
-	 *
-	 * @param [in] port 端口号。
-	 * @param [in] checkUdp udp通信标志。
-	 *
-	 * @return 端口号可用返回true，否则返回false。
-	 */
-	static bool CheckSocketPort(uint16_t port, bool checkUdp = true);
 
 	/**
 	 * @brief 关闭socket。

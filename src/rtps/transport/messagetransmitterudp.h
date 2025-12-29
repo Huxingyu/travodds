@@ -132,8 +132,6 @@ protected:
      */
 	MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor);
 
-protected:
-	asio::io_context& ioContext_;
 private:
 	/**
 	 * @brief 创建接收socket。
@@ -161,6 +159,11 @@ private:
 	 * @return 退出成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t DropMemberShip(Locator_t receiveAddr);
+
+private:
+	asio::io_context ioContext_;
+	asio::executor_work_guard<asio::io_context::executor_type> workGuard_;
+	std::thread ioThread_;
 
 	/* 发送socket，发送ip为key值 */
 	_SEND_SOCKET_MAP		sendSocketMap_;

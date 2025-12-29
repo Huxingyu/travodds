@@ -5,10 +5,18 @@
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterTCP::MessageTransmitterTCP(std::shared_ptr<MessageProcessor> messageProcessor)
-	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext()),
-	  strandWrite_(AsioContext::GetIOContext().get_executor())
+	: MessageTransmitter(messageProcessor), ioContext_(), workGuard_(ioContext_.get_executor())
 {
 	kind_ = LOCATOR_KIND_TCPv4;
+	ioThread_ = std::thread([this]() {
+		try {
+			ioContext_.run();
+		}
+		catch (const std::exception& e) {
+			static_cast<void>(e);
+			TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
+		}
+		});
 }
 
 
@@ -39,6 +47,11 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 		}
 	}
 	sendSocketMap_.clear();
+	workGuard_.reset();
+	ioContext_.stop();
+	if (ioThread_.joinable()) {
+		ioThread_.join();
+	}
 }
 
 ReturnCode_t MessageTransmitterTCP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
@@ -177,18 +190,14 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 	buffers.push_back(asio::buffer(&tcphead, sizeof(TCPHeader)));
 	buffers.push_back(asio::buffer(message, length));
 
-	std::promise<size_t> bytesPromise;
 	asio::error_code ec;
-	auto bytesFuture = bytesPromise.get_future();
-	asio::post(strandWrite_, [&]() {
-		if(sendsocket->lowest_layer().is_open() == false) {
-			bytesPromise.set_value(0);
-		}
-		size_t bytesSent = asio::write(*sendsocket, buffers, ec);
-		bytesPromise.set_value(bytesSent);
+	size_t bytesSent = 0;
+	if (sendsocket->lowest_layer().is_open()) {
+		std::lock_guard<std::mutex> lock(session->mtx);
+		bytesSent = asio::write(*sendsocket, buffers, ec);
+	}
 
-	});
-	if (bytesFuture.get() != (sizeof(TCPHeader) + length)) {
+	if (bytesSent != (sizeof(TCPHeader) + length)) {
 		if (ec) {
 			if (ec.value() == asio::error::connection_reset ||
 				ec.value() == asio::error::broken_pipe) {

@@ -93,6 +93,7 @@ bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 
 ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data)
 {
+	std::lock_guard<std::mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	CacheSerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId};
@@ -165,6 +166,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 
 ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data)
 {
+	std::lock_guard<std::mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	InstanceHandle_t pubHandle = HANDLE_NIL;
@@ -240,6 +242,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 }
 ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInfo, const HeartBeatSubMessage_t& heartMsg)
 {
+	std::lock_guard<std::mutex> guard(hbMutex_);
 	GUID_t guid(headerInfo.sourceGuidPrefix, heartMsg.writerId);
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 	HeartbeatMsgFlag_t flags;
@@ -328,7 +331,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 
 ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInfo, const HeartBeatFragSubMessage_t& heartFragMsg)
 {
-
+	std::lock_guard<std::mutex> guard(hbMutex_);
 	GUID_t guid(headerInfo.sourceGuidPrefix, heartFragMsg.writerId);
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 
@@ -369,6 +372,7 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, const GapSubMessage_t& gapInfo)
 {
+	std::lock_guard<std::mutex> guard(gapMutex_);
 	if (BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
 		return RETCODE_OK;
 	}
