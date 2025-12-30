@@ -65,7 +65,8 @@ public:
 	 *
 	 * @param [in] locator  远端Reader通信信息。
 	 */
-	void ReaderLocatorRemove(Locator_t& locator);
+	void ReaderLocatorRemove(Locator_t& locator, const GUID_t& guid);
+	void ReaderLocatorRemove(const GUID_t& guid);
 
 	/**
 	 * @brief 对未发送的请求信息进行重整操作。
@@ -127,7 +128,9 @@ private:
 
 	Duration_t resendDataPeriod_;
 
-	std::map<Locator_t, std::shared_ptr<ReaderLocator>> readerLocators_;
+	std::map<GUID_t, std::shared_ptr<ReaderLocator>> readerLocators_;
+	std::map<Locator_t, std::set<GUID_t>> readerMulticastLocators_;
+	std::mutex readerLocatorsMutex_;
 
 	std::shared_ptr<Timer> timer_;
 };

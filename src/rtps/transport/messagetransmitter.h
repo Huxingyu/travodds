@@ -77,42 +77,6 @@ public:
 		uint32_t length,
 		uint16_t priority = -1) = 0;
 
-	/**
-	 * @brief RTPS报文发送函数。
-	 *
-	 * @param [in] source 源地址。
-	 * @param [in] destinationList 目的地址列表。
-	 * @param [in] message RTPS报文。
-	 * @param [in] length 报文长度。
-	 * @param [in] priority 发送IP的优先级。
-	 *
-	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	virtual ReturnCode_t MessageSend(
-		LocatorVec& sourceList,
-		LocatorVec& destinationList,
-		char* message,
-		uint32_t length,
-		uint16_t priority = -1
-	);
-
-	/**
-	 * @brief RTPS报文发送函数。
-	 *
-	 * @param [in] destinationList 目的地址列表。
-	 * @param [in] message RTPS报文。
-	 * @param [in] length 报文长度。
-	 * @param [in] priority 发送IP的优先级。
-	 *
-	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	virtual ReturnCode_t MessageSend(
-		LocatorVec& destinationList,
-		char* message,
-		uint32_t length,
-		uint16_t priority = -1
-	);
-
     /**
 	 * @brief 添加RTPS报文监听地址。
 	 *

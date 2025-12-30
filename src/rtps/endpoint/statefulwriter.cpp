@@ -430,6 +430,17 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
         && guid_.IsUserDefinedEntity();
 #endif // DDSSECURITY
 
+
+	std::vector<LocatorVec> dstLocators;
+	for (auto& reader : readerProxys) {
+		if (!change->filterReaders_.empty() && change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
+			SendGap({ change->sequenceNumber }, reader);
+			continue;
+		}
+		LocatorSeq& locators = reader->GetUnicastLocatorList();
+		dstLocators.push_back(locators);
+	}
+
 	if (buffer->next) {
 		/* 分片数据处理 */
 		DataFragSubMessage_t dataFragSubMessage;
@@ -562,21 +573,6 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 				}
 			}
 #endif // DDSSECURITY
-			
-			LocatorVec dstLocators;
-			for (auto& reader : readerProxys) {
-				if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
-					SendGap({ change->sequenceNumber }, reader);
-					continue;
-				}
-				LocatorSeq& locators = reader->GetUnicastLocatorList();
-
-				dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
-			}
-
-			std::sort(dstLocators.begin(), dstLocators.end());
-			dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
-
 			if (flowControl) {
 #ifdef DDSSECURITY
 				if (encodeSubMsg && !encodeRtpsMsg) {
@@ -754,20 +750,6 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		//	messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 		//}
 
-		LocatorVec dstLocators;
-		for (auto& reader : readerProxys) {
-			if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
-				SendGap({ change->sequenceNumber }, reader);
-				continue;
-			}
-
-			LocatorSeq& locators = reader->GetUnicastLocatorList();
-
-			dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
-		}
-
-		std::sort(dstLocators.begin(), dstLocators.end());
-		dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
 		if (flowControl) {
 #ifdef DDSSECURITY
 			if (encodeSubMsg && !encodeRtpsMsg) {
@@ -1267,7 +1249,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
 
 		SerializedBuffer* buffer = cache->serializedBuffer;
-		LocatorVec dstLocators = readerProxy->GetUnicastLocatorList();
+		std::vector<LocatorVec> dstLocators{readerProxy->GetUnicastLocatorList()};
 
         for(uint32_t i = 1; i < datafrag.fragmentNumberState.bitmapBase; i++)
         {

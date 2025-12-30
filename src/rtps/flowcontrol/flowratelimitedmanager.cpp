@@ -73,7 +73,7 @@ void FlowRateLimitedManager::ResetMaxBytesPerPeriod(int32_t maxBytesPerPeriod)
 
 }
 
-void FlowRateLimitedManager::MessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+void FlowRateLimitedManager::MessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length)
 {
     if (timer_) {
         int32_t thisTicket = nextTicket_.fetch_add(1);

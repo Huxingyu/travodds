@@ -95,6 +95,15 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
+	/* MessageTransmitter添加顺序即为传输器发送优先级 */
+	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
+		Locator_t loc;
+		loc.kind = LOCATOR_KIND_SHM;
+		loc.port = userPort;
+		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
+		defaultUnicastLocatorList_.push_back(loc);
+	}
 	if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS) || qos_.discovery.kind == DISCOVER_UDPv4_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
 	}
@@ -107,15 +116,7 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	if (qos_.transport.hasTransport(TRANSPORT_TCPv6_QOS)) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterTCPv6>(messageProcessor_));
 	}
-	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
-		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
-		Locator_t loc;
-		loc.kind = LOCATOR_KIND_SHM;
-		loc.port = userPort;
-		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
-		defaultUnicastLocatorList_.push_back(loc);
-	}
-	
+
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
 
@@ -671,15 +672,7 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 		std::shared_ptr<StatelessWriter> statelessWriter = std::dynamic_pointer_cast<StatelessWriter>(writer);
 		if (statelessWriter) {
-
-			for (auto locator : itor->second.multicastLocatorList) {
-				statelessWriter->ReaderLocatorRemove(locator);
-			}
-
-			for (auto locator : itor->second.unicastLocatorList) {
-				statelessWriter->ReaderLocatorRemove(locator);
-			}
-
+			statelessWriter->ReaderLocatorRemove(itor->second.remoteReaderGuid);
 		}
 
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteReaderGuid);
@@ -1313,13 +1306,27 @@ std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmit
 {
 	return messageTransmitters_;
 }
-void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length)
+void Participant::TransmittersSendMessage(LocatorVec destinationList, char* message, uint32_t length)
 {
-	for (auto& transmitter : messageTransmitters_) {
-		transmitter->MessageSend(destinationList, message, length);
+	ReturnCode_t ret = RETCODE_OK;
+	Locator_t srcLocator;
+	for (auto& dest : destinationList) {
+		for (auto& transmitter : messageTransmitters_) {
+			srcLocator.kind = transmitter->GetTransmitterKind();
+			ret = transmitter->MessageSend(srcLocator, dest, message, length);
+			if (RETCODE_OK == ret) {
+				return;
+			}
+		}
+	}
+}
+void Participant::TransmittersSendMessage(std::vector<LocatorVec>& destinationList, char* message, uint32_t length)
+{
+	for (auto& destList : destinationList) {
+		TransmittersSendMessage(destList, message, length);
 	}	
 }
-void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+void Participant::FlowRateLimitedMessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length)
 {
 	if (flowRateLimitedManager_) {
 		flowRateLimitedManager_->MessageSend(destinationList, message, length);
