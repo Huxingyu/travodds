@@ -4,16 +4,8 @@
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
-	: MessageTransmitter(messageProcessor), ioContext_(), workGuard_(ioContext_.get_executor())
+	: MessageTransmitter(messageProcessor), ioContext_()
 {
-	ioThread_ = std::thread([this]() {
-		try {
-			ioContext_.run();
-		} catch (const std::exception& e) {
-			static_cast<void>(e);
-			TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
-		}
-	});
 }
 
 MessageTransmitterUDP::~MessageTransmitterUDP()
@@ -33,11 +25,7 @@ MessageTransmitterUDP::~MessageTransmitterUDP()
 	}
 
 	sendSocketMap_.clear();
-	workGuard_.reset();
 	ioContext_.stop();
-	if (ioThread_.joinable()) {
-		ioThread_.join();
-	}
 }
 
 ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
@@ -260,7 +248,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 
 	try {
 		// 创建一个UDP监听socket
-		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = GetSocketInit();
+		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = GetReciveSocketInit();
 		// 监听的本地端点，使用系统自动分配的端口
 		asio::ip::udp::endpoint local_endpoint = GetEndpoint(rAddr, true);
 
@@ -451,6 +439,10 @@ std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv4::GetSocketInit()
 {
 	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());
 }
+std::shared_ptr<UDPReciverSocket> MessageTransmitterUDPv4::GetReciveSocketInit()
+{
+	return std::make_shared<UDPReciverSocket>(asio::ip::udp::v4());
+}
 MessageTransmitterUDPv6::MessageTransmitterUDPv6(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitterUDP(messageProcessor)
 {
@@ -478,6 +470,10 @@ asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv6::GetSocketInit()
 {
 	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v6());
+}
+std::shared_ptr<UDPReciverSocket> MessageTransmitterUDPv6::GetReciveSocketInit()
+{
+	return std::make_shared<UDPReciverSocket>(asio::ip::udp::v6());
 }
 asio::ip::multicast::outbound_interface MessageTransmitterUDPv6::GetOutboundInterfaceOption(const AsioLocator& locator)
 {
