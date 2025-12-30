@@ -1,5 +1,6 @@
 #include "rtps/transport/messagetransmittertcp.h"
 #include "rtps/transport/ipcontainer.h"
+#include "rtps/transport/recivesocket.h"
 #include "common/log/logger.h"
 
 USING_TRAVODDS_NAMESPACE;
@@ -322,7 +323,7 @@ void MessageTransmitterTCP::AsyncAccept()
 
 	try {
 		// 创建新socket
-		auto newSocket = std::make_shared<asio::ip::tcp::socket>(ioContext_);
+		auto newSocket = std::make_shared<TCPReciverSocket>();
 		// 异步接受连接
 		acceptor_->async_accept(*newSocket,
 			[this, newSocket](const asio::error_code& ec) {

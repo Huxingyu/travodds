@@ -14,7 +14,7 @@
 
 #include <chrono>
 #include <thread>
-
+#include <atomic>
 #include "type/basictype.h"
 #include "rtps/basictypertps.h"
 #include "dcps/base/retcode.h"

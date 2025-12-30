@@ -880,7 +880,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> m
 	} else {
 		readerList.push_back(dataSubMessage.readerId);
 	}
-	for (auto entittyId : readerList) {
+	for (const auto& entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
 			reader->ReceiveDataMessage(messageReceiver, dataSubMessage, dataSubMessage.serializedPayload);
