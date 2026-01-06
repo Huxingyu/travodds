@@ -73,9 +73,9 @@ typedef struct DiscoveryDPInfo
 	bool handshakMsgInit_ = false;
 	ParticipantStatelessMessage* handshakeMsg_ = NULL;
 	/** @brief 远端DomainParticipant共用密钥 */
-	SharedSecretHandle sharedSecretHdl_;
+	SharedSecretHandle sharedSecretHdl_ = NULL;
 	/** @brief 远端DomainParticipant访问控制句柄 */
-	PermissionsHandle permissionsHdl_;
+	PermissionsHandle permissionsHdl_ = NULL;
 	/** @brief 远端DomainParticipant加密句柄 */
 	ParticipantCryptoHandle cryptoHdl_ = NULL;
 }DiscoveryDPInfo;

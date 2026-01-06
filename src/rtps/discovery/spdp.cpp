@@ -29,11 +29,12 @@ Spdp::Spdp(Participant* participant, Discovery* discovery)
 	time.sec = leaseDuration_.sec;
 	time.nanosec = leaseDuration_.nanosec;
 	timer_ = TimerManager::CreateTimer(time, [&]() { this->CheckRemoteParticipantDuration(); }, "CheckRemoteParticipantDuration");
-
+#ifdef DDSSECURITY
 	Time_t handshakeTime = {1, 0};
 	handshakeTimer_ = TimerManager::CreateTimer(handshakeTime, [&]() {
 		this->HandShakeRetrys();
 	}, "HandShakeRetrys");
+#endif // DDSSECURITY
 }
 
 Spdp::~Spdp()
@@ -41,11 +42,11 @@ Spdp::~Spdp()
 	if (timer_) {
 		timer_->Exit();
 	}
-
+#ifdef DDSSECURITY
 	if (handshakeTimer_) {
 		handshakeTimer_->Exit();
 	}
-
+#endif // DDSSECURITY
 	if (writer_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(writer_->GetGuid());
 		participant_->DeleteWriter(handle);
@@ -388,12 +389,14 @@ void Spdp::HandShakeRetrys()
 {
 	std::lock_guard<std::mutex> lock(remoteGuidRetrySetMutex);
 	for (const auto& remoteGuid : remoteGuidRetrySet) {
-		ParticipantStatelessMessage* handshakeMsg = this->discParts_[remoteGuid.prefix]->handshakeMsg_;
-		//printf("retry begin_handshake_%s local %s remote %s.\n",
-		//	handshakeMsg->messageData[0].class_id.c_str(),
-		//	this->participant_->GetGuid().prefix.toString().c_str(),
-		//	remoteGuid.prefix.toString().c_str());
-		discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *handshakeMsg);
+		if (discParts_.count(remoteGuid.prefix)) {
+			ParticipantStatelessMessage* handshakeMsg = this->discParts_[remoteGuid.prefix]->handshakeMsg_;
+			//printf("retry begin_handshake_%s local %s remote %s.\n",
+		    //	handshakeMsg->messageData[0].class_id.c_str(),
+		    //	this->participant_->GetGuid().prefix.toString().c_str(),
+		    //	remoteGuid.prefix.toString().c_str());
+			discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *handshakeMsg);
+		}
 	}
 }
 
@@ -708,7 +711,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			}
 			case VALIDATION_PENDING_HANDSHAKE_REQUEST: //HandshakeInit begin_handshake_request
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(200)); //考虑时序性 确保对端进入waiting request
 				newDPInfo->enableDDSSec_ = true;
 				newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_REQUESTING;
 				discParts_[remote_prefix] = newDPInfo;
@@ -720,7 +722,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				// TOCHECK
 				discovery_->GetSedp()->AddBuiltinSpdpProxy(data);
 
-				// TODO
 				newDPInfo->handshakeMsg_ = new ParticipantGenericMessage;
 				HandshakeMessageToken handshakeToken;
 				validationRst = secPlugin->authentication->begin_handshake_request(

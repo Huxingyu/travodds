@@ -619,7 +619,6 @@ void Sedp::on_data_available(std::shared_ptr<CacheChange> change)
 
 void Sedp::WritePublicationData(DiscoveredWriterData& data)
 {
-	std::cout << __FUNCTION__ << std::endl;
 	SerializedBuffer *buffer = new SerializedBuffer;
 	ParameterList list(data);
 	unsigned short size = list.GetMessageSize();
@@ -675,7 +674,6 @@ void Sedp::WriteSubscriptionData(DiscoveredReaderData& data)
 #ifdef DDSSECURITY
 void Sedp::WritePublicationSecureData(DiscoveredWriterSecureData& data)
 {
-	std::cout << __FUNCTION__ << std::endl;
     SerializedBuffer *buffer = new SerializedBuffer;
     ParameterList list(data);
     unsigned short size = list.GetMessageSize();
@@ -1197,7 +1195,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				&data.messageData[0],
 				dpInfo->handshakeHdl_,
 				&secExce);
-		std::this_thread::sleep_for(std::chrono::milliseconds(200)); //考虑时序性
 		if (validationRst == VALIDATION_OK_FINAL_MESSAGE) {
 			dpInfo->handshakeMsg_->messageData[0] = handshakeToken;
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
@@ -1312,11 +1309,11 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	}
 	case DiscoveryDPInfo::DDSSEC_OK: {
 		if (data.messageClassId == GMCLASSID_SECURITY_DATAWRITER_CRYPTO_TOKENS) {
-			//TODO
+			// 设置远端写者加密Token
 			SetRemoteDomainEntityCryptoTokens(&data, false);
 		}
 		else if (data.messageClassId == GMCLASSID_SECURITY_DATAREADER_CRYPTO_TOKENS) {
-			//TODO
+			// 设置远端读者加密Token
 			SetRemoteDomainEntityCryptoTokens(&data, true);
 		}
 		else if (data.messageClassId == GMCLASSID_SECURITY_AUTH_HANDSHAKE) {
@@ -1343,18 +1340,17 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			TRAVODDS_LOG(LOG_ERROR, "failed to get_authenticated_peer_credential_token.");
 			return;
 		}
-		//TODO get_shared_secret创建了shared_secret需要释放
-		dpInfo->sharedSecretHdl_ = dp->secPlugin_.authentication->get_shared_secret(dpInfo->handshakeHdl_, &secExce);
 		
+		// 获得共享密钥
+		dpInfo->sharedSecretHdl_ = dp->secPlugin_.authentication->get_shared_secret(dpInfo->handshakeHdl_, &secExce);
 		if (dpInfo->sharedSecretHdl_ == SEC_NIL_HANDLE)
 		{
-			TRAVODDS_LOG(LOG_ERROR, "Get shared secret of Participant failed.");
+			TRAVODDS_LOG(LOG_ERROR, "get_shared_secret failed: sharedSecretHdl_ is null.");
 			GuidPrefix_t guidPrefix = Conversion::ToGuid(dpInfo->pData_.ddsParticipantData.key).prefix;
-			//spdp_->discParts_.erase(guidPrefix);
+			spdp_->SpdpCleanupRemoteSecRsc(dpInfo);
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
 			return;
 		}
-		//std::cout << __FUNCTION__  << " get_shared_secret " << std::endl;
 		// try to get and exchange crypto tokens
 		dpInfo->cryptoHdl_ = dp->secPlugin_.crypto_key_factory->register_matched_remote_participant(
 			dpInfo->identityHdl_,
@@ -1365,7 +1361,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 		if (dpInfo->cryptoHdl_ == SEC_NIL_HANDLE)
 		{
 			GuidPrefix_t guidPrefix = Conversion::ToGuid(dpInfo->pData_.ddsParticipantData.key).prefix;
-			//spdp_->discParts_.erase(guidPrefix);
+			spdp_->SpdpCleanupRemoteSecRsc(dpInfo);
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
 		}
 
