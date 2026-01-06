@@ -12,6 +12,7 @@
 #ifndef TRAVODDS_DCPS_BASE_ENTITY_H
 #define TRAVODDS_DCPS_BASE_ENTITY_H
 
+#include "type/guid.h"
 #include "dcps/condition/statuscondition.h"
 
 TRAVODDS_NAMESPACE_BEGIN
@@ -68,6 +69,8 @@ public:
      * @return 引用的实例句柄。
      */
     virtual const InstanceHandle_t& get_instance_handle() const = 0;
+
+    virtual const GUID_t& get_guid() const = 0;
 
     // add for language wrapper, store user-defined data in the entit)
     /**

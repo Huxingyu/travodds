@@ -369,7 +369,8 @@ void MessageTransmitterUDP::SetStop()
 			itor.second->cancel();
 		}
 	}
-	while (flagNum_.load() > 0) {
+	uint32_t tries = 0;
+	while (flagNum_.load() > 0 && tries++ < 20 ) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }

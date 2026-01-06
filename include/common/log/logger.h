@@ -15,7 +15,8 @@
 
 #include "travodds_dll.h"
 #include <cstdint>
-
+#include <sstream>
+#include <string> 
 TRAVODDS_NAMESPACE_BEGIN
 
 /**
@@ -75,6 +76,21 @@ void LogToConsole(LogType type, const char* file, const char* func, uint32_t lin
  */
 #define TRAVODDS_LOG(type, format, ...) LogToConsole(type, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__); \
 
+#define EMERGENCY_SECURITY_LOGGING(CLASS, format, ...) TRAVODDS_LOG(TRAVODDS::LOG_ERROR, "[" CLASS "] " format, ##__VA_ARGS__)
+#define WARNING_SECURITY_LOGGING(CLASS, format, ...) TRAVODDS_LOG(TRAVODDS::LOG_WARNING, "[" CLASS "] " format, ##__VA_ARGS__)
+
+#define TRAVODDS_LOG_STREAM_IMPL(type, category, stream_input) \
+    do { \
+        std::stringstream log_stream_buffer__; \
+        log_stream_buffer__ << stream_input; \
+        std::string final_message__ = "[" #category "] " + log_stream_buffer__.str(); \
+        LogToConsole(type, __FILE__, __FUNCTION__, __LINE__, "%s", final_message__.c_str()); \
+    } while (0)
+
+#define REC_LOG_ERROR(category, stream_input)   TRAVODDS_LOG_STREAM_IMPL(TRAVODDS::LOG_ERROR,   category, stream_input)
+#define REC_LOG_WARNING(category, stream_input) TRAVODDS_LOG_STREAM_IMPL(TRAVODDS::LOG_WARNING, category, stream_input)
+#define REC_LOG_DEBUG(category, stream_input)   TRAVODDS_LOG_STREAM_IMPL(TRAVODDS::LOG_DEBUG,   category, stream_input)
+#define REC_LOG_INFO(category, stream_input)    TRAVODDS_LOG_STREAM_IMPL(TRAVODDS::LOG_INFO,    category, stream_input)
 TRAVODDS_NAMESPACE_END
 
 #endif // LOGGER_H

@@ -250,7 +250,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 }
 
 
-ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag)
+ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, const DurabilityQosPolicyKind& durabilityKind, bool notFrag)
 {
 	if (nullptr == cache) {
 		TRAVODDS_LOG(LOG_ERROR, "cache is nullptr");
@@ -274,17 +274,24 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 		}
 	} 
 	else {
-		/* 之前没有添加过，循环添加缺失数据 */
-		for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
-			ChangeFromWriter changeInfo;
-			changeInfo.status = UNKNOWN;
-			changeInfo.is_relevant = true;
+		ChangeFromWriter changeInfo;
+		changeInfo.status = UNKNOWN;
+		changeInfo.is_relevant = true;
+		changeInfo.cache = nullptr;
+		if (durabilityKind == VOLATILE_DURABILITY_QOS && insertSeq_ == SEQUENCENUMBER_ZERO) {
+			insertSeq_ = cache->sequenceNumber;
 			changeInfo.sequenceNumber = insertSeq_;
-			changeInfo.cache = nullptr;
-
 			changesFromWriters_[insertSeq_] = changeInfo;
+
+		} else {
+		    /* 之前没有添加过，循环添加缺失数据 */
+		    for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
+				changeInfo.sequenceNumber = insertSeq_;
+			    changesFromWriters_[insertSeq_] = changeInfo;
+		    }
+		    insertSeq_ = insertSeq_ - 1;
 		}
-		insertSeq_ = insertSeq_ - 1;
+
 		changesFromWriters_[insertSeq_].cache = cache;
 		if (notFrag) {
 			changesFromWriters_[insertSeq_].status = RECEIVED;

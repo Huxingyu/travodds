@@ -12,6 +12,16 @@
 include(CheckCXXSourceCompiles)
 message(STATUS "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 
+# 优先查找系统安装的 asio
+find_package(asio QUIET)
+if(asio_FOUND)
+    message(STATUS "Found system asio: ${asio_INCLUDE_DIRS}")
+    include_directories(${asio_INCLUDE_DIRS})
+else()
+    message(WARNING "System asio not found, using thirdparty version")
+    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include)
+endif()
+
 # 添加包含目录
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
@@ -60,6 +70,17 @@ set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} 
     )
+
+#添加安全宏
+if(ENABLE_DDS_SECURITY)
+    message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
+    target_compile_definitions(${LIB_TARGET_NAME}
+    PRIVATE
+    DDSSECURITY
+    )
+else()
+    message(STATUS "DDS Security disabled")
+endif()
 
 option(INTERNAL_DEBUG "Activate developer debug messages" OFF)
 if(BUILD_SHARED_LIBS)
@@ -151,6 +172,7 @@ set(PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/qos
     ${PROJECT_SOURCE_DIR}/include/type
     ${PROJECT_SOURCE_DIR}/include/xtypes
+    ${PROJECT_SOURCE_DIR}/include/security
     )
 install(DIRECTORY ${PUBLIC_HEADERS}
     DESTINATION ${INCLUDE_INSTALL_DIR}

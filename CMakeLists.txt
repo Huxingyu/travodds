@@ -27,7 +27,7 @@ endif()
 ###############################################################################
 # 项 目
 ###############################################################################
-project(travodds VERSION "1.0.0" LANGUAGES C CXX)
+project(travodds VERSION "1.1.0" LANGUAGES C CXX)
 set(PROJECT_NAME_LARGE "TRAVODDS")
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_NAME_UPPER)
@@ -99,6 +99,11 @@ set(LICENSE_INSTALL_DIR ${DATA_INSTALL_DIR}/${PROJECT_NAME} CACHE PATH "Installa
 # 默认构建动态库
 ###############################################################################
 option(BUILD_SHARED_LIBS "Create shared libraries by default" ON)
+
+###############################################################################
+# 默认DDS 安全配置选项启用
+###############################################################################
+option(ENABLE_DDS_SECURITY "Enable DDS Security features" ON)
 
 ###############################################################################
 # 加载外部项目

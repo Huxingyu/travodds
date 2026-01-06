@@ -23,11 +23,35 @@
 #include "common/threads/threadpool.h"
 #include <condition_variable>
 
+#include "security/securitycommon.h"
+#include "security/authenticationlistener.h"
+#include "security/cryptotransform.h"
+#include "security/accesscontrol.h"
+#include "security/crycommonsource.h"
+#include "security/cryptokeyfactory.h"
+#include "security/cryptokeyexchange.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 
 class Participant;
 class Discovery;
 class LivelinessManager;
+
+#ifdef DDSSECURITY
+
+struct SecurityPluginInstanceImpl
+{
+    Authentication* authentication = nullptr;
+    AccessControl* access_control; //访问控制
+    CryptoKeyFactory* crypto_key_factory;
+    CryptoKeyExchange* crypto_key_exchange;
+    CryptoTransform* crypto_transform;
+    Time_t retry_time;
+    Time_t max_wait_time;
+    unsigned int max_retry_number;
+};
+
+#endif // DDSSECURITY
 
 /**
  * @brief DomainParticipantImpl类是DomainParticipant类的子类和功能具体实现，
@@ -42,11 +66,22 @@ public:
      * @param [in] qos	       DomainParticipant Qos。
      * @param [in] listener	   DomainParticipant监听器。
      * @param [in] mask		   StatusMask位掩码。
+     * @param [in] secPlugin   安全插件实例。
      */
+#ifdef DDSSECURITY
     DomainParticipantImpl(DomainId_t domainId,
         const DomainParticipantQos& qos,
         DomainParticipantListener* listener,
-        StatusMask mask);
+        StatusMask mask,
+        const GUID_t& guid,
+        DDSSecurityPluginInstance* secPlugin);
+#endif // DDSSECURITY
+
+    DomainParticipantImpl(DomainId_t domainId,
+        const DomainParticipantQos& qos,
+        DomainParticipantListener* listener,
+        StatusMask mask,
+        const GUID_t& guid);
 
     /**
      * @brief 析构函数。
@@ -670,6 +705,28 @@ public:
      */
     std::shared_ptr<LivelinessManager> GetLivelinessManager();
 
+#ifdef DDSSECURITY
+
+    /**
+     * @brief 安全检测。
+     *
+     * @return 检测失败则返回RETCODE_OK 失败返回RETCODE_ERROR。
+     */
+    ReturnCode_t security_check();
+
+    std::shared_ptr<Discovery> GetDiscovery();
+
+    DomainId_t GetDomainId();
+
+    /**
+     * @brief qos安全相关配置检测。
+     *
+     * @return 检测qos安全相关配置完整则返回true 否则返回false。
+     */
+    bool ExistSecConfig();
+#endif // DDSSECURITY
+
+
 private:
     DomainId_t domainId_ = ~0;
     DomainParticipantQos qos_;
@@ -709,6 +766,35 @@ private:
 
     std::map<InstanceHandle_t, std::unique_ptr<SubscriberImpl>>subHandles_;
     std::map<InstanceHandle_t, std::unique_ptr<PublisherImpl>> pubHandles_;
+public:
+#ifdef DDSSECURITY
+
+    /** @brief 指明该DomainParticipant是否启用了安全插件 配置正确的安全插件和安全配置则为true */
+    bool enableDDSSec_;
+    /** @brief 安全插件实例 */
+    SecurityPluginInstanceImpl secPlugin_;
+    /** @brief 身份验证相关句柄 唯一标识域参与者认证状态 通过插件接口validate_local_identity生成*/
+    IdentityHandle identityHdl_ = NULL;
+    /** @brief 访问控制相关句柄 */
+    PermissionsHandle permissionHdl_ = NULL;
+    /** @brief 加密相关句柄 */
+    ParticipantCryptoHandle cryptoHdl_ = NULL;
+    /** @brief 身份验证令牌 包含身份摘要信息(初步身份标识)*/
+    IdentityToken identityToken_;
+    /** @brief 访问控制令牌 */
+    PermissionsToken permissionsToken_;
+    /** @brief 访问控制令牌 */
+    PermissionsCredentialToken permissionCredentialToken_;
+    /** @brief 安全相关属性 */
+    ParticipantSecurityAttributes secAttributes_;
+    typedef std::vector<ParticipantCryptoHandle> SecParticipantCryptoHandleList;
+    /** @brief 该DomainParticipant发现的启用安全的其他DomainParticipant列表 */
+    SecParticipantCryptoHandleList secParticipants_;
+    /** @brief RTPS消息加密属性 */
+    CryptoRtpsMessageAttributes rtpsCryptoAttr_;
+    bool securityCheckRes_;
+
+#endif // DDSSECURITY
 
 };
 TRAVODDS_NAMESPACE_END

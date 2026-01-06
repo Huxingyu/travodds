@@ -173,7 +173,7 @@ public:
      *
      * @return DomainParticipant指针。
      */
-    const DomainParticipant* get_participant() const;
+    DomainParticipant* get_participant();
 
     /**
      * @brief 删除所有包含的DataReader。

@@ -25,6 +25,7 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class Timer;
 class FlowControlManager;
 class FlowRateLimitedManager;
 
@@ -51,7 +52,7 @@ public:
 	 * @param [in] id 域ID。
 	 * @param [in] threadPool 线程池指针。
 	 */
-	Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool);
+	Participant(DomainId_t id, const GUID_t& guid, std::shared_ptr<ThreadPool> threadPool);
 
 	// Participant(const Participant&) = delete ;
 	/**
@@ -145,6 +146,10 @@ public:
 	 */
 	ReturnCode_t AddRemoteWriter(const DiscoveredWriterData& data);
 
+#ifdef DDSSECURITY
+	ReturnCode_t AddRemoteSecureWriter(const DiscoveredWriterSecureData& data);
+#endif // DDSSECURITY
+
 	/**
 	 * @brief 添加远端Reader的信息到远端Reader存储容器中。
 	 *  在添加前需与本地Writer进行匹配判断（数据类型、主题名、Qos配置等），判断结果一致方可添加。
@@ -154,6 +159,10 @@ public:
 	 * @return RETCODE_OK。
 	 */
 	ReturnCode_t AddRemoteReader(const DiscoveredReaderData& data);
+
+#ifdef DDSSECURITY
+	ReturnCode_t AddRemoteSecureReader(const DiscoveredReaderSecureData& data);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 从远端Writer存储容器中删除远端Writer。
@@ -230,17 +239,6 @@ public:
 	GUID_t GenerateGuid(const InstanceHandle_t& handle);
 
 	/**
-	 * @brief GUID前缀GuidPrefix_t生成。
-	 *	根据domainId和instanceId生成对应的GUID前缀。
-	 *
-	 * @param [in] domainId 域ID。
-	 * @param [in] instanceId 实例ID 。
-	 *
-	 * @return RETCODE_OK。
-	 */
-	ReturnCode_t GenerateGuidPrefix(int32_t domainId, int32_t instanceId);
-
-	/**
 	 * @brief 获取GUID前缀。
 	 *
 	 * @return GUID前缀值。
@@ -300,7 +298,9 @@ public:
 	 * @param [in] subData 远端Reader配置信息。
 	 */
 	void addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData);
-
+#ifdef DDSSECURITY
+	void addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderSecureData& subData);
+#endif // DDSSECURITY
 	/**
 	 * @brief 判断本地Reader的信息是否与远端Writer匹配，匹配则存储到远端Writer存储容器中。
 	 *
@@ -308,7 +308,9 @@ public:
 	 * @param [in] pubData 远端Writer配置信息。
 	 */
 	void addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData);
-
+#ifdef DDSSECURITY
+	void addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterSecureData& pubData);
+#endif // DDSSECURITY
 	/**
 	 * @brief 获取网络传输模块对象。
 	 *
@@ -425,6 +427,17 @@ public:
 
 	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const;
 	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
+
+#ifdef DDSSECURITY
+	std::map<EntityId_t, std::shared_ptr<Writer>>* GetWriterMap()
+	{
+		return &writers_;
+	}
+	std::map<EntityId_t, std::shared_ptr<Reader>>* GetReaderMap()
+	{
+		return &readers_;
+	}
+#endif // DDSSECURITY
 private:
 	DomainParticipantQos qos_;
 
@@ -446,14 +459,19 @@ private:
 	std::map<std::string, std::vector<SubscriptionBuiltinTopicData> > localReaders_;
 	std::map<std::string, std::vector<PublicationBuiltinTopicData> > localWriters_;
 
+	// 本地缓存发现的远端DiscoveredReaderData和DiscoveredWriterData
 	std::map<GUID_t, DiscoveredReaderData> remoteReaders_;
 	std::map<GUID_t, DiscoveredWriterData> remoteWriters_;
-
-
+#ifdef DDSSECURITY
+	std::map<GUID_t, DiscoveredReaderSecureData> remoteSecureReaders_;
+	std::map<GUID_t, DiscoveredWriterSecureData> remoteSecureWriters_;
+#endif // DDSSECURITY
 	// const DomainParticipantImpl* const domainImpl_ ;
     std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
 
     std::unique_ptr<FlowControlManager> flowControlManager_;
+
+	std::shared_ptr<Timer> hbTimer_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	
@@ -487,6 +505,12 @@ private:
 
 	/* 互斥访问matchEntitys_ */
 	mutable std::mutex mtxMatchEntitys_;
+
+#ifdef DDSSECURITY
+public:
+	//新增所属域参与者
+	DomainParticipantImpl* participantImpl_;
+#endif // DDSSECURITY
 };
 
 TRAVODDS_NAMESPACE_END

@@ -51,6 +51,19 @@ struct DiscoveredWriterData
 	int32_t dataMaxSizeSerialized;
 };
 
+#ifdef DDSSECURITY
+struct DiscoveredWriterSecureData
+{
+	PublicationBuiltinTopicSecureData ddsPublicationData;
+	GUID_t remoteWriterGuid;
+	/* rtps v2.5 Figure 8.30 */
+	GUID_t remoteGroupGuid;
+	LocatorSeq unicastLocatorList;
+	LocatorSeq multicastLocatorList;
+	int32_t dataMaxSizeSerialized;
+};
+#endif // DDSSECURITY
+
 struct DiscoveredReaderData
 {
 	SubscriptionBuiltinTopicData ddsSubscriptionData;
@@ -61,6 +74,19 @@ struct DiscoveredReaderData
 	LocatorSeq multicastLocatorList;
 	ContentFilterProperty_t contentFilter;
 };
+
+#ifdef DDSSECURITY
+struct DiscoveredReaderSecureData
+{
+	SubscriptionBuiltinTopicSecureData ddsSubscriptionData;
+	/* rtps v2.5 Figure 8.30 */
+	GUID_t remoteReaderGuid;
+	GUID_t remoteGroupGuid;
+	LocatorSeq unicastLocatorList;
+	LocatorSeq multicastLocatorList;
+	ContentFilterProperty_t contentFilter;
+};
+#endif // DDSSECURITY
 
 struct DiscoveredTopicData
 {
