@@ -23,6 +23,15 @@ ParameterList::ParameterList(const SPDPdiscoveredParticipantData& data, const En
 	if(!data.ddsParticipantData.sys_info.empty()) {
 		AddParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
 	}
+
+#ifdef DDSSECURITY
+	AddParameter(ParameterId::PID_IDENTITY_TOKEN, data.ddsParticipantData.identity_token);
+
+	AddParameter(ParameterId::PID_PERMISSIONS_TOKEN, data.ddsParticipantData.permissions_token);
+
+	AddParameter(ParameterId::PID_PARTICIPANT_SECURITY_INFO, data.ddsParticipantData.security_info);
+#endif // DDSSECURITY
+
 	//PID_DOMAIN_ID : DomainId_t
 	if (data.domainId != DOMAIN_ID_UNKNOWN) {
 		AddParameter(ParameterId::PID_DOMAIN_ID, data.domainId);
@@ -217,6 +226,163 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	}
 }
 
+#ifdef DDSSECURITY
+ParameterList::ParameterList(const DiscoveredWriterSecureData& data, const EndiannessKind& endian)
+	: msgEndian_(endian)
+{
+	const PublicationBuiltinTopicSecureData& pubData = data.ddsPublicationData;
+	//PID_USER_DATA : UserDataQosPolicy
+	if (!pubData.user_data.value.empty()) {
+		AddParameter(ParameterId::PID_USER_DATA, pubData.user_data);
+	}
+	//PID_TOPIC_NAME : string
+	if (!pubData.topic_name.empty()) {
+		AddParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
+	}
+	//PID_TYPE_NAME : string
+	if (!pubData.type_name.empty()) {
+		AddParameter(ParameterId::PID_TYPE_NAME, pubData.type_name);
+	}
+	//PID_GROUP_DATA : GroupDataQosPolicy
+	if (!pubData.group_data.value.empty()) {
+		AddParameter(ParameterId::PID_GROUP_DATA, pubData.group_data);
+	}
+	//PID_TOPIC_DATA : TopicDataQosPolicy
+	if (!pubData.topic_data.value.empty()) {
+		AddParameter(ParameterId::PID_TOPIC_DATA, pubData.topic_data);
+	}
+	//PID_DURABILITY : DurabilityQosPolicy
+	AddParameter(ParameterId::PID_DURABILITY, pubData.durability);
+	//PID_DURABILITY_SERVICE : DurabilityServiceQosPolicy
+	AddParameter(ParameterId::PID_DURABILITY_SERVICE, pubData.durability_service);
+	//PID_DEADLINE : DeadlineQosPolicy
+	AddParameter(ParameterId::PID_DEADLINE, pubData.deadline);
+	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
+	AddParameter(ParameterId::PID_LATENCY_BUDGET, pubData.latency_budget);
+	//PID_LIVELINESS : LivelinessQosPolicy
+	AddParameter(ParameterId::PID_LIVELINESS, pubData.liveliness);
+	//PID_RELIABILITY : ReliabilityQosPolicy
+	AddParameter(ParameterId::PID_RELIABILITY, pubData.reliability);
+	//PID_LIFESPAN : LifespanQosPolicy
+	AddParameter(ParameterId::PID_LIFESPAN, pubData.lifespan);
+	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
+	AddParameter(ParameterId::PID_DESTINATION_ORDER, pubData.destination_order);
+	//PID_OWNERSHIP : OwnershipQosPolicy
+	AddParameter(ParameterId::PID_OWNERSHIP, pubData.ownership);
+	//PID_OWNERSHIP_STRENGTH : OwnershipStrengthQosPolicy
+	AddParameter(ParameterId::PID_OWNERSHIP_STRENGTH, pubData.ownership_strength);
+	//PID_PRESENTATION : PresentationQosPolicy
+	AddParameter(ParameterId::PID_PRESENTATION, pubData.presentation);
+	//PID_PARTITION : PartitionQosPolicy
+	if (!pubData.partition.name.empty()) {
+		AddParameter(ParameterId::PID_PARTITION, pubData.partition);
+	}
+
+	//新增
+	AddParameter(ParameterId::PID_DATA_TAGS, pubData.data_tags);
+	AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, pubData.security_info);
+
+	//PID_UNICAST_LOCATOR : LocatorSeq
+	if (!data.unicastLocatorList.empty()) {
+		AddParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
+	}
+	//PID_MULTICAST_LOCATOR  : LocatorSeq
+	if (!data.multicastLocatorList.empty()) {
+		AddParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
+	}
+	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
+	AddParameter(ParameterId::PID_PARTICIPANT_GUID, pubData.participant_key);
+	//PID_GROUP_GUID : GUID_t
+	if (data.remoteGroupGuid != GUID_UNKNOWN) {
+		AddParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
+	}
+	//PID_GROUP_ENTITY_ID : EntityId_t
+	if (data.remoteGroupGuid.entityId != ENTITYID_UNKNOWN) {
+		AddParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
+	}
+	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
+	AddParameter(ParameterId::PID_ENDPOINT_GUID, pubData.key);
+	//PID_DATA_MAX_SIZE_SERIALIZED : int32_t
+	AddParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
+}
+ParameterList::ParameterList(const DiscoveredReaderSecureData& data, const EndiannessKind& endian)
+	: msgEndian_(endian)
+{
+	const SubscriptionBuiltinTopicSecureData& subData = data.ddsSubscriptionData;
+	//PID_USER_DATA : UserDataQosPolicy
+	if (!subData.user_data.value.empty()) {
+		AddParameter(ParameterId::PID_USER_DATA, subData.user_data);
+	}
+	//PID_TOPIC_NAME : string
+	if (!subData.topic_name.empty()) {
+		AddParameter(ParameterId::PID_TOPIC_NAME, subData.topic_name);
+	}
+	//PID_TYPE_NAME : string
+	if (!subData.type_name.empty()) {
+		AddParameter(ParameterId::PID_TYPE_NAME, subData.type_name);
+	}
+	//PID_GROUP_DATA : GroupDataQosPolicy
+	if (!subData.group_data.value.empty()) {
+		AddParameter(ParameterId::PID_GROUP_DATA, subData.group_data);
+	}
+	//PID_TOPIC_DATA : TopicDataQosPolicy
+	if (!subData.topic_data.value.empty()) {
+		AddParameter(ParameterId::PID_TOPIC_DATA, subData.topic_data);
+	}
+	//PID_DURABILITY : DurabilityQosPolicy
+	AddParameter(ParameterId::PID_DURABILITY, subData.durability);
+	//PID_DEADLINE : DeadlineQosPolicy
+	AddParameter(ParameterId::PID_DEADLINE, subData.deadline);
+	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
+	AddParameter(ParameterId::PID_LATENCY_BUDGET, subData.latency_budget);
+	//PID_LIVELINESS : LivelinessQosPolicy
+	AddParameter(ParameterId::PID_LIVELINESS, subData.liveliness);
+	//PID_RELIABILITY : ReliabilityQosPolicy
+	AddParameter(ParameterId::PID_RELIABILITY, subData.reliability);
+	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
+	AddParameter(ParameterId::PID_DESTINATION_ORDER, subData.destination_order);
+	//PID_OWNERSHIP : OwnershipQosPolicy
+	AddParameter(ParameterId::PID_OWNERSHIP, subData.ownership);
+	//PID_PRESENTATION : PresentationQosPolicy
+	AddParameter(ParameterId::PID_PRESENTATION, subData.presentation);
+	//PID_PARTITION : PartitionQosPolicy
+	if (!subData.partition.name.empty()) {
+		AddParameter(ParameterId::PID_PARTITION, subData.partition);
+	}
+
+	AddParameter(ParameterId::PID_DATA_TAGS, subData.data_tags);
+	AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, subData.security_info);
+
+	//PID_TIME_BASED_FILTER : TimeBasedFilterQosPolicy
+	AddParameter(ParameterId::PID_TIME_BASED_FILTER, subData.time_based_filter);
+	//PID_UNICAST_LOCATOR : LocatorSeq
+	if (!data.unicastLocatorList.empty()) {
+		AddParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
+	}
+	//PID_MULTICAST_LOCATOR  : LocatorSeq
+	if (!data.multicastLocatorList.empty()) {
+		AddParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
+	}
+	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
+	AddParameter(ParameterId::PID_PARTICIPANT_GUID, subData.participant_key);
+	//PID_GROUP_GUID : GUID_t
+	if (data.remoteGroupGuid != GUID_UNKNOWN) {
+		AddParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
+	}
+	//PID_GROUP_ENTITY_ID : EntityId_t
+	if (data.remoteGroupGuid.entityId != ENTITYID_UNKNOWN) {
+		AddParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
+	}
+	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
+	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
+	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
+	/* wangyi fastdds 适配 添加过滤 */
+	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
+		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
+	}
+}
+#endif // DDSSECURITY
+
 ParameterList::ParameterList(const DiscoveredTopicData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
 {
@@ -265,6 +431,13 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 	GetParameter(ParameterId::PID_USER_DATA, data.ddsParticipantData.user_data);
 	//PID_PROPERTY_LIST : PropertySeq
 	GetParameter(ParameterId::PID_PROPERTY_LIST, data.ddsParticipantData.sys_info);
+#ifdef DDSSECURITY
+	GetParameter(ParameterId::PID_IDENTITY_TOKEN, data.ddsParticipantData.identity_token);
+	GetParameter(ParameterId::PID_PERMISSIONS_TOKEN, data.ddsParticipantData.permissions_token);
+	GetParameter(ParameterId::PID_PARTICIPANT_SECURITY_INFO, data.ddsParticipantData.security_info);
+	//contains_security_data由域参与者是否带安全决定
+	data.ddsParticipantData.contains_security_data = data.ddsParticipantData.security_info.participant_security_atributes != 0;
+#endif // DDSSECURITY
 	//PID_DOMAIN_ID : DomainId_t
 	GetParameter(ParameterId::PID_DOMAIN_ID, data.domainId);
 	//ID_DOMAIN_TAG : string
@@ -396,6 +569,119 @@ void ParameterList::GetDiscoveredData(DiscoveredReaderData& data)
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
 	GetParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
 }
+
+#ifdef DDSSECURITY
+void ParameterList::GetDiscoveredSecureData(DiscoveredWriterSecureData& data)
+{
+	PublicationBuiltinTopicSecureData& pubData = data.ddsPublicationData;
+	//PID_USER_DATA : UserDataQosPolicy
+	GetParameter(ParameterId::PID_USER_DATA, pubData.user_data);
+	//PID_TOPIC_NAME : string
+	GetParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
+	//PID_TYPE_NAME : string
+	GetParameter(ParameterId::PID_TYPE_NAME, pubData.type_name);
+	//PID_GROUP_DATA : GroupDataQosPolicy
+	GetParameter(ParameterId::PID_GROUP_DATA, pubData.group_data);
+	//PID_TOPIC_DATA : TopicDataQosPolicy
+	GetParameter(ParameterId::PID_TOPIC_DATA, pubData.topic_data);
+	//PID_DURABILITY : DurabilityQosPolicy
+	GetParameter(ParameterId::PID_DURABILITY, pubData.durability);
+	//PID_DURABILITY_SERVICE : DurabilityServiceQosPolicy
+	GetParameter(ParameterId::PID_DURABILITY_SERVICE, pubData.durability_service);
+	//PID_DEADLINE : DeadlineQosPolicy
+	GetParameter(ParameterId::PID_DEADLINE, pubData.deadline);
+	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
+	GetParameter(ParameterId::PID_LATENCY_BUDGET, pubData.latency_budget);
+	//PID_LIVELINESS : LivelinessQosPolicy
+	GetParameter(ParameterId::PID_LIVELINESS, pubData.liveliness);
+	//PID_RELIABILITY : ReliabilityQosPolicy
+	GetParameter(ParameterId::PID_RELIABILITY, pubData.reliability);
+	//PID_LIFESPAN : LifespanQosPolicy
+	GetParameter(ParameterId::PID_LIFESPAN, pubData.lifespan);
+	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
+	GetParameter(ParameterId::PID_DESTINATION_ORDER, pubData.destination_order);
+	//PID_OWNERSHIP : OwnershipQosPolicy
+	GetParameter(ParameterId::PID_OWNERSHIP, pubData.ownership);
+	//PID_OWNERSHIP_STRENGTH : OwnershipStrengthQosPolicy
+	GetParameter(ParameterId::PID_OWNERSHIP_STRENGTH, pubData.ownership_strength);
+	//PID_PRESENTATION : PresentationQosPolicy
+	GetParameter(ParameterId::PID_PRESENTATION, pubData.presentation);
+	//PID_PARTITION : PartitionQosPolicy
+	GetParameter(ParameterId::PID_PARTITION, pubData.partition);
+
+	//新增解析出结构体
+	GetParameter(ParameterId::PID_DATA_TAGS, pubData.data_tags);
+	GetParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, pubData.security_info);
+
+	//PID_UNICAST_LOCATOR : LocatorSeq
+	GetParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
+	//PID_MULTICAST_LOCATOR  : LocatorSeq
+	GetParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
+	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
+	GetParameter(ParameterId::PID_PARTICIPANT_GUID, pubData.participant_key);
+	//PID_GROUP_GUID : GUID_t
+	GetParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
+	//PID_GROUP_ENTITY_ID : EntityId_t
+	GetParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
+	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
+	GetParameter(ParameterId::PID_ENDPOINT_GUID, pubData.key);
+	//PID_DATA_MAX_SIZE_SERIALIZED : int32_t
+	GetParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
+}
+
+void ParameterList::GetDiscoveredSecureData(DiscoveredReaderSecureData& data)
+{
+	SubscriptionBuiltinTopicSecureData& subData = data.ddsSubscriptionData;
+	//PID_USER_DATA : UserDataQosPolicy
+	GetParameter(ParameterId::PID_USER_DATA, subData.user_data);
+	//PID_TOPIC_NAME : string
+	GetParameter(ParameterId::PID_TOPIC_NAME, subData.topic_name);
+	//PID_TYPE_NAME : string
+	GetParameter(ParameterId::PID_TYPE_NAME, subData.type_name);
+	//PID_GROUP_DATA : GroupDataQosPolicy
+	GetParameter(ParameterId::PID_GROUP_DATA, subData.group_data);
+	//PID_TOPIC_DATA : TopicDataQosPolicy
+	GetParameter(ParameterId::PID_TOPIC_DATA, subData.topic_data);
+	//PID_DURABILITY : DurabilityQosPolicy
+	GetParameter(ParameterId::PID_DURABILITY, subData.durability);
+	//PID_DEADLINE : DeadlineQosPolicy
+	GetParameter(ParameterId::PID_DEADLINE, subData.deadline);
+	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
+	GetParameter(ParameterId::PID_LATENCY_BUDGET, subData.latency_budget);
+	//PID_LIVELINESS : LivelinessQosPolicy
+	GetParameter(ParameterId::PID_LIVELINESS, subData.liveliness);
+	//PID_RELIABILITY : ReliabilityQosPolicy
+	GetParameter(ParameterId::PID_RELIABILITY, subData.reliability);
+	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
+	GetParameter(ParameterId::PID_DESTINATION_ORDER, subData.destination_order);
+	//PID_OWNERSHIP : OwnershipQosPolicy
+	GetParameter(ParameterId::PID_OWNERSHIP, subData.ownership);
+	//PID_PRESENTATION : PresentationQosPolicy
+	GetParameter(ParameterId::PID_PRESENTATION, subData.presentation);
+	//PID_PARTITION : PartitionQosPolicy
+	GetParameter(ParameterId::PID_PARTITION, subData.partition);
+
+	GetParameter(ParameterId::PID_DATA_TAGS, subData.data_tags);
+	GetParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, subData.security_info);
+
+	//PID_TIME_BASED_FILTER : TimeBasedFilterQosPolicy
+	GetParameter(ParameterId::PID_TIME_BASED_FILTER, subData.time_based_filter);
+	//PID_UNICAST_LOCATOR : LocatorSeq
+	GetParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
+	//PID_MULTICAST_LOCATOR  : LocatorSeq
+	GetParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
+	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
+	GetParameter(ParameterId::PID_PARTICIPANT_GUID, subData.participant_key);
+	//PID_GROUP_GUID : GUID_t
+	GetParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
+	//PID_GROUP_ENTITY_ID : EntityId_t
+	GetParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
+	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
+	GetParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
+	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
+	GetParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
+}
+#endif // DDSSECURITY
 
 void ParameterList::GetDiscoveredData(DiscoveredTopicData& data)
 {
@@ -911,11 +1197,118 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			AddParameter(ParameterId::PID_STATUS_INFO, data);
 			break;
 		}
+#ifdef DDSSECURITY
+		case ParameterId::PID_PERMISSIONS_TOKEN: {
+			DataHolder data;
+			uint32_t inOffset = 0;
+			inOffset += ReaderString(msg + offset + inOffset, data.class_id); //解析class id
+			uint32_t num = 0;
+			ReadUInt32(msg + offset + inOffset, num); //properties长度
+			inOffset += 4;
+			//逐个生成properties元素
+			for (uint32_t i = 0; i < num; i++) {
+				Property_t curProperty;
+				inOffset += ReaderString(msg + offset + inOffset, curProperty.name);
+				inOffset += ReaderString(msg + offset + inOffset, curProperty.value);
+				data.properties.push_back(curProperty);
+			}
 
+			ReadUInt32(msg + offset + inOffset, num); //binary_properties长度
+			inOffset += 4;
+			//逐个生成binary_properties元素
+			for (uint32_t i = 0; i < num; i++) {
+				BinaryProperty_t curBinaryProperty;
+				inOffset += ReaderString(msg + offset + inOffset, curBinaryProperty.name);
+				uint32_t binary_properties_value_num;
+				ReadUInt32(msg + offset + inOffset, binary_properties_value_num);
+				inOffset += 4;
+				for (uint32_t j = 0; j < binary_properties_value_num; j++) {
+					curBinaryProperty.value[j] = *(msg + offset + inOffset);
+					inOffset += 1;
+				}
+				data.binary_properties.push_back(curBinaryProperty);
+			}
+			AddParameter(ParameterId::PID_PERMISSIONS_TOKEN, data);
+			break;
+		}
+		case ParameterId::PID_IDENTITY_TOKEN: {
+			DataHolder data;
+			uint32_t inOffset = 0;
+			inOffset += ReaderString(msg + offset + inOffset, data.class_id); //解析class id
+			uint32_t num = 0;
+			ReadUInt32(msg + offset + inOffset, num); //properties长度
+			inOffset += 4;
+			//逐个生成properties元素
+			for (uint32_t i = 0; i < num; i++) {
+				Property_t curProperty;
+				inOffset += ReaderString(msg + offset + inOffset, curProperty.name);
+				inOffset += ReaderString(msg + offset + inOffset, curProperty.value);
+				data.properties.push_back(curProperty);
+			}
+
+			ReadUInt32(msg + offset + inOffset, num); //binary_properties长度
+			inOffset += 4;
+			//逐个生成binary_properties元素
+			for (uint32_t i = 0; i < num; i++) {
+				BinaryProperty_t curBinaryProperty;
+				inOffset += ReaderString(msg + offset + inOffset, curBinaryProperty.name);
+				uint32_t binary_properties_value_num;
+				ReadUInt32(msg + offset + inOffset, binary_properties_value_num);
+				inOffset += 4;
+				for (uint32_t j = 0; j < binary_properties_value_num; j++) {
+					curBinaryProperty.value[j] = *(msg + offset + inOffset);
+					inOffset += 1;
+				}
+				data.binary_properties.push_back(curBinaryProperty);
+			}
+			AddParameter(ParameterId::PID_IDENTITY_TOKEN, data);
+			break;
+		}
+		case ParameterId::PID_PARTICIPANT_SECURITY_INFO: {
+			ParticipantSecurityInfo data;
+			uint32_t inOffset = 0;
+			ReadUInt32(msg + offset + inOffset, data.participant_security_atributes);
+			inOffset += 4;
+			ReadUInt32(msg + offset + inOffset, data.plugin_participant_security_attributes);
+			inOffset += 4;
+			AddParameter(ParameterId::PID_PARTICIPANT_SECURITY_INFO, data);
+			break;
+		}
+		case ParameterId::PID_DATA_TAGS: {
+			DataTags_t data;
+			uint32_t inOffset = 0;
+
+			uint32_t num = 0;
+			ReadUInt32(msg + offset + inOffset, num); //tags长度
+			//tags.length(num);
+			inOffset += 4;
+
+			//逐个生成tags元素
+			for (uint32_t i = 0; i < num; i++) {
+				Tag_t temp;
+				inOffset += ReaderString(msg + offset + inOffset, temp.name);
+				inOffset += ReaderString(msg + offset + inOffset, temp.value);
+
+				data.tags.push_back(temp);
+			}
+			AddParameter(ParameterId::PID_DATA_TAGS, data);
+			break;
+		}
+		case ParameterId::PID_ENDPOINT_SECURITY_INFO: {
+			EndpointSecurityInfo data;
+			uint32_t inOffset = 0;
+			ReadUInt32(msg + offset + inOffset, data.endpoint_security_attributes);
+			inOffset += 4;
+			ReadUInt32(msg + offset + inOffset, data.plugin_endpoint_security_attributes);
+			inOffset += 4;
+			AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, data);
+			break;
+		}
+#endif // DDSSECURITY
 		default: 
 			break;
 		}
-		offset += len;
+ 		offset += len;
 	}
 }
 

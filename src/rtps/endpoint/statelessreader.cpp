@@ -3,7 +3,11 @@
 #include "rtps/endpoint/participant.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
-
+#include "dcps/domain/domainparticipantimpl.h"
+#ifdef DDSSECURITY
+#include "dcps/subscribe/subscriberimpl.h"
+#include "dcps/publish/publisherimpl.h"
+#endif
 USING_TRAVODDS_NAMESPACE;
 
 
@@ -60,7 +64,57 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 		memcpy(buffer->buffer, data, len);
 	}
 
+#ifdef DDSSECURITY
+	//负载解密
+	GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
+	SerializedBuffer* plainData = new SerializedBuffer;
+	plainData->writer_position = len;
+	plainData->buffer_size = len;
+	MemoryPool::GetInstance()->getBuffer(len, plainData->origin_buffer);
+	plainData->buffer = plainData->origin_buffer;
+	if (readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected) {
+		SecurityException secExce;
+		secExce.message[0] = '\0';
+		WriterSampleList* matchWriter = nullptr;
+		auto itor = datareader_->writerSampleList_.find(guid);
+		if (itor != datareader_->writerSampleList_.end()) {
+			matchWriter = itor->second;
+		}
+		else {
+			MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
+			TRAVODDS_LOG(LOG_ERROR, "cryptoHdl of WriterSampleList matchWriter = nullptr");
+			return -1;
+		}
+		DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+		if (!participant->secPlugin_.crypto_transform->decode_serialized_payload(
+			plainData,
+			buffer,
+			1,
+			NULL, // @todo: inline qos
+			0,
+			datareader_->cryptoHdl_,
+			//proxy->m_cryptoHdl,
+			matchWriter->cryptoHdl,
+			&secExce))
+		{
+			//delete[] plainData->buffer;
+			MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
+			return -4;
+		}
+		plainData->writer_position = plainData->buffer_size;
+		MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+	}
+	std::shared_ptr<CacheChange> cache;
+	if (readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected) {
+		cache = new_change(kind, plainData, dataHandle, pubHandle, headerMsg.timestamp);
+	}
+	else {
+		cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
+	}
+#else
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
+#endif // DDSSECURITY
+
 	cache->sequenceNumber = dataMsg.writerSN;
 
 	//QOS处理
@@ -190,6 +244,54 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		std::shared_ptr<CacheChange> dataFragCache = itor->second;
 		dataFragCaches_.erase(itor);
 
+#ifdef DDSSECURITY
+		//dataFragCache的SerializedBuffer* serializedBuffer负载解密
+        GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
+        bool needDecodePayload = readerGuid.IsUserDefinedEntity() && datareader_->secAttributes_.is_payload_protected;
+        SerializedBuffer *plainData = NULL;
+        if (needDecodePayload) {
+            //plainData = new SerializedBuffer;
+            //plainData->buffer_size = dataFragCache->serializedBuffer->buffer_size;
+            //plainData->buffer = new char[plainData->buffer_size];
+			plainData = new SerializedBuffer;
+			plainData->writer_position = dataFragCache->serializedBuffer->buffer_size;
+			plainData->buffer_size = dataFragCache->serializedBuffer->buffer_size;
+			MemoryPool::GetInstance()->getBuffer(dataFragCache->serializedBuffer->buffer_size, plainData->origin_buffer);
+			plainData->buffer = plainData->origin_buffer;
+            SecurityException secExce;
+            secExce.message[0] = '\0';
+            WriterSampleList* matchWriter = nullptr;
+            auto itor = datareader_->writerSampleList_.find(guid);
+            if (itor != datareader_->writerSampleList_.end()) {
+                matchWriter = itor->second;
+            }
+            else {
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
+				TRAVODDS_LOG(LOG_ERROR, "m_cryptoHdl of WriterSampleList matchWriter = nullptr");
+                return -1;
+            }
+			DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+            if (!dp->secPlugin_.crypto_transform->decode_serialized_payload(
+                plainData,
+                dataFragCache->serializedBuffer,
+                1,
+                NULL, // @todo: inline qos
+                0,
+                datareader_->cryptoHdl_,
+                //proxy->m_cryptoHdl,
+                matchWriter->cryptoHdl,
+                &secExce))
+            {
+                //delete[] plainData->buffer;
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
+                return -4;
+            }
+            plainData->writer_position = plainData->buffer_size;
+			//MEM 替换之前释放原先的
+			MemoryPool::GetInstance()->releaseBuffer(dataFragCache->serializedBuffer->origin_buffer);
+            dataFragCache->serializedBuffer = plainData;
+        }
+#endif // DDSSECURITY
 		if(datareader_) {
 			datareader_->SetLastinstanceHandle(dataFragCache);
 

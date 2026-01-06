@@ -14,6 +14,11 @@
 #include "rtps/discovery/discovery.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
+#ifdef DDSSECURITY
+#include "security/cryptotransform.h"
+#include "security/securitycommon.h"
+#include "dcps/domain/domainparticipantimpl.h"
+#endif // DDSSECURITY
 #include "xtypes/dynamictypebuilderfactory.h"
 #include "xtypes/dynamictypebuilder.h"
 #include "xtypes/dynamicdatafactory.h"
@@ -54,7 +59,31 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 	TopicQos topicQos;
 	topic->get_qos(topicQos);
 	builtinData_.topic_data = topicQos.topic_data;
+	
+#ifdef DDSSECURITY
+	memcpy(builtinSecureData_.participant_key.value, &handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+	builtinSecureData_.topic_name = topic->get_name();
+	builtinSecureData_.type_name = topic->get_type_name();
+	builtinSecureData_.durability = qos.durability;
+	builtinSecureData_.durability_service = qos.durability_service;
+	builtinSecureData_.deadline = qos.deadline;
+	builtinSecureData_.latency_budget = qos.latency_budget;
+	builtinSecureData_.liveliness = qos.liveliness;
+	builtinSecureData_.reliability = qos.reliability;
+	builtinSecureData_.lifespan = qos.lifespan;
+	builtinSecureData_.user_data = qos.user_data;
+	builtinSecureData_.ownership = qos.ownership;
+	builtinSecureData_.ownership_strength = qos.ownership_strength;
+	builtinSecureData_.destination_order = qos.destination_order;
+	builtinSecureData_.presentation = pubQos.presentation;
+	builtinSecureData_.partition = pubQos.partition;
+	builtinSecureData_.group_data = pubQos.group_data;
+	builtinSecureData_.topic_data = topicQos.topic_data;
 
+	builtinSecureData_.security_info.endpoint_security_attributes = 0;
+	builtinSecureData_.security_info.plugin_endpoint_security_attributes = 0;
+	builtinSecureData_.protected_discovery = false;
+#endif // DDSSECURITY
 }
 
 DataWriterImpl::~DataWriterImpl()
@@ -66,14 +95,34 @@ DataWriterImpl::~DataWriterImpl()
 	if (lifespanTimer_) {
 		lifespanTimer_->Exit();
 	}
-
-	writer_->SetRelatedDataWriter(nullptr);
+	if (enable_) {
+		writer_->SetRelatedDataWriter(nullptr);
+	}
 	topic_->Dereference();
 
     if (listener_) {
         //delete listener_;
         listener_ = nullptr;
     }
+#ifdef DDSSECURITY
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
+	if (dp->enableDDSSec_ && statistic_.enableSec)
+	{
+		GUID_t dwGuid = Conversion::ToGuid(get_instance_handle());
+		if (dwGuid.IsSecureBuiltinEntity()
+			&& dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER
+			|| statistic_.secAttributes.is_payload_protected
+			|| statistic_.secAttributes.is_submessage_protected)
+		{
+			if (statistic_.enableSec && secPlugin_ != NULL)
+			{
+				SecurityException secExce;
+				secPlugin_->crypto_key_factory->unregister_datawriter(
+					cryptoHdl_, &secExce);
+			}
+		}
+	}
+#endif // DDSSECURITY
 }
 
 
@@ -165,6 +214,11 @@ InstanceHandle_t DataWriterImpl::register_instance(const void* const instance_da
 
 InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const instance_data, const Time_t& source_timestamp)
 {
+	if (enable_ == false){
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return HANDLE_NIL;
+	}
+
     InstanceHandle_t handle;
 	if (source_timestamp.sec < 0 ) {
 		return HANDLE_NIL;
@@ -175,7 +229,7 @@ InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return HANDLE_NIL;
 	}
-	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
+	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
 	SerializedBuffer *buffer = new SerializedBuffer;
 	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
@@ -216,11 +270,19 @@ ReturnCode_t DataWriterImpl::unregister_instance(const void* const instance_data
 
 ReturnCode_t DataWriterImpl::unregister_instance_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	return UnRegisteOrDispose(instance_data, handle, source_timestamp);
 }
 
 ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return RETCODE_NOT_ENABLED;
+	}
 	if (!typeSupport_->has_key()) {
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_ILLEGAL_OPERATION;
@@ -242,6 +304,10 @@ ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandl
 
 InstanceHandle_t DataWriterImpl::lookup_instance(const void* const instance) const
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
+		return HANDLE_NIL;
+	}
 	InstanceHandle_t handle = HANDLE_NIL;
 
 	if (typeSupport_->has_key()) {
@@ -264,6 +330,10 @@ ReturnCode_t DataWriterImpl::write(const void* const instance_data, const Instan
 
 ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return RETCODE_NOT_ENABLED;
+    }
 	ReturnCode_t ret = RETCODE_ERROR;
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 
@@ -332,7 +402,118 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	bufferHeader->buffer -= CDR_ENDIANNESS_LEN;
 	bufferHeader->buffer_size += CDR_ENDIANNESS_LEN;
 
+#ifdef DDSSECURITY
+	//SerializedBuffer* encodeBuffer = new SerializedBuffer;
+	SerializedBuffer* encodeBuffer = nullptr;
+	SerializedBuffer* encodeBufferHeader = nullptr;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
+	if (!dp) {
+		TRAVODDS_LOG(LOG_ERROR, "Writer can not get_participant from Publisher", ret);
+		return RETCODE_ERROR;
+	}
+	SecurityException secExce;
+	SerializedBuffer inlineQos;
+	if (statistic_.secAttributes.is_payload_protected)
+	{
+		//计算需要加密的buffer链表长度
+		uint32_t bufferNum = 1; //需要加密的buffer链表长度
+		uint32_t totalLen = bufferHeader->buffer_size; //链表字节总数
+		SerializedBuffer* curBuffer = bufferHeader;
+		while (curBuffer->next) {
+			curBuffer = curBuffer->next;
+			bufferNum++;
+			totalLen += curBuffer->buffer_size;
+		}
+
+		CryptoTransform* cryptoTransPtr = dp->secPlugin_.crypto_transform;
+		//开辟加密后缓存空间
+		//encodeBuffer->buffer = new char[encodeSize];
+		//encodeBuffer->buffer_size = encodeSize;
+		int encodeSize = totalLen * 10 + 500;
+		ret = CreateSerializedBuffer(encodeBuffer, encodeSize);
+		if (RETCODE_OK != ret) {
+			DeleteSerializedBuffer(encodeBuffer);
+			TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
+			return ret;
+		}
+
+		if (!cryptoTransPtr->encode_serialized_payload(
+			encodeBuffer,
+			NULL,
+			//&inlineQos,
+			bufferHeader,
+			bufferNum,
+			cryptoHdl_,
+			&secExce))
+		{
+			TRAVODDS_LOG(LOG_ERROR,
+				"Write failed: failed to encode payload in DataWriter %s of Topic."
+				"\n  Code: %d"
+				"\n  Minor code: %d"
+				"\n  Message: %s",
+				secExce.code,
+				secExce.minor_code,
+				secExce.message);
+			DeleteSerializedBuffer(encodeBuffer);
+			return RETCODE_ERROR;
+		}
+		size = encodeBuffer->buffer_size - 4; //size为减去长为CDR_ENDIANNESS_LEN的端序信息
+		//加密后的单个encodeBuffer长度超限变为链表
+		int encodeSubBufferNum = encodeBuffer->buffer_size / DATAMESSAGE_LIMIT;//size / DATAMESSAGE_LIMIT;
+		if (encodeBuffer->buffer_size % DATAMESSAGE_LIMIT != 0) {
+			encodeSubBufferNum += 1;
+		}
+
+		SerializedBuffer* curEncodeSubBuffer = NULL;
+		SerializedBuffer* preEncodeSubBuffer = NULL;
+		int curEncodeSubBufferSize = 0;
+		int encodeBufferShift = 0;
+		int encodeBufferSize = encodeBuffer->buffer_size;
+		//SerializedBuffer* encodeBufferHeader = new SerializedBuffer;
+		//逐个构造链表的每一部分buffer
+		for (int i = 0; i < encodeSubBufferNum; ++i) {
+			//curEncodeSubBuffer = new SerializedBuffer;
+			curEncodeSubBuffer = nullptr; //curEncodeSubBuffer指向当前部分buffer
+			if (encodeBufferSize >= DATAMESSAGE_LIMIT * (i + 1)) {
+				curEncodeSubBufferSize = DATAMESSAGE_LIMIT;
+			}
+			else {
+				curEncodeSubBufferSize = encodeBufferSize % DATAMESSAGE_LIMIT;
+			}
+			//curEncodeSubBuffer->buffer = new char[curEncodeSubBufferSize];
+			//curEncodeSubBuffer->buffer_size = curEncodeSubBufferSize;
+			ret = CreateSerializedBuffer(curEncodeSubBuffer, curEncodeSubBufferSize); //创建当前部分buffer
+			if (RETCODE_OK != ret) {
+				DeleteSerializedBuffer(curEncodeSubBuffer);
+				TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
+				return ret;
+			}
+			//从encodeBuffer指向的buffer取出对应部分（根据偏移encodeBufferShift和计算出的长度curEncodeSubBufferSize），赋值给当前buffer
+			memcpy(curEncodeSubBuffer->buffer, encodeBuffer->buffer + encodeBufferShift, curEncodeSubBufferSize);
+			encodeBufferShift += curEncodeSubBufferSize; //更新偏移值encodeBufferShift
+			if (i == 0) { //如果当前部分buffer是第一个
+				encodeBufferHeader = curEncodeSubBuffer;
+				preEncodeSubBuffer = curEncodeSubBuffer;
+			}
+			else {
+				preEncodeSubBuffer->next = curEncodeSubBuffer;
+				preEncodeSubBuffer = curEncodeSubBuffer;
+			}
+		}
+
+		//delete[]encodeBuffer->buffer;
+		DeleteSerializedBuffer(encodeBuffer);
+	}
+	std::shared_ptr<CacheChange> cacheChange;
+	if (statistic_.secAttributes.is_payload_protected) {
+		cacheChange = writer_->NewChange(ALIVE, encodeBufferHeader, instanceHandle, source_timestamp);
+	}
+	else {
+		cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
+	}
+#else
 	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
+#endif // DDSSECURITY
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "cacheChange ret= %d", ret);
 		return RETCODE_ERROR;
@@ -382,6 +563,10 @@ ReturnCode_t DataWriterImpl::dispose(const void* const instance_data, const Inst
 
 ReturnCode_t DataWriterImpl::dispose_w_timestamp(const void* const data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	if (!enable_) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
+		return RETCODE_NOT_ENABLED;
+	}
     return UnRegisteOrDispose(data, handle, source_timestamp, true);
 }
 ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const InstanceHandle_t& handle, const Time_t& timespace, bool dispose)
@@ -466,7 +651,8 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 
 ReturnCode_t DataWriterImpl::wait_for_acknowledgments(const Duration_t& max_wait)
 {
-	if (nullptr == writer_) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	return writer_->WaitForAcknowledgments(max_wait);
@@ -504,8 +690,8 @@ const Publisher* DataWriterImpl::get_publisher() const
 
 ReturnCode_t DataWriterImpl::assert_liveliness()
 {
-	if (writer_ == nullptr) {
-		TRAVODDS_LOG(LOG_ERROR, "writer_ is nullptr");
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 
@@ -527,7 +713,8 @@ ReturnCode_t DataWriterImpl::assert_liveliness()
 
 ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTopicData& subscription_data, const InstanceHandle_t& subscription_handle)
 {
-	if (nullptr == writer_) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	if (writer_->GetMatchedSubscriptionData(subscription_data, subscription_handle)) {
@@ -538,7 +725,8 @@ ReturnCode_t DataWriterImpl::get_matched_subscription_data(SubscriptionBuiltinTo
 
 ReturnCode_t DataWriterImpl::get_matched_subscriptions(InstanceHandleSeq& subscription_handles)
 {
-	if(nullptr == writer_ ) {
+	if (enable_ == false) {
+		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
 		return RETCODE_NOT_ENABLED;
 	}
 	writer_->GetMatchedSubscriptions(subscription_handles);
@@ -594,11 +782,29 @@ ReturnCode_t DataWriterImpl::enable()
 
 	enable_ = true;
 
+	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+#ifdef DDSSECURITY
+	if (builtinSecureData_.security_info.endpoint_security_attributes != 0) {
+		DiscoveredWriterData writerData;
+		writerData.ddsPublicationData = GetBuiltinTopicData();
+		discovery->WritePublicationData(writerData);
+
+		DiscoveredWriterSecureData writerSecureData;
+		writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
+		discovery->WritePublicationSecureData(writerSecureData);
+	}
+	else {
+		DiscoveredWriterData writerData;
+		writerData.ddsPublicationData = GetBuiltinTopicData();
+		discovery->WritePublicationData(writerData);
+	}
+	
+#else
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredWriterData writerData;
 	writerData.ddsPublicationData = GetBuiltinTopicData();
-	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 	discovery->WritePublicationData(writerData);
+#endif // DDSSECURITY
 
 	return RETCODE_OK;
 }
@@ -617,7 +823,12 @@ const PublicationBuiltinTopicData& DataWriterImpl::GetBuiltinTopicData()
 {
 	return builtinData_;
 }
-
+#ifdef DDSSECURITY
+const PublicationBuiltinTopicSecureData& DataWriterImpl::GetBuiltinTopicSecureData()
+{
+    return builtinSecureData_;
+}
+#endif // DDSSECURITY
 void DataWriterImpl::SetRelatedWriter(std::shared_ptr<Writer> writer) 
 {
 	history_ = writer->GetHistoryCache();
@@ -628,6 +839,9 @@ void DataWriterImpl::SetRelatedWriter(std::shared_ptr<Writer> writer)
 
 	handle_ = Conversion::ToInstanceHandle(writer->GetGuid());
 	builtinData_.key = Conversion::ToBuiltinTopicKey(handle_);
+#ifdef DDSSECURITY
+	builtinSecureData_.key = Conversion::ToBuiltinTopicKey(handle_);
+#endif // DDSSECURITY
 }
 
 
@@ -701,7 +915,7 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
 		return RETCODE_BAD_PARAMETER;
 	}
-	// void* data, AGIDDSCdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
+	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
 	SerializedBuffer *buffer = new SerializedBuffer;
 	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
 	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
@@ -789,7 +1003,7 @@ ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHea
 ReturnCode_t DataWriterImpl::DeleteSerializedBuffer(SerializedBuffer* buffer)
 {
 	if (!buffer) {
-		TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
+		// TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
 		return RETCODE_ERROR;
 	}
 
@@ -816,3 +1030,188 @@ void DataWriterImpl::RemoveReaderFilter(const GUID_t& readerGuid)
 {
 	readerFilters_.erase(readerGuid);
 }
+
+#ifdef DDSSECURITY
+PublisherImpl* DataWriterImpl::GetParent()
+{
+	return pub_;
+}
+
+ReturnCode_t DataWriterImpl::GetSecAttributes()
+{
+	SecurityException secExce;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
+	if (dp->enableDDSSec_) {
+		secPlugin_ = &dp->secPlugin_;
+		GUID_t guid = Conversion::ToGuid(handle_);
+		if ((guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER &&
+			guid.IsSecureBuiltinEntity())
+			|| (guid.IsUserDefinedEntity()))
+		{
+			if (dp->secPlugin_.crypto_key_factory == NULL) {
+				return RETCODE_ERROR;
+			}
+			EndpointSecurityAttributes secAttr;
+			PublisherQos qos;
+			pub_->get_qos(qos);
+			if (!secPlugin_->access_control->get_datawriter_sec_attributes(
+				dp->permissionHdl_,
+				topic_->get_name(),
+				&qos.partition,
+				NULL,
+				&secAttr,
+				&secExce))
+			{
+				return RETCODE_ERROR;
+			}
+			statistic_.secAttributes.ac_endpoint_properties = secAttr.ac_endpoint_properties;
+			statistic_.secAttributes.is_write_protected = secAttr.is_write_protected;
+			statistic_.secAttributes.is_read_protected = secAttr.is_read_protected;
+			statistic_.secAttributes.is_discovery_protected = secAttr.is_discovery_protected;
+			statistic_.secAttributes.is_liveliness_protected = secAttr.is_liveliness_protected;
+			statistic_.secAttributes.is_payload_protected = secAttr.is_payload_protected;
+			//statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
+			statistic_.secAttributes.is_submessage_protected = secAttr.is_submessage_protected;
+			statistic_.secAttributes.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+			secPlugin_->access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
+			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
+			{
+				statistic_.rtpsMsgProtected = false;
+			}
+			else
+			{
+				statistic_.rtpsMsgProtected = dp->secAttributes_.is_rtps_protected;
+			}
+		}
+		else
+		{
+			statistic_.secAttributes.is_write_protected = false;
+			statistic_.secAttributes.is_read_protected = false;
+			statistic_.secAttributes.is_discovery_protected = false;
+			statistic_.secAttributes.is_liveliness_protected = false;
+			statistic_.secAttributes.is_payload_protected = false;
+			//statistic_.secAttributes.is_key_protected = false;
+			statistic_.secAttributes.is_submessage_protected = false;
+			statistic_.rtpsMsgProtected = false;
+		}
+		statistic_.enableSec = false;
+		//TODO
+		if (guid.IsSecureBuiltinEntity()
+			&& guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER
+			|| statistic_.secAttributes.is_write_protected
+			|| statistic_.secAttributes.is_read_protected
+			|| statistic_.secAttributes.is_discovery_protected
+			//|| statistic_.secAttributes.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			|| statistic_.secAttributes.is_submessage_protected
+			|| statistic_.secAttributes.is_payload_protected
+			|| statistic_.secAttributes.is_key_protected)
+		{
+			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+				unsigned int tmplen = statistic_.secAttributes.ac_endpoint_properties.size();
+				std::string tmpName = "dds.sec.builtin_endpoint_name";
+				std::string tmpValue = "BuiltinParticipantVolatileMessageSecureWriter";
+				Property_t tmpProperty;
+				tmpProperty.name = tmpName;
+				tmpProperty.value = tmpValue;
+				statistic_.secAttributes.ac_endpoint_properties.push_back(tmpProperty);
+			}
+			// register_local_datawriter
+			cryptoHdl_ = secPlugin_->crypto_key_factory->register_local_datawriter(
+				dp->cryptoHdl_,
+				&statistic_.secAttributes.ac_endpoint_properties,
+				&secExce);
+			if (cryptoHdl_ == SEC_NIL_HANDLE)
+			{
+				return RETCODE_ERROR;
+			}
+			if (statistic_.secAttributes.is_payload_protected)
+			{
+				secPlugin_->crypto_transform->get_payload_encode_attributes(
+					cryptoHdl_,
+					&statistic_.payloadEncodeAttr);
+			}
+			if (statistic_.secAttributes.is_submessage_protected)
+			{
+				secPlugin_->crypto_transform->get_datawriter_submessage_encode_attributes(
+					cryptoHdl_,
+					&statistic_.subMsgEncodeAttr);
+			}
+			if (statistic_.rtpsMsgProtected)
+			{
+				secPlugin_->crypto_transform->get_rtps_message_encode_attributes(
+					dp->cryptoHdl_,
+					&statistic_.rtpsMsgEncodeAttr);
+			}
+			statistic_.enableSec = true;
+			if (statistic_.secAttributes.is_payload_protected
+				|| statistic_.secAttributes.is_submessage_protected
+				|| statistic_.rtpsMsgProtected)
+			{
+				statistic_.encryptoMsg = true;
+			}
+		}
+	}
+	else
+	{
+		statistic_.enableSec = false;
+		statistic_.secAttributes.is_write_protected = false;
+		statistic_.secAttributes.is_read_protected = false;
+		statistic_.secAttributes.is_discovery_protected = false;
+		statistic_.secAttributes.is_liveliness_protected = false;
+		statistic_.secAttributes.is_payload_protected = false;
+		//statistic_.secAttributes.is_key_protected = false;
+		statistic_.secAttributes.is_submessage_protected = false;
+		statistic_.rtpsMsgProtected = false;
+		secPlugin_ = NULL;
+	}
+	return RETCODE_OK;
+}
+
+ReturnCode_t DataWriterImpl::FillSecureData()
+{
+	if (statistic_.enableSec) {
+		builtinSecureData_.security_info.endpoint_security_attributes =
+			EndpointSecurityAttributesToMask(&statistic_.secAttributes);
+	}
+	else
+	{
+		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
+	}
+	builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
+	return RETCODE_OK;
+}
+
+uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, const CryptoTokenSeq* tokens)
+{
+	if (readerId == NULL || tokens == NULL)
+	{
+		return -1;
+	}
+	GUID_t guid = Conversion::ToGuid(get_instance_handle());
+	if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
+	{
+		return 0;
+	}
+	auto rdIter = remoteReaders_.preparingReaders.find(*readerId);
+	if (rdIter == remoteReaders_.preparingReaders.end())
+	{
+		DataHolderSeq& tokenRef = remoteReaders_.remoteReaderCryptoToken[*readerId];
+		tokenRef = *tokens;
+		return 0;
+	}
+	SecurityException secExce;
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
+	if (!dp->secPlugin_.crypto_key_exchange->set_remote_datareader_crypto_tokens(
+		cryptoHdl_,
+		rdIter->second.cryptoHdl,
+		tokens,
+		&secExce))
+	{
+		return -3;
+	}
+	rdIter->second.readyForSecComm = true;
+	secReaders_.push_back(rdIter->second.cryptoHdl);
+	remoteReaders_.preparingReaders.erase(rdIter);
+	return 0;
+}
+#endif // DDSSECURITY

@@ -16,6 +16,9 @@
 #include "dcps/domain/domainentityimpl.h"
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
+#ifdef DDSSECURITY
+#include "security/crycommonsource.h"
+#endif // DDSSECURITY
 
 TRAVODDS_NAMESPACE_BEGIN
 class SerializedBuffer;
@@ -27,6 +30,23 @@ class DataReaderStatusManager;
 class Timer;
 class ReadConditionImpl;
 class QueryConditionImpl;
+
+#ifdef DDSSECURITY
+class Spdp;
+class SecurityPluginInstanceImpl;
+
+typedef struct WriterSampleList
+{
+	/** @brief   DataWriter的标识. */
+	GUID_t writerId;
+	/** @brief DomainParticipant所使用的加密/解密句柄 */
+	ParticipantCryptoHandle partCryptoHdl = NULL;
+	/** @brief 该DataWriter所使用的加密/解密句柄 */
+	DatawriterCryptoHandle cryptoHdl = NULL;
+	/** @brief 指明该DataWriter是否已经准备好进行通信的加密/解密，即是否已经完整获取该DataWriter的安全相关属性 */
+	bool readyForSecComm = false;
+} WriterSampleList;
+#endif // DDSSECURITY
 
 /**
  * @brief DataReaderImpl类，DataReader类功能实现类，包含数据读者行为的实际实现。
@@ -793,7 +813,38 @@ public:
 	 * @return 为空则返回true，否则返回false。
 	 */
 	const SubscriptionBuiltinTopicData& GetBuiltinTopicData();
+#ifdef DDSSECURITY
+	const SubscriptionBuiltinTopicSecureData& GetBuiltinTopicSecureData();
 
+	/**
+	 * @brief 获取安全属性。
+	 *
+	 * @return 成功获取或者所属域参与者未启用安全返回true，否则返回false。
+	 */
+	bool GetSecAttributes();
+
+	/**
+	 * @brief 根据writerId找到匹配的远端写者代理，设置加解密句柄。
+	 * 
+	 * @param [in] writerId 远端写者Guid。
+	 *
+	 */
+	int SetRemoteWriterCryptoTokens(const GUID_t* writerId, const Sequence<CryptoToken>* tokens);
+
+
+	/**
+	 * @brief 根据remotePrefix找到匹配的远端域参与者加解密句柄。
+	 *
+	 * @param [in] remotePrefix 远端域参与者GuidPrefix。
+	 */
+	ParticipantCryptoHandle GetRemoteParticipantCryptoHandle(Spdp* spdp, const GuidPrefix_t* remotePrefix);
+
+	/**
+	 * @brief根据加载的属性填充builtinSecureData_的成员，主要是属性掩码。
+	 *
+	 */
+	ReturnCode_t FillSecureData();
+#endif // DDSSECURITY
 	/**
 	 * @brief 获取buffer指向的序列化缓冲区大小端信息。
 	 *
@@ -880,6 +931,10 @@ public:
 	 */
 	void NotifyReadConditions();
 
+	/**
+	 * @brief 获取所属的订阅者。
+	 */
+	SubscriberImpl* getParent();
 private:
 	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
@@ -896,11 +951,39 @@ private:
 	/* wangyi lifespan 定时器 */
 	std::shared_ptr<Timer> lifespanTimer_;
 	SubscriptionBuiltinTopicData builtinData_;
+#ifdef DDSSECURITY
+	SubscriptionBuiltinTopicSecureData builtinSecureData_;
+#endif // DDSSECURITY
 	ContentFilterProperty_t contentFilter_;
 protected:
 	TypeSupport* typeSupport_ = nullptr;
     std::shared_ptr<HistoryCache> history_;
+#ifdef DDSSECURITY
+public:
+	/** @brief 指明DataReader是否启用了安全通信 */
+	bool enableSec_ = false;
+	/** @brief DataReader所对应的安全相关属性 */
+	EndpointSecurityAttributes secAttributes_;
+	/** @brief DataReader使用的加密/解密句柄 */
+	DatareaderCryptoHandle cryptoHdl_ = NULL;
+	/** @brief 子消息加密相关属性 get_datareader_submessage_encode_attributes获得*/
+	CryptoReaderSubmessageAttributes submsgEncodeAttr_;
+	/** @brief 安全插件实例 */
+	SecurityPluginInstanceImpl* secPlugin_ = NULL;
+	/** @brief DataWriter加密/解密句柄列表 */
+	std::vector<DatawriterCryptoHandle> secWriters_;
+	/** @brief 指明RTPS消息是否被加密 */
+	bool rtpsMsgProtected_;
 
+	/** @brief 启用了安全通信且未获得完整信息的DataWriter列表 */
+	std::map<GUID_t, WriterSampleList*> preparingWriters_; //TOCHECK
+	/** @brief   以DataWriter组织的样本链表. */
+	std::map<GUID_t, WriterSampleList*> writerSampleList_;
+	/** @brief 从GUID到DataWriter加密/解密句柄的映射 */
+	std::map<GUID_t, Sequence<CryptoToken>> remoteWriterCryptoToken_;
+	/** @brief 在所属域参与者启用安全下是否创建成功 */
+	bool createSuccess_;
+#endif // DDSSECURITY
 };
 TRAVODDS_NAMESPACE_END
 

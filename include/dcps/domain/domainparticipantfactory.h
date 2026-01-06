@@ -42,6 +42,23 @@ public:
                                                   const StatusMask& mask) = 0;
 
     /**
+	 * @brief 创建域参与者，并绑定参数中的QoS和监听器。创建完成的域参与者可用于后续对发布者和订阅者等进行管理。
+     * 
+	 * @param [in] domain_id 域id。
+     * @param [in] qos       DomainParticipantQos参考。
+     * @param [in] listener  域参与者监听器指针。
+     * @param [in] mask      StatusMask位掩码参考，用于指定哪些特定事件会触发监听器的回调。
+	 * @param [in] guid      GUID_t参考，用于指定创建的DomainParticipant的全局唯一标识符。
+     *
+     * @return DomainParticipant指针（如果未创建，则为nullptr）。
+     */
+    virtual DomainParticipant* create_participant(DomainId_t domain_id,
+        const DomainParticipantQos& qos,
+        DomainParticipantListener* listener,
+        const StatusMask& mask,
+        const GUID_t& guid) = 0;
+
+    /**
      * @brief 删除参与者以及所有关联的发布者和订阅者。
      *
      * @param [in] participant 指向参与者的指针。
@@ -362,6 +379,35 @@ public:
         const char* qos_name) = 0;
 
 #endif // _XML_INTERFACE_CPP
+
+	/**
+	 * @fn virtual ReturnCode_t DomainParticipantFactory::load_security_plugin( const Char* plugin_name, const Char* file_name, const Char* retrieve_instance_func_name, const Char* finalize_instance_func_name) = 0;
+	 *
+	 * @brief 加载安全插件
+	 *
+	 * @details - 在Windows和Linux内核系统中，安全插件以动态库的形式提供（Windows：.dll，Linux：.so），
+	 *          可以在运行时通过调用该函数加载。
+	 *          - 在VxWorks和ReWorks中，安全插件以开发库的形式提供（.a），必须在开发应用时一同编译到应用中，
+	 *          并在需要使用安全插件之前调用该函数。此时的调用 @e file_name 参数不起作用。
+	 *          注意：由于ReWorks的基础开发环境ReDe在编译时未被直接引用的符号会在编译过程中被删除，
+	 *          因此需要在使用安全插件的应用中放置一个函数，在函数中调用安全插件获取实例和删除实例的函数，
+	 *          避免这两个函数被编译器优化。
+	 *
+	 * @param plugin_name                 为当前加载的安全插件赋予的名称，用于在创建域参与者时引用安全插件。
+	 * @param file_name                   安全插件的文件名称，在Windows中是动态链接库（dll），Linux中是动态库（so），VxWorks和ReWorks中此参数不起作用。
+	 * @param retrieve_instance_func_name 安全插件中获取实例的函数名称，需要参考安全插件的使用手册获知。
+	 * @param finalize_instance_func_name 安全插件中删除实例的函数名称，需要参考安全插件的使用手册获知。
+	 *
+	 * @return 当前可能的返回值：
+	 *          - #RETCODE_OK :表示加载成功；
+	 *          - #RETCODE_ERROR :表示加载失败，失败的原因包含：插件文件不存在、加载文件失败、获取安全插件中的函数失败、获取实例失败，详见运行时日志信息。
+	 */
+	virtual ReturnCode_t load_security_plugin(
+		const char* plugin_name,
+		const char* file_name,
+		const char* retrieve_instance_func_name,
+		const char* finalize_instance_func_name) = 0;
+
 };
 
 TRAVODDS_NAMESPACE_END

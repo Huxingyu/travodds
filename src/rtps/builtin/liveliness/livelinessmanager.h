@@ -120,12 +120,20 @@ public:
 	 */
 	void SetParticipantMessageDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
 
+#ifdef DDSSECURITY
+    void SetParticipantMessageSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
+#endif // DDSSECURITY
+
 	/**
 	 * @brief 关联本地读者内置主题。
 	 * 
 	 * @param [in] dataReader DataReaderImpl类指针。
 	 */
 	void SetParticipantMessageDataReader(std::shared_ptr<DataReaderImpl> dataReader);
+
+#ifdef DDSSECURITY
+    void SetParticipantMessageSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 声明writer存活性。
@@ -259,6 +267,11 @@ private:
 
 	std::shared_ptr<StatefulWriter> ParticipantMessageDataWriter_;
 	std::shared_ptr<StatefulReader> ParticipantMessageDataReader_;
+
+#ifdef DDSSECURITY
+    std::shared_ptr<StatefulWriter> ParticipantMessageSecureDataWriter_;
+    std::shared_ptr<StatefulReader> ParticipantMessageSecureDataReader_;
+#endif // DDSSECURITY
 
 	std::mutex writerMutex_;
 };

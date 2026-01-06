@@ -1,11 +1,16 @@
 #include "rtps/endpoint/statefulreader.h"
 #include "dcps/subscribe/datareaderimpl.h"
+#include "dcps/domain/domainparticipantimpl.h"
 #include "rtps/endpoint/participant.h"
 #include "rtps/messages/messageprocessor.h"
 #include "rtps/transport/messagetransmitter.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
-
+#ifdef DDSSECURITY
+#include "dcps/subscribe/subscriberimpl.h"
+#include "dcps/publish/publisherimpl.h"
+#include <iomanip>
+#endif
 USING_TRAVODDS_NAMESPACE;
 StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, const TopicKind_t& kind)
 	: Reader(qos, kind)
@@ -70,7 +75,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGuid)
 {
 	if (0 == matchedWriters_.count(writerGuid)) {
-		TRAVODDS_LOG(LOG_ERROR, "writerGuid not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "writerGuid not exist");
 		return nullptr;
 	}
 		
@@ -143,7 +148,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 
 	ReturnCode_t ret = RETCODE_OK;
 
-	ret = proxy->AddReliableDataCache(cache);
+	ret = proxy->AddReliableDataCache(cache, qos_.durability.kind);
 		
 	if (RETCODE_OK == ret) {
 		Notify(proxy);
@@ -218,7 +223,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
 			dataFragCache->fragmentSeq.insert(i);
 		}
-		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, false);
+		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, qos_.durability.kind, false);
 
 		/* wangyi 记录最新信息 */
 		if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
@@ -417,12 +422,61 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 {
 	ReturnCode_t ret = RETCODE_OK;
 	if (!proxy) {
-		TRAVODDS_LOG(LOG_ERROR, "proxy is nullptr");
+		TRAVODDS_LOG(LOG_ERROR, "this writerProxy is null");
 		return RETCODE_ERROR;
 	}
-
 	std::shared_ptr<CacheChange> cache = proxy->GetSubmitCache();
 	while (nullptr != cache) {
+#ifdef DDSSECURITY
+		DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+		GUID_t readerGuid = Conversion::ToGuid(datareader_->get_instance_handle());
+		bool needDecodePayload = readerGuid.IsUserDefinedEntity() 
+			&& datareader_->secAttributes_.is_payload_protected  // permissions配置负载加密
+			&& dp->enableDDSSec_; // dp存在安全插件且安全配置完全
+		SerializedBuffer* plainData = NULL;
+		if (needDecodePayload) {
+			plainData = new SerializedBuffer; //TODOMEM
+			//plainData->buffer_size = cache->serializedBuffer->buffer_size;
+			//plainData->buffer = new char[plainData->buffer_size];
+			int len = cache->serializedBuffer->buffer_size;
+			plainData->writer_position = len;
+			plainData->buffer_size = len;
+			MemoryPool::GetInstance()->getBuffer(len, plainData->origin_buffer);
+			plainData->buffer = plainData->origin_buffer;
+
+			SecurityException secExce;
+			secExce.message[0] = '\0';
+			WriterSampleList* matchWriter = nullptr;
+			auto itor = datareader_->writerSampleList_.find(proxy->GetGuid());
+			if (itor != datareader_->writerSampleList_.end()) {
+				matchWriter = itor->second;
+			}
+			else {
+				TRAVODDS_LOG(LOG_ERROR, "matched cryptoHdl of remoteWriter is null");
+				return RETCODE_ERROR;
+			}
+			if (!dp->secPlugin_.crypto_transform->decode_serialized_payload(
+				plainData,
+				cache->serializedBuffer,
+				1,
+				NULL, // @todo: inline qos
+				0,
+				datareader_->cryptoHdl_,
+				matchWriter->cryptoHdl,
+				&secExce))
+			{
+				TRAVODDS_LOG(LOG_ERROR, "decode_serialized_payload failed");
+				//delete[] plainData->buffer;
+				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);
+				return RETCODE_ERROR;
+			}
+			plainData->writer_position = plainData->buffer_size;
+			cache->serializedBuffer = plainData;
+			// TODOMEM释放原先cache->serializedBuffer
+		}
+
+#endif // DDSSECURITY
+
 		if(datareader_ ) {
 			datareader_->SetLastinstanceHandle(cache);
 		}
@@ -443,7 +497,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		}
 
 		/* wangyi Lifespan 超期判断，超期过滤数据 */
-		if (!datareader_->CheckLifespan(cache)) {
+		if (datareader_ && !datareader_->CheckLifespan(cache)) {
 			cache = proxy->GetSubmitCache();
 			continue;
 		}
@@ -455,7 +509,8 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		//TODO 提交数据 
 		if (readerListener_) {
 			readerListener_->on_data_available(cache);
-		} else if (datareader_) {
+		}
+		else if (datareader_) {
 			datareader_->OnDataAvaible();
 		}
 
@@ -495,28 +550,164 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	char data[1224] = { 0 };
+	char data[1224] = { 0 }; //开辟消息空间
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(AcknackSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
+
+	//加密前的子消息长度
+	uint32_t lengthAckNackMsgBefore = 0;
+	uint32_t lengthInfoMsgBefore = 0;
+#ifdef DDSSECURITY
+	SerializedBuffer tmpPlainBuffer;
+	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
+	char encodeData[1224 * 2] = { 0 }; //开辟加密消息空间
+	SerializedBuffer encodeBuffer; //加密情况发送的buffer
+
+	bool encodeSubMsg = datareader_->enableSec_
+		&& datareader_->secAttributes_.is_submessage_protected
+		&& guid_.IsUserDefinedEntity();
+	bool encodeRtpsMsg = datareader_->enableSec_
+		&& datareader_->rtpsMsgProtected_
+		&& guid_.IsUserDefinedEntity();
+	
+	//加密后的子消息长度
+	uint32_t lengthAckNackMsg = 0;
+	uint32_t lengthInfoMsg = 0;
+#endif // DDSSECURITY
 
 	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG) | SubMessageFlag::FINAL_FLAG;
 
-	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg);
-
-	/* wangyi test 添加INFODST */
+	// 序列化AckNack, bufffer指向AckNack头部位置
+	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg); // 出参shift为AckNack消息长度
+	lengthAckNackMsgBefore = shift;
 	bufffer.buffer_size = shift;
+
+#ifdef DDSSECURITY
+	// 加密序列化的AckNack
+	if (encodeSubMsg) {
+		// tmpPlainBuffer指向AckNack明文缓存
+		tmpPlainBuffer.buffer = bufffer.buffer;
+		tmpPlainBuffer.buffer_size = bufffer.buffer_size;
+		//开辟tmpEncodeBuffer作为AckNack加密后暂时缓存 
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		EncodeSubMsgBuffer(writerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+		// AckNack加密后缓存拷贝到encodeData末尾
+		lengthAckNackMsg = tmpEncodeBuffer.buffer_size;
+		memcpy(encodeData + 1224 * 2 - lengthAckNackMsg, tmpEncodeBuffer.buffer, lengthAckNackMsg);
+		delete[] tmpEncodeBuffer.buffer;
+	}
+#endif // DDSSECURITY
+
+	// bufffer当前指向AckNack开始位置，往前序列化Info
+	/* wangyi test 添加INFODST */
 	shift = 0;
 	InfoDestinationSubMessage_t dstMsg;
 	dstMsg.guidPrefix = writerProxy->GetGuid().prefix;
 	dstMsg.header.flags = 0x01;
-	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg);
+	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg); // 出参shift为Info长度
+	lengthInfoMsgBefore = shift;
 
-	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
+#ifdef DDSSECURITY
+	// 加密序列化的Info
+	uint32_t infoPlainLen = shift;
+	tmpPlainBuffer.buffer_size = infoPlainLen; // tmpPlainBuffer指向Info消息明文
+	tmpPlainBuffer.buffer = bufffer.buffer - infoPlainLen;
+	
+	if (encodeSubMsg) { // Info不加密
+		// 开辟tmpEncodeBuffer作为Info加密后暂时缓存 
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size;
+		tmpEncodeBuffer.buffer = tmpPlainBuffer.buffer;
+		// 拷贝到encodeData
+		memcpy(encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg,
+			tmpEncodeBuffer.buffer,
+			lengthInfoMsg);
+	}
+#endif // DDSSECURITY
 
+#ifdef DDSSECURITY
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+	if (encodeSubMsg) {
+		shift = 0;
+		// tmpPlainBuffer指向加密后的消息(包含Info和AckNack)
+		tmpPlainBuffer.buffer_size = lengthInfoMsg + lengthAckNackMsg;
+		tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg;
+		MessageProcessor::EncapsulateMessageHeader(tmpPlainBuffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+	}
+	else {
+		// shift为Info长度，Encapsulate结束后为rtpsHeader长度+Info长度
+		MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度+Info长度
+	}
+
+	if (encodeRtpsMsg) {
+		DatawriterCryptoHandle* partHdls = NULL;
+		uint32_t partHdlsCount = 0;
+		if (writerProxy == NULL)
+		{
+			partHdls = dp->secParticipants_.data();
+			partHdlsCount = dp->secParticipants_.size();
+		}
+		else
+		{
+			partHdls = &writerProxy->partCryptoHdl_;
+			partHdlsCount = 1;
+		}
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			// tmpPlainBuffer指向消息（rtpsHeader+加密Info+加密AckNack）
+			tmpPlainBuffer.buffer_size = lengthInfoMsg + lengthAckNackMsg + shift;
+			tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg - shift;
+		}
+		else { // 不加密子消息情况下使用bufffer
+			tmpPlainBuffer.buffer_size = lengthAckNackMsg + shift;
+			tmpPlainBuffer.buffer = bufffer.buffer  - shift;
+		}
+		
+		// tmpEncodeBuffer开辟对整个消息加密后空间
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		SecurityException secExce;
+		if (datareader_->secPlugin_ && !datareader_->secPlugin_->crypto_transform->encode_rtps_message(
+			&tmpEncodeBuffer,
+			&tmpPlainBuffer,
+			1,
+			dp->cryptoHdl_,
+			partHdls,
+			partHdlsCount,
+			&secExce)) {
+			delete[]tmpEncodeBuffer.buffer;
+			return -1;
+		}
+		// 存到encodeData
+		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
+		// encodeBuffer指向对应的数据
+		encodeBuffer.buffer = encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size;
+		encodeBuffer.buffer_size = tmpEncodeBuffer.buffer_size;
+		delete[]tmpEncodeBuffer.buffer;
+	}
+	else { // 不Rtps加密
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			encodeBuffer.buffer = encodeData + 1224 * 2 - lengthInfoMsg - lengthAckNackMsg - sizeof(MessageHeader_t);;
+			encodeBuffer.buffer_size = lengthInfoMsg + lengthAckNackMsg + sizeof(MessageHeader_t);;
+		}
+	}
+#else
+	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix); //这里出参shift为info+rtpsHeader长度
+#endif 
+
+#ifdef DDSSECURITY
+	//MessageHeader_t + INFO + AckNack  buffer.buffer - shift是字符串 buffer.buffer_size + shift是总长度
+	if (encodeSubMsg || encodeRtpsMsg) {
+		participant_->TransmittersSendMessage(unicastList, encodeBuffer.buffer, encodeBuffer.buffer_size);
+	}
+	else {
+		participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	}
+#else
 	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+#endif // DDSSECURITY
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -534,22 +725,131 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	LocatorSeq unicastList = writerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = writerProxy->GetMulticastLocatorList();
 
-	char data[1500] = { 0 };
+	char data[1500] = { 0 }; //开辟消息空间
 	SerializedBuffer bufffer;
 	uint32_t shift = 0;
 	bufffer.buffer_size = sizeof(AcknackSubMessage_t);
 	bufffer.buffer = data;
-	bufffer.buffer = bufffer.buffer + BUFF_SHIFT;
+	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
+	//加密前的子消息长度
+	uint32_t lengthNackFragMsgBefore = 0;
+
+#ifdef DDSSECURITY
+	SerializedBuffer tmpPlainBuffer;
+	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
+	char encodeData[1500 * 2] = { 0 }; //开辟加密消息空间
+	SerializedBuffer encodeBuffer; //加密情况发送的buffer
+	bool encodeSubMsg = datareader_->enableSec_
+		&& datareader_->secAttributes_.is_submessage_protected
+		&& guid_.IsUserDefinedEntity();
+	bool encodeRtpsMsg = datareader_->enableSec_
+		&& datareader_->rtpsMsgProtected_
+		&& guid_.IsUserDefinedEntity();
+	//加密后的子消息长度
+	uint32_t lengthNackFragMsg = 0;
+#endif // DDSSECURITY
 
 	nackMsg.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
-	MessageProcessor::EncapsulateNackFragMessage(bufffer, shift, nackMsg);
-
+	// 序列化NackFrag, bufffer指向Nack头部位置
+	MessageProcessor::EncapsulateNackFragMessage(bufffer, shift, nackMsg); // 出参shift为Nack消息长度
+	lengthNackFragMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
-	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
 
+#ifdef DDSSECURITY
+	// 加密序列化的Nack
+	if (encodeSubMsg) {
+		// tmpPlainBuffer指向Nack明文缓存
+		tmpPlainBuffer.buffer = bufffer.buffer;
+		tmpPlainBuffer.buffer_size = bufffer.buffer_size;
+		//开辟tmpEncodeBuffer作为Nack加密后暂时缓存 
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		EncodeSubMsgBuffer(writerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+		// Nack加密后缓存拷贝到encodeData末尾
+		lengthNackFragMsg = tmpEncodeBuffer.buffer_size;
+		memcpy(encodeData + 1500 * 2 - lengthNackFragMsg, tmpEncodeBuffer.buffer, lengthNackFragMsg);
+		delete[] tmpEncodeBuffer.buffer;
+	}
+#endif // DDSSECURITY
+
+#ifdef DDSSECURITY
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datareader_->getParent()->get_participant());
+	if (encodeSubMsg) {
+		// tmpPlainBuffer指向加密后的消息
+		tmpPlainBuffer.buffer_size =  lengthNackFragMsg;
+		tmpPlainBuffer.buffer = encodeData + 1500 * 2 - lengthNackFragMsg;
+		MessageProcessor::EncapsulateMessageHeader(tmpPlainBuffer, shift, guid_.prefix); //这里出参shift为rtpsHeader长度
+	}
+	else {
+		MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
+	}
+	if (encodeRtpsMsg) {
+		DatawriterCryptoHandle* partHdls = NULL;
+		uint32_t partHdlsCount = 0;
+		if (writerProxy == NULL)
+		{
+			partHdls = dp->secParticipants_.data();
+			partHdlsCount = dp->secParticipants_.size();
+		}
+		else
+		{
+			partHdls = &writerProxy->partCryptoHdl_;
+			partHdlsCount = 1;
+		}
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			// tmpPlainBuffer指向消息（rtpsHeader+加密NackFrag）
+			tmpPlainBuffer.buffer_size = lengthNackFragMsg + shift;
+			tmpPlainBuffer.buffer = encodeData + 1500 * 2 - lengthNackFragMsg - shift;
+		}
+		else { // 不加密子消息情况下使用bufffer
+			tmpPlainBuffer.buffer_size = lengthNackFragMsg + shift;
+			tmpPlainBuffer.buffer = bufffer.buffer - shift;
+		}
+
+		// tmpEncodeBuffer开辟对整个消息加密后空间
+		tmpEncodeBuffer.buffer_size = tmpPlainBuffer.buffer_size * 10;
+		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
+		SecurityException secExce;
+		if (datareader_->secPlugin_ && !datareader_->secPlugin_->crypto_transform->encode_rtps_message(
+			&tmpEncodeBuffer,
+			&tmpPlainBuffer,
+			1,
+			dp->cryptoHdl_,
+			partHdls,
+			partHdlsCount,
+			&secExce)) {
+			delete[]tmpEncodeBuffer.buffer;
+			return -1;
+		}
+		// 存到encodeData
+		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
+		// encodeBuffer指向对应的数据
+		encodeBuffer.buffer = encodeData + 1500 * 2 - tmpEncodeBuffer.buffer_size;
+		encodeBuffer.buffer_size = tmpEncodeBuffer.buffer_size;
+		delete[]tmpEncodeBuffer.buffer;
+	}
+	else { // 不Rtps加密
+		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
+			encodeBuffer.buffer = encodeData + 1500 * 2  - lengthNackFragMsg - sizeof(MessageHeader_t);;
+			encodeBuffer.buffer_size = lengthNackFragMsg + sizeof(MessageHeader_t);;
+		}
+	}
+#else
+	MessageProcessor::EncapsulateMessageHeader(bufffer, shift, guid_.prefix);
+#endif
+
+#ifdef DDSSECURITY
+	if (encodeSubMsg || encodeRtpsMsg) {
+		participant_->TransmittersSendMessage(unicastList, encodeBuffer.buffer, encodeBuffer.buffer_size);
+	}
+	else {
+		participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+	}
+#else
 	participant_->TransmittersSendMessage(unicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
+#endif // DDSSECURITY
 	//TODO暂时屏蔽组播
 	//messageTransmitter->MessageSend(srcLocators, multicastList, bufffer.buffer - shift, bufffer.buffer_size + shift);
 
@@ -611,3 +911,46 @@ void StatefulReader::TimerExpired()
 		lastNewCacheTimer_->UpdatePeriod(time);
 	}
 }
+
+#ifdef DDSSECURITY
+int StatefulReader::EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer)
+{
+	if (datareader_->enableSec_) {
+		GUID_t writerGuid = writerProxy->GetGuid();
+		if (datareader_->secAttributes_.is_submessage_protected) {
+			SecurityException secExce;
+			DatawriterCryptoHandle* writerHdls = NULL;
+			uint32_t writerHdlsCount = 0;
+			if (writerProxy == NULL)
+			{
+				writerHdls = datareader_->secWriters_.data();
+				writerHdlsCount = datareader_->secWriters_.size();
+			}
+			else
+			{
+				writerHdls = &writerProxy->cryptoHdl_;
+				writerHdlsCount = 1;
+			}
+			if (!datareader_->secPlugin_->crypto_transform->encode_datareader_submessage(
+				&encodeBuffer,
+				&buffer,
+				1,
+				datareader_->cryptoHdl_,
+				writerHdls,
+				writerHdlsCount,
+				&secExce))
+			{
+				TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage."
+					"\n  Code: %d"
+					"\n  Minor code: %d"
+					"\n  Message: %s",
+					secExce.code,
+					secExce.minor_code,
+					secExce.message);
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+#endif // DDSSECURITY

@@ -18,6 +18,9 @@
 #include "qos/qos.h"
 #include "dcps/base/retcode.h"
 #include "xml/tinyxml2.h"
+#ifdef DDSSECURITY
+#include "security/propertyqospolicy.h"
+#endif // DDSSECURITY
 
 using namespace tinyxml2;
 
@@ -322,6 +325,26 @@ private:
      * @return 成功返回true，否则返回false。
      */
     static bool parseTopicQos(XMLElement* element, TopicQos& qos);
+	
+    /**
+     * @brief 遍历配置文件的element所有子节点获取Property_t。
+     *
+     * @param [in]      element     。
+     * @param [in, out] property         出口参数，获取到的Property_t。
+     *
+     * @return 成功返回true，否则返回false。
+     */
+	static bool parseProperty(XMLElement* element, Property_t& property);
+
+    /**
+     * @brief 遍历配置文件的element所有子节点获取BinaryProperty_t。
+     *
+     * @param [in]      element     。
+     * @param [in, out] binaryProperty         出口参数，获取到的BinaryProperty_t。
+     *
+     * @return 成功返回true，否则返回false。
+     */
+    static bool parseBinaryProperty(XMLElement* element, BinaryProperty_t& binaryProperty);
 
     /**
      * @brief 遍历配置文件UserDataQosPolicy标签所有子节点获取Qos配置。
@@ -332,6 +355,13 @@ private:
      * @return 成功返回true，否则返回false。
      */
     static bool parseUserDataQosPolicy(XMLElement* element, UserDataQosPolicy& qos);
+	
+	static bool parsePropertySeq(XMLElement* element, PropertyQosPolicy& qos);
+
+    static bool parseBinaryPropertySeq(XMLElement* element, PropertyQosPolicy& qos);
+
+    static bool parsePropertyQosPolicy(XMLElement* element, PropertyQosPolicy& qos);
+	
     /**
      * @brief 遍历配置文件DurabilityQosPolicy标签所有子节点获取Qos配置。
      *
@@ -521,6 +551,33 @@ private:
      * @return 成功返回true，否则返回false。
      */
     static bool parseDurabilityServiceQosPolicy(XMLElement* element, DurabilityServiceQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件TransportQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseTransportQosPolicy(XMLElement* element, TransportQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件DiscoveredMethodQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseDiscoveredMethodQosPolicy(XMLElement* element, DiscoveredMethodQosPolicy& qos);
+    /**
+     * @brief 遍历配置文件NetworkInterfaceQosPolicy标签所有子节点获取Qos配置。
+     *
+     * @param [in]      element     XML配置文件句柄，允许为NULL，将转换为空字符串。
+     * @param [in, out] qos         出口参数，获取到的Qos。
+     *
+     * @return 成功返回true，否则返回false。
+	 */
+	static bool parseNetworkInterfaceQosPolicy(XMLElement* element, NetworkInterfaceQosPolicy& qos);
     /**
      * @brief 遍历配置文件Duration_t标签节点值获取。
      *

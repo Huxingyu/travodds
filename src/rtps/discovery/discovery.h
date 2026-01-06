@@ -56,14 +56,32 @@ public:
 	 * @param data 发布者配置信息。
 	 */
 	void WritePublicationData(DiscoveredWriterData& data);
-	
+
+#ifdef DDSSECURITY	
+	/**
+	 * @brief 生成并发送本地发布者匹配报文(Data(w))。
+	 *
+	 * @param data 发布者扩展配置信息。
+	 */
+    void WritePublicationSecureData(DiscoveredWriterSecureData& data);
+#endif // DDSSECURITY
 	/**
 	 * @brief 生成并发送本地订阅者匹配报文(Data(r))。
 	 *
 	 * @param data 订阅者配置信息。
 	 */
 	void WriteSubscriptionData(DiscoveredReaderData& data);
-
+#ifdef DDSSECURITY	
+    /**
+     * @brief 生成并发送本地订阅者匹配报文(Data(r))。
+     *
+     * @param data 订阅者扩展配置信息。
+     */
+    void WriteSubscriptionSecureData(DiscoveredReaderSecureData& data);
+    void WriteParticipantMessageSecureData(ParticipantMessageSecureData& data);
+	ReturnCode_t WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data);
+    void WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data);
+#endif // DDSSECURITY
 	/**
 	 * @brief 生成并发送本地发布者释放报文。
 	 *
@@ -84,7 +102,11 @@ public:
 	 * @param data 内置端点代理信息。
 	 */
 	void AddProxy(const SPDPdiscoveredParticipantData& data);
+#ifdef DDSSECURITY
+	void AddPartProxy(const SPDPdiscoveredParticipantData& data);
 
+	//void AddRemainProxy(const SPDPdiscoveredParticipantData& data);
+#endif
 	/**
 	 * @brief 释放内置端点对应远端内置端点的代理信息 。
 	 *
@@ -130,6 +152,12 @@ public:
 	 */
 	bool FindIgnoredParticipants(GUID_t guid);
 
+	DomainParticipantImpl* GetParticipant();
+
+	std::shared_ptr<Spdp> GetSpdp();
+	std::shared_ptr<Sedp> GetSedp();
+
+	SPDPdiscoveredParticipantData GetParticipantData();
 private:
 	DomainParticipantImpl* domainParticipant_;
 	// 内置发布者、订阅者
@@ -143,6 +171,14 @@ private:
 	std::shared_ptr<TopicImpl> dcpsParticipantMessage_;
 	std::shared_ptr<TopicImpl> dcpsTopic_;
 
+#ifdef DDSSECURITY
+	std::shared_ptr<TopicImpl> dcpsSubscriptionSecure_;
+	std::shared_ptr<TopicImpl> dcpsPublicationSecure_;
+	std::shared_ptr<TopicImpl> dcpsParticipantMessageSecure_;
+	std::shared_ptr<TopicImpl> dcpsParticipantStatelessMessage_;
+	std::shared_ptr<TopicImpl> dcpsParticipantVolatileMessageSecure_;
+#endif // DDSSECURITY
+
 	// 内置端点
 	std::shared_ptr<DataWriterImpl> builtinParticipantDataWriter_;
 	std::shared_ptr<DataWriterImpl> builtinPublicationsDataWriter_;
@@ -154,6 +190,20 @@ private:
 	std::shared_ptr<DataReaderImpl> builtinSubscriptionsDataReader_;
 	std::shared_ptr<DataReaderImpl> builtinParticipantMessageDataReader_;
 
+#ifdef DDSSECURITY
+	std::shared_ptr<DataWriterImpl> builtinPublicationsSecureDataWriter_;
+	std::shared_ptr<DataWriterImpl> builtinSubscriptionsSecureDataWriter_;
+	std::shared_ptr<DataWriterImpl> builtinParticipantMessageSecureDataWriter_;
+	std::shared_ptr<DataWriterImpl> builtinParticipantStatelessMessageDataWriter_;
+	std::shared_ptr<DataWriterImpl> builtinParticipantVolatileMessageSecureDataWriter_;
+
+	std::shared_ptr<DataReaderImpl> builtinPublicationsSecureDataReader_;
+	std::shared_ptr<DataReaderImpl> builtinSubscriptionsSecureDataReader_;
+	std::shared_ptr<DataReaderImpl> builtinParticipantMessageSecureDataReader_;
+	std::shared_ptr<DataReaderImpl> builtinParticipantStatelessMessageDataReader_;
+	std::shared_ptr<DataReaderImpl> builtinParticipantVolatileMessageSecureDataReader_;
+#endif // DDSSECURITY
+
 	//内置数据类型
 
 	BuiltinEndpointSet_t builtinEndpointSet_;
@@ -161,6 +211,7 @@ private:
 	std::shared_ptr<Spdp> spdp_;
 	std::shared_ptr<Sedp> sedp_;
 	std::shared_ptr<ThreadPool> threadPool_;
+	SPDPdiscoveredParticipantData pData_;
 };
 
 TRAVODDS_NAMESPACE_END
