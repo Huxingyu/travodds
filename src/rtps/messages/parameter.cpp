@@ -730,8 +730,11 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 	if (allowLength < GetMessageSize()) {
 		return false;
 	}
-
+	msg[0] = 0;
 	msg[1] = static_cast<octet>(msgEndian_);
+	msg[2] = 0;
+	msg[3] = 0;
+
 	uint32_t offset = 4;
 	for (auto& param : parameterList_) {
 		uint16_t c = allowLength;
@@ -749,6 +752,8 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 		(msg + offset)[0] = sentinel[1];
 		(msg + offset)[1] = sentinel[0];
 	}
+	(msg + offset)[2] = 0;
+	(msg + offset)[3] = 0;
 	return true;
 }
 
