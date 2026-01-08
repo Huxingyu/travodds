@@ -74,23 +74,16 @@ ReturnCode_t WaitSetImpl::wait(ConditionSeq& active_conditions, const Duration_t
 {
 	active_conditions.clear();
 	active_conditions.reserve(conditions_.size());
-	if (FindTrigger(active_conditions) != 0) {
-		return RETCODE_OK;
-	}
+
 	std::unique_lock<std::mutex> lockCv(mtxCv_);
 	if (timeout == Duration_t(TIME_INFINITE)) {
-		cv_.wait(lockCv);
+		cv_.wait(lockCv, [this, &active_conditions](){return FindTrigger(active_conditions);});
 	} else {
-		std::cv_status ret = cv_.wait_for(lockCv, std::chrono::nanoseconds(timeout.ToNs()));
-		if (ret == std::cv_status::timeout) {
+		if(!cv_.wait_for(lockCv, std::chrono::nanoseconds(timeout.ToNs()), [this, &active_conditions]() {return FindTrigger(active_conditions); })) {
 			return RETCODE_TIMEOUT;
 		}
 	}
-	lockCv.unlock();
-	if (FindTrigger(active_conditions) != 0) {
-		return RETCODE_OK;
-	}
-	return RETCODE_NO_DATA;
+	return RETCODE_OK;
 }
 
 ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) const
@@ -109,11 +102,11 @@ ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) cons
 	return RETCODE_OK;
 }
 
-uint32_t WaitSetImpl::FindTrigger(ConditionSeq& active_conditions)
+bool WaitSetImpl::FindTrigger(ConditionSeq& active_conditions)
 {
-	std::lock_guard<std::mutex> lock(mtx_);
 	for (auto& it : conditions_) {
-		if (it->get_trigger_value() || it->IsNotify()) {
+		// 优先确认是否是Notify唤醒
+		if (it->IsNotify() || it->get_trigger_value()) {
 			Condition* guard = IsGuardConditionImpl(it);
 			if (nullptr != guard) {
 				active_conditions.emplace_back(guard);
@@ -122,7 +115,7 @@ uint32_t WaitSetImpl::FindTrigger(ConditionSeq& active_conditions)
 			active_conditions.emplace_back(it);
 		}
 	}
-	return active_conditions.size();
+	return active_conditions.size() != 0;
 }
 
 void WaitSetImpl::Notify() 

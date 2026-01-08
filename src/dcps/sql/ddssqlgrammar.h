@@ -30,7 +30,7 @@ namespace DDSSQL {
     // 支持嵌套字段名（如 a.b.c），点数不限
     struct dotOp : pegtl::one< '.' > {};
     struct indexPart : pegtl::seq< pegtl::one<'['>, integer, pegtl::one<']'> > {};
-    struct fieldnamePart : pegtl::seq<pegtl::identifier, pegtl::opt<indexPart > > {};
+    struct fieldnamePart : pegtl::seq<pegtl::identifier, pegtl::star<indexPart > > {};
     struct FIELDNAME : pegtl::list<fieldnamePart, dotOp> {};
 
     // TOPICNAME: 不能以数字开头的标识符
@@ -84,9 +84,9 @@ namespace DDSSQL {
     > {
     };
 
-	struct BaseType : pegtl::sor<INTEGERVALUE, CHARVALUE, FLOATVALUE, STRINGVALUE> {};
+	struct BaseType : pegtl::sor<FLOATVALUE, INTEGERVALUE, CHARVALUE, STRINGVALUE> {};
     // 参数规则 - 更新以包含PARAMETER
-    struct Parameter : pegtl::sor<INTEGERVALUE, CHARVALUE, FLOATVALUE, STRINGVALUE, PARAMETER> {};
+    struct Parameter : pegtl::sor<FLOATVALUE, INTEGERVALUE, CHARVALUE, STRINGVALUE, PARAMETER> {};
 
 	// 关键词规则
     struct andOp : pegtl::pad<pegtl::keyword<'A', 'N', 'D'>, pegtl::space>{};

@@ -36,7 +36,7 @@ public:
 	// 设置每个周期内最大发送字节数，maxBytesPerPeriod<= 0 停止限流
 	void ResetMaxBytesPerPeriod(int32_t maxBytesPerPeriod);
     
-	void MessageSend(LocatorVec& destinationList, char* message, uint32_t length);
+	void MessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length);
 	
 protected:
 	// 对发送请求进行过滤

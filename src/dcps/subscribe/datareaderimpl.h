@@ -935,6 +935,9 @@ public:
 	 * @brief 获取所属的订阅者。
 	 */
 	SubscriberImpl* getParent();
+
+
+	void ContentFilterUpdate();
 private:
 	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;

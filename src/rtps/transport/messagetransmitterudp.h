@@ -15,6 +15,7 @@
 #include "type/basictype.h"
 #include "rtps/transport/messagetransmitter.h"
 #include "rtps/transport/locator.h"
+#include "rtps/transport/recivesocket.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -122,6 +123,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive = false) = 0;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) = 0;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() = 0;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() = 0;
 
 
 protected:
@@ -132,8 +134,6 @@ protected:
      */
 	MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor);
 
-protected:
-	asio::io_context& ioContext_;
 private:
 	/**
 	 * @brief 创建接收socket。
@@ -162,6 +162,9 @@ private:
 	 */
 	ReturnCode_t DropMemberShip(Locator_t receiveAddr);
 
+private:
+	asio::io_context ioContext_;
+
 	/* 发送socket，发送ip为key值 */
 	_SEND_SOCKET_MAP		sendSocketMap_;
 
@@ -189,6 +192,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() override;
 };
 
 class MessageTransmitterUDPv6 : public MessageTransmitterUDP {
@@ -202,6 +206,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() override;
 };
 
 TRAVODDS_NAMESPACE_END

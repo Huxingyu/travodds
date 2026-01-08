@@ -1,13 +1,23 @@
 #include "rtps/transport/messagetransmittertcp.h"
+#include "rtps/transport/ipcontainer.h"
+#include "rtps/transport/recivesocket.h"
 #include "common/log/logger.h"
 
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterTCP::MessageTransmitterTCP(std::shared_ptr<MessageProcessor> messageProcessor)
-	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext()),
-	  strandWrite_(AsioContext::GetIOContext().get_executor())
+	: MessageTransmitter(messageProcessor), ioContext_(), workGuard_(ioContext_.get_executor())
 {
 	kind_ = LOCATOR_KIND_TCPv4;
+	ioThread_ = std::thread([this]() {
+		try {
+			ioContext_.run();
+		}
+		catch (const std::exception& e) {
+			static_cast<void>(e);
+			TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());
+		}
+		});
 }
 
 
@@ -38,6 +48,11 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 		}
 	}
 	sendSocketMap_.clear();
+	workGuard_.reset();
+	ioContext_.stop();
+	if (ioThread_.joinable()) {
+		ioThread_.join();
+	}
 }
 
 ReturnCode_t MessageTransmitterTCP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
@@ -176,18 +191,14 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 	buffers.push_back(asio::buffer(&tcphead, sizeof(TCPHeader)));
 	buffers.push_back(asio::buffer(message, length));
 
-	std::promise<size_t> bytesPromise;
 	asio::error_code ec;
-	auto bytesFuture = bytesPromise.get_future();
-	asio::post(strandWrite_, [&]() {
-		if(sendsocket->lowest_layer().is_open() == false) {
-			bytesPromise.set_value(0);
-		}
-		size_t bytesSent = asio::write(*sendsocket, buffers, ec);
-		bytesPromise.set_value(bytesSent);
+	size_t bytesSent = 0;
+	if (sendsocket->lowest_layer().is_open()) {
+		std::lock_guard<std::mutex> lock(session->mtx);
+		bytesSent = asio::write(*sendsocket, buffers, ec);
+	}
 
-	});
-	if (bytesFuture.get() != (sizeof(TCPHeader) + length)) {
+	if (bytesSent != (sizeof(TCPHeader) + length)) {
 		if (ec) {
 			if (ec.value() == asio::error::connection_reset ||
 				ec.value() == asio::error::broken_pipe) {
@@ -210,6 +221,24 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 	}
 	 
 	return RETCODE_OK;
+}
+
+void MessageTransmitterTCP::SetStop()
+{
+	MessageTransmitter::SetStop();
+	acceptor_->cancel();
+
+	for (auto& socketItor : sessions_) {
+		socketItor.first->cancel();
+	}
+
+	for (auto& socketItor : sendSocketMap_) {
+		socketItor.second->socket->cancel();
+	}
+	uint32_t tries = 0;
+	while (flagNum_.load() > 0 && tries++ < 20) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
 }
 
 void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> session, const asio::error_code& ec, size_t bytesTransferred)
@@ -276,7 +305,7 @@ void MessageTransmitterTCP::InterpretMessage(std::shared_ptr<ReceiveSession> ses
 		// 重置会话状态，准备接收下一个消息
 		session->phase = ReceivePhase::HEADER;
 		session->bytesReceived = 0;
-		receivePool_->releaseBuffer(session->messageBuffer);
+		session->messageBuffer = nullptr;
 	} else {
 		CleanupSession(session);
 		return;
@@ -294,7 +323,7 @@ void MessageTransmitterTCP::AsyncAccept()
 
 	try {
 		// 创建新socket
-		auto newSocket = std::make_shared<asio::ip::tcp::socket>(ioContext_);
+		auto newSocket = std::make_shared<TCPReciverSocket>();
 		// 异步接受连接
 		acceptor_->async_accept(*newSocket,
 			[this, newSocket](const asio::error_code& ec) {
@@ -504,7 +533,13 @@ asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetEndpoint(const AsioLocator& 
 	if (recive) {
 		return asio::ip::tcp::endpoint(asio::ip::tcp::v6(), locator.port);
 	}
-	return asio::ip::tcp::endpoint(locator.GetAddress<asio::ip::address_v6>(), locator.port);
+	auto addr = locator.GetAddress<asio::ip::address_v6>();
+
+	if (addr.is_link_local()) {
+		// 链路本地地址 需要设置作用域ID
+		addr.scope_id(IpContainer::GetAdapterScopeId(locator.address));
+	}
+	return asio::ip::tcp::endpoint(addr, locator.port);
 }
 asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetReciveEndpoint(const uint32_t port)
 {

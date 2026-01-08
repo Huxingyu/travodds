@@ -2,7 +2,6 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "qos/qospolicycheck.h"
 #include "common/log/logger.h"
-#include "rtps/transport/asiocontext.h"
 #include "common/sys/sysinfo.h"
 #ifdef DDSSECURITY
 #include "security/propertyqospolicy.h"
@@ -215,8 +214,6 @@ DomainParticipantFactoryImpl* DomainParticipantFactoryImpl::get_instance()
 {
 	// 确保在获取实例时，获取程序的创建时间戳
 	static std::string timestamp = SysInfo::GetExecutionTimestamp();
-    /* 优先获取网络资源，决定网络资源最后释放 */
-    static AsioContext& as = AsioContext::GetInstance();
     static std::shared_ptr<DomainParticipantFactoryImpl> Impl(new DomainParticipantFactoryImpl);
     return Impl.get();
 }

@@ -28,7 +28,7 @@ public:
 	 *
 	 * @param [in] locator DataReader地址信息。
 	 */
-	ReaderLocator(const Locator_t& locator);
+	ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locatorList);
 
 	/**
 	 * @brief 获取下一个请求报文的序号。
@@ -79,23 +79,25 @@ public:
 	 */
 	bool ResetHighestSentChange();
 
+
+	void LocatorAdd(Locator_t& locator);
+	void LocatorRemove(Locator_t& locator);
+
 	/**
 	 * @brief 获取远端DataReader地址信息。
 	 *
 	 * @return 远端DataReader地址信息。
 	 */
-	Locator_t GetLocator();
+	LocatorSeq GetLocatorList();
 
 	//bool sendData();
-
-	void SetRemoteGuid(const GUID_t& guid);
 
 	const GUID_t& GetRemoteGuid();
 private:
 	GUID_t remoteGuid_;
 	SequenceNumber_t highestSentChangeSN_;
 	SeqNumberVec requestedChanges_;
-	Locator_t locator_;
+	LocatorSeq locatorList_;
 	bool expectsInlineQos_;
 
 	std::shared_ptr<HistoryCache> writerCache_ = nullptr;

@@ -1,11 +1,17 @@
 #include "rtps/endpoint/readerlocator.h"
+#include <algorithm>
 USING_TRAVODDS_NAMESPACE;
 
-ReaderLocator::ReaderLocator(const Locator_t& locator)
-	: locator_(locator),
+ReaderLocator::ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locatorList)
+	: remoteGuid_(readerGuid),
+	  locatorList_(locatorList),
 	  expectsInlineQos_(false),
 	  highestSentChangeSN_(SEQUENCENUMBER_UNKNOWN)
 {
+	std::sort(locatorList_.begin(), locatorList_.end(),
+		[](const Locator_t& a, const Locator_t& b) {
+			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
+		});
 }
 
 SequenceNumber_t ReaderLocator::NextRequestedChange()
@@ -63,13 +69,33 @@ bool ReaderLocator::ResetHighestSentChange()
 	return true;
 }
 
-Locator_t ReaderLocator::GetLocator()
+void ReaderLocator::LocatorAdd(Locator_t& locator)
 {
-	return locator_;
+	for (auto& loc : locatorList_) {
+		if (loc == locator) {
+			return;
+		}
+    }
+	locatorList_.push_back(locator);
+	std::sort(locatorList_.begin(), locatorList_.end(),
+		[](const Locator_t& a, const Locator_t& b) {
+			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
+		});
 }
-void ReaderLocator::SetRemoteGuid(const GUID_t& guid)
+
+void ReaderLocator::LocatorRemove(Locator_t& locator)
 {
-	remoteGuid_ = guid;
+	for (auto it = locatorList_.begin(); it != locatorList_.end(); ++it) {
+		if (*it == locator) {
+			locatorList_.erase(it);
+			return;
+		}
+	}
+}
+
+LocatorSeq ReaderLocator::GetLocatorList()
+{
+	return locatorList_;
 }
 const GUID_t& ReaderLocator::GetRemoteGuid()
 {
