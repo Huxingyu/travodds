@@ -133,7 +133,7 @@ public:
      *
      * @return RETCODE_UNSUPPORTED。
      */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief 数据传输。

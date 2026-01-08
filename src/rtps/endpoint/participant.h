@@ -28,6 +28,7 @@ class ThreadPool;
 class Timer;
 class FlowControlManager;
 class FlowRateLimitedManager;
+class DynamicPerformanceRegulator;
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -323,7 +324,7 @@ public:
 	/* std::vector<LocatorVec>&  destinationList 采用二级存储, 第一级存储目标，第二级存储同一目标的地址 */
 	void TransmittersSendMessage(std::vector<LocatorVec>& destinationList, char* message, uint32_t length);
 
-	void FlowRateLimitedMessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length);
+	ReturnCode_t FlowRateLimitedMessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length, const Duration_t& timeOut);
 
 	void TransmittersConnect(const LocatorVec& remoteLocator);
 
@@ -473,6 +474,8 @@ private:
     std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
 
     std::unique_ptr<FlowControlManager> flowControlManager_;
+
+	std::unique_ptr<DynamicPerformanceRegulator> regulator_;
 
 	std::shared_ptr<Timer> hbTimer_;
 

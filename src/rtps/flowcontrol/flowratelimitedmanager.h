@@ -30,13 +30,11 @@ public:
 	FlowRateLimitedManager(Participant* participant, const FlowParameters& parameters);
 
 	~FlowRateLimitedManager();
-
 	//  periodMs <= 0 停止限流 
-	void ResetPeriod(uint64_t periodMs);
 	// 设置每个周期内最大发送字节数，maxBytesPerPeriod<= 0 停止限流
-	void ResetMaxBytesPerPeriod(int32_t maxBytesPerPeriod);
+	void ResetPeriod(const FlowParameters& parameters);
     
-	void MessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length);
+	ReturnCode_t MessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length, const Duration_t& timeOut);
 	
 protected:
 	// 对发送请求进行过滤
@@ -50,9 +48,10 @@ private:
 	Participant* participant_;
 	int32_t maxBytesPerPeriod_; // 每个周期内最大发送字节数，0表示不限制
 	int32_t bytesAvailableThisPeriod_; // 当前周期内可发送的字节数
-	std::chrono::milliseconds periodMs_; // 周期长度，单位毫秒
-	std::atomic<int32_t> currentTicket_;
+	int64_t periodMs_; // 周期长度，单位毫秒
+	int32_t currentTicket_;
 	std::atomic<int32_t> nextTicket_;
+	std::set<int32_t> timeoutTicket_; // 记录超时的ticket
 	std::condition_variable cv_;
 	std::mutex mtx_;
 	std::shared_ptr<Timer> timer_;

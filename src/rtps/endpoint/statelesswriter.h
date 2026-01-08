@@ -79,7 +79,7 @@ public:
      *
      * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
      */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief 设置重发数据周期，创建定时器用于周期性发送history中的数据。

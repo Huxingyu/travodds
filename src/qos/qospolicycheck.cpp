@@ -40,6 +40,10 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantQos& qos)
 		TRAVODDS_LOG(LOG_ERROR, "Error user_data.value out of resources");
 		return RETCODE_OUT_OF_RESOURCES;
 	}
+	if (qos.dynamic_adjust.score_threshold_factor < 0 || qos.dynamic_adjust.score_threshold_factor > 80) {
+		TRAVODDS_LOG(LOG_ERROR, "Error dynamic_adjust.score_threshold_factor out of resources");
+		return RETCODE_OUT_OF_RESOURCES;
+	}
 	return RETCODE_OK;
 }
 

@@ -238,7 +238,7 @@ void StatelessWriter::UnsentChangesReset()
 	}
 }
 
-ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
+ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
 	/* wnagyi  */
 	Duration_t duration = TIME_INFINITE;
@@ -410,42 +410,34 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 				delete[]encodeBuffer.buffer;
 			}
 #endif // DDSSECURITY
-			if (flowControl) {
+
+			ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-				if (encodeSubMsg && !encodeRtpsMsg) {
-					participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-				}
-				else if (encodeRtpsMsg) {
-					participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-				}
-				else {
-					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				}
-#else
-				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
+			if (encodeSubMsg && !encodeRtpsMsg) {
+				participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
+			}
+			else if (encodeRtpsMsg) {
+				participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
 			}
 			else {
-#ifdef DDSSECURITY
-				if (encodeSubMsg && !encodeRtpsMsg) {
-					participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-				}
-				else if (encodeRtpsMsg) {
-					participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-				}
-				else {
-					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				}
-#else
-				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
+				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
 			}
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}			
+#else
+			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}
+#endif // DDSSECURITY
 
 			buffer = buffer->next;
 
 		} while (buffer);
-	}
-	else {
+	} else {
 
 		DataSubMessage_t dataSubMessage;
 		if (0 != change->serializedBuffer->buffer_size) {
@@ -574,41 +566,34 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			}
 		}
 #endif // DDSSECURITY
-		if (flowControl) {
+
+					ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-			if (encodeSubMsg && !encodeRtpsMsg) {
-				participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-			}
-			else if (encodeRtpsMsg) {
-				participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-			}
-			else {
-				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-			}
-#else
-			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
-		} else {
-#ifdef DDSSECURITY
-			if (encodeSubMsg && !encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-			}
-			else if (encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-			}
-			else {
-				participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-			}
-#else
-			participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-#endif // DDSSECURITY
+		if (encodeSubMsg && !encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
+		}
+		else if (encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
+		}
+		else {
+			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
 		}
 
-#ifdef DDSSECURITY
 		if (encodeBuf) {
 			delete[] encodeBuf;
 		}
-#endif
+
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}			
+#else
+		participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}
+#endif // DDSSECURITY
 	}
 	return RETCODE_OK;
 }
@@ -637,7 +622,7 @@ void StatelessWriter::ResendDataPeriod()
 		if (!change) {
 			continue;
 		}
-		DeliveryData(change, true);
+		DeliveryData(change, TIME_INFINITE);
 	}
 }
 

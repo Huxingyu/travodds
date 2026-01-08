@@ -21,21 +21,21 @@ Discovery::~Discovery()
 
 void Discovery::InitBuiltinEndpoint()
 {
-	builtinPublisher_ = std::make_shared<PublisherImpl>(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-	builtinSubScriber_ = std::make_shared<SubscriberImpl>(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+	builtinPublisher_ = std::make_shared<PublisherImpl>(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+	builtinSubScriber_ = std::make_shared<SubscriberImpl>(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
 
-	dcpsParticipant_ = std::make_shared<TopicImpl>("DCPSParticipant", "SPDPdiscoveredParticipantData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-	dcpsPublication_ = std::make_shared<TopicImpl>("DCPSPublication", "DiscoveredWriterData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-	dcpsSubscription_ = std::make_shared<TopicImpl>("DCPSSubscription", "DiscoveredReaderData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-	dcpsParticipantMessage_ = std::make_shared<TopicImpl>("DCPSParticipantMessage", "SPDPdiscoveredParticipantDataMessage", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+	dcpsParticipant_ = std::make_shared<TopicImpl>("DCPSParticipant", "SPDPdiscoveredParticipantData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+	dcpsPublication_ = std::make_shared<TopicImpl>("DCPSPublication", "DiscoveredWriterData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+	dcpsSubscription_ = std::make_shared<TopicImpl>("DCPSSubscription", "DiscoveredReaderData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+	dcpsParticipantMessage_ = std::make_shared<TopicImpl>("DCPSParticipantMessage", "SPDPdiscoveredParticipantDataMessage", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
 
 #ifdef DDSSECURITY
     /* 安全相关扩展主题 */
-    dcpsSubscriptionSecure_ = std::make_shared<TopicImpl>("DCPSSubscriptionSecure", "DiscoveredReaderDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-    dcpsPublicationSecure_ = std::make_shared<TopicImpl>("DCPSPublicationSecure", "DiscoveredWriterDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-    dcpsParticipantMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantMessageSecure", "ParticipantDataMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-    dcpsParticipantStatelessMessage_ = std::make_shared<TopicImpl>("DCPSParticipantStatelessMessageSecure", "ParticipantStatelessMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
-    dcpsParticipantVolatileMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantVolatileSecureMessageSecure", "ParticipantVolatileSecureMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, const_cast<DomainParticipantImpl*>(domainParticipant_));
+    dcpsSubscriptionSecure_ = std::make_shared<TopicImpl>("DCPSSubscriptionSecure", "DiscoveredReaderDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+    dcpsPublicationSecure_ = std::make_shared<TopicImpl>("DCPSPublicationSecure", "DiscoveredWriterDataSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+    dcpsParticipantMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantMessageSecure", "ParticipantDataMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+    dcpsParticipantStatelessMessage_ = std::make_shared<TopicImpl>("DCPSParticipantStatelessMessageSecure", "ParticipantStatelessMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
+    dcpsParticipantVolatileMessageSecure_ = std::make_shared<TopicImpl>("DCPSParticipantVolatileSecureMessageSecure", "ParticipantVolatileSecureMessageSecure", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE, domainParticipant_);
 #endif // DDSSECURITY
 
 	//TODO 补充具体TypeSupport
@@ -87,8 +87,8 @@ void Discovery::InitBuiltinEndpoint()
 	/* wangyi 添加 Liveliness 内置节点初始化 */
 	builtinParticipantMessageDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantMessage_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
 	builtinParticipantMessageDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantMessage_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
-	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER;
-	builtinEndpointSet_ |= BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_READER;
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER;
+	builtinEndpointSet_ |= DISC_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_READER;
 
 #ifdef DDSSECURITY
 	builtinParticipantMessageSecureDataWriter_ = std::make_shared<DataWriterImpl>(dcpsParticipantMessageSecure_.get(), writerQoS, nullptr, STATUS_MASK_NONE, builtinPublisher_.get(), nullptr);
@@ -116,8 +116,8 @@ void Discovery::InitBuiltinEndpoint()
 
 	//TODO SPDP SEDP初始化
 
-	spdp_ = std::make_shared<Spdp>(const_cast<DomainParticipantImpl*>(domainParticipant_)->GetRelatedParticipant().get(),this);
-	sedp_ = std::make_shared<Sedp>(const_cast<DomainParticipantImpl*>(domainParticipant_)->GetRelatedParticipant().get(), spdp_.get());
+	spdp_ = std::make_shared<Spdp>(domainParticipant_->GetRelatedParticipant().get(),this);
+	sedp_ = std::make_shared<Sedp>(domainParticipant_->GetRelatedParticipant().get(), spdp_.get());
 
 	spdp_->SetParticipantDataWriter(builtinParticipantDataWriter_);
 	spdp_->SetParticipantDataReader(builtinParticipantDataReader_);
