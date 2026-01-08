@@ -146,6 +146,10 @@ void SharedMemSocket::Shutdown()
 		data_->shutdown = true;
 		data_->wcondition.notify_one();
 		data_->rcondition.notify_one();
+		uint32_t trycount = 0;
+		while (data_->refs.load(std::memory_order_acquire) != 0 && trycount++ < 20) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 	}
 }
 
@@ -160,16 +164,6 @@ void SharedMemSocket::Close(bool haslock)
 		return;
 	}
 	Shutdown();
-	auto start = std::chrono::steady_clock::now();
-	while (data_ && data_->refs.load(std::memory_order_acquire) != 0) {
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
-
-		if (elapsed >= std::chrono::seconds(3)) {
-			break; // 准备强制关闭
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
 	try {
 		std::string sharedMemoryName = "TravoddsAcceptSharedMemory" + acceptPort_;
 		const char* objectName = "TravoddsAcceptsharedAcceptList";

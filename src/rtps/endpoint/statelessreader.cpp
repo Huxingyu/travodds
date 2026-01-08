@@ -134,6 +134,9 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 		if (lostcount > 0) {
 			datareader_->OnSampleLost(lostcount);
 		}
+		if(datareader_->ValidateFilterData(cache->serializedBuffer)){
+		    return RETCODE_OK;
+		};
 	}
 
 	if (readerListener_) {
@@ -319,6 +322,9 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			if (lostcount > 0) {
 				datareader_->OnSampleLost(lostcount);
 			}
+			if (datareader_->ValidateFilterData(dataFragCache->serializedBuffer)) {
+				return RETCODE_OK;
+			};
 		}
 
 		ReturnCode_t ret = AddChanges(dataFragCache);

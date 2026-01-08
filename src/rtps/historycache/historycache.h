@@ -293,7 +293,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake = false);
 
 	/**

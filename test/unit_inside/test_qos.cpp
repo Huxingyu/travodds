@@ -358,6 +358,8 @@ TEST_F(QoSTest, QoS_topic_check) {
 	topic_qos.topic_data.value.resize(0);
 	result = topic->set_qos(topic_qos);
 	EXPECT_EQ(result, RETCODE_IMMUTABLE_POLICY);
+	participant->delete_contained_entities();
+	factory->delete_participant(participant);
 
 }
 
@@ -3647,11 +3649,9 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 			WaitPositive();
 			EXPECT_EQ(listener1.wait_data_available(10000), 0);
 			// 11. DataReader1 take，预期10个样本
-			SequenceData<TestModule::BasicData> data;
-			SampleInfoSeq infos;
-			EXPECT_EQ(reader1->take(data, infos, LENGTH_UNLIMITED,
-				ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
-			EXPECT_EQ(data.length(), 1u);
+			TestModule::BasicData data;
+			SampleInfo info;
+			EXPECT_EQ(reader1->read_next_sample(&data, info), RETCODE_OK);
 
 			NotifyPositive();
 

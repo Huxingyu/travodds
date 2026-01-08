@@ -39,6 +39,7 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 	std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(subData.remoteReaderGuid, subData.unicastLocatorList);
 	readerLocator->SetHistoryCache(writerCache_);
 	readerLocators_[subData.remoteReaderGuid] = readerLocator;
+	transportGroup_.AddLocator(subData.remoteReaderGuid.prefix, subData.unicastLocatorList);
 }
 
 #ifdef DDSSECURITY
@@ -229,6 +230,8 @@ void StatelessWriter::ReaderLocatorRemove(const GUID_t& guid)
 		return;
 	}
 	readerLocators_.erase(itor);
+	transportGroup_.DecreaseLocator(guid.prefix);
+
 }
 
 void StatelessWriter::UnsentChangesReset()
@@ -274,7 +277,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 #endif // DDSSECURITY
 
 	std::vector<LocatorVec> dstLocators;
-
+	std::set<GuidPrefix_t> prefixs;
 	for (auto& it : readerMulticastLocators_) {
 		dstLocators.push_back(LocatorSeq{ it.first });
 	}
@@ -282,8 +285,10 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		if (!change->filterReaders_.empty() && change->filterReaders_.find(readerlocator.first) != change->filterReaders_.end()) {
 			continue;
 		}
-		dstLocators.push_back(readerlocator.second->GetLocatorList());
+		prefixs.insert(readerlocator.first.prefix);
 	}
+
+	transportGroup_.GetLocator(prefixs, dstLocators);
 
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;

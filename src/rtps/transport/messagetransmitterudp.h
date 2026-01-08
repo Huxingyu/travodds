@@ -123,7 +123,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive = false) = 0;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) = 0;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() = 0;
-	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() = 0;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit(const uint32_t port) = 0;
 
 
 protected:
@@ -192,7 +192,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
-	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() override;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit(const uint32_t port) override;
 };
 
 class MessageTransmitterUDPv6 : public MessageTransmitterUDP {
@@ -206,7 +206,7 @@ private:
 	virtual asio::ip::udp::endpoint GetEndpoint(const AsioLocator& locator, bool recive) override;
 	virtual asio::ip::udp::endpoint GetReciveEndpoint(const uint32_t port) override;
 	virtual std::shared_ptr<asio::ip::udp::socket> GetSocketInit() override;
-	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit() override;
+	virtual std::shared_ptr<UDPReciverSocket> GetReciveSocketInit(const uint32_t port) override;
 };
 
 TRAVODDS_NAMESPACE_END

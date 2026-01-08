@@ -90,12 +90,14 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_set_get_expression_parameter
     std::thread th_2(
         [&] {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
             TestModule::BasicData data;
             data.id = 10;
             data.name = "abc";
+            EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
             StringSeq parameters = { "20" };
             EXPECT_EQ(cftop->set_expression_parameters(parameters), RETCODE_OK);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::seconds(3));
             EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
 
         });

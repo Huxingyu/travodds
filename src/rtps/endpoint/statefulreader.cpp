@@ -483,7 +483,12 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 
 		if(datareader_ ) {
 			datareader_->SetLastinstanceHandle(cache);
+			if (datareader_->ValidateFilterData(cache->serializedBuffer)) {
+				cache = proxy->GetSubmitCache();
+				continue;
+			}
 		}
+
 		ret = AddChanges(cache);
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {

@@ -1,5 +1,5 @@
 #include "rtps/endpoint/readerlocator.h"
-#include <algorithm>
+
 USING_TRAVODDS_NAMESPACE;
 
 ReaderLocator::ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locatorList)
@@ -8,10 +8,6 @@ ReaderLocator::ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locator
 	  expectsInlineQos_(false),
 	  highestSentChangeSN_(SEQUENCENUMBER_UNKNOWN)
 {
-	std::sort(locatorList_.begin(), locatorList_.end(),
-		[](const Locator_t& a, const Locator_t& b) {
-			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
-		});
 }
 
 SequenceNumber_t ReaderLocator::NextRequestedChange()
@@ -77,10 +73,6 @@ void ReaderLocator::LocatorAdd(Locator_t& locator)
 		}
     }
 	locatorList_.push_back(locator);
-	std::sort(locatorList_.begin(), locatorList_.end(),
-		[](const Locator_t& a, const Locator_t& b) {
-			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
-		});
 }
 
 void ReaderLocator::LocatorRemove(Locator_t& locator)

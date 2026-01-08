@@ -14,23 +14,24 @@
 
 #include <asio.hpp>
 #include "travodds_dll.h"
-
+#include "common/sys/sysinfo.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 class ReciverSocket
 {
 public:
-	ReciverSocket()
+	ReciverSocket(const std::string& name)
 		: workGuard_(asio::make_work_guard(ioContext_)),
-		  ioThread_([this]() { ioContext_.run(); }) {
+		  ioThread_([name,this]() {
+		      ThreadFunction::SetThreadName(name);
+		      ioContext_.run(); 
+		  }) {
 	}
 	virtual ~ReciverSocket() {
 		workGuard_.reset();
 		ioContext_.stop();
 		if (std::this_thread::get_id() != ioThread_.get_id()) {
 			ioThread_.join();
-		} else {
-			ioThread_.detach();  // 在自身线程中，只能detach
 		}
 	}
 protected:
@@ -42,16 +43,16 @@ protected:
 
 class UDPReciverSocket : public ReciverSocket, public asio::ip::udp::socket {
 public:
-	UDPReciverSocket(const asio::ip::udp& protocol)
-		: asio::ip::udp::socket(ioContext_, protocol) {
+	UDPReciverSocket(const asio::ip::udp& protocol, const std::string& name)
+		: ReciverSocket(name), asio::ip::udp::socket(ioContext_, protocol) {
 	}
 	virtual ~UDPReciverSocket() = default;
 };
 
 class TCPReciverSocket : public ReciverSocket, public asio::ip::tcp::socket {
 public:
-	TCPReciverSocket()
-		: asio::ip::tcp::socket(ioContext_) {
+	TCPReciverSocket(const std::string& name)
+		: ReciverSocket(name),asio::ip::tcp::socket(ioContext_) {
 	}
 	virtual ~TCPReciverSocket() = default;
 };

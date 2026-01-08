@@ -16,6 +16,8 @@
 #include "dcps/domain/domainentityimpl.h"
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
+#include "dcps/sql/ddssqlfilter.h"
+
 #ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 #endif // DDSSECURITY
@@ -938,6 +940,9 @@ public:
 
 
 	void ContentFilterUpdate();
+
+	bool ValidateFilterData(SerializedBuffer* buffer);
+
 private:
 	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
@@ -958,6 +963,7 @@ private:
 	SubscriptionBuiltinTopicSecureData builtinSecureData_;
 #endif // DDSSECURITY
 	ContentFilterProperty_t contentFilter_;
+	std::shared_ptr<DDSSQL::DDSSQLFilter> filter_;
 protected:
 	TypeSupport* typeSupport_ = nullptr;
     std::shared_ptr<HistoryCache> history_;

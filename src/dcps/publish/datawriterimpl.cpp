@@ -1028,7 +1028,7 @@ void DataWriterImpl::UpdateReaderFilter(const GUID_t& readerGuid, const ContentF
 {
 	using namespace DDSSQL;
 	auto it = readerFilters_.find(readerGuid);
-	if (it == readerFilters_.end()) {
+	if (it != readerFilters_.end()) {
 		it->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
 	}
 }

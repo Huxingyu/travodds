@@ -16,7 +16,7 @@ void MessageTransmitter::SetRun()
 
 bool MessageTransmitter::IsStop()
 {
-	return flagNum_.load() == 0 && !runFlag_.load();
+	return flagNum_.load(std::memory_order_acquire) == 0 && !runFlag_.load();
 }
 
 void MessageTransmitter::SetStop()

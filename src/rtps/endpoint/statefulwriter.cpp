@@ -44,6 +44,7 @@ void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 	}
 
 	MatchedReaderAdd(proxy);
+	transportGroup_.AddLocator(subData.remoteReaderGuid.prefix, subData.unicastLocatorList);
 }
 
 #ifdef DDSSECURITY
@@ -232,6 +233,9 @@ void StatefulWriter::MatchedReaderRemove(std::shared_ptr<ReaderProxy> readerProx
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
 	matchedReaders_.erase(readerProxy->GetGuid());
+
+	transportGroup_.DecreaseLocator(readerProxy->GetGuid().prefix);
+
 }
 
 std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGuid)
@@ -430,14 +434,16 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 
 	std::vector<LocatorVec> dstLocators;
+	std::set<GuidPrefix_t> prefixs;
 	for (auto& reader : readerProxys) {
 		if (!change->filterReaders_.empty() && change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
 			SendGap({ change->sequenceNumber }, reader);
 			continue;
 		}
-		LocatorSeq& locators = reader->GetUnicastLocatorList();
-		dstLocators.push_back(locators);
+		prefixs.insert(reader->GetGuid().prefix);
 	}
+
+	transportGroup_.GetLocator(prefixs, dstLocators);
 
 	if (buffer->next) {
 		/* 分片数据处理 */
@@ -759,10 +765,9 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			TRAVODDS_LOG(LOG_ERROR, "write data error.");
 			return ret;
 		}
-	}
 #endif
-	return RETCODE_OK;
 	}
+	return RETCODE_OK;
 }
 
 ReturnCode_t StatefulWriter::WriteHeartbeat()

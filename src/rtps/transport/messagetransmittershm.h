@@ -34,7 +34,7 @@ public:
 	ReturnCode_t SendAddrRemove(Locator_t destination);
 
 	ReturnCode_t ReceiveAddrAdd(Locator_t receiveAddr);
-
+	
 	ReturnCode_t ReceiveAddrRemove(Locator_t ReceiveAddr) { return RETCODE_OK; };
 	
 	ReturnCode_t MessageSend(

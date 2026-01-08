@@ -493,13 +493,19 @@ ReturnCode_t Participant::AddRemoteSecureReader(const DiscoveredReaderSecureData
 
 ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 {
-	auto itor = remoteWriters_.find(guid);
-	if (itor == remoteWriters_.end()) {
-		return RETCODE_OK;
+	DiscoveredWriterData dwData;
+	{
+		std::unique_lock<std::mutex> lock(mtxReaders_);
+		auto itor = remoteWriters_.find(guid);
+		if (itor == remoteWriters_.end()) {
+			return RETCODE_OK;
+		}
+		dwData = std::move(itor->second);
+		remoteWriters_.erase(itor);
 	}
 
 	// yuguxu 传输断开链接
-	TransmittersDisconnect(itor->second.unicastLocatorList);
+	TransmittersDisconnect(dwData.unicastLocatorList);
 
 	std::list<EntityId_t> readersEntityid;
 	{
@@ -606,13 +612,12 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 			}
 		}
 
-		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteWriterGuid);
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(dwData.remoteWriterGuid);
 		DataReaderImpl* dr = reader->GetRelatedDataReader();
 		if (dr) {
 			dr->OnSubscriptionMatched(handle, false);
 		}
 	}
-	remoteWriters_.erase(itor);
 
 #ifdef DDSSECURITY
 	// 移除发现的远端写者数据缓存
@@ -629,13 +634,20 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 
 ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 {
-	auto itor = remoteReaders_.find(guid);
-	if (itor == remoteReaders_.end()) {
-		return RETCODE_OK;
+	DiscoveredReaderData drData;
+	{
+		std::unique_lock<std::mutex> lock(mtxWriters_);
+		auto itor = remoteReaders_.find(guid);
+		if (itor == remoteReaders_.end()) {
+			return RETCODE_OK;
+		}
+		drData = std::move(itor->second);
+		remoteReaders_.erase(itor);
 	}
 
+
 	// yuguxu 传输断开链接
-	TransmittersDisconnect(itor->second.unicastLocatorList);
+	TransmittersDisconnect(drData.unicastLocatorList);
 
 	std::list<EntityId_t> writersEntityid;
 	{
@@ -677,16 +689,14 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 		std::shared_ptr<StatelessWriter> statelessWriter = std::dynamic_pointer_cast<StatelessWriter>(writer);
 		if (statelessWriter) {
-			statelessWriter->ReaderLocatorRemove(itor->second.remoteReaderGuid);
+			statelessWriter->ReaderLocatorRemove(drData.remoteReaderGuid);
 		}
 
-		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteReaderGuid);
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(drData.remoteReaderGuid);
 		writer->GetRelatedDataWriter()->OnPublicationMatched(handle,false);
 
 		writer->GetRelatedDataWriter()->RemoveReaderFilter(guid);
 	}
-
-	remoteReaders_.erase(itor);
 
 #ifdef DDSSECURITY
 	// 移除接收到的远端读者发现数据缓存
@@ -705,7 +715,8 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 void Participant::GetParticipantAllWriter(const GUID_t& remoteParticipantGuid,std::vector<GUID_t>& guids)
 {
-	for (auto writer : remoteWriters_) {
+	std::unique_lock<std::mutex> lock(mtxReaders_);
+	for (auto& writer : remoteWriters_) {
 		if (CompareGuidPrefix(remoteParticipantGuid.prefix, writer.first.prefix)) {
 			guids.push_back(writer.first);
 		}
@@ -717,7 +728,7 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllWriter(GUID_t remoteParticip
 	std::vector<GUID_t> guids;
 	GetParticipantAllWriter(remoteParticipantGuid, guids);
 
-	for (auto guid : guids) {
+	for (auto& guid : guids) {
 		RemoveRemoteWriter(guid);
 	}
 
@@ -726,7 +737,8 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllWriter(GUID_t remoteParticip
 
 void Participant::GetParticipantAllReader(const GUID_t & remoteParticipantGuid, std::vector<GUID_t>& guids)
 {
-	for (auto reader : remoteReaders_) {
+	std::unique_lock<std::mutex> lock(mtxWriters_);
+	for (auto& reader : remoteReaders_) {
 		if (CompareGuidPrefix(remoteParticipantGuid.prefix, reader.first.prefix)) {
 			guids.push_back(reader.first);
 		}
@@ -738,7 +750,7 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllReader(GUID_t remoteParticip
 	std::vector<GUID_t> guids;
 	GetParticipantAllReader(remoteParticipantGuid, guids);
 
-	for (auto guid : guids) {
+	for (auto& guid : guids) {
 		RemoveRemoteReader(guid);
 	}
 

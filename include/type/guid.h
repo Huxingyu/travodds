@@ -18,7 +18,6 @@ TRAVODDS_NAMESPACE_BEGIN
 
 struct GuidPrefix_t {
 	octet value[12];
-#ifdef DDSSECURITY
 	// 重载小于运算符
 	bool operator<(const GuidPrefix_t& other) const {
 		for (int32_t i = 0; i < 12; ++i) {
@@ -55,7 +54,6 @@ struct GuidPrefix_t {
 		}
 		return false;
 	}
-#endif // DDSSECURITY
 };
 
 /**

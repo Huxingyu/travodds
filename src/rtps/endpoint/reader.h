@@ -114,7 +114,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTake(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
+	ReturnCode_t ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**
@@ -132,7 +132,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**
@@ -151,7 +151,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeNextInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**

@@ -15,14 +15,16 @@ USING_TRAVODDS_NAMESPACE;
 DynamicPerformanceRegulator::DynamicPerformanceRegulator(const DynamicAdjustQosPolicy& policy, FlowRateLimitedManager* flowRateLimitedManager)
 	: count_(0), flowRateLimitedManager_(flowRateLimitedManager), config_(policy)
 {
-	// 设置调整间隔
-	timer_ = TimerManager::CreateTimer(
-		reinterpret_cast<const Time_t&>(policy.adjustment_interval),
-		[this]() {
-			this->UpdateNetDevStats();
-		},
-		"dpr"
-	);
+    if (policy.adjustment_interval != Duration_t(TIME_INFINITE)) {
+		// 设置调整间隔
+		timer_ = TimerManager::CreateTimer(
+			reinterpret_cast<const Time_t&>(policy.adjustment_interval),
+			[this]() {
+				this->UpdateNetDevStats();
+			},
+			"dpr"
+		);
+	}
 
 }
 

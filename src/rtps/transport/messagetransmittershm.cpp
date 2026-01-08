@@ -128,6 +128,9 @@ ReturnCode_t MessageTransmitterSHM::MessageSend(
 
 void MessageTransmitterSHM::SetStop()
 {
+	if (!runFlag_.load()) {
+		return;
+	}
 	MessageTransmitter::SetStop();
 	acceptor_->Shutdown();
 
@@ -139,7 +142,7 @@ void MessageTransmitterSHM::SetStop()
 		socketItor->Shutdown();
 	}
 	uint32_t tries = 0;
-	while (flagNum_.load() > 0 && tries++ < 20) {
+	while (flagNum_.load(std::memory_order_acquire) > 0 && tries++ < 20) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
@@ -157,9 +160,9 @@ bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
 
 void MessageTransmitterSHM::AsyncAccept()
 {
-	flagNum_.fetch_add(1);
+	flagNum_.fetch_add(1, std::memory_order_release);
 	if (!acceptor_ || !IsRun()) {
-		flagNum_.fetch_sub(1);
+		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
 	}
 
@@ -178,7 +181,7 @@ void MessageTransmitterSHM::AsyncAccept()
 					TRAVODDS_LOG(LOG_ERROR,
 						"Accept error: %s", ec->what());
 				}
-				flagNum_.fetch_sub(1);
+				flagNum_.fetch_sub(1, std::memory_order_release);
 				if (acceptor_ && !acceptor_->IsShutdown()) {
 					AsyncAccept();
 				}
@@ -187,7 +190,7 @@ void MessageTransmitterSHM::AsyncAccept()
 	} catch (const std::exception& e) {
 		TRAVODDS_LOG(LOG_ERROR,
 			"socket_accept exception: %s", e.what());
-		flagNum_.fetch_sub(1);
+		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
 	}
 

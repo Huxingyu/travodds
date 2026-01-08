@@ -15,6 +15,8 @@
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
+#include "rtps/transport/transportgroup.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 
 class FlowController;
@@ -257,6 +259,7 @@ protected:
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
 	FlowController* flowController_;
+	TransportGroup transportGroup_;
 };
 
 TRAVODDS_NAMESPACE_END
