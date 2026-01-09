@@ -96,8 +96,9 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_set_get_expression_parameter
             data.name = "abc";
             EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
             StringSeq parameters = { "20" };
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             EXPECT_EQ(cftop->set_expression_parameters(parameters), RETCODE_OK);
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
 
         });
