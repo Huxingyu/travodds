@@ -717,7 +717,7 @@ void Participant::GetParticipantAllWriter(const GUID_t& remoteParticipantGuid,st
 {
 	std::unique_lock<std::mutex> lock(mtxReaders_);
 	for (auto& writer : remoteWriters_) {
-		if (CompareGuidPrefix(remoteParticipantGuid.prefix, writer.first.prefix)) {
+		if (remoteParticipantGuid.prefix == writer.first.prefix) {
 			guids.push_back(writer.first);
 		}
 	}
@@ -739,7 +739,7 @@ void Participant::GetParticipantAllReader(const GUID_t & remoteParticipantGuid, 
 {
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 	for (auto& reader : remoteReaders_) {
-		if (CompareGuidPrefix(remoteParticipantGuid.prefix, reader.first.prefix)) {
+		if (remoteParticipantGuid.prefix == reader.first.prefix) {
 			guids.push_back(reader.first);
 		}
 	}
@@ -1441,7 +1441,7 @@ ReturnCode_t Participant::GetPublications(InstanceHandleSeq& handles, bool inclu
 {
 	for (auto& writer : remoteWriters_) {
 
-		if (false == includeContainedEntities && true == CompareGuidPrefix(guid_.prefix, writer.first.prefix)) {
+		if (false == includeContainedEntities && guid_.prefix == writer.first.prefix) {
 			continue;
 		}
 
@@ -1611,7 +1611,7 @@ ReturnCode_t Participant::GetSublications(InstanceHandleSeq & handles, bool incl
 {
 	for (auto& reader : remoteReaders_) {
 
-		if (false == includeContainedEntities && true == CompareGuidPrefix(guid_.prefix, reader.first.prefix)) {
+		if (false == includeContainedEntities && guid_.prefix == reader.first.prefix) {
 			continue;
 		}
 

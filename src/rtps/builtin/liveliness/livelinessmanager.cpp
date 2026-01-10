@@ -520,7 +520,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 			livelinessKind = (LivelinessQosPolicyKind)change->instanceHandle.keyHash.value[15];
 		}
 
-		if (CompareGuidPrefix(guid.prefix, ParticipantMessageDataReader_->GetGuid().prefix)) {
+		if (guid.prefix == ParticipantMessageDataReader_->GetGuid().prefix) {
 			/* TODO 日志 */
 			//AGILOG(AGILOG_ERROR, "CompareGuidPrefix Err");
 			return;
