@@ -431,59 +431,43 @@ std::shared_ptr<Reader> Participant::GetReader(const EntityId_t & EntityID)
 	return readers_[EntityID];
 }
 
+#ifdef DDSSECURITY
+ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data, bool isSecure)
+#else
 ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
+#endif // DDSSECURITY
 {
-
 	std::unique_lock<std::mutex> lock(mtxReaders_);
 	for (auto& reader : readers_) {
+#ifdef DDSSECURITY
+		addReaderMatch(reader.second, data, isSecure);
+#else
 		addReaderMatch(reader.second, data);
+#endif // DDSSECURITY
 	}
 	remoteWriters_.insert({ data.remoteWriterGuid, data });
 	return RETCODE_OK;
 }
 
 #ifdef DDSSECURITY
-ReturnCode_t Participant::AddRemoteSecureWriter(const DiscoveredWriterSecureData& data)
-{
-	remoteSecureWriters_.insert({ data.remoteWriterGuid, data });
-
-	std::unique_lock<std::mutex> lock(mtxReaders_);
-	//此参与者所有的Reader的匹配这个检测到的Writer
-	for (auto& reader : readers_) {
-		addReaderMatch(reader.second, data);
-	}
-
-	return RETCODE_OK;
-}
-#endif // DDSSECURITY
-
+ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data, bool isSecure)
+#else
 ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
+#endif // DDSSECURITY
 {
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 
 	for (auto& writer : writers_) {
+#ifdef DDSSECURITY
+		addWriterMatch(writer.second, data, isSecure);
+#else
 		addWriterMatch(writer.second, data);
+#endif // DDSSECURITY
 	}	
 	remoteReaders_.insert({ data.remoteReaderGuid, data });
 
 	return RETCODE_OK;
 }
-
-#ifdef DDSSECURITY
-ReturnCode_t Participant::AddRemoteSecureReader(const DiscoveredReaderSecureData& data)
-{
-	remoteSecureReaders_.insert({ data.remoteReaderGuid, data });
-
-	std::unique_lock<std::mutex> lock(mtxWriters_);
-
-	for (auto& writer : writers_) {
-		addWriterMatch(writer.second, data);
-	}
-
-	return RETCODE_OK;
-}
-
-#endif // DDSSECURITY
 
 ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 {
@@ -607,17 +591,6 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		}
 	}
 	remoteWriters_.erase(itor);
-
-#ifdef DDSSECURITY
-	// 移除发现的远端写者数据缓存
-	auto itRemoteSecureWriter = remoteSecureWriters_.find(guid);
-	if (itRemoteSecureWriter == remoteSecureWriters_.end()) {
-		// return RETCODE_OK;
-	}
-	else {
-		remoteSecureWriters_.erase(itRemoteSecureWriter);
-	}
-#endif // DDSSECURITY
 	return RETCODE_OK;
 }
 
@@ -689,18 +662,6 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 	}
 
 	remoteReaders_.erase(itor);
-
-#ifdef DDSSECURITY
-	// 移除接收到的远端读者发现数据缓存
-	auto secureItor = remoteSecureReaders_.find(guid);
-	if (secureItor == remoteSecureReaders_.end()) {
-
-	}
-	else {
-		remoteSecureReaders_.erase(secureItor);
-	}
-#endif // DDSSECURITY
-
 	return RETCODE_OK;
 }
 
@@ -750,26 +711,28 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllReader(GUID_t remoteParticip
 ReturnCode_t Participant::AddLocalWriter(std::shared_ptr<Writer> writer)
 {
 	for (auto& remoteReaderData : remoteReaders_) {
-		addWriterMatch(writer, remoteReaderData.second);
-	}
 #ifdef DDSSECURITY
-	for (auto& remoteReaderSecureData : remoteSecureReaders_) {
-		addWriterMatch(writer, remoteReaderSecureData.second);
+		bool isSecure = remoteReaderData.second.ddsSubscriptionData.security_info.endpoint_security_attributes &
+			PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
+		addWriterMatch(writer, remoteReaderData.second, isSecure);
+#else
+		addWriterMatch(writer, remoteReaderData.second);
+#endif
 	}
-#endif // DDSSECURITY
 	return RETCODE_OK;
 }
 
 ReturnCode_t Participant::AddLocalReader(std::shared_ptr<Reader> reader)
 {
 	for (auto& remoteWriterData : remoteWriters_) {
-		addReaderMatch(reader, remoteWriterData.second);
-	}
 #ifdef DDSSECURITY
-	for (auto& remoteWriterSecureData : remoteSecureWriters_) {
-		addReaderMatch(reader, remoteWriterSecureData.second);
+		bool isSecure = remoteWriterData.second.ddsPublicationData.security_info.endpoint_security_attributes & 
+			PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
+		addReaderMatch(reader, remoteWriterData.second, isSecure);
+#else
+		addReaderMatch(reader, remoteWriterData.second);
+#endif
 	}
-#endif // DDSSECURITY
 	return RETCODE_OK;
 }
 
@@ -826,7 +789,12 @@ GuidPrefix_t Participant::GetGuidPrefix()
 {
 	return guid_.prefix;
 }
-void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData &subData)
+
+#ifdef DDSSECURITY
+void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData, bool isSecure)
+#else
+void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData)
+#endif // DDSSECURITY
 {
     DataWriterImpl* dw = writer->GetRelatedDataWriter();
     if (nullptr == dw) {
@@ -874,8 +842,11 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 		subData.contentFilter.filterExpression.size() > 0) {
 		dw->AddReaderFilter(subData.remoteReaderGuid, subData.contentFilter);
 	}
-
+#ifdef DDSSECURITY
+	writer->MatchedReaderAddWithSecurity(subData, isSecure);
+#else
 	writer->MatchedReaderAdd(subData);
+#endif
 
 	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
 
@@ -902,75 +873,17 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 }
 
 #ifdef DDSSECURITY
-void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderSecureData& subData)
-{
-	DataWriterImpl* dw = writer->GetRelatedDataWriter();
-	if (nullptr == dw) {
-		TRAVODDS_LOG(LOG_ERROR, "datawriter is nullptr");
-		return;
-	}
-	const PublicationBuiltinTopicSecureData& pubData = dw->GetBuiltinTopicSecureData();
-
-	if (pubData.topic_name != subData.ddsSubscriptionData.topic_name) {
-		return;
-	}
-
-	const TopicImpl* topicImpl = dynamic_cast<const TopicImpl*>(writer->GetRelatedDataWriter()->get_topic());
-	if (nullptr == topicImpl)
-		return;
-
-	if (pubData.type_name != subData.ddsSubscriptionData.type_name) {
-
-		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		return;
-	}
-
-	if ((0x02 == writer->GetGuid().entityId.entityKind && subData.remoteReaderGuid.entityId.entityKind != 0x07)
-		|| (0x03 == writer->GetGuid().entityId.entityKind && subData.remoteReaderGuid.entityId.entityKind != 0x04)) {
-		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		TRAVODDS_LOG(LOG_ERROR, "Loacl dw key = %x ,but remote dr key = %x", writer->GetGuid().entityId.entityKind, subData.remoteReaderGuid.entityId.entityKind);
-		return;
-	}
-
-	std::set<QosPolicyId_t> qosSeq;
-	bool ret = Match(pubData, subData.ddsSubscriptionData, qosSeq);
-	if (!ret) {
-		writer->GetRelatedDataWriter()->OnOfferedIncompatibleQos(qosSeq);
-		return;
-	}
-	//根据远端发送的DiscoveredReaderData subData生成ReaderProxy，存入writer的matchedReaders_中
-	writer->MatchedReaderAdd(subData);
-
-	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	//根据远端GUID找到和本地匹配关系的列表writers
-	auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
-	if (matchLocalEntitys_.end() == writers) { //该远端Guid未找到匹配本地列表
-		std::list<EntityId_t> writerList; //建立联系
-		writerList.push_back(writer->GetGuid().entityId);
-		matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
-	}
-	else {
-		writers->second.push_back(writer->GetGuid().entityId); //该远端Guid匹配本地列表插入这个本地writer
-	}
-	//本地EntityId_t和远端匹配关系的列表
-	auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
-	if (readers == matchRemoteEntitys_.end()) {
-		std::set<GUID_t> remoteWriters;
-		remoteWriters.insert(subData.remoteReaderGuid);
-		matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
-	}
-	else {
-		readers->second.insert(subData.remoteReaderGuid);
-	}
-
-	InstanceHandle_t handle = Conversion::ToInstanceHandle(subData.remoteReaderGuid);
-	writer->GetRelatedDataWriter()->OnPublicationMatched(handle);
-}
+void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure)
+#else
+void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData)
 #endif // DDSSECURITY
-
-void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData &pubData)
 {
     DataReaderImpl* dr = reader->GetRelatedDataReader();
+	GUID_t guid = dr->get_guid();
+	GUID_t remoteGuid = Conversion::ToGuid(pubData.ddsPublicationData.key);
+	if (guid.IsUserDefinedEntity() && remoteGuid.IsUserDefinedEntity()) {
+		int a = 0;
+	}
     if(nullptr == dr) {
         return;
     }
@@ -1013,9 +926,26 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	// yuguxu 传输链接
 	TransmittersConnect(pubData.unicastLocatorList);
 
+#ifdef DDSSECURITY
+	WriterSampleList* newWriter = nullptr;
+	if ((isSecure && dr->secAttributes_.is_discovery_protected) || 
+		!dr->secAttributes_.is_discovery_protected) {
+		newWriter = addReaderMatchWithSecurity(reader, pubData);
+	}
+#endif // DDSSECURITY
+
 	if (reader->IsReliable()) {
 		std::shared_ptr<WriterProxy> proxy = std::make_shared<WriterProxy>(pubData.remoteWriterGuid, pubData.remoteGroupGuid, pubData.unicastLocatorList, pubData.multicastLocatorList);
 		StatefulReader* fulReader = dynamic_cast<StatefulReader*> (reader.get());
+
+#ifdef DDSSECURITY
+		if (newWriter) {
+			proxy->cryptoHdl_ = newWriter->cryptoHdl;
+			proxy->partCryptoHdl_ = newWriter->partCryptoHdl;
+			proxy->readyForSecComm_ = newWriter->readyForSecComm;
+		}
+#endif // DDSSECURITY
+
 		if (fulReader) {
 			fulReader->MatchedWriterAdd(proxy);
 		} else {
@@ -1058,244 +988,6 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(pubData.remoteWriterGuid);
 	reader->GetRelatedDataReader()->OnSubscriptionMatched(handle);
 }
-
-#ifdef DDSSECURITY
-void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterSecureData& pubData)
-{
-	DataReaderImpl* dr = reader->GetRelatedDataReader();
-	if (nullptr == dr) {
-		return;
-	}
-	const SubscriptionBuiltinTopicSecureData& subData = dr->GetBuiltinTopicSecureData();
-
-	if (pubData.ddsPublicationData.topic_name != subData.topic_name) {
-		return;
-	}
-
-	const TopicImpl* topicImpl = dynamic_cast<const TopicImpl*>(reader->GetRelatedDataReader()->get_topicdescription());
-	if (nullptr == topicImpl)
-		return;
-	// 判断是否是和远端为同一主题下的本地DataReader
-	if (pubData.ddsPublicationData.type_name != subData.type_name)
-	{
-		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		return;
-	}
-
-	if ((0x02 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x07)
-		|| (0x03 == pubData.remoteWriterGuid.entityId.entityKind && reader->GetGuid().entityId.entityKind != 0x04)) {
-		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
-		TRAVODDS_LOG(LOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
-		return;
-	}
-	// 执行qos匹配
-	std::set<QosPolicyId_t> qosSeq;
-	bool ret = Match(pubData.ddsPublicationData, subData, qosSeq);
-	if (!ret) {
-		reader->GetRelatedDataReader()->OnRequestedIncompatibleQos(qosSeq);
-		return;
-	}
-
-	// 安全扩展accesscontrol  check_remote_datawriter
-	GUID_t drGuid = Conversion::ToGuid(dr->get_instance_handle());
-	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(dr->getParent()->get_participant());
-	if (dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
-	{
-		if (dr->secAttributes_.is_write_protected)
-		{
-			SecurityException secExce;
-			BuiltinTopicKey_t participant_key = pubData.ddsPublicationData.participant_key;
-			GuidPrefix_t remote_prefix = Conversion::ToGuid(participant_key).prefix;
-			PermissionsHandle remotePermissionsHandle = SEC_NIL_HANDLE;
-			std::map<GuidPrefix_t, DiscoveryDPInfo*>& discParts = dp->GetDiscovery()->GetSpdp()->discParts_;
-			auto dpInfoIter = discParts.find(remote_prefix);
-			if (dpInfoIter == discParts.end())
-			{
-				remotePermissionsHandle = SEC_NIL_HANDLE;
-			}
-			else if (dpInfoIter->second->enableDDSSec_)
-			{
-				remotePermissionsHandle = dpInfoIter->second->permissionsHdl_;
-			}
-			if (!dp->secPlugin_.access_control->check_remote_datawriter(
-				remotePermissionsHandle,
-				dp->GetDomainId(),
-				&pubData.ddsPublicationData,
-				&secExce))
-			{
-				TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: rejected by access control plugin."
-					"\n  Code: %d"
-					"\n  Minor code: %d"
-					"\n  Message: %s",
-					secExce.code,
-					secExce.minor_code,
-					secExce.message);
-				return;
-			}
-		}
-	}
-
-	// 匹配的远端数据写者是否和本地数据读者的域参与者安全属性是否一致
-	if (dp->enableDDSSec_ &&
-		dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
-	{
-	    EndpointSecurityAttributesMask drSecAttrMask =
-	        EndpointSecurityAttributesToMask(&dr->secAttributes_);
-	    EndpointSecurityAttributesMask dwSecAttrMask =
-	        pubData.ddsPublicationData.security_info.endpoint_security_attributes;
-	    if ((dwSecAttrMask & ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID) == 0)
-	    {
-	        dwSecAttrMask = 0;
-	    }
-	    if (drSecAttrMask != dwSecAttrMask
-	        || dr->secAttributes_.plugin_endpoint_attributes
-	        != pubData.ddsPublicationData.security_info.plugin_endpoint_security_attributes)
-	    {
-			TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: participant security_info different from local reader.");
-	        return;
-	    }
-	}
-
-	// 安全扩展相关
-	WriterSampleList* newWriter = new WriterSampleList;
-	GUID_t writerId = Conversion::ToGuid(pubData.ddsPublicationData.key);
-	newWriter->writerId = writerId;
-	newWriter->readyForSecComm = false;
-	// 安全扩展 crypto_key_factory相关 register_matched_remote_datawriter
-	if (dr->enableSec_ && dr->secPlugin_)
-	{
-		if (dr->secAttributes_.is_payload_protected
-			|| dr->secAttributes_.is_submessage_protected)
-		{
-			SecurityException secExce;
-			newWriter->cryptoHdl = dr->secPlugin_->crypto_key_factory->register_matched_remote_datawriter(
-				dr->cryptoHdl_,
-				dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix),
-				dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantSharedSecret(&writerId.prefix),
-				&secExce);
-
-			if (newWriter->cryptoHdl == SEC_NIL_HANDLE)
-			{
-				TRAVODDS_LOG(LOG_ERROR, "Failed to register remote writer to key factory."
-					"\n  Code: %d"
-					"\n  Minor code: %d"
-					"\n  Message: %s",
-					secExce.code,
-					secExce.minor_code,
-					secExce.message);
-				return;
-			}
-
-			if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
-			{
-				ParticipantGenericMessage cryptoTokensSample;
-				if (!dr->secPlugin_->crypto_key_exchange->create_local_datareader_crypto_tokens(
-					&cryptoTokensSample.messageData,
-					dr->cryptoHdl_,
-					newWriter->cryptoHdl,
-					&secExce))
-				{
-					TRAVODDS_LOG(LOG_ERROR, "Match Writer failed:  failed to create crypto tokens for remote writer."
-						"\n  Code: %d"
-						"\n  Minor code: %d"
-						"\n  Message: %s",
-						secExce.code,
-						secExce.minor_code,
-						secExce.message);
-					return;
-				}
-				cryptoTokensSample.messageClassId = GMCLASSID_SECURITY_DATAREADER_CRYPTO_TOKENS;
-				cryptoTokensSample.destinationEndpointKey = Conversion::ToBuiltinTopicKey(writerId);
-				cryptoTokensSample.sourceEndpointKey = Conversion::ToBuiltinTopicKey(drGuid);
-				GUID_t msgReceiver = writerId;
-				msgReceiver.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
-				dp->GetDiscovery()->GetSedp()->WriteParticipantVolatileSecureMessage(&msgReceiver, cryptoTokensSample);
-				dr->secPlugin_->crypto_key_exchange->return_crypto_tokens(
-					&cryptoTokensSample.messageData, &secExce);
-				cryptoTokensSample.messageClassId = "";
-			}
-			else
-			{
-				newWriter->partCryptoHdl = dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix);
-				dr->secWriters_.push_back(newWriter->cryptoHdl);
-				newWriter->readyForSecComm = true;
-			}
-		}
-		else if (dr->rtpsMsgProtected_)
-		{
-			newWriter->partCryptoHdl = dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix);
-			newWriter->readyForSecComm = true;
-		}
-		dr->writerSampleList_[writerId] = newWriter;
-	}
-	if (dr->enableSec_ && !newWriter->readyForSecComm) {
-		if (newWriter->writerId.IsSecureBuiltinEntity()
-			|| dr->secAttributes_.is_payload_protected
-			|| dr->secAttributes_.is_submessage_protected) {
-			// need crypto key exchange
-			dr->preparingWriters_[writerId] = newWriter;
-			auto wrTokenIter = dr->remoteWriterCryptoToken_.find(writerId);
-			if (wrTokenIter != dr->remoteWriterCryptoToken_.end())
-			{
-				dr->SetRemoteWriterCryptoTokens(&writerId, &wrTokenIter->second);
-				dr->remoteWriterCryptoToken_.erase(wrTokenIter);
-			}
-			return;
-		}
-	}
-
-	if (reader->IsReliable()) {
-		std::shared_ptr<WriterProxy> proxy = std::make_shared<WriterProxy>(pubData.remoteWriterGuid, pubData.remoteGroupGuid, pubData.unicastLocatorList, pubData.multicastLocatorList);
-		StatefulReader* fulReader = dynamic_cast<StatefulReader*> (reader.get());
-		proxy->cryptoHdl_ = newWriter->cryptoHdl;
-		proxy->partCryptoHdl_ = newWriter->partCryptoHdl;
-		proxy->readyForSecComm_ = newWriter->readyForSecComm;
-		if (fulReader) { //维护该本地读者下的远端写者map
-			fulReader->MatchedWriterAdd(proxy);
-		}
-		else {
-			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
-		}
-	}
-	else {
-		StatelessReader* lessReader = dynamic_cast<StatelessReader*> (reader.get());
-		//std::shared_ptr<RemoteWriterData> proxy = nullptr;
-		/* wangyi  */
-		std::shared_ptr<WriterProxy> proxy = std::make_shared<WriterProxy>(pubData.remoteWriterGuid, pubData.remoteGroupGuid, pubData.unicastLocatorList, pubData.multicastLocatorList);
-		if (lessReader) {
-			TRAVODDS_LOG(LOG_DEBUG, "MatchedSecureWriterAdd");
-			lessReader->MatchedWriterAdd(proxy);
-		}
-		else {
-			TRAVODDS_LOG(LOG_ERROR, "MatchedWriterAdd Err")
-		}
-	}
-
-	//维护participant下的远程guid和本地实体entity的匹配关系（双向）
-	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto readers = matchLocalEntitys_.find(pubData.remoteWriterGuid);
-	if (matchLocalEntitys_.end() == readers) {
-		std::list<EntityId_t> readerList;
-		readerList.push_back(reader->GetGuid().entityId);
-		matchLocalEntitys_[pubData.remoteWriterGuid] = readerList;
-	}
-	else {
-		readers->second.push_back(reader->GetGuid().entityId);
-	}
-	auto writers = matchRemoteEntitys_.find(reader->GetGuid().entityId);
-	if (writers == matchRemoteEntitys_.end()) {
-		std::set<GUID_t> remoteReaders;
-		remoteReaders.insert(pubData.remoteWriterGuid);
-		matchRemoteEntitys_[reader->GetGuid().entityId] = remoteReaders;
-	}
-	else {
-		writers->second.insert(pubData.remoteWriterGuid);
-	}
-
-	InstanceHandle_t handle = Conversion::ToInstanceHandle(pubData.remoteWriterGuid);
-	reader->GetRelatedDataReader()->OnSubscriptionMatched(handle);
-}
-#endif // DDSSECURITY
 
 std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmitters()
 {
@@ -1612,7 +1304,7 @@ void Participant::GetMacthList(const GUID_t& writerGuid, std::list<EntityId_t>& 
 			endpointList.push_back(ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER);
 		}
 #ifdef DDSSECURITY
-if (writerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		if (writerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
             endpointList.push_back(ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER);
         }
         if (writerGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
@@ -1693,3 +1385,157 @@ bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const Stri
 	}
 	return false;
 }
+#ifdef DDSSECURITY
+WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData)
+{
+	// 安全扩展accesscontrol  check_remote_datawriter
+	DataReaderImpl* dr = reader->GetRelatedDataReader();
+	GUID_t drGuid = Conversion::ToGuid(dr->get_instance_handle());
+	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(dr->getParent()->get_participant());
+	if (dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
+	{
+		if (dr->secAttributes_.is_write_protected)
+		{
+			SecurityException secExce;
+			BuiltinTopicKey_t participant_key = pubData.ddsPublicationData.participant_key;
+			GuidPrefix_t remote_prefix = Conversion::ToGuid(participant_key).prefix;
+			PermissionsHandle remotePermissionsHandle = SEC_NIL_HANDLE;
+			std::map<GuidPrefix_t, DiscoveryDPInfo*>& discParts = dp->GetDiscovery()->GetSpdp()->discParts_;
+			auto dpInfoIter = discParts.find(remote_prefix);
+			if (dpInfoIter == discParts.end())
+			{
+				remotePermissionsHandle = SEC_NIL_HANDLE;
+			}
+			else if (dpInfoIter->second->enableDDSSec_)
+			{
+				remotePermissionsHandle = dpInfoIter->second->permissionsHdl_;
+			}
+			if (!dp->secPlugin_.access_control->check_remote_datawriter(
+				remotePermissionsHandle,
+				dp->GetDomainId(),
+				&pubData.ddsPublicationData,
+				&secExce))
+			{
+				TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: rejected by access control plugin."
+					"\n  Code: %d"
+					"\n  Minor code: %d"
+					"\n  Message: %s",
+					secExce.code,
+					secExce.minor_code,
+					secExce.message);
+				return nullptr;
+			}
+		}
+	}
+
+	// 匹配的远端数据写者是否和本地数据读者的域参与者安全属性是否一致
+	if (dp->enableDDSSec_ &&
+		dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
+	{
+		EndpointSecurityAttributesMask drSecAttrMask =
+			EndpointSecurityAttributesToMask(&dr->secAttributes_);
+		EndpointSecurityAttributesMask dwSecAttrMask =
+			pubData.ddsPublicationData.security_info.endpoint_security_attributes;
+		if ((dwSecAttrMask & ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID) == 0)
+		{
+			dwSecAttrMask = 0;
+		}
+		if (drSecAttrMask != dwSecAttrMask
+			|| dr->secAttributes_.plugin_endpoint_attributes
+			!= pubData.ddsPublicationData.security_info.plugin_endpoint_security_attributes)
+		{
+			TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: participant security_info different from local reader.");
+			return nullptr;
+		}
+	}
+
+	WriterSampleList* newWriter = new WriterSampleList;
+	GUID_t writerId = Conversion::ToGuid(pubData.ddsPublicationData.key);
+	newWriter->writerId = writerId;
+	newWriter->readyForSecComm = false;
+	if (dr->enableSec_ && dr->secPlugin_)
+	{
+		if (dr->secAttributes_.is_payload_protected
+			|| dr->secAttributes_.is_submessage_protected)
+		{
+			SecurityException secExce;
+			newWriter->cryptoHdl = dr->secPlugin_->crypto_key_factory->register_matched_remote_datawriter(
+				dr->cryptoHdl_,
+				dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix),
+				dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantSharedSecret(&writerId.prefix),
+				&secExce);
+
+			if (newWriter->cryptoHdl == SEC_NIL_HANDLE)
+			{
+				TRAVODDS_LOG(LOG_ERROR, "Failed to register remote writer to key factory."
+					"\n  Code: %d"
+					"\n  Minor code: %d"
+					"\n  Message: %s",
+					secExce.code,
+					secExce.minor_code,
+					secExce.message);
+				delete newWriter;
+				return nullptr;
+			}
+
+			if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+			{
+				ParticipantGenericMessage cryptoTokensSample;
+				if (!dr->secPlugin_->crypto_key_exchange->create_local_datareader_crypto_tokens(
+					&cryptoTokensSample.messageData,
+					dr->cryptoHdl_,
+					newWriter->cryptoHdl,
+					&secExce))
+				{
+					TRAVODDS_LOG(LOG_ERROR, "Match Writer failed:  failed to create crypto tokens for remote writer."
+						"\n  Code: %d"
+						"\n  Minor code: %d"
+						"\n  Message: %s",
+						secExce.code,
+						secExce.minor_code,
+						secExce.message);
+					delete newWriter;
+					return nullptr;
+				}
+				cryptoTokensSample.messageClassId = GMCLASSID_SECURITY_DATAREADER_CRYPTO_TOKENS;
+				cryptoTokensSample.destinationEndpointKey = Conversion::ToBuiltinTopicKey(writerId);
+				cryptoTokensSample.sourceEndpointKey = Conversion::ToBuiltinTopicKey(drGuid);
+				GUID_t msgReceiver = writerId;
+				msgReceiver.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
+				dp->GetDiscovery()->GetSedp()->WriteParticipantVolatileSecureMessage(&msgReceiver, cryptoTokensSample);
+				dr->secPlugin_->crypto_key_exchange->return_crypto_tokens(
+					&cryptoTokensSample.messageData, &secExce);
+				cryptoTokensSample.messageClassId = "";
+			}
+			else
+			{
+				newWriter->partCryptoHdl = dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix);
+				dr->secWriters_.push_back(newWriter->cryptoHdl);
+				newWriter->readyForSecComm = true;
+			}
+		}
+		else if (dr->rtpsMsgProtected_)
+		{
+			newWriter->partCryptoHdl = dp->GetDiscovery()->GetSpdp()->GetRemoteParticipantCryptoHandle(&writerId.prefix);
+			newWriter->readyForSecComm = true;
+		}
+		dr->writerSampleList_[writerId] = newWriter;
+	}
+	if (dr->enableSec_ && !newWriter->readyForSecComm) {
+		if (newWriter->writerId.IsSecureBuiltinEntity()
+			|| dr->secAttributes_.is_payload_protected
+			|| dr->secAttributes_.is_submessage_protected) {
+			// need crypto key exchange
+			dr->preparingWriters_[writerId] = newWriter;
+			auto wrTokenIter = dr->remoteWriterCryptoToken_.find(writerId);
+			if (wrTokenIter != dr->remoteWriterCryptoToken_.end())
+			{
+				dr->SetRemoteWriterCryptoTokens(&writerId, &wrTokenIter->second);
+				dr->remoteWriterCryptoToken_.erase(wrTokenIter);
+			}
+			return newWriter;
+		}
+	}
+	return newWriter;
+}
+#endif

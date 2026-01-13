@@ -82,7 +82,7 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 
 	builtinSecureData_.security_info.endpoint_security_attributes = 0;
 	builtinSecureData_.security_info.plugin_endpoint_security_attributes = 0;
-	builtinSecureData_.protected_discovery = false;
+	//builtinSecureData_.protected_discovery = false;
 #endif // DDSSECURITY
 }
 
@@ -784,18 +784,18 @@ ReturnCode_t DataWriterImpl::enable()
 
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
-	if (builtinSecureData_.security_info.endpoint_security_attributes != 0) {
-		DiscoveredWriterData writerData;
-		writerData.ddsPublicationData = GetBuiltinTopicData();
-		discovery->WritePublicationData(writerData);
-
+	if ((builtinSecureData_.security_info.endpoint_security_attributes & 
+		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		//DiscoveredWriterData writerData;
+		//writerData.ddsPublicationData = GetBuiltinTopicSecureData();
+		//discovery->WritePublicationData(writerData);
 		DiscoveredWriterSecureData writerSecureData;
 		writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
 		discovery->WritePublicationSecureData(writerSecureData);
 	}
 	else {
 		DiscoveredWriterData writerData;
-		writerData.ddsPublicationData = GetBuiltinTopicData();
+		writerData.ddsPublicationData = GetBuiltinTopicSecureData();
 		discovery->WritePublicationData(writerData);
 	}
 	
@@ -1044,6 +1044,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 	if (dp->enableDDSSec_) {
 		secPlugin_ = &dp->secPlugin_;
 		GUID_t guid = Conversion::ToGuid(handle_);
+		EndpointSecurityAttributes secAttr;
 		if ((guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER &&
 			guid.IsSecureBuiltinEntity())
 			|| (guid.IsUserDefinedEntity()))
@@ -1051,7 +1052,6 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			if (dp->secPlugin_.crypto_key_factory == NULL) {
 				return RETCODE_ERROR;
 			}
-			EndpointSecurityAttributes secAttr;
 			PublisherQos qos;
 			pub_->get_qos(qos);
 			if (!secPlugin_->access_control->get_datawriter_sec_attributes(
@@ -1070,9 +1070,12 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = secAttr.is_discovery_protected;
 			statistic_.secAttributes.is_liveliness_protected = secAttr.is_liveliness_protected;
 			statistic_.secAttributes.is_payload_protected = secAttr.is_payload_protected;
-			//statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
+			statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
 			statistic_.secAttributes.is_submessage_protected = secAttr.is_submessage_protected;
 			statistic_.secAttributes.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttr.plugin_endpoint_attributes;
+
 			secPlugin_->access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
 			{
@@ -1090,7 +1093,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = false;
 			statistic_.secAttributes.is_liveliness_protected = false;
 			statistic_.secAttributes.is_payload_protected = false;
-			//statistic_.secAttributes.is_key_protected = false;
+			statistic_.secAttributes.is_key_protected = false;
 			statistic_.secAttributes.is_submessage_protected = false;
 			statistic_.rtpsMsgProtected = false;
 		}
@@ -1104,7 +1107,8 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			//|| statistic_.secAttributes.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| statistic_.secAttributes.is_submessage_protected
 			|| statistic_.secAttributes.is_payload_protected
-			|| statistic_.secAttributes.is_key_protected)
+			//|| statistic_.secAttributes.is_key_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			) 
 		{
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
 				unsigned int tmplen = statistic_.secAttributes.ac_endpoint_properties.size();
@@ -1159,7 +1163,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 		statistic_.secAttributes.is_discovery_protected = false;
 		statistic_.secAttributes.is_liveliness_protected = false;
 		statistic_.secAttributes.is_payload_protected = false;
-		//statistic_.secAttributes.is_key_protected = false;
+		statistic_.secAttributes.is_key_protected = false;
 		statistic_.secAttributes.is_submessage_protected = false;
 		statistic_.rtpsMsgProtected = false;
 		secPlugin_ = NULL;
@@ -1177,7 +1181,7 @@ ReturnCode_t DataWriterImpl::FillSecureData()
 	{
 		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 	}
-	builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
+	//builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
 	return RETCODE_OK;
 }
 
@@ -1211,6 +1215,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 	}
 	rdIter->second.readyForSecComm = true;
 	secReaders_.push_back(rdIter->second.cryptoHdl);
+	secReadersMap_[readerId->prefix] = rdIter->second.cryptoHdl;
 	remoteReaders_.preparingReaders.erase(rdIter);
 	return 0;
 }

@@ -805,16 +805,24 @@ ReturnCode_t DataReaderImpl::enable()
 
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredReaderData readerData;
-	readerData.ddsSubscriptionData = GetBuiltinTopicData();
-	readerData.contentFilter = contentFilter_;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WriteSubscriptionData(readerData);
 #ifdef DDSSECURITY
-	//扩展了会发送DiscoveredReaderSecureData
+	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
-	discovery->WriteSubscriptionSecureData(readerSecureData);
+	if ((builtinSecureData_.security_info.endpoint_security_attributes &
+		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		discovery->WriteSubscriptionSecureData(readerSecureData);
+	}
+	else {
+		discovery->WriteSubscriptionData(readerSecureData);
+	}
+#else
+	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	readerData.contentFilter = contentFilter_;
+	discovery->WriteSubscriptionData(readerData);
 #endif // DDSSECURITY
+
 	return RETCODE_OK;
 }
 
@@ -920,9 +928,12 @@ bool DataReaderImpl::GetSecAttributes()
 			secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
 			secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
 			secAttributes_.is_payload_protected = secAttr.is_payload_protected;
-			//secAttributes_.is_key_protected = secAttr.is_key_protected;
+			secAttributes_.is_key_protected = secAttr.is_key_protected;
 			secAttributes_.is_submessage_protected = secAttr.is_submessage_protected;
 			secAttributes_.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttr.plugin_endpoint_attributes;
+
 			dp->secPlugin_.access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
 				rtpsMsgProtected_ = false;
@@ -950,7 +961,8 @@ bool DataReaderImpl::GetSecAttributes()
 			//|| secAttributes_.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| secAttributes_.is_submessage_protected
 			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_key_protected)
+			//|| secAttributes_.is_key_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			)
 		{
 			if (dp->secPlugin_.crypto_key_factory == NULL)
 			{
@@ -1078,7 +1090,7 @@ ReturnCode_t DataReaderImpl::FillSecureData()
 	{
 		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 	}
-	builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
+	//builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
 	return RETCODE_OK;
 }
 

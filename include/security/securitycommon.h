@@ -74,6 +74,7 @@ typedef unsigned int PluginParticipantSecurityAttributesMask;
 #define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_ORIGIN_AUTHENTICATED  (0x00000001UL << 4)
 #define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_ORIGIN_AUTHENTICATED (0x00000001UL << 5)
 #define PLUGIN_PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID                           (0x00000001UL << 31)
+
 struct PluginParticipantSecurityAttributes
 {
     PluginParticipantSecurityAttributes() :
@@ -131,6 +132,12 @@ extern const ParticipantSecurityInfo PARTICIPANT_SECURITY_ATTRIBUTES_INFO_DEFAUL
 typedef unsigned int EndpointSecurityAttributesMask;
 typedef unsigned int PluginEndpointSecurityAttributesMask;
 
+#define PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_SUBMESSAGE_ENCRYPTED            (0x00000001UL << 0)
+#define PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_PAYLOAD_ENCRYPTED               (0x00000001UL << 1)
+#define PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_SUBMESSAGE_ORIGIN_AUTHENTICATED (0x00000001UL << 2)
+#define PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID                           (0x00000001UL << 31)
+#define PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_MASK_DEFAULT PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID
+
 typedef struct EndpointSecurityInfo
 {
     EndpointSecurityAttributesMask endpoint_security_attributes = 0;
@@ -169,6 +176,40 @@ typedef struct ParticipantSecurityAttributes
     /** @brief The plugin participant attributes */
     PluginParticipantSecurityAttributesMask plugin_participant_attributes;
 }ParticipantSecurityAttributes;
+
+
+/**
+ * @typedef struct PluginEndpointSecurityAttributes
+ *
+ * @brief   PluginEndpointSecurityAttributes.
+ */
+typedef struct PluginEndpointSecurityAttributes
+{
+    bool is_submessage_encrypted;
+
+    bool is_submessage_origin_authenticated;
+
+    bool is_payload_encrypted;
+
+    inline PluginEndpointSecurityAttributesMask mask() const
+    {
+        PluginEndpointSecurityAttributesMask rv = PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID;
+        if (is_submessage_encrypted)
+        {
+            rv |= PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_SUBMESSAGE_ENCRYPTED;
+        }
+        if (is_submessage_origin_authenticated)
+        {
+            rv |= PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_SUBMESSAGE_ORIGIN_AUTHENTICATED;
+        }
+        if (is_payload_encrypted)
+        {
+            rv |= PLUGIN_ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_PAYLOAD_ENCRYPTED;
+        }
+        return rv;
+    }
+
+}PluginEndpointSecurityAttributes;
 
 /**
  * @typedef struct EndpointSecurityAttributes

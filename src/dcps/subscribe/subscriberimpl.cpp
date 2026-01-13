@@ -108,18 +108,19 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 
 	DataReader* reader = nullptr;
 	std::unique_ptr<DataReaderImpl> datareaderPtr = std::make_unique<DataReaderImpl>(a_topic, qosT, a_listener, mask, this, typeSupport);
-#ifdef DDSSECURITY
-    //数据读者获取安全属性并填充掩码
-    datareaderPtr->GetSecAttributes();
-    datareaderPtr->FillSecureData();
-#endif // DDSSCURITY
+
     if (!datareaderPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datareader[%s] fail", a_topic->get_type_name());
 		return nullptr;
 	}
     GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_READER);
 	//InstanceHandle_t handle = DomainParticipantImpl::GenerateInstanceHandle(readrPtr->GetGuid());
-	datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
+    datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
+	#ifdef DDSSECURITY
+//数据读者获取安全属性并填充掩码
+    datareaderPtr->GetSecAttributes();
+    datareaderPtr->FillSecureData();
+#endif // DDSSCURITY
 	reader = datareaderPtr.get();
 	std::lock_guard<std::mutex> lock(mtxReaders_);
 	readerHandles_.insert({ datareaderPtr->get_instance_handle(), std::move(datareaderPtr) });

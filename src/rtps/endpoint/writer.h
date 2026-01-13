@@ -160,7 +160,7 @@ public:
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData) = 0;
 #ifdef DDSSECURITY
-	virtual void MatchedReaderAdd(const DiscoveredReaderSecureData& subData) = 0;
+	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderSecureData& subData, bool isSecure) = 0;
 #endif // DDSSECURITY
 
 	/**
