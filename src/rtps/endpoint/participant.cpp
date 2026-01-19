@@ -879,11 +879,7 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 #endif // DDSSECURITY
 {
     DataReaderImpl* dr = reader->GetRelatedDataReader();
-	GUID_t guid = dr->get_guid();
 	GUID_t remoteGuid = Conversion::ToGuid(pubData.ddsPublicationData.key);
-	if (guid.IsUserDefinedEntity() && remoteGuid.IsUserDefinedEntity()) {
-		int a = 0;
-	}
     if(nullptr == dr) {
         return;
     }

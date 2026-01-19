@@ -50,7 +50,7 @@ void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 void StatefulWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure)
 {
 	DataWriterImpl* dw = datawriter_;
-	if (isSecure && dw->statistic_.secAttributes.is_discovery_protected /*&& guid_.IsUserDefinedEntity()*/) {
+	if (!isSecure && dw->statistic_.secAttributes.is_discovery_protected /*&& guid_.IsUserDefinedEntity()*/) {
 		return;
 	}
 	GUID_t dwGuid = Conversion::ToGuid(dw->get_instance_handle());

@@ -36,6 +36,14 @@ const GUID_t& EntityImpl::get_guid() const
 	return Conversion::ToGuid(handle_);
 }
 
+#ifdef DDSSECURITY
+GUID_t EntityImpl::get_guid_value()
+{
+	return Conversion::ToGuid(handle_);
+}
+#endif // DDSSECURITY
+
+
 void EntityImpl::set_object_data(void * data)
 {
 	objectData_ = data;
