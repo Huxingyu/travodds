@@ -1176,6 +1176,7 @@ ReturnCode_t DataWriterImpl::FillSecureData()
 	if (statistic_.enableSec) {
 		builtinSecureData_.security_info.endpoint_security_attributes =
 			EndpointSecurityAttributesToMask(&statistic_.secAttributes);
+		builtinSecureData_.security_info.plugin_endpoint_security_attributes = statistic_.secAttributes.plugin_endpoint_attributes;
 	}
 	else
 	{

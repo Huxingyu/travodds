@@ -800,16 +800,21 @@ ReturnCode_t DataReaderImpl::enable()
 		"dr.lifespan"
 	);
 
+    SetRelatedReader(readerPtr);
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	GetSecAttributes();
+	FillSecureData();
+
 	DiscoveredReaderData readerData;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
 	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
+	readerSecureData.remoteReaderGuid = reader_->GetGuid();
 	if ((builtinSecureData_.security_info.endpoint_security_attributes &
 		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
 		discovery->WriteSubscriptionSecureData(readerSecureData);
@@ -818,6 +823,7 @@ ReturnCode_t DataReaderImpl::enable()
 		discovery->WriteSubscriptionData(readerSecureData);
 	}
 #else
+	readerData.remoteReaderGuid = reader_->GetGuid();
 	readerData.ddsSubscriptionData = GetBuiltinTopicData();
 	readerData.contentFilter = contentFilter_;
 	discovery->WriteSubscriptionData(readerData);
@@ -1057,11 +1063,12 @@ int DataReaderImpl::SetRemoteWriterCryptoTokens(const GUID_t* writerId, const Se
 	if (statelessReader) {
 		std::map<GUID_t, std::shared_ptr<WriterProxy>>* writerMap = statelessReader->GetMatchWriters();
 		if (!writerMap->count(*writerId)) {
-			return -1;
-		}
-		(*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
-		(*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
-		(*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+			//return -1;
+		} else {
+            (*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
+            (*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
+            (*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+        }
 	}
 	return 0;
 }
@@ -1085,6 +1092,7 @@ ReturnCode_t DataReaderImpl::FillSecureData()
 	if (enableSec_) {
 		builtinSecureData_.security_info.endpoint_security_attributes =
 			EndpointSecurityAttributesToMask(&secAttributes_);
+		//builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
 	}
 	else
 	{

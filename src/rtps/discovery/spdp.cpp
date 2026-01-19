@@ -635,6 +635,10 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 	DiscoveryDPInfo* newDPInfo = new DiscoveryDPInfo;
 	newDPInfo->owner_ = this;
 	newDPInfo->pData_ = data;
+	newDPInfo->sharedSecretHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->permissionsHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->identityHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->handshakeHdl_ = SEC_NIL_HANDLE;
 	//try to authenticate the discovered participant
 	SecurityException secExce;
 	SecurityPluginInstanceImpl* secPlugin = &discovery_->GetParticipant()->secPlugin_;
