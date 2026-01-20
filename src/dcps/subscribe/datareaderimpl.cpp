@@ -804,17 +804,19 @@ ReturnCode_t DataReaderImpl::enable()
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
-	//本地匹配完成后再发送SEPD报文，防止重复匹配
-	GetSecAttributes();
-	FillSecureData();
 
 	DiscoveredReaderData readerData;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	if (get_guid_value().IsSecureBuiltinEntity() || get_guid_value().IsUserDefinedEntity()) {
+		GetSecAttributes();
+		FillSecureData();
+	}
 	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
-	readerSecureData.remoteReaderGuid = reader_->GetGuid();
+	//readerSecureData.remoteReaderGuid = reader_->GetGuid();
 	if ((builtinSecureData_.security_info.endpoint_security_attributes &
 		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
 		discovery->WriteSubscriptionSecureData(readerSecureData);
@@ -823,7 +825,7 @@ ReturnCode_t DataReaderImpl::enable()
 		discovery->WriteSubscriptionData(readerSecureData);
 	}
 #else
-	readerData.remoteReaderGuid = reader_->GetGuid();
+	//readerData.remoteReaderGuid = reader_->GetGuid();
 	readerData.ddsSubscriptionData = GetBuiltinTopicData();
 	readerData.contentFilter = contentFilter_;
 	discovery->WriteSubscriptionData(readerData);
@@ -1092,7 +1094,7 @@ ReturnCode_t DataReaderImpl::FillSecureData()
 	if (enableSec_) {
 		builtinSecureData_.security_info.endpoint_security_attributes =
 			EndpointSecurityAttributesToMask(&secAttributes_);
-		//builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
+		builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
 	}
 	else
 	{

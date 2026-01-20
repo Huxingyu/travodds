@@ -1184,8 +1184,18 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 		if (0 != change->fragmentTatolNum && readerProxy->IsNackFrag(seqNumber)) {
 			continue;
 		}
-
+#ifdef DDSSECURITY
+		if (guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+			for (auto& readerProxy : readerProxys) {
+				DeliveryDataToReader(change, readerProxy, flowControl);
+			}
+		}
+		else {
+			DeliveryDataToReaders(change, readerProxys, flowControl);
+		}
+#else
 		DeliveryDataToReaders(change, readerProxys, flowControl);
+#endif //DDSSECURITY
 	}
 
 	SendGap(gapVec, readerProxy);
