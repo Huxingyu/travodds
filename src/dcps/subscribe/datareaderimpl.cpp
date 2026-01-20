@@ -139,10 +139,13 @@ DataReaderImpl::~DataReaderImpl()
 	if (enableSec_)
 	{
 		GUID_t drGuid = Conversion::ToGuid(get_instance_handle());
-		if ((drGuid.IsSecureBuiltinEntity()
-			&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
-			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_submessage_protected)
+		//if ((drGuid.IsSecureBuiltinEntity()
+		//	&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+		//	|| secAttributes_.is_payload_protected
+		//	|| secAttributes_.is_submessage_protected)
+		if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER &&
+			(secAttributes_.is_payload_protected ||
+			secAttributes_.is_submessage_protected))
 		{
 			if (secPlugin_ != NULL && secPlugin_->crypto_key_factory != NULL)
 			{
