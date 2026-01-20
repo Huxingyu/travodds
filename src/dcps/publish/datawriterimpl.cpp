@@ -109,10 +109,13 @@ DataWriterImpl::~DataWriterImpl()
 	if (dp->enableDDSSec_ && statistic_.enableSec)
 	{
 		GUID_t dwGuid = Conversion::ToGuid(get_instance_handle());
-		if (dwGuid.IsSecureBuiltinEntity()
-			&& dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER
-			|| statistic_.secAttributes.is_payload_protected
-			|| statistic_.secAttributes.is_submessage_protected)
+		//if ((dwGuid.IsSecureBuiltinEntity()
+		//	&& dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
+		//	|| statistic_.secAttributes.is_payload_protected
+		//	|| statistic_.secAttributes.is_submessage_protected)
+		if (dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER &&
+				(statistic_.secAttributes.is_payload_protected || 
+				statistic_.secAttributes.is_submessage_protected))
 		{
 			if (statistic_.enableSec && secPlugin_ != NULL)
 			{
