@@ -116,7 +116,7 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
     GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_READER);
 	//InstanceHandle_t handle = DomainParticipantImpl::GenerateInstanceHandle(readrPtr->GetGuid());
     datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
-	#ifdef DDSSECURITY
+#ifdef DDSSECURITY
 //数据读者获取安全属性并填充掩码
     datareaderPtr->GetSecAttributes();
     datareaderPtr->FillSecureData();
@@ -133,9 +133,6 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 			return nullptr;
 		}
 	}
-
-
-
 	return reader;
 }
 

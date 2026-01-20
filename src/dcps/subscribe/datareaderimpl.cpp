@@ -804,15 +804,10 @@ ReturnCode_t DataReaderImpl::enable()
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
-
 	DiscoveredReaderData readerData;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
 	//本地匹配完成后再发送SEPD报文，防止重复匹配
-	if (get_guid_value().IsSecureBuiltinEntity() || get_guid_value().IsUserDefinedEntity()) {
-		GetSecAttributes();
-		FillSecureData();
-	}
 	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
