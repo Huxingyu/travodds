@@ -229,7 +229,9 @@ private:
 	std::shared_ptr<StatelessReader> participantStatelessMessageReader_ = nullptr;
 	std::shared_ptr<StatefulReader> participantVolatileSecureMessageReader_ = nullptr;
 
-	SequenceNumber_t statelessMsgSeqNum_;
+	//SequenceNumber_t statelessMsgSeqNum_;
+	std::map<GuidPrefix_t, SequenceNumber_t> statelessMsgSeqNumMap_;
+	std::map<GuidPrefix_t, SequenceNumber_t> volatileSecureMsgSeqNumMap_;
 
 #endif // DDSSECURITY
 	std::shared_ptr<MemoryPool> memoryPool_;

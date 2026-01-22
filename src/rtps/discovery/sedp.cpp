@@ -704,15 +704,20 @@ ReturnCode_t Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid
 	data.messageIdentity.sourceGuid = Conversion::ToBuiltinTopicKey(spdp_->GetDiscovery()->GetParticipant()->GetRelatedParticipant()->GetGuid());
 	memset(data.destinationEndpointKey.value, 0, 16);
 	memset(data.sourceEndpointKey.value, 0, 16);
-	++statelessMsgSeqNum_.low;
-	if (statelessMsgSeqNum_.low == 0)
-	{
-		++statelessMsgSeqNum_.high;
+	if (!statelessMsgSeqNumMap_.count(remoteGuid->prefix)) {
+		SequenceNumber_t statelessMsgSeqNum;
+		statelessMsgSeqNumMap_[remoteGuid->prefix] = statelessMsgSeqNum;
 	}
-	data.messageIdentity.sequenceNumber = statelessMsgSeqNum_;
-	// 适配和fast通信
+	(statelessMsgSeqNumMap_[remoteGuid->prefix].low)++;
+	if (statelessMsgSeqNumMap_[remoteGuid->prefix].low == 0)
+	{
+		(statelessMsgSeqNumMap_[remoteGuid->prefix].high)++;
+	}
+	data.messageIdentity.sequenceNumber = statelessMsgSeqNumMap_[remoteGuid->prefix];
+
 	if (data.messageData[0].class_id == "DDS:Auth:PKI-DH:1.0+Reply") {
-		data.relatedMessageIdentity.sequenceNumber = statelessMsgSeqNum_;
+		//data.relatedMessageIdentity.sequenceNumber = statelessMsgSeqNum_;
+		data.relatedMessageIdentity.sequenceNumber = statelessMsgSeqNumMap_[remoteGuid->prefix];
 	}
 	
 	SerializedBuffer* buffer = new SerializedBuffer;
@@ -758,12 +763,16 @@ void Sedp::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, Parti
 		memcpy(data.destinationParticipantKey.value + 3, &ENTITYID_PARTICIPANT, 4);
 	}
 	memcpy(data.messageIdentity.sourceGuid.value, participantVolatileSecureMessageWriter_->GetGuidPtr(), 16);
-	++statelessMsgSeqNum_.low;
-	if (statelessMsgSeqNum_.low == 0)
-	{
-		++statelessMsgSeqNum_.high;
+	if (!volatileSecureMsgSeqNumMap_.count(remoteGuid->prefix)) {
+		SequenceNumber_t volatileSecureMsgSeqNum;
+		volatileSecureMsgSeqNumMap_[remoteGuid->prefix] = volatileSecureMsgSeqNum;
 	}
-	data.messageIdentity.sequenceNumber = statelessMsgSeqNum_;
+	(volatileSecureMsgSeqNumMap_[remoteGuid->prefix].low)++;
+	if (volatileSecureMsgSeqNumMap_[remoteGuid->prefix].low == 0)
+	{
+		(volatileSecureMsgSeqNumMap_[remoteGuid->prefix].high)++;
+	}
+	data.messageIdentity.sequenceNumber = volatileSecureMsgSeqNumMap_[remoteGuid->prefix];
 	GUID_t remoteReceiverGuid = *remoteGuid;
 	remoteReceiverGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
 
