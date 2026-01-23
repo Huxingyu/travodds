@@ -714,11 +714,6 @@ ReturnCode_t Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid
 		(statelessMsgSeqNumMap_[remoteGuid->prefix].high)++;
 	}
 	data.messageIdentity.sequenceNumber = statelessMsgSeqNumMap_[remoteGuid->prefix];
-
-	if (data.messageData[0].class_id == "DDS:Auth:PKI-DH:1.0+Reply") {
-		//data.relatedMessageIdentity.sequenceNumber = statelessMsgSeqNum_;
-		data.relatedMessageIdentity.sequenceNumber = statelessMsgSeqNumMap_[remoteGuid->prefix];
-	}
 	
 	SerializedBuffer* buffer = new SerializedBuffer;
 	// buffer->buffer_size = 4; //端序CDR编码的数据封装 已经放在了serialized的size计算中了
@@ -1095,6 +1090,11 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			messageData.push_back(handshakeToken);
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			dpInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
+
+			//handshakeMsg->messageIdentity.sourceGuid = Conversion::ToBuiltinTopicKey(
+			//	spdp_->GetDiscovery()->GetParticipant()->get_guid_value()); // sourceGuid不赋值为0，但是正常通信
+			dpInfo->handshakeMsg_->relatedMessageIdentity = data.messageIdentity; //Fastdds对端处理reply和final会校验
+
 			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 			this->spdp_->AddHandShakeMsg(sourceParticipantGuid); // 定时器重发reply
 			//reply响应完对端request之后置为DDSSEC_HANDSHAKE_WAITING_FINAL，等待processhandshake
