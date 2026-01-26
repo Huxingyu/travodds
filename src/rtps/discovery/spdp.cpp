@@ -610,12 +610,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 		remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
 	}
 #ifdef DDSSECURITY
-	// 判断是否是自己
-	GUID_t selfPartGuid = Conversion::ToGuid(discovery_->GetParticipant()->get_instance_handle());
-	if (Conversion::ToGuid(data.ddsParticipantData.key) == selfPartGuid) {
-		// 忽略来自自身的，TODO
-		return;
-	}
 	//判断是否为已知节点，如果是发现新的DP 则进入验证远端，发起握手流程
 	GuidPrefix_t remote_prefix = Conversion::ToGuid(data.ddsParticipantData.key).prefix;
 	if (0 != discParts_.count(remote_prefix)) {
