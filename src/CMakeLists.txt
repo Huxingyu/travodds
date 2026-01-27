@@ -12,16 +12,6 @@
 include(CheckCXXSourceCompiles)
 message(STATUS "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 
-# 优先查找系统安装的 asio
-find_package(asio QUIET)
-if(asio_FOUND)
-    message(STATUS "Found system asio: ${asio_INCLUDE_DIRS}")
-    include_directories(${asio_INCLUDE_DIRS})
-else()
-    message(WARNING "System asio not found, using thirdparty version")
-    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio-1.13.0/include)
-endif()
-
 # 添加包含目录
 include_directories(
     ${PROJECT_SOURCE_DIR}/include

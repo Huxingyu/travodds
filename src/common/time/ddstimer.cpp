@@ -1,13 +1,5 @@
 #include "common/time/ddstimer.h"
-#ifdef _WIN32
-#include <windows.h>
-#include <processthreadsapi.h>
-#endif // _WIN32
-
-
-
-#include <sstream>
-#include <string>
+#include "common/sys/sysinfo.h"
 
 USING_TRAVODDS_NAMESPACE
 
@@ -61,7 +53,7 @@ void Timer::Start()
 	if (TIMER_MULTIPLE == type_) {
 		if (!thread_.get()) {
 			thread_.reset(new std::thread([this]() {
-				SetThreadName();
+				ThreadFunction::SetThreadName(name_);
 				while (!this->exit_.load()) {
 					this->Run();
 				}
@@ -71,7 +63,7 @@ void Timer::Start()
 	}
 	else {
 		std::thread thread([this]() {
-			SetThreadName();
+			ThreadFunction::SetThreadName(name_);
 			this->Run(); 
 			}
 		);
@@ -114,27 +106,6 @@ void Timer::Run()
 	}
 
 	UpdateNextTime();
-}
-
-void Timer::SetThreadName()
-{
-	if (name_.empty()) {
-		return;
-	}
-	std::array<char, 16> buffer;
-	snprintf(buffer.data(), buffer.size(), "%s", name_.data());
-	buffer.back() = '\0';  // 确保以null结尾
-
-
-#ifdef _WIN32
-	std::wstringstream stream;
-	stream << buffer.data();
-	std::wstring wThreadName = stream.str();
-	SetThreadDescription(GetCurrentThread(), wThreadName.data());
-#else
-	// Linux/macOS实现
-	pthread_setname_np(pthread_self(), buffer.data());
-#endif
 }
 
 // void Timer::restartTimer()

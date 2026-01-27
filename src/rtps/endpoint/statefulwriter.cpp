@@ -44,6 +44,7 @@ void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 	}
 
 	MatchedReaderAdd(proxy);
+	transportGroup_.AddLocator(subData.remoteReaderGuid.prefix, subData.unicastLocatorList);
 }
 
 #ifdef DDSSECURITY
@@ -232,6 +233,9 @@ void StatefulWriter::MatchedReaderRemove(std::shared_ptr<ReaderProxy> readerProx
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
 	matchedReaders_.erase(readerProxy->GetGuid());
+
+	transportGroup_.DecreaseLocator(readerProxy->GetGuid().prefix);
+
 }
 
 std::shared_ptr<ReaderProxy> StatefulWriter::MatchedReaderLookup(GUID_t readerGuid)
@@ -283,7 +287,7 @@ bool StatefulWriter::IsAckedByAll(SequenceNumber_t changeSeqNum)
 	return true;
 }
 
-ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
+ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
@@ -304,9 +308,7 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, b
 	for (auto& readerProxy : matchedReaders_) {
 		readerProxys.push_back(readerProxy.second);
 	}
-	DeliveryDataToReader(change, readerProxys, flowControl);
-
-	return RETCODE_OK;
+	return DeliveryDataToReader(change, readerProxys, timeOut);
 }
 
 ChangeForReader StatefulWriter::CreateChangeForReader(std::shared_ptr<CacheChange> change)
@@ -413,7 +415,7 @@ ReturnCode_t StatefulWriter::ReceiveNackFragMessage(const Receive_t& headerMsg, 
 	return RETCODE_OK;
 }
 
-ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, bool flowControl)
+ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, const Duration_t& timeOut)
 {
 	if (nullptr == change || 0 == readerProxys.size()) {
 		return RETCODE_OK;
@@ -429,6 +431,19 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
         && datawriter_->statistic_.rtpsMsgProtected
         && guid_.IsUserDefinedEntity();
 #endif // DDSSECURITY
+
+
+	std::vector<LocatorVec> dstLocators;
+	std::set<GuidPrefix_t> prefixs;
+	for (auto& reader : readerProxys) {
+		if (!change->filterReaders_.empty() && change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
+			SendGap({ change->sequenceNumber }, reader);
+			continue;
+		}
+		prefixs.insert(reader->GetGuid().prefix);
+	}
+
+	transportGroup_.GetLocator(prefixs, dstLocators);
 
 	if (buffer->next) {
 		/* 分片数据处理 */
@@ -562,58 +577,31 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 				}
 			}
 #endif // DDSSECURITY
-			
-			LocatorVec dstLocators;
-			for (auto& reader : readerProxys) {
-				if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
-					SendGap({ change->sequenceNumber }, reader);
-					continue;
-				}
-				LocatorSeq& locators = reader->GetUnicastLocatorList();
-
-				dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
-			}
-
-			std::sort(dstLocators.begin(), dstLocators.end());
-			dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
-
-			if (flowControl) {
+			ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-				if (encodeSubMsg && !encodeRtpsMsg) {
-					participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-				}
-				else if (encodeRtpsMsg) {
-					participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-				}
-				else {
-					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				}
-				if (encodeSubMsg || encodeRtpsMsg) {
-					delete[] encodeBuf;
-				}
-#else
-				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
-			} else {
-#ifdef DDSSECURITY
-				if (encodeSubMsg && !encodeRtpsMsg) {
-					participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-				}
-				else if (encodeRtpsMsg) {
-					participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-				}
-				else
-				{
-					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				}
-				if (encodeSubMsg || encodeRtpsMsg) {
-					delete[] encodeBuf;
-				}
-#else
-				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
+			if (encodeSubMsg && !encodeRtpsMsg) {
+				ret = participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
 			}
-
+			else if (encodeRtpsMsg) {
+				ret = participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
+			}
+			else {
+				ret = participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+			}
+			if (encodeSubMsg || encodeRtpsMsg) {
+				delete[] encodeBuf;
+			}
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}	
+#else
+			ret =participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}	
+#endif
 			/* TODO 添加延时 */
 			sendFragCount++;
 			if (0 == sendFragCount % DATAFRAG_DELAY_NUM) {
@@ -732,8 +720,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 					participant->cryptoHdl_,
 					partCryptoHdls,
 					partCryptoHdlsCount,
-					&secExce))
-				{
+					&secExce)) {
 					delete[]encodeBuffer.buffer;
 					return -1;
 				}
@@ -754,55 +741,32 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		//	messageTransmitter->MessageSend(srcLocators, dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
 		//}
 
-		LocatorVec dstLocators;
-		for (auto& reader : readerProxys) {
-			if (change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
-				SendGap({ change->sequenceNumber }, reader);
-				continue;
-			}
-
-			LocatorSeq& locators = reader->GetUnicastLocatorList();
-
-			dstLocators.insert(dstLocators.end(), locators.begin(), locators.end());
-		}
-
-		std::sort(dstLocators.begin(), dstLocators.end());
-		dstLocators.erase(std::unique(dstLocators.begin(), dstLocators.end()), dstLocators.end());
-		if (flowControl) {
+		ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-			if (encodeSubMsg && !encodeRtpsMsg) {
-				participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-			} else if (encodeRtpsMsg) {
-				participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-			} else {
-				participant_->FlowRateLimitedMessageSend(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-			}
-			if (encodeSubMsg || encodeRtpsMsg) {
-				delete[] encodeBuf;
-			}
-#else
-			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
-		} else {
-#ifdef DDSSECURITY
-			if (encodeSubMsg && !encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-			}
-			else if (encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-			}
-			else {
-				participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-			}
-			if (encodeSubMsg || encodeRtpsMsg) {
-				delete[] encodeBuf;
-			}
-#else
-			participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
+		if (encodeSubMsg && !encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
 		}
+		else if (encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
+		}
+		else {
+			participant_->FlowRateLimitedMessageSend(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift, timeOut);
+		}
+		if (encodeSubMsg || encodeRtpsMsg) {
+			delete[] encodeBuf;
+		}
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}
+#else
+		participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}
+#endif
 	}
-
 	return RETCODE_OK;
 }
 
@@ -1049,7 +1013,7 @@ ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> rea
 	return RETCODE_UNSUPPORTED;
 }
 
-ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy, bool flowControl)
+ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy)
 {
 	SeqNumberVec gapVec;
 	SequenceNumber_t lastGapseq;
@@ -1070,7 +1034,7 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 			continue;
 		}
 
-		DeliveryDataToReader(change, readerProxys, flowControl);
+		DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
 	}
 
 	SendGap(gapVec, readerProxy);
@@ -1240,7 +1204,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 }
 
 /* 重传分片数据 */
-ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& datafrag, bool flowControl)
+ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& datafrag)
 {
 	ReturnCode_t ret = RETCODE_OK;
 
@@ -1267,7 +1231,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
 
 		SerializedBuffer* buffer = cache->serializedBuffer;
-		LocatorVec dstLocators = readerProxy->GetUnicastLocatorList();
+		std::vector<LocatorVec> dstLocators{readerProxy->GetUnicastLocatorList()};
 
         for(uint32_t i = 1; i < datafrag.fragmentNumberState.bitmapBase; i++)
         {
@@ -1299,12 +1263,8 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 				MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
 				
 				MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
-				if (flowControl) {
-					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				} else {
-					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-				}
-				
+				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, TIME_INFINITE);
+
 				fragSendCount++;
 
 				if (0 == fragSendCount % DATAFRAG_DELAY_NUM) {

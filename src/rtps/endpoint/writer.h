@@ -15,6 +15,8 @@
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
+#include "rtps/transport/transportgroup.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 
 class FlowController;
@@ -133,7 +135,7 @@ public:
      *
      * @return RETCODE_UNSUPPORTED。
      */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief 数据传输。
@@ -257,6 +259,7 @@ protected:
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
 	FlowController* flowController_;
+	TransportGroup transportGroup_;
 };
 
 TRAVODDS_NAMESPACE_END

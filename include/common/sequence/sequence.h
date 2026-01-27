@@ -136,7 +136,8 @@ template<typename T>
 SequenceData<T>::SequenceData(int32_t max)
 	: SequenceData()
 {
-	//resize(max);
+	resize(max);
+	this->length_ = max;
 }
 
 template<typename T>
@@ -167,8 +168,6 @@ template<typename T>
 SequenceData<T>& SequenceData<T>::operator =(const SequenceData& other)
 {
 	this->length_ = other.length();
-	this->maximum_ = other.maximum();
-
 	resize(length_);
 
 	for (int32_t i = 0; i < length_; i++) {
@@ -184,6 +183,7 @@ void SequenceData<T>::push_back(T& data)
 	*value = data;
 
 	datas_.push_back(value);
+	elements_ = reinterpret_cast<void**>(datas_.data());
 	length_++;
 	maximum_++;
 }

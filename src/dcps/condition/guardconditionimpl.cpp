@@ -9,6 +9,9 @@ GuardConditionImpl::GuardConditionImpl(GuardCondition* guard)
 ReturnCode_t GuardConditionImpl::set_trigger_value(bool value)
 {
 	triggerValue_ .store(value);
+    if(value) {
+        Notify();
+	}
     return RETCODE_OK;
 }
 

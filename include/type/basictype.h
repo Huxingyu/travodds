@@ -80,40 +80,20 @@ struct MIGRtpsKeyHash {
 		if (this->length != right.length) {
 			return false;
 		}
-
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] != right.value[i]) {
-				return false;
-			}
-		}
-		return true;
+		return (memcmp(this->value, right.value, this->length) == 0);
 	}
 
 	bool operator != (const MIGRtpsKeyHash& right) const {
 		if (this->length != right.length) {
 			return true;
 		}
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] != right.value[i]) {
-				return true;
-			}
-		}
-		return false;
+		return (memcmp(this->value, right.value, this->length) != 0);
 	}
 	bool operator > (const MIGRtpsKeyHash& right) const {
 		if (this->length != right.length) {
 			return false;
 		}
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] > right.value[i]) {
-				return true;
-			} else if (this->value[i] == right.value[i]) {
-				continue;
-			} else {
-				return false;
-			}
-		}
-		return false;
+		return (memcmp(this->value, right.value, this->length) > 0);
 	}
 	MIGRtpsKeyHash& operator = (const MIGRtpsKeyHash& right) {
 		this->length = right.length;
@@ -197,12 +177,7 @@ struct BuiltinTopicKey_t {
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
 
 	/* wangyi Cyclone DDS 适配 添加构造函数初始化  */
-	BuiltinTopicKey_t()
-	{
-		value[0] = 0;
-		value[1] = 0;
-		value[2] = 0;
-		value[3] = 0;
+	BuiltinTopicKey_t() : value{0} {
 	}
 
 	bool operator==(const BuiltinTopicKey_t& other) const {
@@ -254,8 +229,8 @@ static void CurrentTimeSinceUnixEpoch(
 	auto t_since_epoch = system_clock::now().time_since_epoch();
 	auto secs_t = duration_cast<seconds>(t_since_epoch);
 	t_since_epoch -= secs_t;
-	secs = static_cast<long>(secs_t.count());
-	nanosecs = static_cast<unsigned long>(duration_cast<nanoseconds>(t_since_epoch).count());
+	secs = static_cast<int32_t>(secs_t.count());
+	nanosecs = static_cast<uint32_t>(duration_cast<nanoseconds>(t_since_epoch).count());
 }
 
 struct Duration_t {
@@ -475,7 +450,7 @@ struct BinaryProperty_t {
     {
     }
 
-    BinaryProperty_t(const std::string& name, const std::vector<uint8_t>& value) :name(name), value(value)
+    BinaryProperty_t(const std::string& name, const std::vector<uint8_t>& value) :name(name), value(value), propagate(false)
     {
     }
 
@@ -538,9 +513,7 @@ struct SampleInfo {
 		  publication_handle(HANDLE_NIL),
 		  disposed_generation_count(0), no_writers_generation_count(0), sample_rank(0),
 		  generation_rank(0), absolute_generation_rank(0), reception_sequence_number(0),
-		  valid_data(false)
-		  
-	{
+		  write_sequence_number(0), valid_data(false) {
 
 	}
 };

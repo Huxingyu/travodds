@@ -131,7 +131,7 @@ bool LivelinessAssert::AssertLiveliness(GUID_t guid, LivelinessQosPolicyKind kin
         //更新相同guidprefix writer的存活状态
         for (auto writerIt = writers_.begin(); writerIt != writers_.end(); writerIt++)
         {
-            if (writerIt->second.livelinessQos_.kind == kind && CompareGuidPrefix(guid.prefix, writerIt->first.prefix)) {
+            if (writerIt->second.livelinessQos_.kind == kind && guid.prefix ==  writerIt->first.prefix) {
                 AssertWriterLiveliness(writerIt->second);
             }
         }

@@ -53,7 +53,7 @@ public:
 	 *
 	 * @return 处理成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	virtual ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len) = 0;
+	virtual ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data) = 0;
 
 	/**
 	 * @brief 处理传入的DATA_FRAG消息。
@@ -65,7 +65,7 @@ public:
 	 *
 	 * @return 处理成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	virtual ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, SerializedPayload data, uint32_t len) = 0;
+	virtual ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data) = 0;
 
 	/**
 	 * @brief 处理传入的HEARTBEAT消息。
@@ -114,7 +114,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTake(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
+	ReturnCode_t ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**
@@ -132,7 +132,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**
@@ -151,7 +151,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeNextInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
 
 	/**
@@ -324,6 +324,12 @@ protected:
 	std::shared_ptr<CacheChange> lastNewCache_;
 	std::shared_ptr<Timer> lastNewCacheTimer_;
 	GUID_t lastNewGuid_;
+
+	/* 报文处理锁 */
+	std::mutex dataMutex_;
+	std::mutex hbMutex_;
+	std::mutex gapMutex_;
+
 	friend class DataReaderImpl;
 };
 

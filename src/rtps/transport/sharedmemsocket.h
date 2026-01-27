@@ -19,7 +19,6 @@
 TRAVODDS_NAMESPACE_BEGIN
 
 class SharedMemAccept;
-class MemoryPool;
 
 /*
  * yuguxu
@@ -29,18 +28,20 @@ class MemoryPool;
  */
 class SharedMemSocket {
 public:
+    struct Message_t {
+        uint32_t dataSize = 0;
+        char data[1];
+    };
+public:
     SharedMemSocket();
+    SharedMemSocket(std::function<void(char*, const uint32_t&)> callback);
     ~SharedMemSocket();
 
     bool Connect(const std::string& srcport, const std::string& destport);
 
     bool Connect(const std::string& destport);
 
-    void Write(const char* message, size_t len);
-
-    void Read(std::shared_ptr<MemoryPool> receivePool, std::vector<std::pair<char*, uint32_t>>& messages, char*& buffer);
-
-    void AsyncRead(std::shared_ptr<MemoryPool> receivePool, std::function<void(const std::vector<std::pair<char*, uint32_t>>&, char*&,const std::exception*)> callback);
+    void Write(const char* message, uint32_t len);
 
     void Shutdown();
 
@@ -48,13 +49,14 @@ public:
 
     void Close(bool haslock = false);
 private:
-    // 将长度先写入共享内存缓存
-    void WriteInLength(uint32_t len, uint32_t& currentwritepos, size_t buffersize);
     void CleanupResources();
 
-	bool IsAllow(const size_t& len) const;  
+    bool IsWriteSucfully(const char* message, const uint32_t& len);
+
+    void ReadFromSharedMem();
 
 private:
+    std::function<void(char*, const uint32_t&)> callback_;
     asio::thread_pool pool_;
     uint32_t port_;
     std::string acceptPort_;
@@ -67,11 +69,6 @@ private:
    
     std::unique_ptr<InterprocessType::managed_shared_memory> segment_;
 
-    struct Message_t {
-        uint32_t dataSize = 0;
-        char data[1];
-    };
-
     struct Data {
         // 读写锁、条件等待集
         InterprocessType::interprocess_mutex rmutex;
@@ -80,17 +77,21 @@ private:
         InterprocessType::interprocess_condition wcondition;
 
 		// 当前读取位置
-        std::atomic<uint32_t> readpos = 0;
+        std::atomic<uint32_t> readpos;
 		// 当前写入位置
-        std::atomic<uint32_t> writepos = 0;
+        std::atomic<uint32_t> writepos;
         // 读写引用记数
-        std::atomic<uint32_t> refs = 0;
+        std::atomic<uint32_t> refs;
+
+        std::atomic<uint32_t> usedBytes;
+
         bool shutdown = false;
         //缓存实际长度是允许单次写入的两倍
-        char msg[SHM_MAX_MESSAGE_SIZE * 2];
-        Data() : msg{0} {};
+        char msg[SHM_MAX_MESSAGE_SIZE * 2 + 5];
+        Data() : readpos(0), writepos(0), refs(0), usedBytes(0), msg{ 0 } {};
     };
     Data* data_;
+    size_t buffersize_ = SHM_MAX_MESSAGE_SIZE * 2;
     size_t sharedMemSize_ = 1024 + sizeof(Data);
 
     friend SharedMemAccept;

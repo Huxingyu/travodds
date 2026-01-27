@@ -5,10 +5,6 @@ int32_t SequenceBase::maximum() const
 	return maximum_;
 }
 
-int32_t SequenceBase::length() const
-{
-	return length_;
-}
 void* SequenceBase::operator [](uint32_t i)
 {
 	return elements_[i];
