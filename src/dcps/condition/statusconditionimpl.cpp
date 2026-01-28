@@ -46,7 +46,6 @@ const StatusMask& StatusConditionImpl::get_status() const
 void StatusConditionImpl::set_status(const StatusMask& status, bool addFlag)
 {
     if (addFlag) {
-        std::lock_guard<std::mutex> guard(mtx_);
         bool oldTrigger = false, trigger = false;
         {
             std::lock_guard<std::mutex> guard(mtx_);
