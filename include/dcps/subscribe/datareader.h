@@ -675,6 +675,12 @@ public:
      */
     virtual ReturnCode_t get_matched_publications(InstanceHandleSeq& publication_handles) const = 0;
 
+    /**
+	 * @brief 获取DataReader中未读数据样本的数量。
+	 * @return 未读数据样本的数量。
+     */
+    virtual uint64_t get_unread_count() = 0;
+
 #ifdef _XML_INTERFACE_CPP
 
     /**

@@ -726,6 +726,9 @@ public:
 	 *         启用失败返回RETCODE_ERROR。
 	 */
 	virtual ReturnCode_t enable();
+
+	virtual uint64_t get_unread_count();
+
 #ifdef _XML_INTERFACE_CPP
 	/**
 	 * @brief 指定QoS仓库的Qos配置，并设置数据读取器的QoS。
