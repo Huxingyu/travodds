@@ -101,7 +101,7 @@ struct EntityId_t
 	 * @param right EntityId_t。
 	 */
 	bool operator < (const EntityId_t& right) const {
-	    bool ret = memcmp(this->entityKey, right.entityKey, sizeof(OctetArray3));
+	    int32_t ret = memcmp(this->entityKey, right.entityKey, sizeof(OctetArray3));
 		if (ret < 0 ||
 			(ret == 0 && this->entityKind < right.entityKind)) {
 			return true;
@@ -115,7 +115,7 @@ struct EntityId_t
 	 * @param right EntityId_t。
 	 */
 	bool operator > (const EntityId_t& right) const {
-		bool ret = memcmp(this->entityKey, right.entityKey, sizeof(OctetArray3));
+		int32_t ret = memcmp(this->entityKey, right.entityKey, sizeof(OctetArray3));
 		if (ret > 0 ||
 			(ret == 0 && this->entityKind > right.entityKind)) {
 			return true;
@@ -284,7 +284,7 @@ struct GUID_t {
 	 * @param right GUID_t。
 	 */
 	bool operator < (const GUID_t& right) const {
-	    int32_t ret = memcmp(this->prefix.value, right.prefix.value, sizeof(OctetArray12));
+		int32_t ret = memcmp(this->prefix.value, right.prefix.value, sizeof(OctetArray12));
 		if (ret < 0 ||
 			(ret == 0 && this->entityId < right.entityId)) {
 			return true;

@@ -3,7 +3,6 @@
 #include "dcps/condition/guardcondition.h"
 #include "dcps/condition/guardconditionimpl.h"
 #include "common/log/logger.h"
-#include "waitsetimpl.h"
 
 USING_TRAVODDS_NAMESPACE;
 

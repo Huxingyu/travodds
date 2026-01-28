@@ -836,6 +836,15 @@ ReturnCode_t DataReaderImpl::enable()
 	return RETCODE_OK;
 }
 
+uint64_t DataReaderImpl::get_unread_count()
+{
+	if (history_) {
+		SampleCounters counter = history_->GetSampleCounters(false);
+		return counter.sampleNotRead;
+	}
+	return 0;
+}
+
 void DataReaderImpl::SetRelatedReader(std::shared_ptr<Reader> reader)
 {
 	reader_ = reader;
