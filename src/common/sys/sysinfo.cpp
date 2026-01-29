@@ -275,3 +275,24 @@ PropertySeq SysInfo::GetSysInfoProperties()
 	properties.push_back({ "dds.sys_info.execution_timestamp", GetExecutionTimestamp() });
     return properties;
 }
+
+void ThreadFunction::SetThreadName(const std::string& name)
+{
+    if (name.empty()) {
+        return;
+    }
+    std::array<char, 16> buffer;
+    snprintf(buffer.data(), buffer.size(), "%s", name.data());
+    buffer.back() = '\0';  // 确保以null结尾
+
+
+#ifdef _WIN32
+    std::wstringstream stream;
+    stream << buffer.data();
+    std::wstring wThreadName = stream.str();
+    // SetThreadDescription(GetCurrentThread(), wThreadName.data());
+#else
+    // Linux/macOS实现
+    pthread_setname_np(pthread_self(), buffer.data());
+#endif
+}

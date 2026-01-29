@@ -12,6 +12,7 @@
 #include "dcps/publish/datawriterimpl.h"
 #include "rtps/transport/ipcontainer.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
+#include "rtps/builtin/dpr/dynamicperformanceregulator.h"
 #include "rtps/flowcontrol/flowcontrolmanager.h"
 #include "rtps/flowcontrol/flowratelimitedmanager.h"
 #include "common/log/logger.h"
@@ -86,6 +87,11 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 {
 	qos_ = qos;
 
+	FlowParameters flowParameters;
+	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
+	flowControlManager_ = std::make_unique<FlowControlManager>(this);
+	regulator_ = std::make_unique<DynamicPerformanceRegulator>(qos.dynamic_adjust, flowRateLimitedManager_.get());
+
 	int32_t participantid = 0;
 
 	uint32_t userPort = USER_DEFAULT_UNICAST_PORT(domainId_, participantid);
@@ -95,6 +101,15 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	livelinessManager_ = std::make_shared<LivelinessManager>(this);
 
 	messageProcessor_ = std::make_shared<MessageProcessor>(this);
+	/* MessageTransmitter添加顺序即为传输器发送优先级 */
+	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
+		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
+		Locator_t loc;
+		loc.kind = LOCATOR_KIND_SHM;
+		loc.port = userPort;
+		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
+		defaultUnicastLocatorList_.push_back(loc);
+	}
 	if (qos_.transport.hasTransport(TRANSPORT_UDPv4_QOS) || qos_.discovery.kind == DISCOVER_UDPv4_QOS || qos_.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterUDPv4>(messageProcessor_));
 	}
@@ -107,15 +122,7 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	if (qos_.transport.hasTransport(TRANSPORT_TCPv6_QOS)) {
 		messageTransmitters_.push_back(std::make_shared<MessageTransmitterTCPv6>(messageProcessor_));
 	}
-	if (qos_.transport.hasTransport(TRANSPORT_SHM_QOS)) {
-		messageTransmitters_.push_back(std::make_shared<MessageTransmitterSHM>(messageProcessor_));
-		Locator_t loc;
-		loc.kind = LOCATOR_KIND_SHM;
-		loc.port = userPort;
-		memcpy(loc.address, MessageTransmitterSHM::GetAddress().data(), sizeof(Locator_t::address));
-		defaultUnicastLocatorList_.push_back(loc);
-	}
-	
+
 	std::vector<InfoIP_t> localIps;
 	IpContainer::GetInfoIPs(localIps);
 
@@ -173,11 +180,10 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 		} else {
 			continue;
 		}
+		if (qos_.transport.hasTransport(TransportQosPolicyKind(TRANSPORT_UDPv4_QOS | TRANSPORT_TCPv4_QOS | TRANSPORT_TCPv6_QOS | TRANSPORT_UDPv6_QOS))) {
+			regulator_->RegisterInterface(ip.dev);
+		}
 	}
-
-	FlowParameters flowParameters;
-	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
-	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	return RETCODE_OK;
 }
 
@@ -471,13 +477,19 @@ ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 
 ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 {
-	auto itor = remoteWriters_.find(guid);
-	if (itor == remoteWriters_.end()) {
-		return RETCODE_OK;
+	DiscoveredWriterData dwData;
+	{
+		std::unique_lock<std::mutex> lock(mtxReaders_);
+		auto itor = remoteWriters_.find(guid);
+		if (itor == remoteWriters_.end()) {
+			return RETCODE_OK;
+		}
+		dwData = std::move(itor->second);
+		remoteWriters_.erase(itor);
 	}
 
 	// yuguxu 传输断开链接
-	TransmittersDisconnect(itor->second.unicastLocatorList);
+	TransmittersDisconnect(dwData.unicastLocatorList);
 
 	std::list<EntityId_t> readersEntityid;
 	{
@@ -584,25 +596,33 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 			}
 		}
 
-		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteWriterGuid);
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(dwData.remoteWriterGuid);
 		DataReaderImpl* dr = reader->GetRelatedDataReader();
 		if (dr) {
 			dr->OnSubscriptionMatched(handle, false);
 		}
 	}
-	remoteWriters_.erase(itor);
+
+
 	return RETCODE_OK;
 }
 
 ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 {
-	auto itor = remoteReaders_.find(guid);
-	if (itor == remoteReaders_.end()) {
-		return RETCODE_OK;
+	DiscoveredReaderData drData;
+	{
+		std::unique_lock<std::mutex> lock(mtxWriters_);
+		auto itor = remoteReaders_.find(guid);
+		if (itor == remoteReaders_.end()) {
+			return RETCODE_OK;
+		}
+		drData = std::move(itor->second);
+		remoteReaders_.erase(itor);
 	}
 
+
 	// yuguxu 传输断开链接
-	TransmittersDisconnect(itor->second.unicastLocatorList);
+	TransmittersDisconnect(drData.unicastLocatorList);
 
 	std::list<EntityId_t> writersEntityid;
 	{
@@ -644,32 +664,25 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 
 		std::shared_ptr<StatelessWriter> statelessWriter = std::dynamic_pointer_cast<StatelessWriter>(writer);
 		if (statelessWriter) {
-
-			for (auto locator : itor->second.multicastLocatorList) {
-				statelessWriter->ReaderLocatorRemove(locator);
-			}
-
-			for (auto locator : itor->second.unicastLocatorList) {
-				statelessWriter->ReaderLocatorRemove(locator);
-			}
-
+			statelessWriter->ReaderLocatorRemove(drData.remoteReaderGuid);
 		}
 
-		InstanceHandle_t handle = Conversion::ToInstanceHandle(itor->second.remoteReaderGuid);
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(drData.remoteReaderGuid);
 		writer->GetRelatedDataWriter()->OnPublicationMatched(handle,false);
 
 		writer->GetRelatedDataWriter()->RemoveReaderFilter(guid);
 	}
 
-	remoteReaders_.erase(itor);
+
 	return RETCODE_OK;
 }
 
 
 void Participant::GetParticipantAllWriter(const GUID_t& remoteParticipantGuid,std::vector<GUID_t>& guids)
 {
-	for (auto writer : remoteWriters_) {
-		if (CompareGuidPrefix(remoteParticipantGuid.prefix, writer.first.prefix)) {
+	std::unique_lock<std::mutex> lock(mtxReaders_);
+	for (auto& writer : remoteWriters_) {
+		if (remoteParticipantGuid.prefix == writer.first.prefix) {
 			guids.push_back(writer.first);
 		}
 	}
@@ -680,7 +693,7 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllWriter(GUID_t remoteParticip
 	std::vector<GUID_t> guids;
 	GetParticipantAllWriter(remoteParticipantGuid, guids);
 
-	for (auto guid : guids) {
+	for (auto& guid : guids) {
 		RemoveRemoteWriter(guid);
 	}
 
@@ -689,8 +702,9 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllWriter(GUID_t remoteParticip
 
 void Participant::GetParticipantAllReader(const GUID_t & remoteParticipantGuid, std::vector<GUID_t>& guids)
 {
-	for (auto reader : remoteReaders_) {
-		if (CompareGuidPrefix(remoteParticipantGuid.prefix, reader.first.prefix)) {
+	std::unique_lock<std::mutex> lock(mtxWriters_);
+	for (auto& reader : remoteReaders_) {
+		if (remoteParticipantGuid.prefix == reader.first.prefix) {
 			guids.push_back(reader.first);
 		}
 	}
@@ -701,7 +715,7 @@ ReturnCode_t Participant::RemoveRemoteParticipantAllReader(GUID_t remoteParticip
 	std::vector<GUID_t> guids;
 	GetParticipantAllReader(remoteParticipantGuid, guids);
 
-	for (auto guid : guids) {
+	for (auto& guid : guids) {
 		RemoveRemoteReader(guid);
 	}
 
@@ -796,11 +810,21 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData)
 #endif // DDSSECURITY
 {
-    DataWriterImpl* dw = writer->GetRelatedDataWriter();
-    if (nullptr == dw) {
+	DataWriterImpl* dw = writer->GetRelatedDataWriter();
+	if (nullptr == dw) {
 		TRAVODDS_LOG(LOG_ERROR, "datawriter is nullptr");
-        return;
-    }
+		return;
+	}
+	{
+		std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
+		auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
+		if (readers != matchRemoteEntitys_.end() && readers->second.find(subData.remoteReaderGuid) != readers->second.end()) {
+		    // 已经匹配过了
+			dw->UpdateReaderFilter(subData.remoteReaderGuid, subData.contentFilter);
+			return;
+		}
+	}
+
     const PublicationBuiltinTopicData& pubData = dw->GetBuiltinTopicData();
 
     if (pubData.topic_name != subData.ddsSubscriptionData.topic_name) {
@@ -850,27 +874,31 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 
 	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
 
-	std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
-	auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
-	if (matchLocalEntitys_.end() == writers) {
-		std::list<EntityId_t> writerList;
-		writerList.push_back(writer->GetGuid().entityId);
-		matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
-	} else {
-		writers->second.push_back(writer->GetGuid().entityId);
-	}
-	auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
-	if (readers == matchRemoteEntitys_.end()) {
-		std::set<GUID_t> remoteWriters;
-		remoteWriters.insert(subData.remoteReaderGuid);
-		matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
-	} else {
-		readers->second.insert(subData.remoteReaderGuid);
+	{
+		std::unique_lock<std::mutex>  lock(mtxMatchEntitys_);
+		auto writers = matchLocalEntitys_.find(subData.remoteReaderGuid);
+		if (matchLocalEntitys_.end() == writers) {
+			std::list<EntityId_t> writerList;
+			writerList.push_back(writer->GetGuid().entityId);
+			matchLocalEntitys_[subData.remoteReaderGuid] = writerList;
+		} else {
+			writers->second.push_back(writer->GetGuid().entityId);
+		}
+		auto readers = matchRemoteEntitys_.find(writer->GetGuid().entityId);
+		if (readers == matchRemoteEntitys_.end()) {
+			std::set<GUID_t> remoteWriters;
+			remoteWriters.insert(subData.remoteReaderGuid);
+			matchRemoteEntitys_[writer->GetGuid().entityId] = remoteWriters;
+		} else {
+			readers->second.insert(subData.remoteReaderGuid);
+		}
 	}
 	
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(subData.remoteReaderGuid);
 	writer->GetRelatedDataWriter()->OnPublicationMatched(handle);
 }
+
+
 
 #ifdef DDSSECURITY
 void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure)
@@ -879,7 +907,6 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 #endif // DDSSECURITY
 {
     DataReaderImpl* dr = reader->GetRelatedDataReader();
-	GUID_t remoteGuid = Conversion::ToGuid(pubData.ddsPublicationData.key);
     if(nullptr == dr) {
         return;
     }
@@ -985,21 +1012,39 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 	reader->GetRelatedDataReader()->OnSubscriptionMatched(handle);
 }
 
+
+
 std::vector<std::shared_ptr<MessageTransmitter>> Participant::GetMessageTransmitters()
 {
 	return messageTransmitters_;
 }
-void Participant::TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length)
+void Participant::TransmittersSendMessage(LocatorVec destinationList, char* message, uint32_t length)
 {
-	for (auto& transmitter : messageTransmitters_) {
-		transmitter->MessageSend(destinationList, message, length);
+	ReturnCode_t ret = RETCODE_OK;
+	Locator_t srcLocator;
+	for (auto& dest : destinationList) {
+		for (auto& transmitter : messageTransmitters_) {
+			srcLocator.kind = transmitter->GetTransmitterKind();
+			ret = transmitter->MessageSend(srcLocator, dest, message, length);
+			if (RETCODE_OK == ret) {
+				return;
+			}
+		}
+	}
+}
+void Participant::TransmittersSendMessage(std::vector<LocatorVec>& destinationList, char* message, uint32_t length)
+{
+	for (auto& destList : destinationList) {
+		TransmittersSendMessage(destList, message, length);
 	}	
 }
-void Participant::FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length)
+ReturnCode_t Participant::FlowRateLimitedMessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length, const Duration_t& timeOut)
 {
 	if (flowRateLimitedManager_) {
-		flowRateLimitedManager_->MessageSend(destinationList, message, length);
+		return flowRateLimitedManager_->MessageSend(destinationList, message, length, timeOut);
 	}
+	TransmittersSendMessage(destinationList, message, length);
+	return RETCODE_OK;
 }
 void Participant::TransmittersConnect(const LocatorVec& remoteLocator)
 {
@@ -1091,7 +1136,7 @@ ReturnCode_t Participant::GetPublications(InstanceHandleSeq& handles, bool inclu
 {
 	for (auto& writer : remoteWriters_) {
 
-		if (false == includeContainedEntities && true == CompareGuidPrefix(guid_.prefix, writer.first.prefix)) {
+		if (false == includeContainedEntities && guid_.prefix == writer.first.prefix) {
 			continue;
 		}
 
@@ -1261,7 +1306,7 @@ ReturnCode_t Participant::GetSublications(InstanceHandleSeq & handles, bool incl
 {
 	for (auto& reader : remoteReaders_) {
 
-		if (false == includeContainedEntities && true == CompareGuidPrefix(guid_.prefix, reader.first.prefix)) {
+		if (false == includeContainedEntities && guid_.prefix == reader.first.prefix) {
 			continue;
 		}
 

@@ -1,0 +1,478 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - src/rtps/endpoint/reader.cpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">src/rtps/endpoint</a> - reader.cpp<span style="font-size: 80%;"> (source / <a href="reader.cpp.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">174</td>
+            <td class="headerCovTableEntry">209</td>
+            <td class="headerCovTableEntryMed">83.3 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2026-01-09 09:02:49</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">22</td>
+            <td class="headerCovTableEntryMed">77.3 %</td>
+          </tr>
+          <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : #include &quot;rtps/endpoint/reader.h&quot;</a>
+<a name="2"><span class="lineNum">       2 </span>            : #include &quot;rtps/endpoint/participant.h&quot;</a>
+<a name="3"><span class="lineNum">       3 </span>            : #include &quot;common/log/logger.h&quot;</a>
+<a name="4"><span class="lineNum">       4 </span>            : #include &quot;common/timeconversion.h&quot;</a>
+<a name="5"><span class="lineNum">       5 </span>            : #include &quot;dcps/subscribe/datareaderimpl.h&quot;</a>
+<a name="6"><span class="lineNum">       6 </span>            : USING_TRAVODDS_NAMESPACE;</a>
+<a name="7"><span class="lineNum">       7 </span>            : </a>
+<a name="8"><span class="lineNum">       8 </span><span class="lineCov">       1173 : Reader::Reader(const DataReaderQos&amp; qos, const TopicKind_t&amp; kind)</span></a>
+<a name="9"><span class="lineNum">       9 </span><span class="lineCov">       1173 :         : qos_(qos),</span></a>
+<a name="10"><span class="lineNum">      10 </span><span class="lineCov">       1173 :           heartbeatResponseDelay_(TIME_INVALID),</span></a>
+<a name="11"><span class="lineNum">      11 </span><span class="lineCov">       1173 :           heartbeatSuppressionDuration_(TIME_INVALID),</span></a>
+<a name="12"><span class="lineNum">      12 </span><span class="lineCov">       1173 :           readerCache_(std::make_shared&lt;HistoryCache&gt;(qos.history, qos.resource_limits, kind)),</span></a>
+<a name="13"><span class="lineNum">      13 </span><span class="lineCov">       1173 :           expectsInlineQos_(false),</span></a>
+<a name="14"><span class="lineNum">      14 </span><span class="lineCov">       1173 :           lastSequenceNumber_(SEQUENCENUMBER_ZERO),</span></a>
+<a name="15"><span class="lineNum">      15 </span><span class="lineCov">       1173 :           readerListener_(nullptr),</span></a>
+<a name="16"><span class="lineNum">      16 </span><span class="lineCov">       2346 :           datareader_(nullptr)</span></a>
+<a name="17"><span class="lineNum">      17 </span>            : {</a>
+<a name="18"><span class="lineNum">      18 </span><span class="lineCov">       1173 :         if (BEST_EFFORT == qos_.reliability.kind) {</span></a>
+<a name="19"><span class="lineNum">      19 </span><span class="lineCov">        363 :                 reliabilityLevel_ = BEST_EFFORT;</span></a>
+<a name="20"><span class="lineNum">      20 </span>            :         }       </a>
+<a name="21"><span class="lineNum">      21 </span>            :         else {</a>
+<a name="22"><span class="lineNum">      22 </span><span class="lineCov">        810 :                 reliabilityLevel_ = RELIABLE;</span></a>
+<a name="23"><span class="lineNum">      23 </span>            :         }</a>
+<a name="24"><span class="lineNum">      24 </span>            :                 </a>
+<a name="25"><span class="lineNum">      25 </span><span class="lineCov">       1173 :         instanceHandles_.push_back(HANDLE_NIL);</span></a>
+<a name="26"><span class="lineNum">      26 </span><span class="lineCov">       1173 :         lastTime_ = { 0,0 };</span></a>
+<a name="27"><span class="lineNum">      27 </span><span class="lineCov">       1173 : }</span></a>
+<a name="28"><span class="lineNum">      28 </span>            : </a>
+<a name="29"><span class="lineNum">      29 </span><span class="lineCov">       1173 : Reader::~Reader()</span></a>
+<a name="30"><span class="lineNum">      30 </span>            : {</a>
+<a name="31"><span class="lineNum">      31 </span><span class="lineCov">       1173 : }</span></a>
+<a name="32"><span class="lineNum">      32 </span><span class="lineCov">         43 : ReturnCode_t Reader::ReadOrTake(std::vector&lt;std::shared_ptr&lt;CacheChange&gt;&gt;&amp; dataValues, SampleInfoSeq&amp; sampleInfos, uint32_t maxSamples,</span></a>
+<a name="33"><span class="lineNum">      33 </span>            :         SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)</a>
+<a name="34"><span class="lineNum">      34 </span>            : {</a>
+<a name="35"><span class="lineNum">      35 </span><span class="lineCov">         43 :         InstanceHandle_t handle = HANDLE_NIL;</span></a>
+<a name="36"><span class="lineNum">      36 </span><span class="lineCov">         43 :         InstanceHandle_t nextHandle = HANDLE_NIL;</span></a>
+<a name="37"><span class="lineNum">      37 </span><span class="lineCov">         43 :         ReturnCode_t ret = RETCODE_OK;</span></a>
+<a name="38"><span class="lineNum">      38 </span>            :         </a>
+<a name="39"><span class="lineNum">      39 </span>            :         /* 循环读取所有的Instance的数据 */</a>
+<a name="40"><span class="lineNum">      40 </span>            :         do {</a>
+<a name="41"><span class="lineNum">      41 </span><span class="lineCov">         45 :                 if (dataValues.size() &gt;= maxSamples) {</span></a>
+<a name="42"><span class="lineNum">      42 </span><span class="lineNoCov">          0 :                         break;</span></a>
+<a name="43"><span class="lineNum">      43 </span>            :                 }</a>
+<a name="44"><span class="lineNum">      44 </span>            : </a>
+<a name="45"><span class="lineNum">      45 </span><span class="lineCov">         45 :                 ret = ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, nextHandle, sampleStates, viewStates, instanceStates, shouldTake);</span></a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineCov">         45 :                 handle = nextHandle;</span></a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineCov">         45 :                 ret = FindNextInstance(handle, nextHandle);     </span></a>
+<a name="49"><span class="lineNum">      49 </span>            : </a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineCov">         45 :         } while (RETCODE_ERROR != ret);</span></a>
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineCov">         43 :         if (0 &gt;= dataValues.size()) {</span></a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineCov">         10 :                 return RETCODE_NO_DATA;</span></a>
+<a name="54"><span class="lineNum">      54 </span>            :         }</a>
+<a name="55"><span class="lineNum">      55 </span>            :                 </a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineCov">         33 :         return RETCODE_OK;</span></a>
+<a name="57"><span class="lineNum">      57 </span>            : }</a>
+<a name="58"><span class="lineNum">      58 </span>            : </a>
+<a name="59"><span class="lineNum">      59 </span><span class="lineCov">         47 : ReturnCode_t Reader::ReadOrTakeInstance(std::vector&lt;std::shared_ptr&lt;CacheChange&gt;&gt;&amp; dataValues, SampleInfoSeq &amp; sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,</span></a>
+<a name="60"><span class="lineNum">      60 </span>            :         SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)</a>
+<a name="61"><span class="lineNum">      61 </span>            : {</a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineCov">         47 :         GetRelatedDataReader()-&gt;SetStatus(false);</span></a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineCov">         47 :         ReturnCode_t ret = RETCODE_OK;</span></a>
+<a name="64"><span class="lineNum">      64 </span>            :         /* 实例样本最新的状态  */</a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineCov">         47 :         SampleInfo info = sampleInfos_[handle];</span></a>
+<a name="66"><span class="lineNum">      66 </span>            :         /* 实例样本在缓冲区最新数据的样本 */</a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineCov">         47 :         SampleInfo handleInfo;</span></a>
+<a name="68"><span class="lineNum">      68 </span>            :         /* 实例样本读取到的最新状态 */</a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineCov">         47 :         SampleInfo readInfo;</span></a>
+<a name="70"><span class="lineNum">      70 </span><span class="lineCov">         47 :         int32_t size = 0;</span></a>
+<a name="71"><span class="lineNum">      71 </span>            :         /* 读取 */</a>
+<a name="72"><span class="lineNum">      72 </span>            :         //if((0 == (viewStates &amp; info.view_state))|| (0 == (instanceStates &amp; info.instance_state)) ){</a>
+<a name="73"><span class="lineNum">      73 </span>            :         //      return RETCODE_NO_DATA;</a>
+<a name="74"><span class="lineNum">      74 </span>            :         //}</a>
+<a name="75"><span class="lineNum">      75 </span>            : </a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineCov">         47 :         ret = readerCache_-&gt;ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, handle, sampleStates, viewStates, instanceStates, shouldTake);</span></a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineCov">         47 :         if (RETCODE_OK != ret) {</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineCov">         13 :                 return ret;</span></a>
+<a name="79"><span class="lineNum">      79 </span>            :         }</a>
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<a name="81"><span class="lineNum">      81 </span>            :         /* 修改状态  */</a>
+<a name="82"><span class="lineNum">      82 </span><span class="lineCov">         34 :         size = sampleInfos.length();</span></a>
+<a name="83"><span class="lineNum">      83 </span>            : </a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineCov">         34 :         if (0 &gt; size) {</span></a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :                 readInfo = sampleInfos[size - 1];</span></a>
+<a name="86"><span class="lineNum">      86 </span>            :         }</a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineCov">         34 :         handleInfo = GetLastInstanceSampleInfo(handle);</span></a>
+<a name="88"><span class="lineNum">      88 </span>            : </a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineCov">        104 :         for (int32_t i = 0; i &lt; sampleInfos.length(); i++) {</span></a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineCov">         70 :                 SampleInfo sampleInfo = sampleInfos[i];</span></a>
+<a name="91"><span class="lineNum">      91 </span>            : </a>
+<a name="92"><span class="lineNum">      92 </span>            :                 /*  从缓冲区读取时赋值状态  */</a>
+<a name="93"><span class="lineNum">      93 </span>            :                 //sampleInfo.sample_state;</a>
+<a name="94"><span class="lineNum">      94 </span>            :                 /*  在申明Cachce空间时，获取当前Instancehandle的SampleInfo的相关信息时赋值  */</a>
+<a name="95"><span class="lineNum">      95 </span>            :                 //sampleInfo.source_timestamp;</a>
+<a name="96"><span class="lineNum">      96 </span>            :                 //sampleInfo.instance_handle;</a>
+<a name="97"><span class="lineNum">      97 </span>            :                 //sampleInfo.publication_handle;</a>
+<a name="98"><span class="lineNum">      98 </span>            :                 //sampleInfo.disposed_generation_count;</a>
+<a name="99"><span class="lineNum">      99 </span>            :                 //sampleInfo.no_writers_generation_count;</a>
+<a name="100"><span class="lineNum">     100 </span>            :                 </a>
+<a name="101"><span class="lineNum">     101 </span>            :                 /* 更新为最新的状态 */</a>
+<a name="102"><span class="lineNum">     102 </span>            :                 //sampleInfo.view_state = handleInfo.view_state;</a>
+<a name="103"><span class="lineNum">     103 </span>            :                 //sampleInfo.instance_state = handleInfo.instance_state;</a>
+<a name="104"><span class="lineNum">     104 </span>            : </a>
+<a name="105"><span class="lineNum">     105 </span>            :                 /* 读取到的数据，读取到数据个数（剩余数据的个数） */</a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineCov">         70 :                 sampleInfo.sample_rank = --size;</span></a>
+<a name="107"><span class="lineNum">     107 </span>            : </a>
+<a name="108"><span class="lineNum">     108 </span>            :                 /* (读取到最新sampleInfo.disposed_generation_count + 读取到最新SampleInfo.no_writers_generation_count) - </a>
+<a name="109"><span class="lineNum">     109 </span>            :                         (当前sampleInfo.disposed_generation_count + 当前SampleInfo.no_writers_generation_count) */</a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">         70 :                 sampleInfo.generation_rank = (readInfo.disposed_generation_count + readInfo.no_writers_generation_count) -</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineCov">         70 :                         (sampleInfo.disposed_generation_count + sampleInfo.no_writers_generation_count);</span></a>
+<a name="112"><span class="lineNum">     112 </span>            : </a>
+<a name="113"><span class="lineNum">     113 </span>            :                 /* (样本最新sampleInfo.disposed_generation_count + 样本最新SampleInfo.no_writers_generation_count) - </a>
+<a name="114"><span class="lineNum">     114 </span>            :                         (当前sampleInfo.disposed_generation_count + 当前SampleInfo.no_writers_generation_count) */</a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineCov">         70 :                 sampleInfo.absolute_generation_rank = (handleInfo.disposed_generation_count + handleInfo.no_writers_generation_count) -</span></a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineCov">         70 :                                                                                                 (sampleInfo.disposed_generation_count + sampleInfo.no_writers_generation_count);</span></a>
+<a name="117"><span class="lineNum">     117 </span>            : </a>
+<a name="118"><span class="lineNum">     118 </span>            :                 /* * 代表DataSample是否包含数据，或者仅用于传递实例instance_state的更改 */</a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineCov">         70 :                 sampleInfo.valid_data = true;</span></a>
+<a name="120"><span class="lineNum">     120 </span>            : </a>
+<a name="121"><span class="lineNum">     121 </span>            :         }</a>
+<a name="122"><span class="lineNum">     122 </span>            : </a>
+<a name="123"><span class="lineNum">     123 </span>            :         /* 如果读取到的是实例的最后一个样本数据，将是实例的view状态修改为NOT_NEW_VIEW_STATE */</a>
+<a name="124"><span class="lineNum">     124 </span>            :         //TODO  需要判断样本是最后一个数据 </a>
+<a name="125"><span class="lineNum">     125 </span>            :         //if (readInfo.reception_sequence_number == handleInfo.reception_sequence_number) {</a>
+<a name="126"><span class="lineNum">     126 </span>            :         //      sampleInfos_[handle].view_state = NOT_NEW_VIEW_STATE;</a>
+<a name="127"><span class="lineNum">     127 </span>            :         //}</a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineCov">         34 :         GetRelatedDataReader()-&gt;NotifyReadConditions();</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineCov">         34 :         return ret;</span></a>
+<a name="130"><span class="lineNum">     130 </span>            : }</a>
+<a name="131"><span class="lineNum">     131 </span>            : </a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineCov">          4 : ReturnCode_t Reader::ReadOrTakeNextInstance(std::vector&lt;std::shared_ptr&lt;CacheChange&gt;&gt;&amp; dataValues, SampleInfoSeq &amp; sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,</span></a>
+<a name="133"><span class="lineNum">     133 </span>            :         SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)</a>
+<a name="134"><span class="lineNum">     134 </span>            : {</a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineCov">          4 :         InstanceHandle_t takeHandle = HANDLE_NIL;</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineCov">          4 :         ReturnCode_t ret = RETCODE_ERROR;</span></a>
+<a name="137"><span class="lineNum">     137 </span>            :         /* 从列表中获取大于handle的实例句柄，如果没有获取到说明没有其他数据 */</a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineCov">          4 :         ret = FindNextInstance(handle, takeHandle);</span></a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineCov">          4 :         if (RETCODE_OK != ret) {</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineCov">          4 :                 return ret;</span></a>
+<a name="141"><span class="lineNum">     141 </span>            :         }</a>
+<a name="142"><span class="lineNum">     142 </span>            :                 </a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 :         return ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, takeHandle, sampleStates, viewStates, instanceStates, shouldTake);</span></a>
+<a name="144"><span class="lineNum">     144 </span>            : }</a>
+<a name="145"><span class="lineNum">     145 </span>            : </a>
+<a name="146"><span class="lineNum">     146 </span>            : </a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineCov">         49 : ReturnCode_t Reader::FindNextInstance(const InstanceHandle_t&amp; preHander, InstanceHandle_t&amp; instanceHandle)</span></a>
+<a name="148"><span class="lineNum">     148 </span>            : {</a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineCov">        101 :         for (auto&amp; handle : instanceHandles_) {</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineCov">         54 :                 if (preHander &lt; handle) {</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineCov">          2 :                         instanceHandle = handle;</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineCov">          2 :                         return RETCODE_OK;</span></a>
+<a name="153"><span class="lineNum">     153 </span>            :                 }</a>
+<a name="154"><span class="lineNum">     154 </span>            :         }</a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineCov">         47 :         return RETCODE_ERROR;</span></a>
+<a name="156"><span class="lineNum">     156 </span>            : }</a>
+<a name="157"><span class="lineNum">     157 </span>            : </a>
+<a name="158"><span class="lineNum">     158 </span>            : </a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineCov">       6853 : std::shared_ptr&lt;CacheChange&gt; Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t&amp; handle, const InstanceHandle_t&amp; pubHandle, const Time_t&amp; sourceTimespace)</span></a>
+<a name="160"><span class="lineNum">     160 </span>            : {</a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineCov">       6853 :         std::shared_ptr&lt;CacheChange&gt; cacheChange = std::make_shared&lt;CacheChange&gt;();</span></a>
+<a name="162"><span class="lineNum">     162 </span>            : </a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineCov">       6849 :         auto itor = instanceHandles_.begin();</span></a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineCov">      13244 :         for (; itor != instanceHandles_.end(); itor++) {</span></a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineCov">      12816 :                 if (handle &lt; *itor) {</span></a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineCov">        321 :                         instanceHandles_.insert(itor, handle);</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineCov">        321 :                         readerCache_-&gt;instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_-&gt;maxSamplesPerInstance_)));</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineCov">        322 :                         break;</span></a>
+<a name="169"><span class="lineNum">     169 </span>            :                 }</a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineCov">      12493 :                 if (handle == *itor) {</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineCov">       6100 :                         break;</span></a>
+<a name="172"><span class="lineNum">     172 </span>            :                 }</a>
+<a name="173"><span class="lineNum">     173 </span>            :         }</a>
+<a name="174"><span class="lineNum">     174 </span>            : </a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineCov">       6836 :         if (itor == instanceHandles_.end()) {</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineCov">        419 :                 readerCache_-&gt;instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_-&gt;maxSamplesPerInstance_)));</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineCov">        421 :                 instanceHandles_.insert(itor, handle);</span></a>
+<a name="178"><span class="lineNum">     178 </span>            :         }</a>
+<a name="179"><span class="lineNum">     179 </span>            : </a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineCov">       6841 :         cacheChange-&gt;kind = kind;</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineCov">       6841 :         cacheChange-&gt;writerGuid = Conversion::ToGuid(pubHandle);</span></a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineCov">       6851 :         cacheChange-&gt;instanceHandle = handle;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineCov">       6845 :         cacheChange-&gt;sequenceNumber = lastSequenceNumber_++;</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineCov">       6848 :         cacheChange-&gt;serializedBuffer = data;</span></a>
+<a name="185"><span class="lineNum">     185 </span>            : </a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineCov">       6842 :         cacheChange-&gt;sampleInfo = sampleInfos_[handle];</span></a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineCov">       6835 :         cacheChange-&gt;sampleInfo.instance_handle = handle;</span></a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineCov">       6831 :         cacheChange-&gt;sampleInfo.publication_handle = pubHandle;</span></a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineCov">       6831 :         cacheChange-&gt;sampleInfo.source_timestamp = sourceTimespace;</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineCov">       6831 :         cacheChange-&gt;sampleInfo.sample_state = NOT_READ_SAMPLE_STATE;</span></a>
+<a name="191"><span class="lineNum">     191 </span>            : </a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineCov">      13660 :         return cacheChange;</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineCov">         34 : SampleInfo Reader::GetLastInstanceSampleInfo(const InstanceHandle_t&amp; handle)</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : {</a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineCov">         34 :         return sampleInfo_;</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : }</a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 : void Reader::ChangeSampleInfoByLiveliness()</span></a>
+<a name="200"><span class="lineNum">     200 </span>            : {</a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 :         for (auto sampleInfo : sampleInfos_) {</span></a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :                 sampleInfo.second.no_writers_generation_count++;</span></a>
+<a name="203"><span class="lineNum">     203 </span>            :         }</a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="205"><span class="lineNum">     205 </span>            : </a>
+<a name="206"><span class="lineNum">     206 </span>            : </a>
+<a name="207"><span class="lineNum">     207 </span>            : /* 远端的DW调用Dispose函数，修改对应instance实例的状态 */</a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 : void Reader::ChangeSampleInfoByDWDisposed(const InstanceHandle_t&amp; handl)</span></a>
+<a name="209"><span class="lineNum">     209 </span>            : {</a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :         for (auto sampleInfo : sampleInfos_) {</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :                 sampleInfo.second.disposed_generation_count++;</span></a>
+<a name="212"><span class="lineNum">     212 </span>            :         }</a>
+<a name="213"><span class="lineNum">     213 </span>            :         //TODO  begin修改History的中相关实例的的样本状态；</a>
+<a name="214"><span class="lineNum">     214 </span>            :         </a>
+<a name="215"><span class="lineNum">     215 </span>            :         // 将样本的状态修改为  NOT_ALIVE_DISPOSED_INSTANCE_STATE</a>
+<a name="216"><span class="lineNum">     216 </span>            : </a>
+<a name="217"><span class="lineNum">     217 </span>            :         //TODO end</a>
+<a name="218"><span class="lineNum">     218 </span>            :         </a>
+<a name="219"><span class="lineNum">     219 </span>            : </a>
+<a name="220"><span class="lineNum">     220 </span>            : </a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 : } </span></a>
+<a name="222"><span class="lineNum">     222 </span>            : </a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineCov">       1064 : void Reader::SetReaderListener(ReaderListener* listener)</span></a>
+<a name="224"><span class="lineNum">     224 </span>            : {</a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineCov">       1064 :         readerListener_ = listener;</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineCov">       1064 : }</span></a>
+<a name="227"><span class="lineNum">     227 </span>            : </a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineCov">       6812 : ReturnCode_t Reader::AddChanges(std::shared_ptr&lt;CacheChange&gt; cache)</span></a>
+<a name="229"><span class="lineNum">     229 </span>            : {</a>
+<a name="230"><span class="lineNum">     230 </span>            :         /* 判断是否有key  */</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineCov">       6812 :         std::map&lt;InstanceHandle_t, CacheChangeVector&gt;::iterator vitOut;</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineCov">       6813 :         SerializedBuffer* buffer = nullptr;</span></a>
+<a name="233"><span class="lineNum">     233 </span>            :         /* 丢弃数据 */</a>
+<a name="234"><span class="lineNum">     234 </span>            :         {</a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineCov">       6813 :                 std::unique_lock&lt;std::mutex&gt; lock(readerCache_-&gt;changeMutex_);</span></a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineCov">       6813 :                 if (RETCODE_OUT_OF_RESOURCES == readerCache_-&gt;FindORAddKey(cache-&gt;instanceHandle, buffer, &amp;vitOut)) {</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :                         return REJECTED_BY_INSTANCES_LIMIT;</span></a>
+<a name="238"><span class="lineNum">     238 </span>            :                 }</a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineCov">       6806 :         }</span></a>
+<a name="240"><span class="lineNum">     240 </span>            :         </a>
+<a name="241"><span class="lineNum">     241 </span>            :         ///* 根据HistoryQos的值进行设置 */</a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineCov">       6812 :         if (KEEP_LAST_HISTORY_QOS == qos_.history.kind || BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {</span></a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineCov">       6797 :                 std::unique_lock&lt;std::mutex&gt; lock(readerCache_-&gt;changeMutex_);</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineCov">       6793 :                 auto  changesItor = readerCache_-&gt;instanceChanges_.find(cache-&gt;instanceHandle);</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineCov">       6791 :                 if (changesItor == readerCache_-&gt;instanceChanges_.end()) {</span></a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 :                         return REJECTED_BY_INSTANCES_LIMIT;</span></a>
+<a name="247"><span class="lineNum">     247 </span>            :                 }</a>
+<a name="248"><span class="lineNum">     248 </span>            :                 /*  满了，删除最旧的数据  */</a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineCov">       6790 :                 if (changesItor-&gt;second.cacheChanges.size() == changesItor-&gt;second.maxSamples) {</span></a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineCov">       5485 :                         auto change = changesItor-&gt;second.cacheChanges.begin();</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineCov">       5481 :                         readerCache_-&gt;RemoveSampleCounters((*change)-&gt;sampleInfo.sample_state, changesItor-&gt;second.viewState, changesItor-&gt;second.instanceState);</span></a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineCov">       5488 :                         readerCache_-&gt;cacheChanges_.erase((*change)-&gt;sequenceNumber);</span></a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineCov">       5476 :                         changesItor-&gt;second.cacheChanges.erase(change);</span></a>
+<a name="254"><span class="lineNum">     254 </span>            :                 }</a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineCov">      13591 :         }</span></a>
+<a name="256"><span class="lineNum">     256 </span>            :         else {</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineCov">         15 :                 std::unique_lock&lt;std::mutex&gt; lock(readerCache_-&gt;changeMutex_);</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineCov">         15 :                 auto  changesItor = readerCache_-&gt;instanceChanges_.find(cache-&gt;instanceHandle);</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineCov">         15 :                 if (changesItor == readerCache_-&gt;instanceChanges_.end()) {</span></a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :                         return REJECTED_BY_INSTANCES_LIMIT;</span></a>
+<a name="261"><span class="lineNum">     261 </span>            :                 }</a>
+<a name="262"><span class="lineNum">     262 </span>            : </a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineCov">         15 :                 auto time_out = std::chrono::seconds(qos_.reliability.max_blocking_time.sec) + std::chrono::nanoseconds(qos_.reliability.max_blocking_time.nanosec);</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineCov">         15 :                 bool ret0 = readerCache_-&gt;changeVar_.wait_for(lock, time_out,</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineCov">         19 :                         [&amp;]() { return changesItor-&gt;second.cacheChanges.size() &lt; changesItor-&gt;second.maxSamples; });</span></a>
+<a name="266"><span class="lineNum">     266 </span>            : </a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineCov">         15 :                 if (!ret0) {</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineCov">          4 :                         return REJECTED_BY_SAMPLES_PER_INSTANCE_LIMIT;</span></a>
+<a name="269"><span class="lineNum">     269 </span>            :                 }</a>
+<a name="270"><span class="lineNum">     270 </span>            : </a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineCov">         15 :         }</span></a>
+<a name="272"><span class="lineNum">     272 </span>            : </a>
+<a name="273"><span class="lineNum">     273 </span>            :         /* TODO wangyi 暂时以接收时间为源时间戳 */</a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineCov">       6810 :         Time_t::now(cache-&gt;sourceTimespace);//获取当前时间</span></a>
+<a name="275"><span class="lineNum">     275 </span>            : </a>
+<a name="276"><span class="lineNum">     276 </span>            :         //wangyi time_based_filter 过滤判断</a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineCov">       6807 :         if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {</span></a>
+<a name="278"><span class="lineNum">     278 </span>            :                 //wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数</a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineCov">         25 :                 Duration_t ltime = Conversion::TimeToDuration(cache-&gt;sourceTimespace);</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineCov">         25 :                 Duration_t costTime = ltime - lastTime_;</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineCov">         25 :                 if (costTime &lt; qos_.time_based_filter.minimum_separation) {</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineCov">         12 :                         return RETCODE_TIME_BASED_FILTER;</span></a>
+<a name="283"><span class="lineNum">     283 </span>            :                 }</a>
+<a name="284"><span class="lineNum">     284 </span>            : </a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineCov">         13 :                 lastTime_ = ltime;</span></a>
+<a name="286"><span class="lineNum">     286 </span>            :                 /* 更新定时器时间 */</a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineCov">         13 :                 if (lastNewCacheTimer_ != nullptr) {</span></a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :                         lastNewCacheTimer_-&gt;UpdatePeriod(Conversion::ToMilliSecondsDouble(qos_.time_based_filter.minimum_separation) * 1.5);</span></a>
+<a name="289"><span class="lineNum">     289 </span>            :                 }</a>
+<a name="290"><span class="lineNum">     290 </span>            :         }</a>
+<a name="291"><span class="lineNum">     291 </span>            : </a>
+<a name="292"><span class="lineNum">     292 </span>            : </a>
+<a name="293"><span class="lineNum">     293 </span>            :         /* wangyi 获取远端数据写者QoS */</a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineCov">       6795 :         PublicationBuiltinTopicData publicationData;</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineCov">       6792 :         if (EXCLUSIVE_OWNERSHIP_QOS == qos_.ownership.kind) {</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineCov">          2 :                 GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(cache-&gt;writerGuid));</span></a>
+<a name="297"><span class="lineNum">     297 </span>            :         }</a>
+<a name="298"><span class="lineNum">     298 </span>            :         {</a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineCov">       6792 :                 std::unique_lock&lt;std::mutex&gt; lock(readerCache_-&gt;changeMutex_);</span></a>
+<a name="300"><span class="lineNum">     300 </span>            :                 </a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineCov">       6797 :                 ReturnCode_t ret = readerCache_-&gt;UpdataSampleInstance(</span></a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineCov">       6795 :                         cache-&gt;instanceHandle, </span></a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineCov">       6796 :                         cache-&gt;kind, </span></a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineCov">       6796 :                         cache-&gt;writerGuid,</span></a>
+<a name="305"><span class="lineNum">     305 </span>            :                         publicationData.ownership_strength.value, //ownershipStrength  </a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineCov">       6797 :                         SHARED_OWNERSHIP_QOS == qos_.ownership.kind ? true : false</span></a>
+<a name="307"><span class="lineNum">     307 </span>            :                 );</a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineCov">       6797 :                 if (RETCODE_OK != ret) {</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineCov">          1 :                         return ret;</span></a>
+<a name="310"><span class="lineNum">     310 </span>            :                 }</a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineCov">       6796 :                 auto&amp; ins = readerCache_-&gt;instanceChanges_[cache-&gt;instanceHandle];</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineCov">       6793 :                 ins.cacheChanges.push_back(cache);</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineCov">       6795 :                 readerCache_-&gt;AddSampleCounters(cache-&gt;sampleInfo.sample_state, ins.viewState, ins.instanceState);</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineCov">       6798 :         }</span></a>
+<a name="315"><span class="lineNum">     315 </span>            : </a>
+<a name="316"><span class="lineNum">     316 </span>            :         /* 更新接收到数据的状态 */</a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineCov">       6797 :         sampleInfo_ = cache-&gt;sampleInfo;</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineCov">       6794 :         sampleInfos_[cache-&gt;instanceHandle] = cache-&gt;sampleInfo;</span></a>
+<a name="319"><span class="lineNum">     319 </span>            : </a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineCov">       6791 :         return RETCODE_OK;</span></a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineCov">       6792 : }</span></a>
+<a name="322"><span class="lineNum">     322 </span>            : </a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineCov">      21754 : DataReaderImpl* Reader::GetRelatedDataReader()</span></a>
+<a name="324"><span class="lineNum">     324 </span>            : {</a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineCov">      21754 :         return datareader_;</span></a>
+<a name="326"><span class="lineNum">     326 </span>            : }</a>
+<a name="327"><span class="lineNum">     327 </span>            : </a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineCov">        749 : ReturnCode_t Reader::ProcessInlineQos(ChangeKind_t&amp; kind, InstanceHandle_t&amp; handle, const ParameterList_t&amp; inlineQos)</span></a>
+<a name="329"><span class="lineNum">     329 </span>            : {</a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineCov">       2238 :         for (auto&amp; parameter : inlineQos) {</span></a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineCov">       1483 :                 switch (parameter.parameterId) {</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineCov">        743 :                         case PID_KEY_HASH:</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineCov">        743 :                                 memcpy(handle.keyHash.value, parameter.value.data(), MIG_RTPS_KEY_HASH_MAX_LENGTH);</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineCov">        749 :                                 break;</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineCov">        740 :                         case PID_STATUS_INFO:</span></a>
+<a name="336"><span class="lineNum">     336 </span>            :                         {</a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineCov">        740 :                                 if (parameter.length == 4) {</span></a>
+<a name="338"><span class="lineNum">     338 </span>            :                                         //TODO</a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineCov">        740 :                                         octet flag = parameter.value[3];</span></a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineCov">        740 :                                         switch (flag &amp; (StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG)) {</span></a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 :                                             case StatusInfoFlag::NONE_FLAG:</span></a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 :                                                         kind = ALIVE;</span></a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :                                                     break;</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :                                             case StatusInfoFlag::DISPOSED_FLAG:</span></a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :                                                         kind = NOT_ALIVE_DISPOSED;</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :                                                     break;</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :                                                 case StatusInfoFlag::UNREGISTERED_FLAG:</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :                                                         kind = NOT_ALIVE_UNREGISTERED;</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :                                                     break;</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineCov">        740 :                                                 case (StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG):</span></a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineCov">        740 :                                                         kind = NOT_ALIVE_DISPOSED_UNREGISTERED;</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineCov">        740 :                                                     break;</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :                                                 default:</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :                                                 break;</span></a>
+<a name="355"><span class="lineNum">     355 </span>            :                                         }</a>
+<a name="356"><span class="lineNum">     356 </span>            :                                 }</a>
+<a name="357"><span class="lineNum">     357 </span>            :                         }</a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineCov">        740 :                         break;</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :                         default:</span></a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :                                 break;</span></a>
+<a name="361"><span class="lineNum">     361 </span>            :                 }</a>
+<a name="362"><span class="lineNum">     362 </span>            :         }</a>
+<a name="363"><span class="lineNum">     363 </span>            : </a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineCov">        749 :         return RETCODE_OK;</span></a>
+<a name="365"><span class="lineNum">     365 </span>            : }</a>
+<a name="366"><span class="lineNum">     366 </span>            : </a>
+<a name="367"><span class="lineNum">     367 </span>            : </a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineCov">       2382 : bool Reader::IsReliable()</span></a>
+<a name="369"><span class="lineNum">     369 </span>            : {</a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineCov">       2382 :         return qos_.reliability.kind == RELIABLE_RELIABILITY_QOS;</span></a>
+<a name="371"><span class="lineNum">     371 </span>            : }</a>
+<a name="372"><span class="lineNum">     372 </span>            : </a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineCov">       1282 : void Reader::SetRelatedDataReader(DataReaderImpl* reader)</span></a>
+<a name="374"><span class="lineNum">     374 </span>            : {</a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineCov">       1282 :         datareader_ = reader;</span></a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineCov">       1282 : }</span></a>
+<a name="377"><span class="lineNum">     377 </span>            : </a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 : DataReaderQos Reader::GetQos()</span></a>
+<a name="379"><span class="lineNum">     379 </span>            : {</a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :         return qos_;</span></a>
+<a name="381"><span class="lineNum">     381 </span>            : }</a>
+<a name="382"><span class="lineNum">     382 </span>            : </a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineCov">         84 : void Reader::GetMatchedPublications(InstanceHandleSeq&amp; publication_handles) const</span></a>
+<a name="384"><span class="lineNum">     384 </span>            : {</a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineCov">         84 :         participant_-&gt;GetMatchedEntitys(guid_.entityId, publication_handles);</span></a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineCov">         84 : }</span></a>
+<a name="387"><span class="lineNum">     387 </span>            : </a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineCov">        337 : bool Reader::GetMatchedPublicationData(PublicationBuiltinTopicData&amp; publicationData, const InstanceHandle_t&amp; remotehandle) const</span></a>
+<a name="389"><span class="lineNum">     389 </span>            : {</a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineCov">        337 :         if (!participant_-&gt;RemoteEntityIsMatched(guid_.entityId, remotehandle)) {</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :                 return false;</span></a>
+<a name="392"><span class="lineNum">     392 </span>            :         }</a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineCov">        337 :         if (RETCODE_OK == participant_-&gt;GetPublicationData(publicationData, remotehandle)) {</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineCov">        337 :                 return true;</span></a>
+<a name="395"><span class="lineNum">     395 </span>            :         }</a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineNoCov">          0 :         return false;</span></a>
+<a name="397"><span class="lineNum">     397 </span>            : }</a>
+<a name="398"><span class="lineNum">     398 </span>            : </a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 : std::shared_ptr&lt;HistoryCache&gt; Reader::GetReaderCache()</span></a>
+<a name="400"><span class="lineNum">     400 </span>            : {</a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :         return readerCache_;</span></a>
+<a name="402"><span class="lineNum">     402 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

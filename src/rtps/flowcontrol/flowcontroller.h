@@ -16,6 +16,7 @@
 #include "rtps/flowcontrol/flowcontroltype.h"
 #include "rtps/flowcontrol/flowcontrolscheduler.h"
 #include "rtps/basictypertps.h"
+#include "rtps/messages/cdrmessage_t.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
@@ -30,7 +31,7 @@ public:
 	virtual ~FlowController() = default;
 	void RegisterWriter(std::shared_ptr<Writer> writer);
 	void UnregisterWriter(std::shared_ptr<Writer> writer);
-	virtual void AddNewData(Writer* writer, std::shared_ptr<CacheChange> change) = 0;
+	virtual ReturnCode_t AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut = { 0, 200000000 }) = 0;
 	virtual void ReSendDataFrag(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet) = 0;
 	virtual void ReSendData(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy) = 0;
 protected:
@@ -46,7 +47,7 @@ public:
 	FlowSyncController(Participant* participant, const FlowControllerConfig& config);
 	virtual ~FlowSyncController() = default;
 
-	void AddNewData(Writer* writer, std::shared_ptr<CacheChange> change);
+	ReturnCode_t AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	void ReSendDataFrag(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet);
 
@@ -59,7 +60,7 @@ public:
 	FlowAsyncController(Participant* participant, const FlowControllerConfig& config);
 	virtual ~FlowAsyncController() = default;
 
-	virtual void AddNewData(Writer* writer, std::shared_ptr<CacheChange> change);
+	virtual ReturnCode_t AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut );
 
 	void ReSendDataFrag(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet);
 
@@ -71,7 +72,7 @@ public:
 	FlowSemiSyncController(Participant* participant, const FlowControllerConfig& config);
 	virtual ~FlowSemiSyncController() = default;
 
-	void AddNewData(Writer* writer, std::shared_ptr<CacheChange> change) override;
+	ReturnCode_t AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut) override;
 };
 
 

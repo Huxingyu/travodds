@@ -6,7 +6,8 @@ EntityImpl::EntityImpl(const StatusMask& mask)
 	: enable_(false),
 	  statusMask_(mask),
 	  statusCondition_(this),
-	  handle_(HANDLE_NIL)
+	  handle_(HANDLE_NIL),
+	  objectData_(nullptr)
 {
 }
 

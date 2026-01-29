@@ -252,8 +252,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	 ReturnCode_t InterpretSubmessage(char*& message,
-		uint32_t messageLen);
+	 ReturnCode_t InterpretSubmessage(std::shared_ptr<Message_t> message);
 
 	 /**
 	  * @brief 解析RTPS报文头。
@@ -274,7 +273,7 @@ public:
 	  *
 	  * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	  */
-	 ReturnCode_t InterpretDataMessage(char* message,
+	 ReturnCode_t InterpretDataMessage(std::shared_ptr<Message_t> message,
 		SubMessageHeader_t & submessageHeader,
 		Receive_t & messageReceiver);
 
@@ -322,7 +321,7 @@ public:
 	  *
 	  * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	  */
-	 ReturnCode_t InterpretDataFragMessage(char * message,
+	 ReturnCode_t InterpretDataFragMessage(std::shared_ptr<Message_t> message,
 		SubMessageHeader_t & submessageHeader,
 		Receive_t & messageReceiver);
 

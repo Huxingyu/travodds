@@ -16,6 +16,8 @@
 #include "dcps/domain/domainentityimpl.h"
 #include "rtps/basictypertps.h"
 #include "rtps/historycache/historycache.h"
+#include "dcps/sql/ddssqlfilter.h"
+
 #ifdef DDSSECURITY
 #include "security/crycommonsource.h"
 #endif // DDSSECURITY
@@ -724,6 +726,9 @@ public:
 	 *         启用失败返回RETCODE_ERROR。
 	 */
 	virtual ReturnCode_t enable();
+
+	virtual uint64_t get_unread_count();
+
 #ifdef _XML_INTERFACE_CPP
 	/**
 	 * @brief 指定QoS仓库的Qos配置，并设置数据读取器的QoS。
@@ -935,6 +940,12 @@ public:
 	 * @brief 获取所属的订阅者。
 	 */
 	SubscriberImpl* getParent();
+
+
+	void ContentFilterUpdate();
+
+	bool ValidateFilterData(SerializedBuffer* buffer);
+
 private:
 	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
@@ -955,6 +966,7 @@ private:
 	SubscriptionBuiltinTopicSecureData builtinSecureData_;
 #endif // DDSSECURITY
 	ContentFilterProperty_t contentFilter_;
+	std::shared_ptr<DDSSQL::DDSSQLFilter> filter_;
 protected:
 	TypeSupport* typeSupport_ = nullptr;
     std::shared_ptr<HistoryCache> history_;

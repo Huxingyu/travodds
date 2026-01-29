@@ -27,10 +27,10 @@ bool AsioLocator::Empty() const
 
 std::string AsioLocator::GetStringAddress() const
 {
-	if (kind == LOCATOR_KIND_UDPv4) {
+	if (kind == LOCATOR_KIND_UDPv4 || kind == LOCATOR_KIND_TCPv4) {
 		return GetAddress<asio::ip::address_v4>().to_string();
 	}
-	else if (kind == LOCATOR_KIND_UDPv6) {
+	else if (kind == LOCATOR_KIND_UDPv6 || kind == LOCATOR_KIND_TCPv6) {
 		return GetAddress<asio::ip::address_v6>().to_string();
 	}
 	return std::string();
@@ -38,10 +38,10 @@ std::string AsioLocator::GetStringAddress() const
 
 uint32_t AsioLocator::GetUIAddress() const
 {
-	if (kind == LOCATOR_KIND_UDPv4) {
+	if (kind == LOCATOR_KIND_UDPv4 || kind == LOCATOR_KIND_TCPv4) {
 		uint32_t uiAddress = *(uint32_t*)(address + 12);
 		return uiAddress;
-	} else if (kind == LOCATOR_KIND_UDPv6) {
+	} else if (kind == LOCATOR_KIND_UDPv6 || kind == LOCATOR_KIND_TCPv6) {
 		return GetAddress<asio::ip::address_v6>().scope_id();
 	}
 	return ~0u;

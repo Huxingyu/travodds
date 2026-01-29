@@ -17,6 +17,7 @@
 TRAVODDS_NAMESPACE_BEGIN
 class TopicImpl;
 class DynamicType;
+class DataReaderImpl;
 /**
  * @brief ContentFilteredTopicImpl类，TopicDescription的具体实现，允许基于内容的订阅。
  */
@@ -84,11 +85,15 @@ public:
 
 public:
     static bool ValidFilterExpression(const std::string& filter_expression, const StringSeq& expression_parameters, DynamicType* type);
-private:
 
+    void AddReader(DataReaderImpl* reader);
+
+	void RemoveReader(DataReaderImpl* reader);
+private:
     TopicImpl* relatedTopic_ = nullptr;
     std::string filterExpression_;
     StringSeq expressionParameters_;
+    std::set<DataReaderImpl*> readers_;
 };
 TRAVODDS_NAMESPACE_END
 #endif //!TRAVODDS_DCPS_TOPIC_CONTENTFILTEREDTOPICIMPL_H

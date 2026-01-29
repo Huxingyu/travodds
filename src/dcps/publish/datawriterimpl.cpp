@@ -171,9 +171,7 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
 		if (qos_.lifespan.duration != Duration_t(TIME_INFINITE))
 		{
 			lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
-		}
-		else
-		{
+		} else if(lifespanTimer_) {
 			lifespanTimer_->Exit();
 		}
 	}
@@ -1027,6 +1025,15 @@ bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilt
 		ret = filter.first->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
 	}
 	return ret == RETCODE_OK ? true : false;
+}
+
+void DataWriterImpl::UpdateReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
+{
+	using namespace DDSSQL;
+	auto it = readerFilters_.find(readerGuid);
+	if (it != readerFilters_.end()) {
+		it->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
+	}
 }
 
 void DataWriterImpl::RemoveReaderFilter(const GUID_t& readerGuid)

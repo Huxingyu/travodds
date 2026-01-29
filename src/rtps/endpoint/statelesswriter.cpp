@@ -4,6 +4,7 @@
 #include "rtps/transport/messagetransmitter.h"
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/flowcontrol/flowcontroller.h"
+#include "rtps/transport/locator.h"
 #include "common/time/ddstimer.h"
 #include "common/log/logger.h"
 #ifdef DDSSECURITY
@@ -28,13 +29,17 @@ StatelessWriter::~StatelessWriter()
 }
 void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 {
-	for (auto locator : subData.unicastLocatorList) {
-		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
+	std::lock_guard<std::mutex> lock(readerLocatorsMutex_);
+	if (0 != readerLocators_.count(subData.remoteReaderGuid)) {
+		return;
 	}
-
-	for (auto locator : subData.multicastLocatorList) {
-		ReaderLocatorAdd(locator, subData.remoteReaderGuid);
+	for (const auto& locator : subData.multicastLocatorList) {
+		readerMulticastLocators_[locator].insert(subData.remoteReaderGuid);
 	}
+	std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(subData.remoteReaderGuid, subData.unicastLocatorList);
+	readerLocator->SetHistoryCache(writerCache_);
+	readerLocators_[subData.remoteReaderGuid] = readerLocator;
+	transportGroup_.AddLocator(subData.remoteReaderGuid.prefix, subData.unicastLocatorList);
 }
 
 #ifdef DDSSECURITY
@@ -166,30 +171,65 @@ void StatelessWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& s
 }
 #endif // DDSSECURITY
 
-void StatelessWriter::ReaderLocatorAdd(Locator_t & locator, const GUID_t& guid)
+void StatelessWriter::ReaderLocatorAdd(Locator_t& locator, const GUID_t& guid)
 {
-	if (0 != readerLocators_.count(locator)) {
-		return;
+	AsioLocator asioLocator(locator);
+	std::lock_guard<std::mutex> lock(readerLocatorsMutex_);
+	if (asioLocator.IsMulticast()) {
+		readerMulticastLocators_[locator].insert(guid);
+	} else {
+		auto itor = readerLocators_.find(guid);
+		if (itor == readerLocators_.end()) {
+			LocatorSeq locatorList{ locator };
+			std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(guid, locatorList);
+			readerLocators_[guid] = readerLocator;
+			readerLocator->SetHistoryCache(writerCache_);
+			return;
+		}
+		itor->second->LocatorAdd(locator);
 	}
-
-	std::shared_ptr<ReaderLocator> readerLocator = std::make_shared<ReaderLocator>(locator);
-	readerLocator->SetHistoryCache(writerCache_);
-	if (guid != GUID_UNKNOWN) {
-		readerLocator->SetRemoteGuid(guid);
-	}
-	readerLocators_[locator] = readerLocator;
 }
 
-void StatelessWriter::ReaderLocatorRemove(Locator_t & locator)
+void StatelessWriter::ReaderLocatorRemove(Locator_t& locator, const GUID_t& guid)
 {
-	if (0 == readerLocators_.count(locator)) {
-		return;
+	AsioLocator asioLocator(locator);
+	std::lock_guard<std::mutex> lock(readerLocatorsMutex_);
+	if (asioLocator.IsMulticast()) {
+		auto itor = readerMulticastLocators_.find(locator);
+		if (itor != readerMulticastLocators_.end()) {
+			itor->second.erase(guid);
+			if (itor->second.empty()) {
+				readerMulticastLocators_.erase(itor);
+			}
+		}
+	} else {
+		auto itor = readerLocators_.find(guid);
+		if (itor == readerLocators_.end()) {
+			return;
+		}
+		itor->second->LocatorRemove(locator);
+	}
+}
+
+void StatelessWriter::ReaderLocatorRemove(const GUID_t& guid)
+{
+	std::lock_guard<std::mutex> lock(readerLocatorsMutex_);
+	for (auto it = readerMulticastLocators_.begin(); it != readerMulticastLocators_.end(); ) {
+		it->second.erase(guid);
+		if (it->second.empty()) {
+			it = readerMulticastLocators_.erase(it);
+		} else {
+			++it;
+		}
 	}
 
-	//delete  readerLocators_[locator];
-	//readerLocators_[locator] = nullptr;
+	auto itor = readerLocators_.find(guid);
+	if (itor == readerLocators_.end()) {
+		return;
+	}
+	readerLocators_.erase(itor);
+	transportGroup_.DecreaseLocator(guid.prefix);
 
-	readerLocators_.erase(locator);
 }
 
 void StatelessWriter::UnsentChangesReset()
@@ -199,7 +239,7 @@ void StatelessWriter::UnsentChangesReset()
 	}
 }
 
-ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl)
+ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
 	/* wnagyi  */
 	Duration_t duration = TIME_INFINITE;
@@ -214,7 +254,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		}
 	}
 
-	if (0 == readerLocators_.size()) {
+	if (readerLocators_.empty() && readerMulticastLocators_.empty()) {
 		return RETCODE_OK;
 	}
 
@@ -233,6 +273,20 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
         && datawriter_->statistic_.rtpsMsgProtected
         && guid_.IsUserDefinedEntity();
 #endif // DDSSECURITY
+
+	std::vector<LocatorVec> dstLocators;
+	std::set<GuidPrefix_t> prefixs;
+	for (auto& it : readerMulticastLocators_) {
+		dstLocators.push_back(LocatorSeq{ it.first });
+	}
+	for (auto& readerlocator : readerLocators_) {
+		if (!change->filterReaders_.empty() && change->filterReaders_.find(readerlocator.first) != change->filterReaders_.end()) {
+			continue;
+		}
+		prefixs.insert(readerlocator.first.prefix);
+	}
+
+	transportGroup_.GetLocator(prefixs, dstLocators);
 
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;
@@ -360,48 +414,33 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			}
 #endif // DDSSECURITY
 
-			/* 发送数据 */
-			for (auto& readerlocator : readerLocators_) {
-				if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
-					continue;
-				}
-				LocatorVec dstLocators { readerlocator.first };
-				if (flowControl) {
+			ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-					if (encodeSubMsg && !encodeRtpsMsg) {
-						participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-				    }
-					else if (encodeRtpsMsg) {
-						participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-					}
-					else {
-						participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-					}
-#else
-					participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
-				} else {
-#ifdef DDSSECURITY
-					if (encodeSubMsg && !encodeRtpsMsg) {
-						participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-					}
-					else if (encodeRtpsMsg) {
-						participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-					}
-					else {
-						participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-					}
-#else
-					participant_->TransmittersSendMessage(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift);
-#endif // DDSSECURITY
-				}
+			if (encodeSubMsg && !encodeRtpsMsg) {
+				participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
 			}
+			else if (encodeRtpsMsg) {
+				participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
+			}
+			else {
+				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+			}
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}			
+#else
+			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+			if (ret != RETCODE_OK) {
+				TRAVODDS_LOG(LOG_ERROR, "write data error.");
+				return ret;
+			}
+#endif // DDSSECURITY
 
 			buffer = buffer->next;
 
 		} while (buffer);
-	}
-	else {
+	} else {
 
 		DataSubMessage_t dataSubMessage;
 		if (0 != change->serializedBuffer->buffer_size) {
@@ -530,30 +569,34 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			}
 		}
 #endif // DDSSECURITY
-		for (auto& readerlocator : readerLocators_) {
-			if (change->filterReaders_.find(readerlocator.second->GetRemoteGuid()) != change->filterReaders_.end()) {
-				continue;
-			}
-			LocatorVec dstLocators{ readerlocator.first };
+
+					ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
-			if (encodeSubMsg && !encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift);
-			}
-			else if (encodeRtpsMsg) {
-				participant_->TransmittersSendMessage(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size);
-			}
-			else {
-				participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-			}
-#else
-			participant_->TransmittersSendMessage(dstLocators, change->serializedBuffer->buffer - shift, change->serializedBuffer->buffer_size + shift);
-#endif // DDSSECURITY
+		if (encodeSubMsg && !encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeBuffer.buffer - encodeShift, encodeDataSize + encodeShift, timeOut);
 		}
-#ifdef DDSSECURITY
+		else if (encodeRtpsMsg) {
+			participant_->FlowRateLimitedMessageSend(dstLocators, encodeRtpsBuffer.buffer, encodeRtpsBuffer.buffer_size, timeOut);
+		}
+		else {
+			participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+		}
+
 		if (encodeBuf) {
 			delete[] encodeBuf;
 		}
-#endif
+
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}			
+#else
+		participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+		if (ret != RETCODE_OK) {
+			TRAVODDS_LOG(LOG_ERROR, "write data error.");
+			return ret;
+		}
+#endif // DDSSECURITY
 	}
 	return RETCODE_OK;
 }
@@ -582,7 +625,7 @@ void StatelessWriter::ResendDataPeriod()
 		if (!change) {
 			continue;
 		}
-		DeliveryData(change, true);
+		DeliveryData(change, TIME_INFINITE);
 	}
 }
 

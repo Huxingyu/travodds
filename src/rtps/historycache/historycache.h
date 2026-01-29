@@ -14,6 +14,7 @@
 
 #include "rtps/basictypertps.h"
 #include "rtps/messages/parameter.h"
+#include "rtps/messages/cdrmessage_t.h"
 #include "dcps/subscribe/states.h"
 #include "dcps/base/retcode.h"
 #include "dcps/topic/typesupport.h"
@@ -90,6 +91,17 @@ struct StateSet{
 	}
 };
 
+class CacheSerializedBuffer : public SerializedBuffer {
+public:
+	std::shared_ptr<Message_t> originMessage;
+	CacheSerializedBuffer()
+		: SerializedBuffer()
+		, originMessage(nullptr) {
+	}
+	virtual ~CacheSerializedBuffer() {
+	}
+};
+
 /**
  * @brief CacheChange 类, 包含有关特定缓存更改的信息。
  */
@@ -117,6 +129,7 @@ public:
 	int32_t fragmentTatolNum;
 	/* 所有的数据分片数据序号，收到一个分片数据，删除分片序号 */
 	std::set<int32_t> fragmentSeq;
+	std::map<int32_t, SerializedBuffer*> fragmentBufferMap;
 	/* 需要过滤的订阅者 */
 	std::set<GUID_t> filterReaders_;
 
@@ -139,7 +152,12 @@ public:
 	 * @brief 析构函数。
 	 */
 	~CacheChange() {
+		for (const auto& it : fragmentBufferMap) {
+			delete it.second;
+		}
+		fragmentBufferMap.clear();
 		while(nullptr != serializedBuffer) {
+
 			SerializedBuffer* del = serializedBuffer;
 			serializedBuffer = serializedBuffer->next;
 			if (del->origin_buffer) {
@@ -275,7 +293,7 @@ public:
 	 *
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
+	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
 		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake = false);
 
 	/**

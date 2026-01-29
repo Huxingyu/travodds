@@ -18,10 +18,14 @@ ReturnCode_t DDSSQLFilter::InputSQL(const std::string& expression, const std::ve
 	try {
 		memory_input<> in(expression, "");
 		CurrentFieldState state{ {},dynType_,nullptr};
+
 		auto root = parse_tree::parse<FilterExpressionGrammar, BinaryTreeNode, FilterExpressionSelector>(in, state);
 		if (!root) {
 			return RETCODE_BAD_PARAMETER;
 		}
+
+		std::lock_guard<std::mutex> lock(mutex_);
+		fields_.clear();
 		root_ =  TransformTreeToCondition(root->left(), parameters);
 		if (!root_) {
 			return RETCODE_BAD_PARAMETER;
