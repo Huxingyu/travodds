@@ -290,7 +290,7 @@ void ThreadFunction::SetThreadName(const std::string& name)
     std::wstringstream stream;
     stream << buffer.data();
     std::wstring wThreadName = stream.str();
-    // SetThreadDescription(GetCurrentThread(), wThreadName.data());
+    SetThreadDescription(GetCurrentThread(), wThreadName.data());
 #else
     // Linux/macOS实现
     pthread_setname_np(pthread_self(), buffer.data());
