@@ -34,7 +34,7 @@ public:
 	ReturnCode_t SendAddrRemove(Locator_t destination);
 
 	ReturnCode_t ReceiveAddrAdd(Locator_t receiveAddr);
-
+	
 	ReturnCode_t ReceiveAddrRemove(Locator_t ReceiveAddr) { return RETCODE_OK; };
 	
 	ReturnCode_t MessageSend(
@@ -44,6 +44,10 @@ public:
 		uint32_t length,
 		uint16_t priority = -1);
 
+	virtual void SetStop() override;
+
+	virtual ReturnCode_t InterpretMessage(char* message, uint32_t len);
+
 	static const std::array<char, 16>& GetAddress() { return uuid_; }
 
 private:
@@ -51,15 +55,14 @@ private:
 
 	void AsyncAccept();
 
-	void AsyncReceive(std::shared_ptr<SharedMemSocket> socket);
 private:
-	asio::io_context& ioContext_; // 调用异步功能
-
 	static const std::array<char, 16> uuid_;
 
 	std::shared_ptr<SharedMemAccept> acceptor_;
 
 	std::map<Locator_t, std::shared_ptr<SharedMemSocket>> sendSockets_;
+
+	std::set<std::shared_ptr<SharedMemSocket>> recvSockets_;
 	std::mutex sendSocketsMtx_;
 };
 

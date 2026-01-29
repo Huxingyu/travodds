@@ -18,6 +18,8 @@
 #include "rtps/endpoint/statefulreader.h"
 #include "rtps/endpoint/participant.h"
 #ifdef DDSSECURITY
+#include "rtps/endpoint/statelesswriter.h"
+#include "rtps/endpoint/statelessreader.h"
 #include "security/participantmessagedata.h"
 #include "security/participantgenericmessage.h"
 #endif // DDSSECURITY
@@ -78,10 +80,6 @@ public:
 	 */
 	void AddSedpProxy(const SPDPdiscoveredParticipantData& data);
 #ifdef DDSSECURITY
-	void AddPartSedpProxy(const SPDPdiscoveredParticipantData& data);
-
-	void AddRemainSedpProxy(const SPDPdiscoveredParticipantData& data);
-
 
 	// SedpAssociationSpdpEntities
 	void AddBuiltinSpdpProxy(const SPDPdiscoveredParticipantData& data);
@@ -166,11 +164,14 @@ private:
 	 * @brief 添加远端DataWriter信息到远端远端DataWriter管理列表中。
 	 *
 	 * @param [in] data 远端DataWriter信息。
+	 * 
+	 * @param [in] isSecure 此信息来源实体是否是安全相关的。
 	 */
-	void ReceiveDiscoveredWriterData(DiscoveredWriterData& data);
-
 #ifdef DDSSECURITY
 	void ReceiveDiscoveredWriterSecureData(DiscoveredWriterSecureData& data);
+	void ReceiveDiscoveredWriterData(DiscoveredWriterData& data, bool isSecure = false);
+#else
+	void ReceiveDiscoveredWriterData(DiscoveredWriterData& data);
 #endif // DDSSECURITY
 
 	/**
@@ -191,12 +192,17 @@ private:
 	 * @brief 添加远端DataReader信息到远端远端DataReader管理列表中。
 	 *
 	 * @param [in] data 远端DataReader信息。
+	 *
+	 * @param [in] isSecure 此信息来源实体是否是安全相关的。
 	 */
-	void ReceiveDiscoveredReaderData(DiscoveredReaderData& data);
-
 #ifdef DDSSECURITY
 	void ReceiveDiscoveredReaderSecureData(DiscoveredReaderSecureData& data);
+	void ReceiveDiscoveredReaderData(DiscoveredReaderData& data, bool isSecure = false);
+#else
+	void ReceiveDiscoveredReaderData(DiscoveredReaderData& data);
+#endif // DDSSECURITY
 
+#ifdef DDSSECURITY
 	void ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data);
 
 	uint32_t SetRemoteDomainEntityCryptoTokens(const ParticipantVolatileSecureMessage* sample, bool isReader);
@@ -213,14 +219,19 @@ private:
 	std::shared_ptr<StatefulWriter> publicationsSecureWriter_ = nullptr;
 	std::shared_ptr<StatefulWriter> subscriptionsSecureWriter_ = nullptr;
 	std::shared_ptr<StatefulWriter> participantMessageSecureWriter_ = nullptr;
-	std::shared_ptr<StatefulWriter> participantStatelessMessageWriter_ = nullptr;
+    //std::shared_ptr<StatefulWriter> participantStatelessMessageWriter_ = nullptr;
+	std::shared_ptr<StatelessWriter> participantStatelessMessageWriter_ = nullptr;
 	std::shared_ptr<StatefulWriter> participantVolatileSecureMessageWriter_ = nullptr;
 	std::shared_ptr<StatefulReader> publicationsSecureReader_ = nullptr;
 	std::shared_ptr<StatefulReader> subscriptionsSecureReader_ = nullptr;
 	std::shared_ptr<StatefulReader> participantMessageSecureReader_ = nullptr;
-	std::shared_ptr<StatefulReader> participantStatelessMessageReader_ = nullptr;
+    //std::shared_ptr<StatefulReader> participantStatelessMessageReader_ = nullptr;
+	std::shared_ptr<StatelessReader> participantStatelessMessageReader_ = nullptr;
 	std::shared_ptr<StatefulReader> participantVolatileSecureMessageReader_ = nullptr;
-	SequenceNumber_t statelessMsgSeqNum_;
+
+	//SequenceNumber_t statelessMsgSeqNum_;
+	std::map<GuidPrefix_t, SequenceNumber_t> statelessMsgSeqNumMap_;
+	std::map<GuidPrefix_t, SequenceNumber_t> volatileSecureMsgSeqNumMap_;
 
 #endif // DDSSECURITY
 	std::shared_ptr<MemoryPool> memoryPool_;

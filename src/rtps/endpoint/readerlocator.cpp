@@ -1,8 +1,10 @@
 #include "rtps/endpoint/readerlocator.h"
+
 USING_TRAVODDS_NAMESPACE;
 
-ReaderLocator::ReaderLocator(const Locator_t& locator)
-	: locator_(locator),
+ReaderLocator::ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locatorList)
+	: remoteGuid_(readerGuid),
+	  locatorList_(locatorList),
 	  expectsInlineQos_(false),
 	  highestSentChangeSN_(SEQUENCENUMBER_UNKNOWN)
 {
@@ -63,13 +65,29 @@ bool ReaderLocator::ResetHighestSentChange()
 	return true;
 }
 
-Locator_t ReaderLocator::GetLocator()
+void ReaderLocator::LocatorAdd(Locator_t& locator)
 {
-	return locator_;
+	for (auto& loc : locatorList_) {
+		if (loc == locator) {
+			return;
+		}
+    }
+	locatorList_.push_back(locator);
 }
-void ReaderLocator::SetRemoteGuid(const GUID_t& guid)
+
+void ReaderLocator::LocatorRemove(Locator_t& locator)
 {
-	remoteGuid_ = guid;
+	for (auto it = locatorList_.begin(); it != locatorList_.end(); ++it) {
+		if (*it == locator) {
+			locatorList_.erase(it);
+			return;
+		}
+	}
+}
+
+LocatorSeq ReaderLocator::GetLocatorList()
+{
+	return locatorList_;
 }
 const GUID_t& ReaderLocator::GetRemoteGuid()
 {

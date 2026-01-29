@@ -150,12 +150,12 @@ unsigned int SequenceNumber_tTypeSupport::get_max_serialized_data_size(void* dat
 int SequenceNumber_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
     uint32_t tmpLength = 0;
-    if (!cdr->serializeBaseType(structData->high)) {
-        fprintf(stderr, "Serialization failed for field: structData->high\n");
-        return -1;
-    }
     if (!cdr->serializeBaseType(structData->low)) {
         fprintf(stderr, "Serialization failed for field: structData->low\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseType(structData->high)) {
+        fprintf(stderr, "Serialization failed for field: structData->high\n");
         return -1;
     }
     return 0;
@@ -167,12 +167,12 @@ int SequenceNumber_tTypeSupport::deserialize_data(void* data, CdrDeserializer* c
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
-    if (!cdr->deserializeBaseType(structData->high)) {
-        fprintf(stderr, "Deserialization failed for field: structData->high\n");
-        return -1;
-    }
     if (!cdr->deserializeBaseType(structData->low)) {
         fprintf(stderr, "Deserialization failed for field: structData->low\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseType(structData->high)) {
+        fprintf(stderr, "Deserialization failed for field: structData->high\n");
         return -1;
     }
     return 0;

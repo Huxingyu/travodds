@@ -1,0 +1,72 @@
+<dds_qos xmlns="http://www.omg.org/dds/">
+  <qos_library name="default_lib">
+    <qos_profile name="default_profile">
+      <domain_participant_factory_qos name="security_example">
+        <entity_factory>
+          <autoenable_created_entities>true</autoenable_created_entities>
+        </entity_factory>
+      </domain_participant_factory_qos>
+      <domain_participant_qos name="example_pub">
+        <entity_factory>
+          <autoenable_created_entities>true</autoenable_created_entities>
+        </entity_factory>
+        <property>
+          <value>
+            <element>
+              <name>dds.sec.plugin_name</name>
+              <value>SecurityPlugin</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.auth.identity_ca</name>
+              <value>file:../config/identity_ca.cert.pem</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.auth.identity_certificate</name>
+              <value>file:../config/cert.pem</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.auth.private_key</name>
+              <value>file:../config/key.pem</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.access.permissions_ca</name>
+              <value>file:../config/permissions_ca.cert.pem</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.access.permissions</name>
+              <value>file:../config/permissions.p7s</value>
+              <propagate>false</propagate>
+            </element>
+            <element>
+              <name>dds.sec.access.governance</name>
+              <value>file:../config/governance.p7s</value>
+              <propagate>false</propagate>
+            </element>
+          </value>
+          <binary_value>
+            <element>
+              <name>test</name>
+              <value>abcdef</value>
+              <propagate>false</propagate>
+            </element>
+          </binary_value>
+        </property>
+      </domain_participant_qos>
+      <datawriter_qos name="reliable">
+        <reliability>
+          <kind>RELIABLE_RELIABILITY_QOS</kind>
+        </reliability>
+      </datawriter_qos>
+      <datareader_qos name="reliable">
+        <reliability>
+          <kind>RELIABLE_RELIABILITY_QOS</kind>
+        </reliability>
+      </datareader_qos>
+    </qos_profile>
+  </qos_library>
+</dds_qos>

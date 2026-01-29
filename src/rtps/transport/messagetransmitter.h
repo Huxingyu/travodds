@@ -14,10 +14,9 @@
 
 #include <chrono>
 #include <thread>
-
+#include <atomic>
 #include "type/basictype.h"
 #include "rtps/basictypertps.h"
-#include "rtps/transport/asiocontext.h"
 #include "dcps/base/retcode.h"
 #include "common/memory/memorypool.h"
 
@@ -36,7 +35,7 @@ public:
 	 * @param [in] messageProcessor MessageProcessor指针。
 	 */
 	MessageTransmitter(std::shared_ptr<MessageProcessor> messageProcessor)
-		: messageProcessor_(messageProcessor), receivePool_(new MemoryPool(64)), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
+		: messageProcessor_(messageProcessor), receivePool_(MemoryPool::GetInstance()), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
 	{
 	}
 
@@ -77,42 +76,6 @@ public:
 		char* message,
 		uint32_t length,
 		uint16_t priority = -1) = 0;
-
-	/**
-	 * @brief RTPS报文发送函数。
-	 *
-	 * @param [in] source 源地址。
-	 * @param [in] destinationList 目的地址列表。
-	 * @param [in] message RTPS报文。
-	 * @param [in] length 报文长度。
-	 * @param [in] priority 发送IP的优先级。
-	 *
-	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	virtual ReturnCode_t MessageSend(
-		LocatorVec& sourceList,
-		LocatorVec& destinationList,
-		char* message,
-		uint32_t length,
-		uint16_t priority = -1
-	);
-
-	/**
-	 * @brief RTPS报文发送函数。
-	 *
-	 * @param [in] destinationList 目的地址列表。
-	 * @param [in] message RTPS报文。
-	 * @param [in] length 报文长度。
-	 * @param [in] priority 发送IP的优先级。
-	 *
-	 * @return 报文发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	virtual ReturnCode_t MessageSend(
-		LocatorVec& destinationList,
-		char* message,
-		uint32_t length,
-		uint16_t priority = -1
-	);
 
     /**
 	 * @brief 添加RTPS报文监听地址。
@@ -173,15 +136,6 @@ public:
 	 */
 	void SetUnicastLocatorList(const LocatorVec& locatorlist);
 
-	/**
-	 * @brief 检测端口号是否被占用。
-	 *
-	 * @param [in] port 端口号。
-	 * @param [in] checkUdp udp通信标志。
-	 *
-	 * @return 端口号可用返回true，否则返回false。
-	 */
-	static bool CheckSocketPort(uint16_t port, bool checkUdp = true);
 
 	/**
 	 * @brief 关闭socket。
@@ -203,7 +157,7 @@ public:
 	 *
 	 * @return 报文解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t InterpretMessage(char* message, uint32_t len);
+	virtual ReturnCode_t InterpretMessage(char* message, uint32_t len);
 
 protected:
 	std::atomic_bool runFlag_;

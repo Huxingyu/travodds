@@ -61,7 +61,11 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
+#ifdef DDSSECURITY
+	writerData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
+#else
 	writerData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+#endif //DDSSECURITY
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -70,28 +74,12 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER;
-	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
 #ifdef DDSSECURITY
-    //安全扩展
-    DiscoveredWriterSecureData writerSecureData;
-    memcpy(&writerSecureData.remoteWriterGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-    writerSecureData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-    writerSecureData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-
-    writerSecureData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
-    writerSecureData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
-    participant_->AddRemoteSecureWriter(writerSecureData);
-
-    DiscoveredReaderSecureData readerSecureData;
-    memcpy(&readerSecureData.remoteReaderGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-    readerSecureData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-    readerSecureData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-
-    readerSecureData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER;
-    readerSecureData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
-    participant_->AddRemoteSecureReader(readerSecureData);
-#endif // DDSSECURITY
+	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+#else
+	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+#endif //DDSSECURITY
+	participant_->AddRemoteReader(readerData);
 }
 
 void LivelinessManager::RemoveParticipantMessageProxy(GUID_t guid)
@@ -520,7 +508,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 			livelinessKind = (LivelinessQosPolicyKind)change->instanceHandle.keyHash.value[15];
 		}
 
-		if (CompareGuidPrefix(guid.prefix, ParticipantMessageDataReader_->GetGuid().prefix)) {
+		if (guid.prefix == ParticipantMessageDataReader_->GetGuid().prefix) {
 			/* TODO 日志 */
 			//AGILOG(AGILOG_ERROR, "CompareGuidPrefix Err");
 			return;

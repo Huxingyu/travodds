@@ -1,0 +1,560 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - src/rtps/transport/messagetransmitterudp.cpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">src/rtps/transport</a> - messagetransmitterudp.cpp<span style="font-size: 80%;"> (source / <a href="messagetransmitterudp.cpp.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">170</td>
+            <td class="headerCovTableEntry">238</td>
+            <td class="headerCovTableEntryLo">71.4 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2026-01-09 09:02:49</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntry">31</td>
+            <td class="headerCovTableEntryMed">77.4 %</td>
+          </tr>
+          <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : #include &quot;rtps/transport/messagetransmitterudp.h&quot;</a>
+<a name="2"><span class="lineNum">       2 </span>            : #include &quot;common/log/logger.h&quot;</a>
+<a name="3"><span class="lineNum">       3 </span>            : </a>
+<a name="4"><span class="lineNum">       4 </span>            : USING_TRAVODDS_NAMESPACE;</a>
+<a name="5"><span class="lineNum">       5 </span>            : </a>
+<a name="6"><span class="lineNum">       6 </span><span class="lineCov">        271 : MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr&lt;MessageProcessor&gt; messageProcessor)</span></a>
+<a name="7"><span class="lineNum">       7 </span><span class="lineCov">        271 :         : MessageTransmitter(messageProcessor), ioContext_()</span></a>
+<a name="8"><span class="lineNum">       8 </span>            : {</a>
+<a name="9"><span class="lineNum">       9 </span><span class="lineCov">        271 : }</span></a>
+<a name="10"><span class="lineNum">      10 </span>            : </a>
+<a name="11"><span class="lineNum">      11 </span><span class="lineCov">        271 : MessageTransmitterUDP::~MessageTransmitterUDP()</span></a>
+<a name="12"><span class="lineNum">      12 </span>            : {</a>
+<a name="13"><span class="lineNum">      13 </span>            :         /* 关闭所有接收socket */</a>
+<a name="14"><span class="lineNum">      14 </span><span class="lineCov">       1066 :         for (auto&amp; socketItor : receiveSocketMap_) {</span></a>
+<a name="15"><span class="lineNum">      15 </span><span class="lineCov">        795 :                 socketItor.second-&gt;close();</span></a>
+<a name="16"><span class="lineNum">      16 </span>            :         }</a>
+<a name="17"><span class="lineNum">      17 </span><span class="lineCov">        271 :         receiveSocketMap_.clear();</span></a>
+<a name="18"><span class="lineNum">      18 </span>            : </a>
+<a name="19"><span class="lineNum">      19 </span>            :         /* 关闭所有发送socket */</a>
+<a name="20"><span class="lineNum">      20 </span><span class="lineCov">        542 :         for (auto&amp; socketItor : sendSocketMap_) {</span></a>
+<a name="21"><span class="lineNum">      21 </span><span class="lineCov">        542 :                 for (auto&amp; itor : socketItor.second) {</span></a>
+<a name="22"><span class="lineNum">      22 </span><span class="lineCov">        271 :                         itor.second-&gt;close();</span></a>
+<a name="23"><span class="lineNum">      23 </span>            :                 }</a>
+<a name="24"><span class="lineNum">      24 </span><span class="lineCov">        271 :                 socketItor.second.clear();</span></a>
+<a name="25"><span class="lineNum">      25 </span>            :         }</a>
+<a name="26"><span class="lineNum">      26 </span>            : </a>
+<a name="27"><span class="lineNum">      27 </span><span class="lineCov">        271 :         sendSocketMap_.clear();</span></a>
+<a name="28"><span class="lineNum">      28 </span><span class="lineCov">        271 :         ioContext_.stop();</span></a>
+<a name="29"><span class="lineNum">      29 </span><span class="lineCov">        271 : }</span></a>
+<a name="30"><span class="lineNum">      30 </span>            : </a>
+<a name="31"><span class="lineNum">      31 </span><span class="lineCov">        271 : ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)</span></a>
+<a name="32"><span class="lineNum">      32 </span>            : {</a>
+<a name="33"><span class="lineNum">      33 </span><span class="lineCov">        271 :         if (source.kind != destination.kind || source.kind != kind_) {</span></a>
+<a name="34"><span class="lineNum">      34 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="35"><span class="lineNum">      35 </span>            :         }</a>
+<a name="36"><span class="lineNum">      36 </span><span class="lineCov">        271 :         AsioLocator src(source);</span></a>
+<a name="37"><span class="lineNum">      37 </span>            : </a>
+<a name="38"><span class="lineNum">      38 </span><span class="lineCov">        271 :         const uint32_t uiAddress = src.GetUIAddress();</span></a>
+<a name="39"><span class="lineNum">      39 </span>            :         /*  端口号为0时 只进行ip地址判断是否已创建 */</a>
+<a name="40"><span class="lineNum">      40 </span><span class="lineCov">        271 :         if (0 == src.port) {</span></a>
+<a name="41"><span class="lineNum">      41 </span>            :                 /* 该发送IP的地址和优先级已创建发送socket，直接返回 */</a>
+<a name="42"><span class="lineNum">      42 </span><span class="lineCov">        271 :                 if (0 != sendSocketMap_.count(uiAddress) &amp;&amp; 0 != sendSocketMap_[uiAddress].count(priority)) {</span></a>
+<a name="43"><span class="lineNum">      43 </span><span class="lineNoCov">          0 :                         return RETCODE_OK;</span></a>
+<a name="44"><span class="lineNum">      44 </span>            :                 } </a>
+<a name="45"><span class="lineNum">      45 </span>            :         } else {</a>
+<a name="46"><span class="lineNum">      46 </span>            :                 /* 该发送IP+端口号已创建发送socket，直接返回 */</a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineNoCov">          0 :                 if (sendPortSocketMap_.count(src) != 0) {</span></a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineNoCov">          0 :                         return RETCODE_OK;</span></a>
+<a name="49"><span class="lineNum">      49 </span>            :                 }</a>
+<a name="50"><span class="lineNum">      50 </span>            :         }</a>
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<a name="52"><span class="lineNum">      52 </span>            :         try {</a>
+<a name="53"><span class="lineNum">      53 </span>            :                 // IPPROTO_UDP</a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineCov">        271 :                 std::shared_ptr&lt;asio::ip::udp::socket&gt; NewSendSocket = GetSocketInit(); //AF_INET/AF_INET6, SOCK_DGRAM;</span></a>
+<a name="55"><span class="lineNum">      55 </span>            : </a>
+<a name="56"><span class="lineNum">      56 </span>            :                 // 设置 SO_REUSEADDR</a>
+<a name="57"><span class="lineNum">      57 </span><span class="lineCov">        271 :                 asio::socket_base::reuse_address reuse_option(true);</span></a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineCov">        271 :                 NewSendSocket-&gt;set_option(reuse_option);</span></a>
+<a name="59"><span class="lineNum">      59 </span>            : </a>
+<a name="60"><span class="lineNum">      60 </span>            :                 // 设置 IP_MULTICAST_TTL</a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineCov">        271 :                 asio::ip::multicast::hops multicast_ttl_option(64);</span></a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineCov">        271 :                 NewSendSocket-&gt;set_option(multicast_ttl_option);</span></a>
+<a name="63"><span class="lineNum">      63 </span>            : </a>
+<a name="64"><span class="lineNum">      64 </span>            :                 // 设置 IP_TTL</a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineCov">        271 :                 asio::ip::unicast::hops unicast_ttl_option(63);</span></a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineCov">        271 :                 NewSendSocket-&gt;set_option(unicast_ttl_option);</span></a>
+<a name="67"><span class="lineNum">      67 </span>            :                 // 设置 IP_TOS</a>
+<a name="68"><span class="lineNum">      68 </span>            :                 /* IP_TOS,设置优先级  IP_TOS,一共8bite,</a>
+<a name="69"><span class="lineNum">      69 </span>            :                 前 3bite用 000 - 111（0-7）</a>
+<a name="70"><span class="lineNum">      70 </span>            :                 111–Network Control（网络控制）；</a>
+<a name="71"><span class="lineNum">      71 </span>            :                 110–Internetwork Control（网间控制）；</a>
+<a name="72"><span class="lineNum">      72 </span>            :                 101–Critic（关键）；</a>
+<a name="73"><span class="lineNum">      73 </span>            :                 100–Flash Override（疾速）；</a>
+<a name="74"><span class="lineNum">      74 </span>            :                 011–Flash（闪速）；</a>
+<a name="75"><span class="lineNum">      75 </span>            :                 010–Immediate（快速）；</a>
+<a name="76"><span class="lineNum">      76 </span>            :                 001–Priority（优先）</a>
+<a name="77"><span class="lineNum">      77 </span>            :                 000–Routine（普通）。</a>
+<a name="78"><span class="lineNum">      78 </span>            :                 中间四个bit</a>
+<a name="79"><span class="lineNum">      79 </span>            :                 0000–normal service；</a>
+<a name="80"><span class="lineNum">      80 </span>            :                 1000–minimize delay；</a>
+<a name="81"><span class="lineNum">      81 </span>            :                 0100–maximize throughput；</a>
+<a name="82"><span class="lineNum">      82 </span>            :                 0010–maximize reliability；</a>
+<a name="83"><span class="lineNum">      83 </span>            :                 0001–minimize monetary cost。</a>
+<a name="84"><span class="lineNum">      84 </span>            :                 */</a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineCov">        271 :                 int32_t tos_value = 1;</span></a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineCov">        271 :                 asio::detail::socket_option::integer&lt;IPPROTO_IP, IP_TOS&gt; tos_option(tos_value);</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineCov">        271 :                 NewSendSocket-&gt;set_option(tos_option);</span></a>
+<a name="88"><span class="lineNum">      88 </span>            : </a>
+<a name="89"><span class="lineNum">      89 </span>            :                 /* 既不指定发送ip也不指定发送端口号时，不进行绑定操作，由系统自动选择 */</a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineCov">        271 :                 if (0 == src.port &amp;&amp; src.Empty()) {</span></a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineCov">        271 :                         sendSocketMap_[uiAddress][priority] = NewSendSocket;</span></a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineCov">        271 :                         return RETCODE_OK;</span></a>
+<a name="93"><span class="lineNum">      93 </span>            :                 }</a>
+<a name="94"><span class="lineNum">      94 </span>            :                 /* 绑定发送socket到本地端点，使用指定的IP地址和端口号 */</a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineNoCov">          0 :                 asio::ip::udp::endpoint local_endpoint = GetEndpoint(src);</span></a>
+<a name="96"><span class="lineNum">      96 </span>            : </a>
+<a name="97"><span class="lineNum">      97 </span>            :                 // 检查 socket 是否已经打开</a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :                 if (!NewSendSocket-&gt;is_open()) {</span></a>
+<a name="99"><span class="lineNum">      99 </span>            :                         // 绑定socket到本地端点</a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :                         NewSendSocket-&gt;open(local_endpoint.protocol());</span></a>
+<a name="101"><span class="lineNum">     101 </span>            :                 }</a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :                 NewSendSocket-&gt;bind(local_endpoint);</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :                 if (0 == src.port) {</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :                         sendSocketMap_[uiAddress][priority] = std::move(NewSendSocket);</span></a>
+<a name="105"><span class="lineNum">     105 </span>            :                 } else {</a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :                         sendPortSocketMap_.insert(std::pair&lt;Locator_t, std::shared_ptr&lt;asio::ip::udp::socket&gt;&gt;(src, NewSendSocket));</span></a>
+<a name="107"><span class="lineNum">     107 </span>            :                 }</a>
+<a name="108"><span class="lineNum">     108 </span>            : </a>
+<a name="109"><span class="lineNum">     109 </span>            : </a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">        271 :         }</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :         catch (std::exception&amp; e) {</span></a>
+<a name="112"><span class="lineNum">     112 </span>            :                 static_cast&lt;void&gt;(e);</a>
+<a name="113"><span class="lineNum">     113 </span>            :                 //std::cerr &lt;&lt; &quot;Exception: &quot; &lt;&lt; e.what() &lt;&lt; std::endl;</a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :                 TRAVODDS_LOG(LOG_ERROR, &quot;ioContext Err e[%s]&quot;, e.what());</span></a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :         }</span></a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :         return RETCODE_OK;</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineCov">        271 : }</span></a>
+<a name="119"><span class="lineNum">     119 </span>            : </a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 : ReturnCode_t MessageTransmitterUDP::SendAddrRemove(Locator_t destination)</span></a>
+<a name="121"><span class="lineNum">     121 </span>            : {</a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :         return ReturnCode_t();</span></a>
+<a name="123"><span class="lineNum">     123 </span>            : }</a>
+<a name="124"><span class="lineNum">     124 </span>            : </a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineCov">       6686 : ReturnCode_t MessageTransmitterUDP::MessageSend(Locator_t source1, Locator_t destination1, char* message, uint32_t length, uint16_t priority)</span></a>
+<a name="126"><span class="lineNum">     126 </span>            : {</a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineCov">       6686 :         if (source1.kind != destination1.kind || source1.kind != kind_) {</span></a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineCov">         36 :                 return RETCODE_ERROR;</span></a>
+<a name="129"><span class="lineNum">     129 </span>            :         }</a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineCov">       6650 :         char* pMsg = message;</span></a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineCov">       6650 :         uint32_t uiMsgLen = length;</span></a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineCov">       6650 :         AsioLocator src(source1);</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineCov">       6650 :         AsioLocator dest(destination1);</span></a>
+<a name="134"><span class="lineNum">     134 </span>            : </a>
+<a name="135"><span class="lineNum">     135 </span>            :         /* 判断收发地址是否相同，0表示本地程序之间进行发送 */</a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineCov">       6649 :         if (0 == memcmp(src.address, dest.address, sizeof(src.address))) {</span></a>
+<a name="137"><span class="lineNum">     137 </span>            :                 /* 判断是否也接收该端口号的数据,0即表示是程序内部自发自收 */</a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :                 if (0 != receiveSocketMap_.count(dest.port)) {</span></a>
+<a name="139"><span class="lineNum">     139 </span>            :                         /*  将数据内容写入缓冲区 */</a>
+<a name="140"><span class="lineNum">     140 </span>            :                         //m_pReceiveBuffer-&gt;Write(pMsg, uiMsgLen);</a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :                         return RETCODE_OK;</span></a>
+<a name="142"><span class="lineNum">     142 </span>            :                 }</a>
+<a name="143"><span class="lineNum">     143 </span>            :         }</a>
+<a name="144"><span class="lineNum">     144 </span>            :         /* 目的地址 */</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineCov">       6649 :         asio::ip::udp::endpoint target_endpoint = GetEndpoint(dest);</span></a>
+<a name="146"><span class="lineNum">     146 </span>            :         /* 查找对应的发送socket */</a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineCov">       6654 :         std::shared_ptr&lt;asio::ip::udp::socket&gt; SendSocket = nullptr;</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineCov">       6654 :         if (0 == src.port) {</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineCov">       6654 :                 SendSocket = sendSocketMap_[src.GetUIAddress()][priority];</span></a>
+<a name="150"><span class="lineNum">     150 </span>            :         } else {</a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :                 SendSocket = sendPortSocketMap_[src];</span></a>
+<a name="152"><span class="lineNum">     152 </span>            :         }</a>
+<a name="153"><span class="lineNum">     153 </span>            : </a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineCov">       6664 :         if (nullptr == SendSocket) {</span></a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 :                 TRAVODDS_LOG(LOG_ERROR, &quot;SendSocket is nullptr&quot;);</span></a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="157"><span class="lineNum">     157 </span>            :         }</a>
+<a name="158"><span class="lineNum">     158 </span>            : </a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineCov">       6663 :         mtxSendSocket_.lock();</span></a>
+<a name="160"><span class="lineNum">     160 </span>            :         /* 发送组播数据且未指定发送地址时，每个网卡都需要发送组播数据 */</a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineCov">       6664 :         if (dest.IsMulticast() &amp;&amp; src.Empty()) {</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineCov">       2488 :                 for (auto&amp; itor : unicastLocatorList_) {</span></a>
+<a name="163"><span class="lineNum">     163 </span>            :                         try {</a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineCov">       1244 :                                 asio::ip::multicast::outbound_interface option = GetOutboundInterfaceOption(AsioLocator(itor));</span></a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineCov">       1243 :                                 SendSocket-&gt;set_option(option);</span></a>
+<a name="166"><span class="lineNum">     166 </span>            : </a>
+<a name="167"><span class="lineNum">     167 </span>            :                                 // 发送数据到目标端点</a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineCov">       1244 :                                 SendSocket-&gt;send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);</span></a>
+<a name="169"><span class="lineNum">     169 </span>            :                         }</a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :                         catch (asio::system_error&amp; e) {</span></a>
+<a name="171"><span class="lineNum">     171 </span>            :                                 static_cast&lt;void&gt;(e);</a>
+<a name="172"><span class="lineNum">     172 </span>            :                                 //std::cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; &quot;:&quot; &lt;&lt; e.code()&lt;&lt;std::endl;</a>
+<a name="173"><span class="lineNum">     173 </span>            :                                 //AGILOG(AGILOG_ERROR, &quot;send_to error&quot;, e.what());</a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :                                 continue;</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :                         }</span></a>
+<a name="176"><span class="lineNum">     176 </span>            :                 }</a>
+<a name="177"><span class="lineNum">     177 </span>            :         }</a>
+<a name="178"><span class="lineNum">     178 </span>            :         else {</a>
+<a name="179"><span class="lineNum">     179 </span>            :                 try {</a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineCov">       5420 :                         SendSocket-&gt;send_to(asio::const_buffer(pMsg, uiMsgLen), target_endpoint);</span></a>
+<a name="181"><span class="lineNum">     181 </span>            :                 }</a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :                 catch (const std::exception&amp; e) {</span></a>
+<a name="183"><span class="lineNum">     183 </span>            :                         static_cast&lt;void&gt;(e);</a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :                         mtxSendSocket_.unlock();</span></a>
+<a name="185"><span class="lineNum">     185 </span>            :                         //AGILOG(AGILOG_ERROR, &quot;send_to error&quot;, e.what());</a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :                         return RETCODE_ERROR;</span></a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineNoCov">          0 :                 }</span></a>
+<a name="188"><span class="lineNum">     188 </span>            :         }</a>
+<a name="189"><span class="lineNum">     189 </span>            : </a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineCov">       6663 :         mtxSendSocket_.unlock();</span></a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineCov">       6664 :         return RETCODE_OK;</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineCov">       6664 : }</span></a>
+<a name="193"><span class="lineNum">     193 </span>            : </a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 : ReturnCode_t MessageTransmitterUDP::SendMultiMessage(Locator_t source, Locator_t destination, char* message, uint32_t length)</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : {</a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :         return MessageSend(source, destination, message, length);</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : }</a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineCov">       1316 : ReturnCode_t MessageTransmitterUDP::ReceiveAddrAdd(Locator_t receiveAddr)</span></a>
+<a name="200"><span class="lineNum">     200 </span>            : {</a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineCov">       1316 :         if (receiveAddr.kind != kind_) {</span></a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="203"><span class="lineNum">     203 </span>            :         }</a>
+<a name="204"><span class="lineNum">     204 </span>            :         ReturnCode_t ret;</a>
+<a name="205"><span class="lineNum">     205 </span>            :         /* 创建接收socket */</a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineCov">       1316 :         ret = AddRecvSocket(receiveAddr);</span></a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineCov">       1316 :         if (RETCODE_OK != ret) {</span></a>
+<a name="208"><span class="lineNum">     208 </span>            :                 //AGILOG(AGILOG_ERROR, &quot;AddRecvSocket error, ret = %d&quot;, ret);</a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineCov">        521 :                 return ret;</span></a>
+<a name="210"><span class="lineNum">     210 </span>            :         }</a>
+<a name="211"><span class="lineNum">     211 </span>            : </a>
+<a name="212"><span class="lineNum">     212 </span>            :         /* 加入组播组 */</a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineCov">        795 :         ret = AddMemberShip(receiveAddr);</span></a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineCov">        795 :         if (RETCODE_OK != ret) {</span></a>
+<a name="215"><span class="lineNum">     215 </span>            :                 //AGILOG(AGILOG_ERROR, &quot;AddMemberShip error, ret = %d&quot;, ret);</a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="217"><span class="lineNum">     217 </span>            :         }</a>
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineCov">        795 :         AsyncReceive(receiveSocketMap_[receiveAddr.port]);</span></a>
+<a name="220"><span class="lineNum">     220 </span>            : </a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineCov">        795 :         return RETCODE_OK;</span></a>
+<a name="222"><span class="lineNum">     222 </span>            : }</a>
+<a name="223"><span class="lineNum">     223 </span>            : </a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 : ReturnCode_t MessageTransmitterUDP::ReceiveAddrRemove(Locator_t receiveAddr)</span></a>
+<a name="225"><span class="lineNum">     225 </span>            : {</a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :         if (receiveAddr.kind != kind_) {</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="228"><span class="lineNum">     228 </span>            :         }</a>
+<a name="229"><span class="lineNum">     229 </span>            :         ReturnCode_t ret;</a>
+<a name="230"><span class="lineNum">     230 </span>            :         /*  只退组，不删除socket */</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :         ret = DropMemberShip(receiveAddr);</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :         if (RETCODE_OK != ret) {</span></a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :                 TRAVODDS_LOG(LOG_ERROR, &quot;DropMemberShip error, ret = %d&quot;, ret);</span></a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="235"><span class="lineNum">     235 </span>            :         }</a>
+<a name="236"><span class="lineNum">     236 </span>            : </a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :         return RETCODE_OK;</span></a>
+<a name="238"><span class="lineNum">     238 </span>            : }</a>
+<a name="239"><span class="lineNum">     239 </span>            : </a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineCov">       1316 : ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)</span></a>
+<a name="241"><span class="lineNum">     241 </span>            : {</a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineCov">       1316 :         AsioLocator rAddr(receiveAddr);</span></a>
+<a name="243"><span class="lineNum">     243 </span>            : </a>
+<a name="244"><span class="lineNum">     244 </span>            :         /* 端口号已存在 */</a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineCov">       1316 :         if (receiveSocketMap_.count(rAddr.port) &gt; 0) {</span></a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 :                 return RETCODE_OK;</span></a>
+<a name="247"><span class="lineNum">     247 </span>            :         }</a>
+<a name="248"><span class="lineNum">     248 </span>            : </a>
+<a name="249"><span class="lineNum">     249 </span>            :         try {</a>
+<a name="250"><span class="lineNum">     250 </span>            :                 // 创建一个UDP监听socket</a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineCov">       1316 :                 std::shared_ptr&lt;asio::ip::udp::socket&gt; newRecvSocket = GetReciveSocketInit(rAddr.port);</span></a>
+<a name="252"><span class="lineNum">     252 </span>            :                 // 监听的本地端点，使用系统自动分配的端口</a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineCov">       1316 :                 asio::ip::udp::endpoint local_endpoint = GetEndpoint(rAddr, true);</span></a>
+<a name="254"><span class="lineNum">     254 </span>            : </a>
+<a name="255"><span class="lineNum">     255 </span>            :                 // 检查 socket 是否已经打开</a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineCov">       1316 :                 if (!newRecvSocket-&gt;is_open()) {</span></a>
+<a name="257"><span class="lineNum">     257 </span>            :                         // 绑定socket到本地端点</a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :                         newRecvSocket-&gt;open(local_endpoint.protocol());</span></a>
+<a name="259"><span class="lineNum">     259 </span>            :                 }</a>
+<a name="260"><span class="lineNum">     260 </span>            : </a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineCov">       1316 :                 if (rAddr.IsMulticast()) {</span></a>
+<a name="262"><span class="lineNum">     262 </span>            :                         /* 端口复用 */</a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineCov">        267 :                         asio::socket_base::reuse_address option_reuse_address(true);</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineCov">        267 :                         newRecvSocket-&gt;set_option(option_reuse_address);</span></a>
+<a name="265"><span class="lineNum">     265 </span>            :         } else {</a>
+<a name="266"><span class="lineNum">     266 </span>            :                         // Windows：禁止其他进程复用（关键！）</a>
+<a name="267"><span class="lineNum">     267 </span>            : #ifdef _WIN32</a>
+<a name="268"><span class="lineNum">     268 </span>            :                         newRecvSocket-&gt;set_option(asio::detail::socket_option::integer&lt;ASIO_OS_DEF(SOL_SOCKET), SO_EXCLUSIVEADDRUSE&gt;(1));</a>
+<a name="269"><span class="lineNum">     269 </span>            : #endif</a>
+<a name="270"><span class="lineNum">     270 </span>            :                 }</a>
+<a name="271"><span class="lineNum">     271 </span>            : </a>
+<a name="272"><span class="lineNum">     272 </span>            : </a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineCov">       1316 :                 asio::socket_base::receive_buffer_size option_receive_buffer_size(RECEIVE_BUFFER_SIZE);</span></a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineCov">       1316 :                 newRecvSocket-&gt;set_option(option_receive_buffer_size);</span></a>
+<a name="275"><span class="lineNum">     275 </span>            : </a>
+<a name="276"><span class="lineNum">     276 </span>            :                 // 设置接收超时</a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineCov">       1316 :                 int32_t timeout = 200;</span></a>
+<a name="278"><span class="lineNum">     278 </span>            : #ifdef _WIN32</a>
+<a name="279"><span class="lineNum">     279 </span>            :                 asio::detail::socket_option::integer&lt;SOL_SOCKET, SO_RCVTIMEO&gt; tos_option(timeout);</a>
+<a name="280"><span class="lineNum">     280 </span>            :                 newRecvSocket-&gt;set_option(tos_option);</a>
+<a name="281"><span class="lineNum">     281 </span>            : #else</a>
+<a name="282"><span class="lineNum">     282 </span>            :         struct timeval tv;</a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineCov">       1316 :         tv.tv_sec = timeout / 1000;</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineCov">       1316 :         tv.tv_usec = (timeout % 1000) * 1000;</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineCov">       1316 :         if (setsockopt(newRecvSocket-&gt;native_handle(), SOL_SOCKET, SO_RCVTIMEO, &amp;tv, sizeof (tv)) &lt;0) {</span></a>
+<a name="286"><span class="lineNum">     286 </span>            :                         //AGILOG(AGILOG_ERROR, &quot;setsockopt timeout Err[%d]&quot;, errno);</a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :             return RETCODE_ERROR;</span></a>
+<a name="288"><span class="lineNum">     288 </span>            :         }</a>
+<a name="289"><span class="lineNum">     289 </span>            : #endif</a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineCov">       1316 :                 newRecvSocket-&gt;bind(GetReciveEndpoint(rAddr.port));</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineCov">        795 :                 receiveSocketMap_.insert(std::pair&lt;uint16_t, std::shared_ptr&lt;asio::ip::udp::socket&gt;&gt;(rAddr.port, newRecvSocket));</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineCov">        795 :                 return RETCODE_OK;</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineCov">       1316 :         }</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineCov">        521 :         catch (asio::system_error&amp; e) {</span></a>
+<a name="295"><span class="lineNum">     295 </span>            :                 //AGILOG(AGILOG_ERROR, &quot;Err[%s]&quot;, e.what());</a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineCov">        521 :                 if (e.code() == asio::error::address_in_use) {</span></a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineCov">        521 :                         return RETCODE_PORT_IN_USE;</span></a>
+<a name="298"><span class="lineNum">     298 </span>            :                 }</a>
+<a name="299"><span class="lineNum">     299 </span>            : #ifdef _WIN32</a>
+<a name="300"><span class="lineNum">     300 </span>            :                 if (e.code().value() == WSAEACCES) {</a>
+<a name="301"><span class="lineNum">     301 </span>            :                         return RETCODE_PORT_IN_USE;</a>
+<a name="302"><span class="lineNum">     302 </span>            :                 }</a>
+<a name="303"><span class="lineNum">     303 </span>            : #endif</a>
+<a name="304"><span class="lineNum">     304 </span>            :         //std::cerr &lt;&lt; &quot;Bind error: &quot; &lt;&lt; e.what() &lt;&lt; std::endl;</a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineCov">        521 :         }</span></a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineCov">       1316 : }</span></a>
+<a name="308"><span class="lineNum">     308 </span>            : </a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineCov">        795 : ReturnCode_t MessageTransmitterUDP::AddMemberShip(Locator_t receiveAddr)</span></a>
+<a name="310"><span class="lineNum">     310 </span>            : {</a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineCov">        795 :         AsioLocator rAddr(receiveAddr);</span></a>
+<a name="312"><span class="lineNum">     312 </span>            :         /* 判断接收地址是否是组播地址，非组播直接返回 */</a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineCov">        795 :         if (!rAddr.IsMulticast()) {</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineCov">        528 :                 return RETCODE_OK;</span></a>
+<a name="315"><span class="lineNum">     315 </span>            :         }</a>
+<a name="316"><span class="lineNum">     316 </span>            : </a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineCov">        267 :         std::shared_ptr&lt;asio::ip::udp::socket&gt; socke = receiveSocketMap_[rAddr.port];</span></a>
+<a name="318"><span class="lineNum">     318 </span>            : </a>
+<a name="319"><span class="lineNum">     319 </span>            :         /* 根据DomainParticipant中的IP地址进行加组  */</a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineCov">        534 :         for (auto&amp; itor : unicastLocatorList_) {</span></a>
+<a name="321"><span class="lineNum">     321 </span>            : </a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineCov">        267 :                 AsioLocator it(itor);</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineCov">        267 :                 asio::ip::multicast::join_group option = GetJoinGroupOption(rAddr, it);</span></a>
+<a name="324"><span class="lineNum">     324 </span>            :                 try {</a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineCov">        267 :                         socke-&gt;set_option(option);</span></a>
+<a name="326"><span class="lineNum">     326 </span>            :                 }</a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :                 catch (const std::system_error&amp; e) {</span></a>
+<a name="328"><span class="lineNum">     328 </span>            :                         static_cast&lt;void&gt;(e);</a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :                         TRAVODDS_LOG(LOG_ERROR, &quot;Err[%s]&quot;, e.what());</span></a>
+<a name="330"><span class="lineNum">     330 </span>            :                         //std::cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; std::endl;</a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :                         continue;</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :                 }</span></a>
+<a name="333"><span class="lineNum">     333 </span>            :                 //printf(&quot;netcard ip : %d.%d.%d.%d add membership : %d.%d.%d.%d sucess !\n&quot;,</a>
+<a name="334"><span class="lineNum">     334 </span>            :                 //      itor.address[12], itor.address[13], itor.address[14], itor.address[15],</a>
+<a name="335"><span class="lineNum">     335 </span>            :                 //      rAddr.address[12], rAddr.address[13], rAddr.address[14], rAddr.address[15]);</a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineCov">        267 :         }</span></a>
+<a name="337"><span class="lineNum">     337 </span>            : </a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineCov">        267 :         return RETCODE_OK;</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineCov">        795 : }</span></a>
+<a name="340"><span class="lineNum">     340 </span>            : </a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 : ReturnCode_t MessageTransmitterUDP::DropMemberShip(Locator_t receiveAddr)</span></a>
+<a name="342"><span class="lineNum">     342 </span>            : {</a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :         AsioLocator rAddr(receiveAddr);</span></a>
+<a name="344"><span class="lineNum">     344 </span>            :         /* 判断接收地址是否是组播地址，非组播直接返回 */</a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :         if (!rAddr.IsMulticast()) {</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :                 return RETCODE_OK;</span></a>
+<a name="347"><span class="lineNum">     347 </span>            :         }</a>
+<a name="348"><span class="lineNum">     348 </span>            : </a>
+<a name="349"><span class="lineNum">     349 </span>            :         /* 退出组播组，因为该socket可能还同时加入其它组播组，不能关闭该socket */</a>
+<a name="350"><span class="lineNum">     350 </span>            :         try {</a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :                 asio::ip::multicast::leave_group option = GetLeaveGroupOption(rAddr);</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :                 receiveSocketMap_[rAddr.port]-&gt;set_option(option);</span></a>
+<a name="353"><span class="lineNum">     353 </span>            :         }</a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         catch (const std::exception&amp; e) {</span></a>
+<a name="355"><span class="lineNum">     355 </span>            :                 static_cast&lt;void&gt;(e);</a>
+<a name="356"><span class="lineNum">     356 </span>            :                 //std::cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; std::endl;</a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :                 TRAVODDS_LOG(LOG_ERROR, &quot;Err[%s]&quot;, e.what());</span></a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :                 return RETCODE_ERROR;</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :         }</span></a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :         return RETCODE_OK;</span></a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="362"><span class="lineNum">     362 </span>            : </a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineCov">        542 : void MessageTransmitterUDP::SetStop()</span></a>
+<a name="364"><span class="lineNum">     364 </span>            : {</a>
+<a name="365"><span class="lineNum">     365 </span><span class="lineCov">        542 :         if (!runFlag_.load()) {</span></a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineCov">        271 :                 return;</span></a>
+<a name="367"><span class="lineNum">     367 </span>            :         }</a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineCov">        271 :         MessageTransmitter::SetStop();</span></a>
+<a name="369"><span class="lineNum">     369 </span><span class="lineCov">       1066 :         for (auto&amp; socketItor : receiveSocketMap_) {</span></a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineCov">        795 :                 socketItor.second-&gt;cancel();</span></a>
+<a name="371"><span class="lineNum">     371 </span>            :         }</a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineCov">        542 :         for (auto&amp; socketItor : sendSocketMap_) {</span></a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineCov">        542 :                 for (auto&amp; itor : socketItor.second) {</span></a>
+<a name="374"><span class="lineNum">     374 </span><span class="lineCov">        271 :                         itor.second-&gt;cancel();</span></a>
+<a name="375"><span class="lineNum">     375 </span>            :                 }</a>
+<a name="376"><span class="lineNum">     376 </span>            :         }</a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineCov">        271 :         uint32_t tries = 0;</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineCov">       1112 :         while (flagNum_.load(std::memory_order_acquire) &gt; 0 &amp;&amp; tries++ &lt; 20 ) {</span></a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineCov">        285 :                 std::this_thread::sleep_for(std::chrono::milliseconds(10));</span></a>
+<a name="380"><span class="lineNum">     380 </span>            :         }</a>
+<a name="381"><span class="lineNum">     381 </span>            : }</a>
+<a name="382"><span class="lineNum">     382 </span>            : </a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineCov">       9184 : void MessageTransmitterUDP::AsyncReceive(std::shared_ptr&lt;asio::ip::udp::socket&gt; socket)</span></a>
+<a name="384"><span class="lineNum">     384 </span>            : {</a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineCov">       9184 :         flagNum_.fetch_add(1, std::memory_order_release);</span></a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineCov">       9184 :         char* buffer = nullptr;</span></a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineCov">       9184 :         bool ret = receivePool_-&gt;getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);</span></a>
+<a name="388"><span class="lineNum">     388 </span>            : </a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineCov">       9184 :         while (!ret &amp;&amp; IsRun()) {</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :                 std::this_thread::sleep_for(std::chrono::milliseconds(1));</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :                 ret = receivePool_-&gt;getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);</span></a>
+<a name="392"><span class="lineNum">     392 </span>            :         }</a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineCov">       9184 :         if (!IsRun()) {</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineCov">          2 :                 flagNum_.fetch_sub(1, std::memory_order_release);</span></a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineCov">          2 :                 return;</span></a>
+<a name="396"><span class="lineNum">     396 </span>            :         }</a>
+<a name="397"><span class="lineNum">     397 </span>            : </a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineCov">       9183 :         std::shared_ptr&lt;asio::ip::udp::endpoint&gt; sender_endpoint = std::make_shared&lt;asio::ip::udp::endpoint&gt;();</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineCov">       9182 :         socket-&gt;async_receive_from(asio::buffer(buffer, UDP_MAX_MESSAGE_SIZE), *sender_endpoint,</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineCov">      44363 :                 [this, buffer, socket, sender_endpoint](const std::error_code&amp; ec, std::size_t bytes_transferred) {</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineCov">       9171 :                         ReturnCode_t ret = RETCODE_OK;</span></a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineCov">       9171 :                         if (!ec) {</span></a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineCov">       8436 :                                 InterpretMessage(buffer, bytes_transferred);</span></a>
+<a name="404"><span class="lineNum">     404 </span>            :                         } </a>
+<a name="405"><span class="lineNum">     405 </span><span class="lineCov">       9183 :                         flagNum_.fetch_sub(1, std::memory_order_release);</span></a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineCov">       9183 :                         if (IsRun()) {</span></a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineCov">       8390 :                                 AsyncReceive(socket);</span></a>
+<a name="408"><span class="lineNum">     408 </span>            :                         }</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineCov">       9183 :                 });</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineCov">       9183 : }</span></a>
+<a name="411"><span class="lineNum">     411 </span>            : </a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineCov">        266 : MessageTransmitterUDPv4::MessageTransmitterUDPv4(std::shared_ptr&lt;MessageProcessor&gt; messageProcessor)</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineCov">        266 :         : MessageTransmitterUDP(messageProcessor)</span></a>
+<a name="414"><span class="lineNum">     414 </span>            : {</a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineCov">        266 :         kind_ = LOCATOR_KIND_UDPv4;</span></a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineCov">        266 : }</span></a>
+<a name="417"><span class="lineNum">     417 </span>            : </a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 : asio::ip::multicast::leave_group MessageTransmitterUDPv4::GetLeaveGroupOption(const AsioLocator&amp; locator)</span></a>
+<a name="419"><span class="lineNum">     419 </span>            : {</a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :         return asio::ip::multicast::leave_group(locator.GetAddress&lt;asio::ip::address_v4&gt;());;</span></a>
+<a name="421"><span class="lineNum">     421 </span>            : }</a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineCov">        264 : asio::ip::multicast::join_group MessageTransmitterUDPv4::GetJoinGroupOption(const AsioLocator&amp; multicastLoc, const AsioLocator&amp; interfaceLoc)</span></a>
+<a name="423"><span class="lineNum">     423 </span>            : {</a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineCov">        264 :         return asio::ip::multicast::join_group(multicastLoc.GetAddress&lt;asio::ip::address_v4&gt;(), interfaceLoc.GetAddress&lt;asio::ip::address_v4&gt;());</span></a>
+<a name="425"><span class="lineNum">     425 </span>            : }</a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineCov">       1233 : asio::ip::multicast::outbound_interface MessageTransmitterUDPv4::GetOutboundInterfaceOption(const AsioLocator&amp; locator)</span></a>
+<a name="427"><span class="lineNum">     427 </span>            : {</a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineCov">       1233 :         return asio::ip::multicast::outbound_interface(locator.GetAddress&lt;asio::ip::address_v4&gt;());</span></a>
+<a name="429"><span class="lineNum">     429 </span>            : }</a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineCov">       7932 : asio::ip::udp::endpoint MessageTransmitterUDPv4::GetEndpoint(const AsioLocator&amp; locator, bool recive)</span></a>
+<a name="431"><span class="lineNum">     431 </span>            : {</a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineCov">       7932 :         if (locator.IsMulticast() &amp;&amp; recive) {</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineCov">        264 :                 return asio::ip::udp::endpoint(asio::ip::udp::v4(), locator.port);</span></a>
+<a name="434"><span class="lineNum">     434 </span>            :         }</a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineCov">       7665 :         return asio::ip::udp::endpoint(locator.GetAddress&lt;asio::ip::address_v4&gt;(), locator.port);</span></a>
+<a name="436"><span class="lineNum">     436 </span>            : }</a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineCov">       1303 : asio::ip::udp::endpoint MessageTransmitterUDPv4::GetReciveEndpoint(const uint32_t port)</span></a>
+<a name="438"><span class="lineNum">     438 </span>            : {</a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineCov">       1303 :         return asio::ip::udp::endpoint(asio::ip::address::from_string(&quot;0.0.0.0&quot;), port);</span></a>
+<a name="440"><span class="lineNum">     440 </span>            : }</a>
+<a name="441"><span class="lineNum">     441 </span><span class="lineCov">        266 : std::shared_ptr&lt;asio::ip::udp::socket&gt; MessageTransmitterUDPv4::GetSocketInit()</span></a>
+<a name="442"><span class="lineNum">     442 </span>            : {</a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineCov">        532 :         return std::make_shared&lt;asio::ip::udp::socket&gt;(ioContext_, asio::ip::udp::v4());</span></a>
+<a name="444"><span class="lineNum">     444 </span>            : }</a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineCov">       1303 : std::shared_ptr&lt;UDPReciverSocket&gt; MessageTransmitterUDPv4::GetReciveSocketInit(const uint32_t port)</span></a>
+<a name="446"><span class="lineNum">     446 </span>            : {</a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineCov">       2606 :         return std::make_shared&lt;UDPReciverSocket&gt;(asio::ip::udp::v4(),&quot;udp.v4.&quot;+std::to_string(port));</span></a>
+<a name="448"><span class="lineNum">     448 </span>            : }</a>
+<a name="449"><span class="lineNum">     449 </span><span class="lineCov">          5 : MessageTransmitterUDPv6::MessageTransmitterUDPv6(std::shared_ptr&lt;MessageProcessor&gt; messageProcessor)</span></a>
+<a name="450"><span class="lineNum">     450 </span><span class="lineCov">          5 :         : MessageTransmitterUDP(messageProcessor)</span></a>
+<a name="451"><span class="lineNum">     451 </span>            : {</a>
+<a name="452"><span class="lineNum">     452 </span><span class="lineCov">          5 :         kind_ = LOCATOR_KIND_UDPv6;</span></a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineCov">          5 : }</span></a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineNoCov">          0 : asio::ip::multicast::leave_group MessageTransmitterUDPv6::GetLeaveGroupOption(const AsioLocator&amp; locator)</span></a>
+<a name="455"><span class="lineNum">     455 </span>            : {</a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineNoCov">          0 :         return asio::ip::multicast::leave_group(locator.GetAddress&lt;asio::ip::address_v6&gt;());;</span></a>
+<a name="457"><span class="lineNum">     457 </span>            : }</a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineCov">          3 : asio::ip::multicast::join_group MessageTransmitterUDPv6::GetJoinGroupOption(const AsioLocator&amp; multicastLoc, const AsioLocator&amp; interfaceLoc)</span></a>
+<a name="459"><span class="lineNum">     459 </span>            : {</a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineCov">          3 :         return asio::ip::multicast::join_group(multicastLoc.GetAddress&lt;asio::ip::address_v6&gt;(), interfaceLoc.GetUIAddress());</span></a>
+<a name="461"><span class="lineNum">     461 </span>            : }</a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineCov">         47 : asio::ip::udp::endpoint MessageTransmitterUDPv6::GetEndpoint(const AsioLocator&amp; locator, bool recive)</span></a>
+<a name="463"><span class="lineNum">     463 </span>            : {</a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineCov">         47 :         if (locator.IsMulticast() &amp;&amp; recive) {</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineCov">          3 :                 return asio::ip::udp::endpoint(asio::ip::udp::v6(), locator.port);</span></a>
+<a name="466"><span class="lineNum">     466 </span>            :         }</a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineCov">         44 :         return asio::ip::udp::endpoint(locator.GetAddress&lt;asio::ip::address_v6&gt;(), locator.port);</span></a>
+<a name="468"><span class="lineNum">     468 </span>            : }</a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineCov">         13 : asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_t port)</span></a>
+<a name="470"><span class="lineNum">     470 </span>            : {</a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineCov">         13 :         return asio::ip::udp::endpoint(asio::ip::address::from_string(&quot;::&quot;), port);</span></a>
+<a name="472"><span class="lineNum">     472 </span>            : }</a>
+<a name="473"><span class="lineNum">     473 </span><span class="lineCov">          5 : std::shared_ptr&lt;asio::ip::udp::socket&gt; MessageTransmitterUDPv6::GetSocketInit()</span></a>
+<a name="474"><span class="lineNum">     474 </span>            : {</a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineCov">         10 :         return std::make_shared&lt;asio::ip::udp::socket&gt;(ioContext_, asio::ip::udp::v6());</span></a>
+<a name="476"><span class="lineNum">     476 </span>            : }</a>
+<a name="477"><span class="lineNum">     477 </span><span class="lineCov">         13 : std::shared_ptr&lt;UDPReciverSocket&gt; MessageTransmitterUDPv6::GetReciveSocketInit(const uint32_t port)</span></a>
+<a name="478"><span class="lineNum">     478 </span>            : {</a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineCov">         26 :         return std::make_shared&lt;UDPReciverSocket&gt;(asio::ip::udp::v6(), &quot;udp.v6.&quot; + std::to_string(port));</span></a>
+<a name="480"><span class="lineNum">     480 </span>            : }</a>
+<a name="481"><span class="lineNum">     481 </span><span class="lineCov">         11 : asio::ip::multicast::outbound_interface MessageTransmitterUDPv6::GetOutboundInterfaceOption(const AsioLocator&amp; locator)</span></a>
+<a name="482"><span class="lineNum">     482 </span>            : {</a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineCov">         11 :         return asio::ip::multicast::outbound_interface(locator.GetUIAddress());</span></a>
+<a name="484"><span class="lineNum">     484 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

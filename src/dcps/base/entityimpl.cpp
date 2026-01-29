@@ -6,7 +6,8 @@ EntityImpl::EntityImpl(const StatusMask& mask)
 	: enable_(false),
 	  statusMask_(mask),
 	  statusCondition_(this),
-	  handle_(HANDLE_NIL)
+	  handle_(HANDLE_NIL),
+	  objectData_(nullptr)
 {
 }
 
@@ -35,6 +36,14 @@ const GUID_t& EntityImpl::get_guid() const
 {
 	return Conversion::ToGuid(handle_);
 }
+
+#ifdef DDSSECURITY
+GUID_t EntityImpl::get_guid_value()
+{
+	return Conversion::ToGuid(handle_);
+}
+#endif // DDSSECURITY
+
 
 void EntityImpl::set_object_data(void * data)
 {

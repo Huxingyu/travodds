@@ -42,19 +42,11 @@ using SpdpDataMap = std::map<BuiltinTopicKey_t, SPDPdiscoveredParticipantData>;
 
 struct DiscoveredWriterData
 {
-	PublicationBuiltinTopicData ddsPublicationData;
-	GUID_t remoteWriterGuid;
-	/* rtps v2.5 Figure 8.30 */
-	GUID_t remoteGroupGuid;
-	LocatorSeq unicastLocatorList;
-	LocatorSeq multicastLocatorList;
-	int32_t dataMaxSizeSerialized;
-};
-
 #ifdef DDSSECURITY
-struct DiscoveredWriterSecureData
-{
 	PublicationBuiltinTopicSecureData ddsPublicationData;
+#else
+	PublicationBuiltinTopicData ddsPublicationData;
+#endif //DDSSECURITY
 	GUID_t remoteWriterGuid;
 	/* rtps v2.5 Figure 8.30 */
 	GUID_t remoteGroupGuid;
@@ -62,11 +54,14 @@ struct DiscoveredWriterSecureData
 	LocatorSeq multicastLocatorList;
 	int32_t dataMaxSizeSerialized;
 };
-#endif // DDSSECURITY
 
 struct DiscoveredReaderData
 {
+#ifdef DDSSECURITY
+	SubscriptionBuiltinTopicSecureData ddsSubscriptionData;
+#else
 	SubscriptionBuiltinTopicData ddsSubscriptionData;
+#endif //DDSSECURITY
 	/* rtps v2.5 Figure 8.30 */
 	GUID_t remoteReaderGuid;
 	GUID_t remoteGroupGuid;
@@ -76,16 +71,10 @@ struct DiscoveredReaderData
 };
 
 #ifdef DDSSECURITY
-struct DiscoveredReaderSecureData
-{
-	SubscriptionBuiltinTopicSecureData ddsSubscriptionData;
-	/* rtps v2.5 Figure 8.30 */
-	GUID_t remoteReaderGuid;
-	GUID_t remoteGroupGuid;
-	LocatorSeq unicastLocatorList;
-	LocatorSeq multicastLocatorList;
-	ContentFilterProperty_t contentFilter;
-};
+
+typedef DiscoveredReaderData DiscoveredReaderSecureData;
+typedef DiscoveredWriterData DiscoveredWriterSecureData;
+
 #endif // DDSSECURITY
 
 struct DiscoveredTopicData

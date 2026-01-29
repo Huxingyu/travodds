@@ -3,15 +3,14 @@
 #include "rtps/transport/sharedmemuuid.h"
 #include "rtps/transport/sharedmemaccept.h"
 #include "rtps/transport/sharedmemsocket.h"
+#include "rtps/messages/messageprocessor.h"
 #include "common/log/logger.h"
-#include <iostream>
 USING_TRAVODDS_NAMESPACE;
 
 
 const std::array<char, 16> MessageTransmitterSHM::uuid_(SharedMemUUID::GetInstance().GetUUID());
 MessageTransmitterSHM::MessageTransmitterSHM(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitter(messageProcessor)
-	, ioContext_(AsioContext::GetIOContext())
 {
 	kind_ = LOCATOR_KIND_SHM;
 }
@@ -28,6 +27,11 @@ MessageTransmitterSHM::~MessageTransmitterSHM()
 		acceptor_->Close();
 		acceptor_.reset();
 	}
+
+	for (auto& it : recvSockets_) {
+		it->Close();
+	}
+	sendSockets_.clear();
 }
 
 
@@ -122,6 +126,32 @@ ReturnCode_t MessageTransmitterSHM::MessageSend(
 	return RETCODE_OK;
 }
 
+void MessageTransmitterSHM::SetStop()
+{
+	if (!runFlag_.load()) {
+		return;
+	}
+	MessageTransmitter::SetStop();
+	acceptor_->Shutdown();
+
+	for (auto& socketItor : sendSockets_) {
+		socketItor.second->Shutdown();
+	}
+
+	for (auto& socketItor : recvSockets_) {
+		socketItor->Shutdown();
+	}
+	uint32_t tries = 0;
+	while (flagNum_.load(std::memory_order_acquire) > 0 && tries++ < 20) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
+ReturnCode_t MessageTransmitterSHM::InterpretMessage(char* message, uint32_t len)
+{
+	return messageProcessor_->InterpretSubmessage(std::make_shared<Message_t>(message, len, true));
+}
+
 bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
 {
 	return memcmp(locator.address, uuid_.data(), uuid_.size()) == 0;
@@ -130,24 +160,28 @@ bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
 
 void MessageTransmitterSHM::AsyncAccept()
 {
-	flagNum_.fetch_add(1);
+	flagNum_.fetch_add(1, std::memory_order_release);
 	if (!acceptor_ || !IsRun()) {
-		flagNum_.fetch_sub(1);
+		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
 	}
 
 	try {
-		std::shared_ptr<SharedMemSocket> newSocket = std::make_shared<SharedMemSocket>();
+		std::shared_ptr<SharedMemSocket> newSocket = std::make_shared<SharedMemSocket>(
+			[this](char* message, const size_t& len) {
+				this->InterpretMessage(message, len);
+			}
+		);
 
 		acceptor_->AsyncAccept(newSocket,
 			[this, newSocket](const std::exception* ec) {
 				if (!ec) {
-					AsyncReceive(newSocket);
+				    recvSockets_.insert(newSocket);
 				} else {
 					TRAVODDS_LOG(LOG_ERROR,
 						"Accept error: %s", ec->what());
 				}
-				flagNum_.fetch_sub(1);
+				flagNum_.fetch_sub(1, std::memory_order_release);
 				if (acceptor_ && !acceptor_->IsShutdown()) {
 					AsyncAccept();
 				}
@@ -156,43 +190,8 @@ void MessageTransmitterSHM::AsyncAccept()
 	} catch (const std::exception& e) {
 		TRAVODDS_LOG(LOG_ERROR,
 			"socket_accept exception: %s", e.what());
-		flagNum_.fetch_sub(1);
+		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
 	}
-
-}
-
-void MessageTransmitterSHM::AsyncReceive(std::shared_ptr<SharedMemSocket> socket)
-{
-	flagNum_.fetch_add(1);
-	if (!socket || !IsRun()) {
-		flagNum_.fetch_sub(1);
-		return;
-	}
-	try {
-		socket->AsyncRead(receivePool_, 
-			[this, socket](const std::vector<std::pair<char*, uint32_t>>& messages, char*& buffer,const std::exception* ec) {
-				if (!ec) {
-					for (auto& it : messages) {
-						InterpretMessage(it.first, it.second);
-					}
-					
-					receivePool_->releaseBuffer(buffer);
-				} else {
-					TRAVODDS_LOG(LOG_ERROR,
-						"receive error: %s", ec->what());
-				}
-				flagNum_.fetch_sub(1);
-				if (IsRun() && !socket->IsShutdown()) {
-					AsyncReceive(socket);
-				}
-			});
-	} catch (const std::exception& e) {
-		TRAVODDS_LOG(LOG_ERROR,
-			"socket_receive exception: %s", e.what());
-		flagNum_.fetch_sub(1);
-		return;
-	}
-
 
 }

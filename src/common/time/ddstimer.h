@@ -136,12 +136,6 @@ public:
 	 */
 	void Run();
 
-	/**
-	 * @brief 设置线程名描述。
-	 *  长度16字节包括休止符。
-	 */
-	void SetThreadName();
-
 	/* 支持跳过当前定时执行，重新设置间隔时间 */
 	// void restartTimer();
 	//

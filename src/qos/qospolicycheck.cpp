@@ -40,6 +40,10 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantQos& qos)
 		TRAVODDS_LOG(LOG_ERROR, "Error user_data.value out of resources");
 		return RETCODE_OUT_OF_RESOURCES;
 	}
+	if (qos.dynamic_adjust.score_threshold_factor < 0 || qos.dynamic_adjust.score_threshold_factor > 80) {
+		TRAVODDS_LOG(LOG_ERROR, "Error dynamic_adjust.score_threshold_factor out of resources");
+		return RETCODE_OUT_OF_RESOURCES;
+	}
 	return RETCODE_OK;
 }
 
@@ -316,38 +320,4 @@ bool QosPolicyCheck::ConsistebcyCheckTimeBasedFilterQos(const TimeBasedFilterQos
 {
 	return qosA.minimum_separation == qosB.minimum_separation;
 }
-
-void QosPolicyCheck::CheckQosMatchRule(const DataWriterQos& dwQos, const DataReaderQos& drQos, std::set<QosPolicyId_t>& qosPolicyId)
-{
-	qosPolicyId.clear();
-	/* durability设置不匹配 */
-	if (dwQos.durability.kind < drQos.durability.kind) {
-		qosPolicyId.insert(DURABILITY_QOS_POLICY_ID);
-	}
-	/* deadline设置不匹配 */
-	if (dwQos.deadline.period > drQos.deadline.period) {
-		qosPolicyId.insert(DEADLINE_QOS_POLICY_ID);
-	}
-	if (dwQos.latency_budget.duration > drQos.latency_budget.duration) {
-		qosPolicyId.insert(LATENCYBUDGET_QOS_POLICY_ID);
-	}
-	/* ownership 设置不匹配 */
-	if (dwQos.ownership.kind != drQos.ownership.kind) {
-		// OWNERSHIP_QOS_POLICY_ID
-		qosPolicyId.insert(OWNERSHIP_QOS_POLICY_ID);
-	}
-	/* 存活性不匹配 */
-	if (dwQos.liveliness.kind < drQos.liveliness.kind || dwQos.liveliness.lease_duration > drQos.liveliness.lease_duration) {
-		qosPolicyId.insert(LIVELINESS_QOS_POLICY_ID);
-	}
-	if (BEST_EFFORT_RELIABILITY_QOS == dwQos.reliability.kind && RELIABLE_RELIABILITY_QOS == drQos.reliability.kind) {
-		qosPolicyId.insert(RELIABILITY_QOS_POLICY_ID);
-	}
-	/* DataReader为报文源时间戳排序 DataWriter为报文接收时间戳排序，设置不匹配 */
-	if (BY_SOURCE_TIMESTAMP_DESTINATIONORDER_QOS == drQos.destination_order.kind &&
-		BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS == dwQos.destination_order.kind) {
-		qosPolicyId.insert(DESTINATIONORDER_QOS_POLICY_ID);
-	}
-}
-
 

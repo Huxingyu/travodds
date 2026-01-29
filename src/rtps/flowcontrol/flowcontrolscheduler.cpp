@@ -44,7 +44,7 @@ void FlowControlFifoScheduler::AddSendData(Writer* writer, std::shared_ptr<Cache
 	asyncThreads_->submit(
 		[writerPtr, change]() {
 			// 异步受流控
-			writerPtr->DeliveryData(change, true);
+			writerPtr->DeliveryData(change, TIME_INFINITE);
 		}
 	);
 }
@@ -56,7 +56,7 @@ void FlowControlFifoScheduler::ReSendDataFrag(StatefulWriter* writer, std::share
 	}
 	asyncThreads_->submit(
 		[writerPtr, readerProxy, FragSet]() {
-			writerPtr->ReSendDataFrag(readerProxy, FragSet, true);
+			writerPtr->ReSendDataFrag(readerProxy, FragSet);
 		}
 	);
 }
@@ -69,7 +69,7 @@ void FlowControlFifoScheduler::ReSendData(StatefulWriter* writer, std::shared_pt
 	}
 	asyncThreads_->submit(
 		[writerPtr, readerProxy]() {
-			writerPtr->ReSendData(readerProxy, true);
+			writerPtr->ReSendData(readerProxy);
 		}
 	);
 
