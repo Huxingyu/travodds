@@ -49,7 +49,7 @@ public:
 	 */
 	void MatchedReaderAdd(const DiscoveredReaderData &subData);
 #ifdef DDSSECURITY
-	void MatchedReaderAdd(const DiscoveredReaderSecureData& subData);
+	void MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure);
 #endif // DDSSECURITY
 
 

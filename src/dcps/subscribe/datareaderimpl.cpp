@@ -151,10 +151,13 @@ DataReaderImpl::~DataReaderImpl()
 	if (enableSec_)
 	{
 		GUID_t drGuid = Conversion::ToGuid(get_instance_handle());
-		if ((drGuid.IsSecureBuiltinEntity()
-			&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
-			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_submessage_protected)
+		//if ((drGuid.IsSecureBuiltinEntity()
+		//	&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+		//	|| secAttributes_.is_payload_protected
+		//	|| secAttributes_.is_submessage_protected)
+		if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER &&
+			(secAttributes_.is_payload_protected ||
+			secAttributes_.is_submessage_protected))
 		{
 			if (secPlugin_ != NULL && secPlugin_->crypto_key_factory != NULL)
 			{
@@ -816,23 +819,28 @@ ReturnCode_t DataReaderImpl::enable()
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
-	//本地匹配完成后再发送SEPD报文，防止重复匹配
-	GetSecAttributes();
-	FillSecureData();
-
 	DiscoveredReaderData readerData;
-	readerData.ddsSubscriptionData = GetBuiltinTopicData();
-	readerData.remoteReaderGuid = reader_->GetGuid();
-	readerData.contentFilter = contentFilter_;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WriteSubscriptionData(readerData);
 #ifdef DDSSECURITY
-	//扩展了会发送DiscoveredReaderSecureData
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
-	readerSecureData.remoteReaderGuid = reader_->GetGuid();
-	discovery->WriteSubscriptionSecureData(readerSecureData);
+	//readerSecureData.remoteReaderGuid = reader_->GetGuid();
+	if ((builtinSecureData_.security_info.endpoint_security_attributes &
+		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		discovery->WriteSubscriptionSecureData(readerSecureData);
+	}
+	else {
+		discovery->WriteSubscriptionData(readerSecureData);
+	}
+#else
+	//readerData.remoteReaderGuid = reader_->GetGuid();
+	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	readerData.contentFilter = contentFilter_;
+	discovery->WriteSubscriptionData(readerData);
 #endif // DDSSECURITY
+
 	return RETCODE_OK;
 }
 
@@ -947,9 +955,12 @@ bool DataReaderImpl::GetSecAttributes()
 			secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
 			secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
 			secAttributes_.is_payload_protected = secAttr.is_payload_protected;
-			//secAttributes_.is_key_protected = secAttr.is_key_protected;
+			secAttributes_.is_key_protected = secAttr.is_key_protected;
 			secAttributes_.is_submessage_protected = secAttr.is_submessage_protected;
 			secAttributes_.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttr.plugin_endpoint_attributes;
+
 			dp->secPlugin_.access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
 				rtpsMsgProtected_ = false;
@@ -977,7 +988,8 @@ bool DataReaderImpl::GetSecAttributes()
 			//|| secAttributes_.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| secAttributes_.is_submessage_protected
 			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_key_protected)
+			//|| secAttributes_.is_key_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			)
 		{
 			if (dp->secPlugin_.crypto_key_factory == NULL)
 			{
@@ -1107,7 +1119,7 @@ ReturnCode_t DataReaderImpl::FillSecureData()
 	{
 		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 	}
-	builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
+	//builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
 	return RETCODE_OK;
 }
 
@@ -1300,7 +1312,11 @@ void DataReaderImpl::ContentFilterUpdate()
 	filter_->InputSQL(contentFilter_.filterExpression, contentFilter_.expressionParameters);
 	if(enable_) {
 		DiscoveredReaderData readerData;
+#ifdef DDSSECURITY
+		readerData.ddsSubscriptionData = builtinSecureData_;
+#else
 		readerData.ddsSubscriptionData = builtinData_;
+#endif
 		readerData.contentFilter = contentFilter_;
 		DomainParticipantImpl* domainParticipant = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant()));
 		std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();

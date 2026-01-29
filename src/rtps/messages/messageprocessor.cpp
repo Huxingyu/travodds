@@ -85,6 +85,15 @@ ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageB
 	if (dataSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
 		dataSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
 	}
+	if (dataSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
+	}
+	if (dataSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
+	}
+	if (dataSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER) {
+		dataSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
+	}
 #endif
 	
 	shift += sizeof(EntityId_t);
@@ -187,7 +196,21 @@ ReturnCode_t MessageProcessor::EncapsulateHeartBeatMessage(SerializedBuffer& mes
 		shift += sizeof(HeartBeatSubMessage_t) - surplus;
 
 	}
-
+	//PND 跟fastdds保持一致
+#ifdef DDSSECURITY
+	if (heartBeatSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
+	}
+#endif
 	return RETCODE_OK;
 }
 

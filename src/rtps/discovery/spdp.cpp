@@ -30,7 +30,7 @@ Spdp::Spdp(Participant* participant, Discovery* discovery)
 	time.nanosec = leaseDuration_.nanosec;
 	timer_ = TimerManager::CreateTimer(time, [&]() { this->CheckRemoteParticipantDuration(); }, "CheckRemoteParticipantDuration");
 #ifdef DDSSECURITY
-	Time_t handshakeTime = {1, 0};
+	Time_t handshakeTime = {10, 0};
 	handshakeTimer_ = TimerManager::CreateTimer(handshakeTime, [&]() {
 		this->HandShakeRetrys();
 	}, "HandShakeRetrys");
@@ -53,6 +53,14 @@ Spdp::~Spdp()
 	}
 	if (reader_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(reader_->GetGuid());
+		participant_->DeleteReader(handle);
+	}
+	if (writerSecure_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(writerSecure_->GetGuid());
+		participant_->DeleteWriter(handle);
+	}
+	if (readerSecure_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(readerSecure_->GetGuid());
 		participant_->DeleteReader(handle);
 	}
 //#ifdef DDSSECURITY
@@ -134,6 +142,77 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
 
 	//TODO DataReader与reader关联
 }
+
+#ifdef DDSSECURITY
+void Spdp::SetParticipantSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
+{
+	DataWriterQos qos;
+	dataWriter->get_qos(qos);
+
+	//TODO 补充resendPeriod参数
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER, true, ENTITY_WRITER);
+	std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, guid, true);
+	if (nullptr == writer) {
+		//TODO 日志记录
+		TRAVODDS_LOG(LOG_ERROR, "participant secure writer is nullptr");
+		return;
+	}
+	writerSecure_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
+
+	//writerSecure_->SetResendDataPeriod(leaseDuration_);
+	DomainParticipantQos dpqos;
+	dataWriter->get_publisher()->get_participant()->get_qos(dpqos);
+	//TODO 补充locator与ip的装换函数
+	if (dpqos.discovery.kind == DISCOVER_UDPv4_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locator;
+		locator.kind = LOCATOR_KIND_UDPv4;
+		locator.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locator.address[12] = 0xEF;
+		locator.address[13] = 0xFF;
+		locator.address[14] = 0x00;
+		locator.address[15] = 0x01;
+		//writerSecure_->ReaderLocatorAdd(locator);
+	}
+	if (dpqos.discovery.kind == DISCOVER_UDPv6_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locatorv6;
+		locatorv6.kind = LOCATOR_KIND_UDPv6;
+		locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locatorv6.address[0] = 0xff;
+		locatorv6.address[1] = 0x1e;
+		//3-9 : 0
+		locatorv6.address[10] = 0xff;
+		locatorv6.address[11] = 0xff;
+		locatorv6.address[12] = 0xef;
+		locatorv6.address[13] = 0xff;
+		locatorv6.address[15] = 0x01;
+
+		//writerSecure_->ReaderLocatorAdd(locatorv6);
+	}
+
+	// DiscoveredReaderData data;
+	// participant_->AddRemoteReader()
+
+	//TODO DataWriter与writer关联
+}
+void Spdp::SetParticipantSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader)
+{
+	DataReaderQos qos;
+	dataReader->get_qos(qos);
+	qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_READER, true, ENTITY_READER);
+	std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, guid, true);
+	if (nullptr == reader) {
+		//TODO 日志记录
+		TRAVODDS_LOG(LOG_ERROR, "participant secure reader is nullptr");
+		return;
+	}
+	readerSecure_ = std::dynamic_pointer_cast<StatefulReader>(reader);
+	readerSecure_->SetReaderListener(this);
+
+	//TODO DataReader与reader关联
+}
+#endif // DDSSECURITY
+
 
 void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 {
@@ -294,16 +373,10 @@ void Spdp::RemoveDiscoveryDPInfoFromDiscParts(const GuidPrefix_t& prefix)
 	delete discParts_[prefix];
 	discParts_.erase(prefix);
 
-	//GUID_t remoteGuid;
-	//remoteGuid.prefix = prefix;
-	//remoteGuid.entityId = ENTITYID_PARTICIPANT;
-	//if (handshakeRetryCounts_.count(remoteGuid)) {
-	//	handshakeRetryCounts_.erase(remoteGuid);
-	//}
-	//if(handshakeTimers_.count(remoteGuid)) {
-	//	handshakeTimers_[remoteGuid]->Exit();
-	//	handshakeTimers_.erase(remoteGuid);
-	//}
+	GUID_t remoteGuid;
+	remoteGuid.prefix = prefix;
+	remoteGuid.entityId = ENTITYID_PARTICIPANT;
+	RemoveHandShakeMsg(remoteGuid);
 }
 
 ParticipantCryptoHandle Spdp::GetRemoteParticipantCryptoHandle(const GuidPrefix_t* remotePrefix)
@@ -314,7 +387,7 @@ ParticipantCryptoHandle Spdp::GetRemoteParticipantCryptoHandle(const GuidPrefix_
 		//TRAVODDS_LOG(LOG_ERROR, "GetRemoteParticipantCryptoHandle is nullptr");
 		return SEC_NIL_HANDLE;
 	}
-	if (dpInfoIter->second->enableDDSSec_)
+	if (dpInfoIter->second && dpInfoIter->second->enableDDSSec_)
 	{
 		return dpInfoIter->second->cryptoHdl_;
 	}
@@ -410,23 +483,34 @@ void Spdp::RemoveParticipant(GUID_t guid)
 void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data)
 {
 	data.leaseDuration = leaseDuration_;
-
-	SerializedBuffer *buffer = new SerializedBuffer;
-#ifdef DDSSECURITY
-	bigEndianMsgData_ = buffer;
-#endif // DDSSECURITY
-	ParameterList list(data);
-	uint16_t size = list.GetMessageSize();
+	uint16_t size = 0;
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
-
+#ifdef DDSSECURITY
+	bigEndianMsgData_ = new SerializedBuffer;
+	ParameterList bigEndianList(data, EndiannessKind::PL_CDR_BE);
+	size = bigEndianList.GetMessageSize();
+	bigEndianMsgData_->buffer_size = size;
+	memoryPool_->getBuffer(bigEndianMsgData_->buffer_size + BUFF_SHIFT, bigEndianMsgData_->origin_buffer);
+	bigEndianMsgData_->buffer = bigEndianMsgData_->origin_buffer + BUFF_SHIFT;
+	bigEndianList.WriterToMessage((octet*)bigEndianMsgData_->buffer, size);
+#endif // DDSSECURITY
+	SerializedBuffer *buffer = new SerializedBuffer;
+	ParameterList list(data);
+	size = list.GetMessageSize();
 	buffer->buffer_size = size ;
-
 	memoryPool_->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->origin_buffer);
-
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
-
 	list.WriterToMessage((octet*)buffer->buffer, size);
+
+	SerializedBuffer* bufferSecure = new SerializedBuffer;
+	ParameterList listSecure(data);
+	size = listSecure.GetMessageSize();
+	bufferSecure->buffer_size = size;
+	memoryPool_->getBuffer(bufferSecure->buffer_size + BUFF_SHIFT, bufferSecure->origin_buffer);
+	bufferSecure->buffer = bufferSecure->origin_buffer + BUFF_SHIFT;
+	listSecure.WriterToMessage((octet*)bufferSecure->buffer, size);
+
 	InstanceHandle_t handle;
 	memcpy(handle.keyHash.value, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
@@ -443,6 +527,16 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 		TRAVODDS_LOG(LOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
+	cacheChange = writerSecure_->NewChange(ALIVE, bufferSecure, handle, time);
+	if (nullptr == cacheChange) {
+		TRAVODDS_LOG(LOG_ERROR, "create participantSecure newChange Err");
+		return;
+	}
+	ret = writerSecure_->AddBuiltinCache(cacheChange);
+
+	if (RETCODE_OK != ret) {
+		TRAVODDS_LOG(LOG_ERROR, "writerSecure_ AddBuiltinCache ret= %d", ret);
+	}
 }
 
 void Spdp::RemoveSpdPdiscoveredParticipantData(GUID_t & guid)
@@ -488,11 +582,13 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 	ParticipantSecurityAttributesMask participant_security_atributes =
 		ParticipantSecurityAttributesToMask(&participant_->participantImpl_->secAttributes_);
 	bool contains_security_data = participant_security_atributes != 0; //本域参与者是否带安全
-	if (data.ddsParticipantData.contains_security_data && !contains_security_data/*!participant_->participantImpl_->enableDDSSec_*/) {
+	if (data.ddsParticipantData.contains_security_data && !contains_security_data/*!participant_->participantImpl_->enableDDSSec_*/
+		&& GetDiscovery()->GetParticipant()->secAttributes_.plugin_participant_attributes == 0) {
 		TRAVODDS_LOG(LOG_INFO, "local no security participant ignore remote security participant.");
 		return;
 	}
-	if (!data.ddsParticipantData.contains_security_data && contains_security_data/*participant_->participantImpl_->enableDDSSec_*/) {
+	if (!data.ddsParticipantData.contains_security_data && contains_security_data/*participant_->participantImpl_->enableDDSSec_*/
+		&& data.ddsParticipantData.security_info.plugin_participant_security_attributes == 0) {
 		TRAVODDS_LOG(LOG_INFO, "local security participant ignore remote no security participant.");
 		return;
 	}
@@ -514,12 +610,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 		remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
 	}
 #ifdef DDSSECURITY
-	// 判断是否是自己
-	GUID_t selfPartGuid = Conversion::ToGuid(discovery_->GetParticipant()->get_instance_handle());
-	if (Conversion::ToGuid(data.ddsParticipantData.key) == selfPartGuid) {
-		// 忽略来自自身的，TODO
-		return;
-	}
 	//判断是否为已知节点，如果是发现新的DP 则进入验证远端，发起握手流程
 	GuidPrefix_t remote_prefix = Conversion::ToGuid(data.ddsParticipantData.key).prefix;
 	if (0 != discParts_.count(remote_prefix)) {

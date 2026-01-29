@@ -43,9 +43,12 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 }
 
 #ifdef DDSSECURITY
-void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderSecureData& subData)
+void StatelessWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure)
 {
 	DataWriterImpl* dw = datawriter_;
+	if (!isSecure && dw->statistic_.secAttributes.is_discovery_protected && guid_.IsUserDefinedEntity()) { //开启保护但收到的是普通的发现数据
+		return;
+	}
 	GUID_t dwGuid = Conversion::ToGuid(dw->get_instance_handle());
 	GUID_t remoteDrGuid = Conversion::ToGuid(subData.ddsSubscriptionData.key);
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(dw->GetParent()->get_participant());
@@ -144,6 +147,7 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderSecureData& subData
 		else
 		{
 			dw->secReaders_.push_back(rdInfo.cryptoHdl);
+			dw->secReadersMap_[remoteDrGuid.prefix] = rdInfo.cryptoHdl;
 			rdInfo.readyForSecComm = true;
 		}
 	}
@@ -162,14 +166,8 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderSecureData& subData
 			// return;
 		}
 	}
-	for (auto locator : subData.unicastLocatorList) {
-		ReaderLocatorAdd(locator);
-	}
-
-	for (auto locator : subData.multicastLocatorList) {
-		ReaderLocatorAdd(locator);
-	}
-	TRAVODDS_LOG(LOG_DEBUG, "MatchedSecureReader success");
+	// 安全的匹配逻辑通过，调用通用的匹配逻辑
+	return MatchedReaderAdd(subData);
 }
 #endif // DDSSECURITY
 

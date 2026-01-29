@@ -1137,22 +1137,21 @@ public:
 	 */
 	ParameterList(const DiscoveredReaderData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
 
-#ifdef DDSSECURITY
-	/**
-	 * @brief DiscoveredWriterSecureData结构对应构造函数。
-	 *
-	 * @param [in] data DiscoveredWriterSecureData结构对象。
-	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
-	 */
-	ParameterList(const DiscoveredWriterSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
-	/**
-	 * @brief DiscoveredReaderData结构对应构造函数。
-	 *
-	 * @param [in] data DiscoveredReaderData结构对象。
-	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
-	 */
-	ParameterList(const DiscoveredReaderSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
-#endif // DDSSECURITY
+//	/**
+//	 * @brief DiscoveredWriterSecureData结构对应构造函数。
+//	 *
+//	 * @param [in] data DiscoveredWriterSecureData结构对象。
+//	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+//	 */
+//	ParameterList(const DiscoveredWriterSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
+//	/**
+//	 * @brief DiscoveredReaderData结构对应构造函数。
+//	 *
+//	 * @param [in] data DiscoveredReaderData结构对象。
+//	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+//	 */
+//	ParameterList(const DiscoveredReaderSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
+//#endif // DDSSECURITY
 
 	/**
 	 * @brief DiscoveredTopicData结构对应构造函数。

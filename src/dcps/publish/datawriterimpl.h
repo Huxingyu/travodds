@@ -583,7 +583,7 @@ public:
 	SecurityPluginInstanceImpl* secPlugin_ = NULL;
 	/** @brief The list of DataReader which are enabled security */
 	std::vector<DatareaderCryptoHandle> secReaders_;
-
+	std::map<GuidPrefix_t, DatareaderCryptoHandle> secReadersMap_;
 	SecurityPluginInstanceImpl* dpSecPlugin_ = NULL;
 	//TODO 安全扩展，维护几个远端的guid和信息的map
 	RemoteReaderList remoteReaders_;

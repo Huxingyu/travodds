@@ -45,7 +45,7 @@ public:
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData);
 	
 #ifdef DDSSECURITY
-	virtual void MatchedReaderAdd(const DiscoveredReaderSecureData &subData);
+	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderData &subData, bool isSecure);
 #endif // DDSSECURITY
 
 	/**
@@ -133,6 +133,17 @@ public:
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
 	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, const Duration_t& timeOut);
+#ifdef DDSSECURITY
+	/**
+	 * @brief Data报文封装控制及发送控制函数，用于Volatile数据。
+	 *
+	 * @param [in] change		  Data报文发送请求句柄。
+	 * @param [in] readerProxy	  Data报文接收的DataReader句柄。
+	 *
+	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	ReturnCode_t DeliveryDataToReaderForVolatile(std::shared_ptr<CacheChange> change, std::shared_ptr<ReaderProxy> readerProxy, const Duration_t& timeOut);
+#endif
 
 	/**
 	 * @brief Heartbeat报文发送控制函数。
