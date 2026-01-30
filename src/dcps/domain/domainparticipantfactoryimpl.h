@@ -393,6 +393,8 @@ public:
         const char* retrieve_instance_func_name,
         const char* finalize_instance_func_name);
 
+    virtual ReturnCode_t unload_security_plugin(const char* plugin_name);
+
 private:
     /**
      * @brief 构造函数。
