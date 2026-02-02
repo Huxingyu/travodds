@@ -1,9 +1,0 @@
-#!/bin/sh
-set -e
-
-if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-        rm -f /etc/ld.so.conf.d/travodds.conf
-	ldconfig
-fi
-
-exit 0
