@@ -180,6 +180,8 @@ unsigned int ParticipantGenericMessageTypeSupport::get_serialized_data_size(void
     ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
     unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
+    // PND
+    currentAlignment += 4; //00010000
     currentAlignment += MessageIdentityTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->messageIdentity, currentAlignment);
     currentAlignment += MessageIdentityTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->relatedMessageIdentity, currentAlignment);
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->destinationParticipantKey, currentAlignment);
@@ -200,6 +202,20 @@ unsigned int ParticipantGenericMessageTypeSupport::get_max_serialized_data_size(
 int ParticipantGenericMessageTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
     uint32_t tmpLength = 0;
+    //PND
+    uint16_t dig = 0;
+    if (!cdr->serializeBaseType((uint8_t)0)) {
+        fprintf(stderr, "Serialization failed for field: cdr_le\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseType((uint8_t)1)) { // DEFAULT_ENCAPSULATION
+        fprintf(stderr, "Serialization failed for field: cdr_le\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseType(dig)) {
+        fprintf(stderr, "Serialization failed for field: dig\n");
+        return -1;
+    }
     if (MessageIdentityTypeSupport::get_instance()->serialize_data((void*)&structData->messageIdentity, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->messageIdentity\n");
         return -1;
@@ -244,6 +260,22 @@ int ParticipantGenericMessageTypeSupport::deserialize_data(void* data, CdrDeseri
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
+    //PND
+    uint8_t cdr_le;
+    uint16_t dig = 0;
+    if (!cdr->deserializeBaseType(cdr_le)) {
+        fprintf(stderr, "Deserialization length failed for field: cdr_le\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseType(cdr_le)) {
+        fprintf(stderr, "Deserialization length failed for field: cdr_le\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseType(dig)) {
+        fprintf(stderr, "Deserialization length failed for field: dig\n");
+        return -1;
+    }
+
     if (MessageIdentityTypeSupport::get_instance()->deserialize_data(&structData->messageIdentity, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->messageIdentity\n");
         return -1;

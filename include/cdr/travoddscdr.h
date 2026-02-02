@@ -49,7 +49,7 @@ public:
         reader_position = 0;
         next = nullptr;
     }
-
+    virtual ~SerializedBuffer() {}
     /**
      * @brief 写入数据。
      * 

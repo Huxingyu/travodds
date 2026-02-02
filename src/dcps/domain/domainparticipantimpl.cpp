@@ -90,6 +90,7 @@ DomainParticipantImpl::~DomainParticipantImpl()
     {
         SecurityException secExce;
         secPlugin_.crypto_key_factory->unregister_participant(cryptoHdl_, &secExce);
+        cryptoHdl_ = NULL;
         secPlugin_.access_control->return_permissions_token(&permissionsToken_, &secExce);
         secPlugin_.access_control->return_permissions_credential_token(&permissionCredentialToken_, &secExce);
         secPlugin_.access_control->return_permissions_handle(permissionHdl_, &secExce);
@@ -1032,9 +1033,10 @@ ReturnCode_t DomainParticipantImpl::security_check()
         secAttributes_.allow_unauthenticated_participants = secAttr.allow_unauthenticated_participants;
         secAttributes_.is_rtps_protected = secAttr.is_rtps_protected;
         secAttributes_.plugin_participant_attributes = secAttr.plugin_participant_attributes;
-		// 目前下面几个变量未使用
-        // secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
-        // secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
+        //PND secAttributes_的初始化工作完善
+        secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
+        secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
+
         if (!secPlugin_.access_control->return_participant_sec_attributes(&secAttr, &exceptionInfo))
         {
             TRAVODDS_LOG(LOG_ERROR, "DomainParticipant return security attributes failed."

@@ -151,6 +151,10 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessK
 	AddParameter(ParameterId::PID_ENDPOINT_GUID, pubData.key);
 	//PID_DATA_MAX_SIZE_SERIALIZED : int32_t
 	AddParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
+#ifdef DDSSECURITY
+	// PID_ENDPOINT_SECURITY_INFO : 安全相关
+	AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, pubData.security_info);
+#endif //DDSSECURITY
 }
 
 ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessKind& endian)
@@ -224,164 +228,11 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
 		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
 	}
-}
-
 #ifdef DDSSECURITY
-ParameterList::ParameterList(const DiscoveredWriterSecureData& data, const EndiannessKind& endian)
-	: msgEndian_(endian)
-{
-	const PublicationBuiltinTopicSecureData& pubData = data.ddsPublicationData;
-	//PID_USER_DATA : UserDataQosPolicy
-	if (!pubData.user_data.value.empty()) {
-		AddParameter(ParameterId::PID_USER_DATA, pubData.user_data);
-	}
-	//PID_TOPIC_NAME : string
-	if (!pubData.topic_name.empty()) {
-		AddParameter(ParameterId::PID_TOPIC_NAME, pubData.topic_name);
-	}
-	//PID_TYPE_NAME : string
-	if (!pubData.type_name.empty()) {
-		AddParameter(ParameterId::PID_TYPE_NAME, pubData.type_name);
-	}
-	//PID_GROUP_DATA : GroupDataQosPolicy
-	if (!pubData.group_data.value.empty()) {
-		AddParameter(ParameterId::PID_GROUP_DATA, pubData.group_data);
-	}
-	//PID_TOPIC_DATA : TopicDataQosPolicy
-	if (!pubData.topic_data.value.empty()) {
-		AddParameter(ParameterId::PID_TOPIC_DATA, pubData.topic_data);
-	}
-	//PID_DURABILITY : DurabilityQosPolicy
-	AddParameter(ParameterId::PID_DURABILITY, pubData.durability);
-	//PID_DURABILITY_SERVICE : DurabilityServiceQosPolicy
-	AddParameter(ParameterId::PID_DURABILITY_SERVICE, pubData.durability_service);
-	//PID_DEADLINE : DeadlineQosPolicy
-	AddParameter(ParameterId::PID_DEADLINE, pubData.deadline);
-	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
-	AddParameter(ParameterId::PID_LATENCY_BUDGET, pubData.latency_budget);
-	//PID_LIVELINESS : LivelinessQosPolicy
-	AddParameter(ParameterId::PID_LIVELINESS, pubData.liveliness);
-	//PID_RELIABILITY : ReliabilityQosPolicy
-	AddParameter(ParameterId::PID_RELIABILITY, pubData.reliability);
-	//PID_LIFESPAN : LifespanQosPolicy
-	AddParameter(ParameterId::PID_LIFESPAN, pubData.lifespan);
-	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
-	AddParameter(ParameterId::PID_DESTINATION_ORDER, pubData.destination_order);
-	//PID_OWNERSHIP : OwnershipQosPolicy
-	AddParameter(ParameterId::PID_OWNERSHIP, pubData.ownership);
-	//PID_OWNERSHIP_STRENGTH : OwnershipStrengthQosPolicy
-	AddParameter(ParameterId::PID_OWNERSHIP_STRENGTH, pubData.ownership_strength);
-	//PID_PRESENTATION : PresentationQosPolicy
-	AddParameter(ParameterId::PID_PRESENTATION, pubData.presentation);
-	//PID_PARTITION : PartitionQosPolicy
-	if (!pubData.partition.name.empty()) {
-		AddParameter(ParameterId::PID_PARTITION, pubData.partition);
-	}
-
-	//新增
-	AddParameter(ParameterId::PID_DATA_TAGS, pubData.data_tags);
-	AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, pubData.security_info);
-
-	//PID_UNICAST_LOCATOR : LocatorSeq
-	if (!data.unicastLocatorList.empty()) {
-		AddParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
-	}
-	//PID_MULTICAST_LOCATOR  : LocatorSeq
-	if (!data.multicastLocatorList.empty()) {
-		AddParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
-	}
-	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
-	AddParameter(ParameterId::PID_PARTICIPANT_GUID, pubData.participant_key);
-	//PID_GROUP_GUID : GUID_t
-	if (data.remoteGroupGuid != GUID_UNKNOWN) {
-		AddParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
-	}
-	//PID_GROUP_ENTITY_ID : EntityId_t
-	if (data.remoteGroupGuid.entityId != ENTITYID_UNKNOWN) {
-		AddParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
-	}
-	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
-	AddParameter(ParameterId::PID_ENDPOINT_GUID, pubData.key);
-	//PID_DATA_MAX_SIZE_SERIALIZED : int32_t
-	AddParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
-}
-ParameterList::ParameterList(const DiscoveredReaderSecureData& data, const EndiannessKind& endian)
-	: msgEndian_(endian)
-{
-	const SubscriptionBuiltinTopicSecureData& subData = data.ddsSubscriptionData;
-	//PID_USER_DATA : UserDataQosPolicy
-	if (!subData.user_data.value.empty()) {
-		AddParameter(ParameterId::PID_USER_DATA, subData.user_data);
-	}
-	//PID_TOPIC_NAME : string
-	if (!subData.topic_name.empty()) {
-		AddParameter(ParameterId::PID_TOPIC_NAME, subData.topic_name);
-	}
-	//PID_TYPE_NAME : string
-	if (!subData.type_name.empty()) {
-		AddParameter(ParameterId::PID_TYPE_NAME, subData.type_name);
-	}
-	//PID_GROUP_DATA : GroupDataQosPolicy
-	if (!subData.group_data.value.empty()) {
-		AddParameter(ParameterId::PID_GROUP_DATA, subData.group_data);
-	}
-	//PID_TOPIC_DATA : TopicDataQosPolicy
-	if (!subData.topic_data.value.empty()) {
-		AddParameter(ParameterId::PID_TOPIC_DATA, subData.topic_data);
-	}
-	//PID_DURABILITY : DurabilityQosPolicy
-	AddParameter(ParameterId::PID_DURABILITY, subData.durability);
-	//PID_DEADLINE : DeadlineQosPolicy
-	AddParameter(ParameterId::PID_DEADLINE, subData.deadline);
-	//PID_LATENCY_BUDGET : LatencyBudgetQosPolicy
-	AddParameter(ParameterId::PID_LATENCY_BUDGET, subData.latency_budget);
-	//PID_LIVELINESS : LivelinessQosPolicy
-	AddParameter(ParameterId::PID_LIVELINESS, subData.liveliness);
-	//PID_RELIABILITY : ReliabilityQosPolicy
-	AddParameter(ParameterId::PID_RELIABILITY, subData.reliability);
-	//PID_DESTINATION_ORDER : DestinationOrderQosPolicy
-	AddParameter(ParameterId::PID_DESTINATION_ORDER, subData.destination_order);
-	//PID_OWNERSHIP : OwnershipQosPolicy
-	AddParameter(ParameterId::PID_OWNERSHIP, subData.ownership);
-	//PID_PRESENTATION : PresentationQosPolicy
-	AddParameter(ParameterId::PID_PRESENTATION, subData.presentation);
-	//PID_PARTITION : PartitionQosPolicy
-	if (!subData.partition.name.empty()) {
-		AddParameter(ParameterId::PID_PARTITION, subData.partition);
-	}
-
-	AddParameter(ParameterId::PID_DATA_TAGS, subData.data_tags);
+	// PID_ENDPOINT_SECURITY_INFO : 安全相关
 	AddParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, subData.security_info);
-
-	//PID_TIME_BASED_FILTER : TimeBasedFilterQosPolicy
-	AddParameter(ParameterId::PID_TIME_BASED_FILTER, subData.time_based_filter);
-	//PID_UNICAST_LOCATOR : LocatorSeq
-	if (!data.unicastLocatorList.empty()) {
-		AddParameter(ParameterId::PID_UNICAST_LOCATOR, data.unicastLocatorList);
-	}
-	//PID_MULTICAST_LOCATOR  : LocatorSeq
-	if (!data.multicastLocatorList.empty()) {
-		AddParameter(ParameterId::PID_MULTICAST_LOCATOR, data.multicastLocatorList);
-	}
-	//PID_PARTICIPANT_GUID : BuiltinTopicKey_t
-	AddParameter(ParameterId::PID_PARTICIPANT_GUID, subData.participant_key);
-	//PID_GROUP_GUID : GUID_t
-	if (data.remoteGroupGuid != GUID_UNKNOWN) {
-		AddParameter(ParameterId::PID_GROUP_GUID, data.remoteGroupGuid);
-	}
-	//PID_GROUP_ENTITY_ID : EntityId_t
-	if (data.remoteGroupGuid.entityId != ENTITYID_UNKNOWN) {
-		AddParameter(ParameterId::PID_GROUP_ENTITY_ID, data.remoteGroupGuid.entityId);
-	}
-	//PID_ENDPOINT_GUID : BuiltinTopicKey_t
-	AddParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
-	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
-	/* wangyi fastdds 适配 添加过滤 */
-	if (0 < data.contentFilter.relatedTopicName.size() && 0 < data.contentFilter.contentFilteredTopicName.size() && 0 < data.contentFilter.filterClassName.size() && 0 < data.contentFilter.filterExpression.size()) {
-		AddParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
-	}
+#endif //DDSSECURITY
 }
-#endif // DDSSECURITY
 
 ParameterList::ParameterList(const DiscoveredTopicData& data, const EndiannessKind& endian)
 	: msgEndian_(endian)
@@ -435,6 +286,7 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 	GetParameter(ParameterId::PID_IDENTITY_TOKEN, data.ddsParticipantData.identity_token);
 	GetParameter(ParameterId::PID_PERMISSIONS_TOKEN, data.ddsParticipantData.permissions_token);
 	GetParameter(ParameterId::PID_PARTICIPANT_SECURITY_INFO, data.ddsParticipantData.security_info);
+	//contains_security_data由域参与者是否带安全决定
 	data.ddsParticipantData.contains_security_data = data.ddsParticipantData.security_info.participant_security_atributes != 0;
 #endif // DDSSECURITY
 	//PID_DOMAIN_ID : DomainId_t
@@ -518,6 +370,9 @@ void ParameterList::GetDiscoveredData(DiscoveredWriterData& data)
 	GetParameter(ParameterId::PID_ENDPOINT_GUID, pubData.key);
 	//PID_DATA_MAX_SIZE_SERIALIZED : int32_t
 	GetParameter(ParameterId::PID_TYPE_MAX_SIZE_SERIALIZED, data.dataMaxSizeSerialized);
+#ifdef DDSSECURITY
+	GetParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, pubData.security_info);
+#endif //DDSSECURITY
 }
 
 void ParameterList::GetDiscoveredData(DiscoveredReaderData& data)
@@ -567,6 +422,9 @@ void ParameterList::GetDiscoveredData(DiscoveredReaderData& data)
 	GetParameter(ParameterId::PID_ENDPOINT_GUID, subData.key);
 	//PID_CONTENT_FILTER_PROPERTY : ContentFilterProperty_t
 	GetParameter(ParameterId::PID_CONTENT_FILTER_PROPERTY, data.contentFilter);
+#ifdef DDSSECURITY
+	GetParameter(ParameterId::PID_ENDPOINT_SECURITY_INFO, subData.security_info);
+#endif //DDSSECURITY
 }
 
 #ifdef DDSSECURITY
@@ -730,8 +588,11 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 	if (allowLength < GetMessageSize()) {
 		return false;
 	}
-
+	msg[0] = 0;
 	msg[1] = static_cast<octet>(msgEndian_);
+	msg[2] = 0;
+	msg[3] = 0;
+
 	uint32_t offset = 4;
 	for (auto& param : parameterList_) {
 		uint16_t c = allowLength;
@@ -749,6 +610,8 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 		(msg + offset)[0] = sentinel[1];
 		(msg + offset)[1] = sentinel[0];
 	}
+	(msg + offset)[2] = 0;
+	(msg + offset)[3] = 0;
 	return true;
 }
 

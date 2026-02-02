@@ -115,7 +115,13 @@ namespace SysInfo {
 	PropertySeq GetSysInfoProperties();
 };
 
-
+namespace ThreadFunction {
+	/**
+	 * @brief 设置线程名描述。
+	 *  长度16字节包括休止符。
+	 */
+	void SetThreadName(const std::string& name);
+}
 
 
 TRAVODDS_NAMESPACE_END

@@ -79,7 +79,7 @@ public:
      */
     void WriteSubscriptionSecureData(DiscoveredReaderSecureData& data);
     void WriteParticipantMessageSecureData(ParticipantMessageSecureData& data);
-    void WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data, Sedp::StatelessMessageDataKind kind);
+	ReturnCode_t WriteParticipantStatelessMessageData(const GUID_t* remoteGuid, ParticipantStatelessMessage& data);
     void WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, ParticipantVolatileSecureMessage& data);
 #endif // DDSSECURITY
 	/**
@@ -171,12 +171,15 @@ private:
 	std::shared_ptr<TopicImpl> dcpsParticipantMessage_;
 	std::shared_ptr<TopicImpl> dcpsTopic_;
 
+
 #ifdef DDSSECURITY
 	std::shared_ptr<TopicImpl> dcpsSubscriptionSecure_;
 	std::shared_ptr<TopicImpl> dcpsPublicationSecure_;
 	std::shared_ptr<TopicImpl> dcpsParticipantMessageSecure_;
 	std::shared_ptr<TopicImpl> dcpsParticipantStatelessMessage_;
 	std::shared_ptr<TopicImpl> dcpsParticipantVolatileMessageSecure_;
+	std::shared_ptr<TopicImpl> dcpsParticipantSecure_;
+
 #endif // DDSSECURITY
 
 	// 内置端点
@@ -197,11 +200,15 @@ private:
 	std::shared_ptr<DataWriterImpl> builtinParticipantStatelessMessageDataWriter_;
 	std::shared_ptr<DataWriterImpl> builtinParticipantVolatileMessageSecureDataWriter_;
 
+	std::shared_ptr<DataWriterImpl> builtinParticipantSecureDataWriter_;
+
 	std::shared_ptr<DataReaderImpl> builtinPublicationsSecureDataReader_;
 	std::shared_ptr<DataReaderImpl> builtinSubscriptionsSecureDataReader_;
 	std::shared_ptr<DataReaderImpl> builtinParticipantMessageSecureDataReader_;
 	std::shared_ptr<DataReaderImpl> builtinParticipantStatelessMessageDataReader_;
 	std::shared_ptr<DataReaderImpl> builtinParticipantVolatileMessageSecureDataReader_;
+
+	std::shared_ptr<DataReaderImpl> builtinParticipantSecureDataReader_;
 #endif // DDSSECURITY
 
 	//内置数据类型

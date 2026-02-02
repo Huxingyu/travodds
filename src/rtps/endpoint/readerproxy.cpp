@@ -18,6 +18,12 @@ ReaderProxy::ReaderProxy(const GUID_t& readerGuid, const GUID_t groupGuid,
 	ackedSeq_(SEQUENCENUMBER_ZERO),
 	relatedSeqnum_(SEQUENCENUMBER_ZERO)
 {
+	std::sort(unicastLocatorList_.begin(), unicastLocatorList_.end(),
+		[](const Locator_t& a, const Locator_t& b) {
+			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
+		});
+	//std::sort(unicastLocatorList_.begin(), unicastLocatorList_.end());
+	//unicastLocatorList_.erase(std::unique(unicastLocatorList_.begin(), unicastLocatorList_.end()), unicastLocatorList_.end());
 }
 
 void ReaderProxy::AckedChangesSet(SequenceNumber_t committedSeqNum)

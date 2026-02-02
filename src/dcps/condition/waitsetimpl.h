@@ -69,23 +69,22 @@ public:
 	ReturnCode_t get_conditions(ConditionSeq& attached_conditions) const;
 
 public:
-
 	/**
+	 * @brief 唤醒正在等待该条件变量的线程。
+	 */
+	void Notify();
+private:
+	GuardConditionImpl* IsGuardCondition(Condition* cond);
+	Condition* IsGuardConditionImpl(ConditionImpl* cond) const;
+
+    /**
 	 * @brief 检索获取活跃附加条件列表。
 	 *
 	 * @param [out] active_conditions 活跃的附加条件的集合。
 	 *
 	 * @return 活跃附件条件列表大小。
 	 */
-	uint32_t FindTrigger(ConditionSeq& active_conditions);
-	
-	/**
-	 * @brief 唤醒正在等待该条件变量的线程。
-	 */
-	void Notify();
-protected:
-	GuardConditionImpl* IsGuardCondition(Condition* cond);
-	Condition* IsGuardConditionImpl(ConditionImpl* cond) const;
+	bool FindTrigger(ConditionSeq& active_conditions);
 private:
 	mutable std::mutex mtx_;
 	mutable std::mutex mtxCv_;

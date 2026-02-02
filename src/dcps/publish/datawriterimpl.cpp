@@ -82,7 +82,7 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 
 	builtinSecureData_.security_info.endpoint_security_attributes = 0;
 	builtinSecureData_.security_info.plugin_endpoint_security_attributes = 0;
-	builtinSecureData_.protected_discovery = false;
+	//builtinSecureData_.protected_discovery = false;
 #endif // DDSSECURITY
 }
 
@@ -109,10 +109,13 @@ DataWriterImpl::~DataWriterImpl()
 	if (dp->enableDDSSec_ && statistic_.enableSec)
 	{
 		GUID_t dwGuid = Conversion::ToGuid(get_instance_handle());
-		if (dwGuid.IsSecureBuiltinEntity()
-			&& dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER
-			|| statistic_.secAttributes.is_payload_protected
-			|| statistic_.secAttributes.is_submessage_protected)
+		//if ((dwGuid.IsSecureBuiltinEntity()
+		//	&& dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
+		//	|| statistic_.secAttributes.is_payload_protected
+		//	|| statistic_.secAttributes.is_submessage_protected)
+		if (dwGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER &&
+				(statistic_.secAttributes.is_payload_protected || 
+				statistic_.secAttributes.is_submessage_protected))
 		{
 			if (statistic_.enableSec && secPlugin_ != NULL)
 			{
@@ -168,9 +171,7 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
 		if (qos_.lifespan.duration != Duration_t(TIME_INFINITE))
 		{
 			lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
-		}
-		else
-		{
+		} else if(lifespanTimer_) {
 			lifespanTimer_->Exit();
 		}
 	}
@@ -460,7 +461,9 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		size = encodeBuffer->buffer_size - 4; //size为减去长为CDR_ENDIANNESS_LEN的端序信息
 		//加密后的单个encodeBuffer长度超限变为链表
 		int encodeSubBufferNum = encodeBuffer->buffer_size / DATAMESSAGE_LIMIT;//size / DATAMESSAGE_LIMIT;
-		encodeSubBufferNum += 1;
+		if (encodeBuffer->buffer_size % DATAMESSAGE_LIMIT != 0) {
+			encodeSubBufferNum += 1;
+		}
 
 		SerializedBuffer* curEncodeSubBuffer = NULL;
 		SerializedBuffer* preEncodeSubBuffer = NULL;
@@ -782,18 +785,18 @@ ReturnCode_t DataWriterImpl::enable()
 
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
-	if (builtinSecureData_.security_info.endpoint_security_attributes != 0) {
-		DiscoveredWriterData writerData;
-		writerData.ddsPublicationData = GetBuiltinTopicData();
-		discovery->WritePublicationData(writerData);
-
+	if ((builtinSecureData_.security_info.endpoint_security_attributes & 
+		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		//DiscoveredWriterData writerData;
+		//writerData.ddsPublicationData = GetBuiltinTopicSecureData();
+		//discovery->WritePublicationData(writerData);
 		DiscoveredWriterSecureData writerSecureData;
 		writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
 		discovery->WritePublicationSecureData(writerSecureData);
 	}
 	else {
 		DiscoveredWriterData writerData;
-		writerData.ddsPublicationData = GetBuiltinTopicData();
+		writerData.ddsPublicationData = GetBuiltinTopicSecureData();
 		discovery->WritePublicationData(writerData);
 	}
 	
@@ -1024,6 +1027,15 @@ bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilt
 	return ret == RETCODE_OK ? true : false;
 }
 
+void DataWriterImpl::UpdateReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
+{
+	using namespace DDSSQL;
+	auto it = readerFilters_.find(readerGuid);
+	if (it != readerFilters_.end()) {
+		it->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
+	}
+}
+
 void DataWriterImpl::RemoveReaderFilter(const GUID_t& readerGuid)
 {
 	readerFilters_.erase(readerGuid);
@@ -1042,6 +1054,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 	if (dp->enableDDSSec_) {
 		secPlugin_ = &dp->secPlugin_;
 		GUID_t guid = Conversion::ToGuid(handle_);
+		EndpointSecurityAttributes secAttr;
 		if ((guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER &&
 			guid.IsSecureBuiltinEntity())
 			|| (guid.IsUserDefinedEntity()))
@@ -1049,7 +1062,6 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			if (dp->secPlugin_.crypto_key_factory == NULL) {
 				return RETCODE_ERROR;
 			}
-			EndpointSecurityAttributes secAttr;
 			PublisherQos qos;
 			pub_->get_qos(qos);
 			if (!secPlugin_->access_control->get_datawriter_sec_attributes(
@@ -1068,9 +1080,12 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = secAttr.is_discovery_protected;
 			statistic_.secAttributes.is_liveliness_protected = secAttr.is_liveliness_protected;
 			statistic_.secAttributes.is_payload_protected = secAttr.is_payload_protected;
-			//statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
+			statistic_.secAttributes.is_key_protected = secAttr.is_key_protected;
 			statistic_.secAttributes.is_submessage_protected = secAttr.is_submessage_protected;
 			statistic_.secAttributes.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttr.plugin_endpoint_attributes;
+
 			secPlugin_->access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
 			{
@@ -1088,7 +1103,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			statistic_.secAttributes.is_discovery_protected = false;
 			statistic_.secAttributes.is_liveliness_protected = false;
 			statistic_.secAttributes.is_payload_protected = false;
-			//statistic_.secAttributes.is_key_protected = false;
+			statistic_.secAttributes.is_key_protected = false;
 			statistic_.secAttributes.is_submessage_protected = false;
 			statistic_.rtpsMsgProtected = false;
 		}
@@ -1099,10 +1114,11 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			|| statistic_.secAttributes.is_write_protected
 			|| statistic_.secAttributes.is_read_protected
 			|| statistic_.secAttributes.is_discovery_protected
-			|| statistic_.secAttributes.is_liveliness_protected
+			//|| statistic_.secAttributes.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| statistic_.secAttributes.is_submessage_protected
 			|| statistic_.secAttributes.is_payload_protected
-			|| statistic_.secAttributes.is_key_protected)
+			//|| statistic_.secAttributes.is_key_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			) 
 		{
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
 				unsigned int tmplen = statistic_.secAttributes.ac_endpoint_properties.size();
@@ -1157,7 +1173,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 		statistic_.secAttributes.is_discovery_protected = false;
 		statistic_.secAttributes.is_liveliness_protected = false;
 		statistic_.secAttributes.is_payload_protected = false;
-		//statistic_.secAttributes.is_key_protected = false;
+		statistic_.secAttributes.is_key_protected = false;
 		statistic_.secAttributes.is_submessage_protected = false;
 		statistic_.rtpsMsgProtected = false;
 		secPlugin_ = NULL;
@@ -1170,12 +1186,13 @@ ReturnCode_t DataWriterImpl::FillSecureData()
 	if (statistic_.enableSec) {
 		builtinSecureData_.security_info.endpoint_security_attributes =
 			EndpointSecurityAttributesToMask(&statistic_.secAttributes);
+		builtinSecureData_.security_info.plugin_endpoint_security_attributes = statistic_.secAttributes.plugin_endpoint_attributes;
 	}
 	else
 	{
 		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 	}
-	builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
+	//builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
 	return RETCODE_OK;
 }
 
@@ -1209,6 +1226,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 	}
 	rdIter->second.readyForSecComm = true;
 	secReaders_.push_back(rdIter->second.cryptoHdl);
+	secReadersMap_[readerId->prefix] = rdIter->second.cryptoHdl;
 	remoteReaders_.preparingReaders.erase(rdIter);
 	return 0;
 }

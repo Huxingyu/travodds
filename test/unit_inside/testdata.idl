@@ -1,0 +1,99 @@
+module TestModule{
+// 1. 基础数据类型
+struct BasicData {
+    long id;
+    string name;
+};
+
+// 2. 带Key的结构
+struct KeyData {
+    @key long userId;
+    string data;
+};
+
+// 3. 序列类型
+struct SequenceData {
+    sequence<long> numbers;
+};
+
+// 4. 枚举类型
+enum TestEnum {
+    VALUE_A,
+    VALUE_B,
+    VALUE_C,
+    VALUE_D,
+    VALUE_E
+};
+
+// 5. 嵌套结构
+struct NestedStruct {
+    long nestedId;
+    double nestedValue;
+    boolean nestedFlag;
+    string nestedName;
+    long nestedArray[2];  // 定长数组
+};
+
+// 6. 类型别名
+typedef long Matrix4x4[4][4];
+typedef string<64> FixedString;
+typedef double Measurements[10];
+typedef short ShortBuffer[8];
+typedef char CharBuffer[32];
+typedef octet ByteBuffer[64];
+
+// 7. 用于ContentFilteredTopic测试的复杂数据结构 - 包含基本测试类型
+struct FilterableData {
+    // === 基本数值类型 ===
+    short shortField;
+    unsigned short ushortField;
+    long longField;
+    unsigned long ulongField;
+    long long longlongField;
+    unsigned long long ulonglongField;
+    float floatField;
+    double doubleField;
+
+    // === 布尔和字符类型 ===
+    boolean boolField;
+    char charField;
+    octet byteField;
+
+    // === 字符串类型 ===
+    string stringField;
+    FixedString fixedStringField;  // 使用类型别名
+
+    // === 枚举类型 ===
+    TestEnum enumField;
+
+    // === 嵌套结构 ===
+    NestedStruct nestedField;
+
+    // === 定长数组 ===
+    long longArray[10];           // 定长long数组
+    double doubleArray[5];        // 定长double数组
+    boolean boolArray[3];         // 定长boolean数组
+    string stringArray[4];        // 定长字符串数组
+
+    // === 多维定长数组 ===
+    long matrix2x3[2][3];         // 2x3矩阵
+    float floatMatrix[3][3];      // 3x3浮点矩阵
+    Matrix4x4 matrix4x4;          // 使用类型别名
+
+    // === 序列（可变长度）===
+    sequence<long> seqLongField;
+    sequence<string> seqStringField;
+
+    // === 使用类型别名的数组 ===
+    ShortBuffer shortBuffer;      // 8个short
+    CharBuffer charBuffer;        // 32个char
+    ByteBuffer byteBuffer;        // 64字节
+    Measurements measurements;    // 10个double
+
+    // === 枚举数组 ===
+    TestEnum enumArray[5];
+
+    // === 嵌套结构数组 ===
+    NestedStruct structArray[3];
+};
+};

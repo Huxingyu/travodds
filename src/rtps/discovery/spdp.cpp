@@ -29,6 +29,12 @@ Spdp::Spdp(Participant* participant, Discovery* discovery)
 	time.sec = leaseDuration_.sec;
 	time.nanosec = leaseDuration_.nanosec;
 	timer_ = TimerManager::CreateTimer(time, [&]() { this->CheckRemoteParticipantDuration(); }, "CheckRemoteParticipantDuration");
+#ifdef DDSSECURITY
+	Time_t handshakeTime = {10, 0};
+	handshakeTimer_ = TimerManager::CreateTimer(handshakeTime, [&]() {
+		this->HandShakeRetrys();
+	}, "HandShakeRetrys");
+#endif // DDSSECURITY
 }
 
 Spdp::~Spdp()
@@ -36,13 +42,25 @@ Spdp::~Spdp()
 	if (timer_) {
 		timer_->Exit();
 	}
-
+#ifdef DDSSECURITY
+	if (handshakeTimer_) {
+		handshakeTimer_->Exit();
+	}
+#endif // DDSSECURITY
 	if (writer_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(writer_->GetGuid());
 		participant_->DeleteWriter(handle);
 	}
 	if (reader_) {
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(reader_->GetGuid());
+		participant_->DeleteReader(handle);
+	}
+	if (writerSecure_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(writerSecure_->GetGuid());
+		participant_->DeleteWriter(handle);
+	}
+	if (readerSecure_) {
+		InstanceHandle_t handle = Conversion::ToInstanceHandle(readerSecure_->GetGuid());
 		participant_->DeleteReader(handle);
 	}
 //#ifdef DDSSECURITY
@@ -124,6 +142,77 @@ void Spdp::SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader)
 
 	//TODO DataReader与reader关联
 }
+
+#ifdef DDSSECURITY
+void Spdp::SetParticipantSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
+{
+	DataWriterQos qos;
+	dataWriter->get_qos(qos);
+
+	//TODO 补充resendPeriod参数
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER, true, ENTITY_WRITER);
+	std::shared_ptr < Writer > writer = participant_->CreateWriter(dataWriter.get(), qos, guid, true);
+	if (nullptr == writer) {
+		//TODO 日志记录
+		TRAVODDS_LOG(LOG_ERROR, "participant secure writer is nullptr");
+		return;
+	}
+	writerSecure_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
+
+	//writerSecure_->SetResendDataPeriod(leaseDuration_);
+	DomainParticipantQos dpqos;
+	dataWriter->get_publisher()->get_participant()->get_qos(dpqos);
+	//TODO 补充locator与ip的装换函数
+	if (dpqos.discovery.kind == DISCOVER_UDPv4_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locator;
+		locator.kind = LOCATOR_KIND_UDPv4;
+		locator.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locator.address[12] = 0xEF;
+		locator.address[13] = 0xFF;
+		locator.address[14] = 0x00;
+		locator.address[15] = 0x01;
+		//writerSecure_->ReaderLocatorAdd(locator);
+	}
+	if (dpqos.discovery.kind == DISCOVER_UDPv6_QOS || dpqos.discovery.kind == DISCOVER_UDPv4_AND_UDPv6_QOS) {
+		Locator_t locatorv6;
+		locatorv6.kind = LOCATOR_KIND_UDPv6;
+		locatorv6.port = SPDP_WELL_KNOWN_MULTICAST_PORT(dataWriter->get_publisher()->get_participant()->get_domain_id());
+		locatorv6.address[0] = 0xff;
+		locatorv6.address[1] = 0x1e;
+		//3-9 : 0
+		locatorv6.address[10] = 0xff;
+		locatorv6.address[11] = 0xff;
+		locatorv6.address[12] = 0xef;
+		locatorv6.address[13] = 0xff;
+		locatorv6.address[15] = 0x01;
+
+		//writerSecure_->ReaderLocatorAdd(locatorv6);
+	}
+
+	// DiscoveredReaderData data;
+	// participant_->AddRemoteReader()
+
+	//TODO DataWriter与writer关联
+}
+void Spdp::SetParticipantSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader)
+{
+	DataReaderQos qos;
+	dataReader->get_qos(qos);
+	qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_READER, true, ENTITY_READER);
+	std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), qos, guid, true);
+	if (nullptr == reader) {
+		//TODO 日志记录
+		TRAVODDS_LOG(LOG_ERROR, "participant secure reader is nullptr");
+		return;
+	}
+	readerSecure_ = std::dynamic_pointer_cast<StatefulReader>(reader);
+	readerSecure_->SetReaderListener(this);
+
+	//TODO DataReader与reader关联
+}
+#endif // DDSSECURITY
+
 
 void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 {
@@ -283,6 +372,11 @@ void Spdp::RemoveDiscoveryDPInfoFromDiscParts(const GuidPrefix_t& prefix)
 	}
 	delete discParts_[prefix];
 	discParts_.erase(prefix);
+
+	GUID_t remoteGuid;
+	remoteGuid.prefix = prefix;
+	remoteGuid.entityId = ENTITYID_PARTICIPANT;
+	RemoveHandShakeMsg(remoteGuid);
 }
 
 ParticipantCryptoHandle Spdp::GetRemoteParticipantCryptoHandle(const GuidPrefix_t* remotePrefix)
@@ -293,7 +387,7 @@ ParticipantCryptoHandle Spdp::GetRemoteParticipantCryptoHandle(const GuidPrefix_
 		//TRAVODDS_LOG(LOG_ERROR, "GetRemoteParticipantCryptoHandle is nullptr");
 		return SEC_NIL_HANDLE;
 	}
-	if (dpInfoIter->second->enableDDSSec_)
+	if (dpInfoIter->second && dpInfoIter->second->enableDDSSec_)
 	{
 		return dpInfoIter->second->cryptoHdl_;
 	}
@@ -314,6 +408,71 @@ SharedSecretHandle Spdp::GetRemoteParticipantSharedSecret(const GuidPrefix_t* re
 	}
 	return SEC_NIL_HANDLE;
 }
+
+//void Spdp::AddHandShakeRetryTimer(const Time_t& time, const GUID_t& guid)
+//{
+//	ParticipantStatelessMessage* handshakeMsg = this->discParts_[guid.prefix]->handshakeMsg_;
+//	handshakeRetryCounts_[guid] = 0;
+//	std::shared_ptr<Timer> handShakeRetryTimer =
+//		TimerManager::CreateTimer(time, [=]() { 
+//		this->HandShakeRetry(guid, handshakeMsg); 
+//	}, "HandShakeRetry");
+//	if (handshakeTimers_.count(guid)) {
+//		handshakeTimers_[guid]->Exit();
+//		handshakeTimers_.erase(guid);
+//	}
+//	handshakeTimers_[guid] = handShakeRetryTimer;
+//}
+
+//void Spdp::RemoveHandShakeRetryTimer(const GUID_t& guid)
+//{
+//	handshakeRetryCounts_.erase(guid);
+//	if (handshakeTimers_.count(guid)) {
+//		printf("0000 remove handshake timer %s\n", guid.prefix.toString().c_str());
+//		handshakeTimers_[guid]->Stop();
+//		handshakeTimers_.erase(guid);
+//	}
+//}
+
+void Spdp::AddHandShakeMsg(const GUID_t& guid)
+{
+	std::lock_guard<std::mutex> lock(remoteGuidRetrySetMutex);
+	remoteGuidRetrySet.insert(guid);
+}
+
+void Spdp::RemoveHandShakeMsg(const GUID_t& guid)
+{
+	std::lock_guard<std::mutex> lock(remoteGuidRetrySetMutex);
+	remoteGuidRetrySet.erase(guid);
+}
+
+//void Spdp::HandShakeRetry(GUID_t remoteGuid, ParticipantStatelessMessage* handshakeMsg)
+//{
+//	if (handshakeRetryCounts_[remoteGuid] <= 10) {
+//		handshakeRetryCounts_[remoteGuid]++;
+//		printf("retry begin_handshake_%s local %s remote %s.\n",
+//			handshakeMsg->messageData[0].class_id.c_str(),
+//			this->participant_->GetGuid().prefix.toString().c_str(),
+//			remoteGuid.prefix.toString().c_str());
+//		discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *handshakeMsg);
+//	}
+//}
+
+void Spdp::HandShakeRetrys()
+{
+	std::lock_guard<std::mutex> lock(remoteGuidRetrySetMutex);
+	for (const auto& remoteGuid : remoteGuidRetrySet) {
+		if (discParts_.count(remoteGuid.prefix)) {
+			ParticipantStatelessMessage* handshakeMsg = this->discParts_[remoteGuid.prefix]->handshakeMsg_;
+			//printf("retry begin_handshake_%s local %s remote %s.\n",
+		    //	handshakeMsg->messageData[0].class_id.c_str(),
+		    //	this->participant_->GetGuid().prefix.toString().c_str(),
+		    //	remoteGuid.prefix.toString().c_str());
+			discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *handshakeMsg);
+		}
+	}
+}
+
 #endif // DDSSECURITY
 
 void Spdp::RemoveParticipant(GUID_t guid)
@@ -324,23 +483,34 @@ void Spdp::RemoveParticipant(GUID_t guid)
 void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data)
 {
 	data.leaseDuration = leaseDuration_;
-
-	SerializedBuffer *buffer = new SerializedBuffer;
-#ifdef DDSSECURITY
-	bigEndianMsgData_ = buffer;
-#endif // DDSSECURITY
-	ParameterList list(data);
-	uint16_t size = list.GetMessageSize();
+	uint16_t size = 0;
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
-
+#ifdef DDSSECURITY
+	bigEndianMsgData_ = new SerializedBuffer;
+	ParameterList bigEndianList(data, EndiannessKind::PL_CDR_BE);
+	size = bigEndianList.GetMessageSize();
+	bigEndianMsgData_->buffer_size = size;
+	memoryPool_->getBuffer(bigEndianMsgData_->buffer_size + BUFF_SHIFT, bigEndianMsgData_->origin_buffer);
+	bigEndianMsgData_->buffer = bigEndianMsgData_->origin_buffer + BUFF_SHIFT;
+	bigEndianList.WriterToMessage((octet*)bigEndianMsgData_->buffer, size);
+#endif // DDSSECURITY
+	SerializedBuffer *buffer = new SerializedBuffer;
+	ParameterList list(data);
+	size = list.GetMessageSize();
 	buffer->buffer_size = size ;
-
 	memoryPool_->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->origin_buffer);
-
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
-
 	list.WriterToMessage((octet*)buffer->buffer, size);
+
+	SerializedBuffer* bufferSecure = new SerializedBuffer;
+	ParameterList listSecure(data);
+	size = listSecure.GetMessageSize();
+	bufferSecure->buffer_size = size;
+	memoryPool_->getBuffer(bufferSecure->buffer_size + BUFF_SHIFT, bufferSecure->origin_buffer);
+	bufferSecure->buffer = bufferSecure->origin_buffer + BUFF_SHIFT;
+	listSecure.WriterToMessage((octet*)bufferSecure->buffer, size);
+
 	InstanceHandle_t handle;
 	memcpy(handle.keyHash.value, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 
@@ -357,6 +527,16 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 		TRAVODDS_LOG(LOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
 
+	cacheChange = writerSecure_->NewChange(ALIVE, bufferSecure, handle, time);
+	if (nullptr == cacheChange) {
+		TRAVODDS_LOG(LOG_ERROR, "create participantSecure newChange Err");
+		return;
+	}
+	ret = writerSecure_->AddBuiltinCache(cacheChange);
+
+	if (RETCODE_OK != ret) {
+		TRAVODDS_LOG(LOG_ERROR, "writerSecure_ AddBuiltinCache ret= %d", ret);
+	}
 }
 
 void Spdp::RemoveSpdPdiscoveredParticipantData(GUID_t & guid)
@@ -399,12 +579,17 @@ void Spdp::TakeSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data
 void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data)
 {
 #ifdef DDSSECURITY
-	if (data.ddsParticipantData.contains_security_data && !participant_->participantImpl_->enableDDSSec_) {
-		//TRAVODDS_LOG(LOG_INFO, "local no security participant ignore remote security participant.");
+	ParticipantSecurityAttributesMask participant_security_atributes =
+		ParticipantSecurityAttributesToMask(&participant_->participantImpl_->secAttributes_);
+	bool contains_security_data = participant_security_atributes != 0; //本域参与者是否带安全
+	if (data.ddsParticipantData.contains_security_data && !contains_security_data/*!participant_->participantImpl_->enableDDSSec_*/
+		&& GetDiscovery()->GetParticipant()->secAttributes_.plugin_participant_attributes == 0) {
+		TRAVODDS_LOG(LOG_INFO, "local no security participant ignore remote security participant.");
 		return;
 	}
-	if (!data.ddsParticipantData.contains_security_data && participant_->participantImpl_->enableDDSSec_) {
-		//TRAVODDS_LOG(LOG_INFO, "local security participant ignore remote no security participant.");
+	if (!data.ddsParticipantData.contains_security_data && contains_security_data/*participant_->participantImpl_->enableDDSSec_*/
+		&& data.ddsParticipantData.security_info.plugin_participant_security_attributes == 0) {
+		TRAVODDS_LOG(LOG_INFO, "local security participant ignore remote no security participant.");
 		return;
 	}
 #endif
@@ -425,12 +610,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 		remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
 	}
 #ifdef DDSSECURITY
-	// 判断是否是自己
-	GUID_t selfPartGuid = Conversion::ToGuid(discovery_->GetParticipant()->get_instance_handle());
-	if (Conversion::ToGuid(data.ddsParticipantData.key) == selfPartGuid) {
-		// 忽略来自自身的，TODO
-		return;
-	}
 	//判断是否为已知节点，如果是发现新的DP 则进入验证远端，发起握手流程
 	GuidPrefix_t remote_prefix = Conversion::ToGuid(data.ddsParticipantData.key).prefix;
 	if (0 != discParts_.count(remote_prefix)) {
@@ -450,18 +629,24 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 	DiscoveryDPInfo* newDPInfo = new DiscoveryDPInfo;
 	newDPInfo->owner_ = this;
 	newDPInfo->pData_ = data;
+	newDPInfo->sharedSecretHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->permissionsHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->identityHdl_ = SEC_NIL_HANDLE;
+	newDPInfo->handshakeHdl_ = SEC_NIL_HANDLE;
 	//try to authenticate the discovered participant
 	SecurityException secExce;
 	SecurityPluginInstanceImpl* secPlugin = &discovery_->GetParticipant()->secPlugin_;
+	// 此域参与者启用了安全
 	if (discovery_->GetParticipant()->enableDDSSec_ && secPlugin != NULL) {
-		if (!data.ddsParticipantData.contains_security_data) {
-			if (!discovery_->GetParticipant()->secAttributes_.allow_unauthenticated_participants) {
-				TRAVODDS_LOG(LOG_ERROR, "Discovered a Participant without supporting DDS Security.");
-				return;
-			}
-			newDPInfo->enableDDSSec_ = false;
-		}
-		else {
+		//if (!data.ddsParticipantData.contains_security_data) {
+		//	if (!discovery_->GetParticipant()->secAttributes_.allow_unauthenticated_participants) {
+		//		TRAVODDS_LOG(LOG_ERROR, "Discovered a Participant without supporting DDS Security.");
+		//		return;
+		//	}
+		//	newDPInfo->enableDDSSec_ = false;
+		//}
+		//else 
+		{
 			// validate_remote_identity 生成为远端参与者创建的handle, 缓存到newDPInfo, 用于本地验证.
 			ValidationResult_t validationRst =
 				secPlugin->authentication->validate_remote_identity(
@@ -496,7 +681,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				if (validationRst == VALIDATION_FAILED)
 				{
 					TRAVODDS_LOG(LOG_ERROR, "begin_handshake_request on self failed.");
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -512,7 +696,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 					&secExce);
 				if (validationRst == VALIDATION_FAILED)
 				{
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -524,7 +707,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 					&secExce);
 				if (validationRst == VALIDATION_FAILED)
 				{
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -536,7 +718,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 					&secExce);
 				if (validationRst == VALIDATION_FAILED)
 				{
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -546,7 +727,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				//discovery_->AddRemainProxy(data);
 				if (newDPInfo->sharedSecretHdl_ == SEC_NIL_HANDLE)
 				{
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -568,7 +748,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				if (newDPInfo->cryptoHdl_ == SEC_NIL_HANDLE)
 				{
 					TRAVODDS_LOG(LOG_ERROR, "Register remote participant to CryptographicFactory failed.");
-					//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					SpdpCleanupRemoteSecRsc(newDPInfo);
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
@@ -586,7 +765,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 						newDPInfo->cryptoHdl_,
 						&secExce))
 					{
-						//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 						SpdpCleanupRemoteSecRsc(newDPInfo);
 						RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 						return;
@@ -597,7 +775,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 						&cryptoTokens,
 						&secExce))
 					{
-						//discParts_.erase(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 						SpdpCleanupRemoteSecRsc(newDPInfo);
 						RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 						return;
@@ -628,15 +805,17 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			}
 			case VALIDATION_PENDING_HANDSHAKE_REQUEST: //HandshakeInit begin_handshake_request
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(800)); //考虑时序性 确保对端进入waiting request
 				newDPInfo->enableDDSSec_ = true;
 				newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_REQUESTING;
 				discParts_[remote_prefix] = newDPInfo;
 
+				GUID_t remoteGuid;
+				remoteGuid.prefix = Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix;
+				remoteGuid.entityId = ENTITYID_PARTICIPANT;
+				
 				// TOCHECK
 				discovery_->GetSedp()->AddBuiltinSpdpProxy(data);
 
-				// TODO
 				newDPInfo->handshakeMsg_ = new ParticipantGenericMessage;
 				HandshakeMessageToken handshakeToken;
 				validationRst = secPlugin->authentication->begin_handshake_request(
@@ -654,22 +833,28 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 				{
 					newDPInfo->handshakeMsg_->messageData.push_back(handshakeToken);
 					secPlugin->authentication->return_handshake_token(&handshakeToken, &secExce);
-					GUID_t remoteGuid;
-					remoteGuid.prefix = Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix;
-					remoteGuid.entityId = ENTITYID_PARTICIPANT;
+					
 					newDPInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
 
-					//auto now = std::chrono::system_clock::now();
-					//std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
-					//std::cout << "now time after begin_handshake_request: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
-
+					//printf("begin_handshake_request local %s remote %s.\n",
+					//	this->participant_->GetGuid().prefix.toString().c_str(),
+					//	remoteGuid.prefix.toString().c_str());
 					//执行相互认证和密钥交换之前，发送ParticipantStatelessMessageData解决序列化攻击
-					discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *newDPInfo->handshakeMsg_, Sedp::StatelessMessageDataKind::REQUEST);
+					ReturnCode_t ret = discovery_->WriteParticipantStatelessMessageData(&remoteGuid, *newDPInfo->handshakeMsg_);
+					if (ret != 0) {
+						newDPInfo->handshakeMsg_->messageClassId = "";
+						delete newDPInfo->handshakeMsg_;
+						TRAVODDS_LOG(LOG_DEBUG, "Send handshake token failed.");
+						SpdpCleanupRemoteSecRsc(newDPInfo);
+						RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
+						return;
+					}
+					
+					Time_t time = { 1, 0 };
+					//this->AddHandShakeRetryTimer(time, remoteGuid); //设置定时器重发request
+					this->AddHandShakeMsg(remoteGuid);
 					newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_REPLY;
 
-					//now = std::chrono::system_clock::now();
-					//now_ms = std::chrono::system_clock::to_time_t(now);
-					//std::cout << "now time after into WAITING_REPLY: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
 				}
 				else if (validationRst == VALIDATION_OK)
 				{
@@ -687,10 +872,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			case VALIDATION_PENDING_HANDSHAKE_MESSAGE: {
 				newDPInfo->enableDDSSec_ = true;
 				newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_REQUEST;
-
-				//auto now = std::chrono::system_clock::now();
-				//std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
-				//std::cout << "now time afer into WAITING_REQUEST: " << std::put_time(std::localtime(&now_ms), "%F %T") << std::endl;
 
 				discParts_[remote_prefix] = newDPInfo;
 

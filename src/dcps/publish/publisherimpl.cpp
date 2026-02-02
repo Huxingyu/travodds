@@ -110,12 +110,7 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 
 	DataWriter* datawriter = nullptr;
 	std::unique_ptr<DataWriterImpl> datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
-#ifdef DDSSECURITY
-	//数据读者获取安全属性
-	datawriterPtr->GetSecAttributes();
-	//填充缓存的builtinSecureData_
-	datawriterPtr->FillSecureData();
-#endif
+
 	if (!datawriterPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datawriter Err");
 		return nullptr;
@@ -123,6 +118,13 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 	GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_WRITER);
 	datawriterPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
 	datawriter = datawriterPtr.get();
+
+#ifdef DDSSECURITY
+	//数据读者获取安全属性
+	datawriterPtr->GetSecAttributes();
+	//填充缓存的builtinSecureData_
+	datawriterPtr->FillSecureData();
+#endif
 
 	std::lock_guard<std::mutex> lock(mtxWriters_);
 	writerHandles_.insert({ datawriterPtr->get_instance_handle(), std::move(datawriterPtr) });
