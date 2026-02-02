@@ -26,6 +26,26 @@ TRAVODDS_NAMESPACE_BEGIN
 
 // const uint32_t DATAMESSAGE_LIMIT = 63 * 1024;
 
+
+struct Message_t {
+	char* buffer;
+	uint32_t length;
+	char* originBuffer;
+	bool onlyCopy;  /* 仅允许拷贝，不允许共享控制权 */
+	Message_t(char* buffer, uint32_t length, bool copy = false)
+	  : buffer(buffer),
+	    length(length),
+	    originBuffer(buffer),
+		onlyCopy(copy) {
+	}
+	Message_t(const Message_t& other)
+	  : buffer(other.buffer),
+		length(other.length),
+		originBuffer(other.originBuffer),
+		onlyCopy(other.onlyCopy) {
+	}
+};
+
 /**
 * @ brief 定义子报文元素 SubmessageElement
 */
@@ -79,7 +99,15 @@ struct FragMentNumberSet_t {
 	}
 };
 
-typedef unsigned char* SerializedPayload;
+struct SerializedPayload {
+    char* data;
+	uint32_t length;
+	std::shared_ptr<Message_t> originMessage;
+
+	SerializedPayload()
+		: data(nullptr), length(0), originMessage(nullptr){
+	}
+};
 
 /**
 * @ brief 定义报文类型
@@ -98,6 +126,13 @@ const SubMessageKind_t NACK_FRAG = 0x12;
 const SubMessageKind_t HEARTBEAT_FRAG = 0x13;
 const SubMessageKind_t DATA = 0x15;
 const SubMessageKind_t DATA_FRAG = 0x16;
+#ifdef DDSSECURITY
+const SubMessageKind_t SEC_SUB_MSG = 0x30;     // SecureSubmessage
+const SubMessageKind_t SEC_PREFIX = 0x31;      // SecurePrefix
+const SubMessageKind_t SEC_POSTFIX = 0x32;     // SecurePostfix
+const SubMessageKind_t SRTPS_PREFIX = 0x33;    // SecureRTPSPrefix
+const SubMessageKind_t SRTPS_POSTFIX = 0x34;   // SecureRTPSPostfix
+#endif // DDSSECURITY
 
 #define FLAG_BIT_0 1
 #define FLAG_BIT_1 2

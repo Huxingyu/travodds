@@ -250,7 +250,7 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 }
 
 
-ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, bool notFrag)
+ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cache, const DurabilityQosPolicyKind& durabilityKind, bool notFrag)
 {
 	if (nullptr == cache) {
 		TRAVODDS_LOG(LOG_ERROR, "cache is nullptr");
@@ -274,17 +274,24 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 		}
 	} 
 	else {
-		/* 之前没有添加过，循环添加缺失数据 */
-		for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
-			ChangeFromWriter changeInfo;
-			changeInfo.status = UNKNOWN;
-			changeInfo.is_relevant = true;
+		ChangeFromWriter changeInfo;
+		changeInfo.status = UNKNOWN;
+		changeInfo.is_relevant = true;
+		changeInfo.cache = nullptr;
+		if (durabilityKind == VOLATILE_DURABILITY_QOS && insertSeq_ == SEQUENCENUMBER_ZERO) {
+			insertSeq_ = cache->sequenceNumber;
 			changeInfo.sequenceNumber = insertSeq_;
-			changeInfo.cache = nullptr;
-
 			changesFromWriters_[insertSeq_] = changeInfo;
+
+		} else {
+		    /* 之前没有添加过，循环添加缺失数据 */
+		    for (insertSeq_++; insertSeq_ <= cache->sequenceNumber; insertSeq_++) {
+				changeInfo.sequenceNumber = insertSeq_;
+			    changesFromWriters_[insertSeq_] = changeInfo;
+		    }
+		    insertSeq_ = insertSeq_ - 1;
 		}
-		insertSeq_ = insertSeq_ - 1;
+
 		changesFromWriters_[insertSeq_].cache = cache;
 		if (notFrag) {
 			changesFromWriters_[insertSeq_].status = RECEIVED;
@@ -340,7 +347,7 @@ bool WriterProxy::ExistCache(const SequenceNumber_t& seq)
 	return ret;
 }
 
-ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t startNum, int32_t num)
+ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const SerializedPayload& data, int32_t startNum, int32_t num)
 {
 	std::shared_ptr<CacheChange> cache = nullptr;
 	ReturnCode_t ret = RETCODE_ERROR;
@@ -359,8 +366,20 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
 	if (cache->fragmentSeq.erase(startNum) > 0) {
-		uint32_t shift = (startNum - 1) * cache->fraqmentSize;
-		memcpy(cache->serializedBuffer->buffer + shift, data, len);
+		CacheSerializedBuffer* buffer = new CacheSerializedBuffer();
+		buffer->writer_position = data.length;
+		buffer->buffer_size = data.length;
+		if (data.originMessage->onlyCopy) {
+			/* 只允许拷贝，不允许获得所有权 */
+			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
+			buffer->buffer = buffer->origin_buffer;
+			memcpy(buffer->buffer, data.data, data.length);
+		}
+		else {
+			buffer->buffer = data.data;
+			buffer->originMessage = data.originMessage;
+		}
+		cache->fragmentBufferMap.insert({ startNum, buffer });
 	} else {
 		//TODO  
 		/* 重复接收分片数据 */
@@ -373,6 +392,11 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	}
 
 	if (0 == cache->fragmentSeq.size()) {
+		for (auto fragItor = cache->fragmentBufferMap.begin(); fragItor != std::prev(cache->fragmentBufferMap.end()); fragItor++) {
+			fragItor->second->next = std::next(fragItor)->second;
+		}
+		cache->serializedBuffer = cache->fragmentBufferMap.begin()->second;
+		cache->fragmentBufferMap.clear();
 		changeInfo->second.status = RECEIVED;
 	}
 

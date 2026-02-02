@@ -14,6 +14,9 @@
 
 #include  "rtps/endpoint/writer.h"
 #include  "rtps/endpoint/readerlocator.h"
+#ifdef DDSSECURITY
+#include "rtps/endpoint/readerproxy.h"
+#endif
 
 TRAVODDS_NAMESPACE_BEGIN
 class Timer;
@@ -45,6 +48,10 @@ public:
 	 * @param [in] subData  远端Reader配置参数。
 	 */
 	void MatchedReaderAdd(const DiscoveredReaderData &subData);
+#ifdef DDSSECURITY
+	void MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure);
+#endif // DDSSECURITY
+
 
 	/**
 	 * @brief 本地添加与当前Writer匹配的远端Reader通信信息。
@@ -58,7 +65,8 @@ public:
 	 *
 	 * @param [in] locator  远端Reader通信信息。
 	 */
-	void ReaderLocatorRemove(Locator_t& locator);
+	void ReaderLocatorRemove(Locator_t& locator, const GUID_t& guid);
+	void ReaderLocatorRemove(const GUID_t& guid);
 
 	/**
 	 * @brief 对未发送的请求信息进行重整操作。
@@ -71,7 +79,7 @@ public:
      *
      * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
      */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief 设置重发数据周期，创建定时器用于周期性发送history中的数据。
@@ -107,11 +115,22 @@ public:
 	 */
 	virtual ReturnCode_t ReceiveNackFragMessage(const Receive_t&  headerMsg, const NackFragSubMessage_t& nackMsg);
 
+#ifdef DDSSECURITY
+	/**
+	 * @brief 加密子消息。
+	 *
+	 * @return 返回0表示加密成功，其余失败。
+	 */
+	int EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
+
 private:
 
 	Duration_t resendDataPeriod_;
 
-	std::map<Locator_t, std::shared_ptr<ReaderLocator>> readerLocators_;
+	std::map<GUID_t, std::shared_ptr<ReaderLocator>> readerLocators_;
+	std::map<Locator_t, std::set<GUID_t>> readerMulticastLocators_;
+	std::mutex readerLocatorsMutex_;
 
 	std::shared_ptr<Timer> timer_;
 };

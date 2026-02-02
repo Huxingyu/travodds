@@ -25,8 +25,14 @@ class DataReaderImpl;
 class MessageProcessor;
 class LivelinessManager;
 class ThreadPool;
+class Timer;
 class FlowControlManager;
 class FlowRateLimitedManager;
+class DynamicPerformanceRegulator;
+
+#ifdef DDSSECURITY
+class WriterSampleList;
+#endif //DDSSECURITY
 
 enum EntityType : char{
 	ENTITY_DOMAIN,
@@ -51,7 +57,7 @@ public:
 	 * @param [in] id 域ID。
 	 * @param [in] threadPool 线程池指针。
 	 */
-	Participant(DomainId_t id, std::shared_ptr<ThreadPool> threadPool);
+	Participant(DomainId_t id, const GUID_t& guid, std::shared_ptr<ThreadPool> threadPool);
 
 	// Participant(const Participant&) = delete ;
 	/**
@@ -140,20 +146,32 @@ public:
 	 *  在添加前需与本地Reader进行匹配判断（数据类型、主题名、Qos配置等），判断结果一致方可添加。
 	 *
 	 * @param [in] data 远端Writer配置信息。
+	 * 
+	 * @param [in] isSecure 内置主题来源实体是否安全相关。
 	 *
 	 * @return RETCODE_OK。
 	 */
+#ifdef DDSSECURITY
+	ReturnCode_t AddRemoteWriter(const DiscoveredWriterData& data, bool isSecure = false);
+#else
 	ReturnCode_t AddRemoteWriter(const DiscoveredWriterData& data);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 添加远端Reader的信息到远端Reader存储容器中。
 	 *  在添加前需与本地Writer进行匹配判断（数据类型、主题名、Qos配置等），判断结果一致方可添加。
 	 *
 	 * @param [in] data 远端Reader配置信息。
+	 * 
+	 * @param[in] isSecure 此信息来源实体是否是安全相关的。
 	 *
 	 * @return RETCODE_OK。
 	 */
+#ifdef DDSSECURITY
+	ReturnCode_t AddRemoteReader(const DiscoveredReaderData& data, bool isSecure = false);
+#else
 	ReturnCode_t AddRemoteReader(const DiscoveredReaderData& data);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 从远端Writer存储容器中删除远端Writer。
@@ -230,17 +248,6 @@ public:
 	GUID_t GenerateGuid(const InstanceHandle_t& handle);
 
 	/**
-	 * @brief GUID前缀GuidPrefix_t生成。
-	 *	根据domainId和instanceId生成对应的GUID前缀。
-	 *
-	 * @param [in] domainId 域ID。
-	 * @param [in] instanceId 实例ID 。
-	 *
-	 * @return RETCODE_OK。
-	 */
-	ReturnCode_t GenerateGuidPrefix(int32_t domainId, int32_t instanceId);
-
-	/**
 	 * @brief 获取GUID前缀。
 	 *
 	 * @return GUID前缀值。
@@ -298,8 +305,13 @@ public:
 	 *
 	 * @param [in] writer 本地Writer指针。
 	 * @param [in] subData 远端Reader配置信息。
+	 * @param [in] isSecure 此信息来源实体是否是安全相关的。
 	 */
+#ifdef DDSSECURITY
+	void addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData, bool isSecure = false);
+#else
 	void addWriterMatch(std::shared_ptr<Writer> writer, const DiscoveredReaderData& subData);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 判断本地Reader的信息是否与远端Writer匹配，匹配则存储到远端Writer存储容器中。
@@ -307,7 +319,11 @@ public:
 	 * @param [in] reader 本地Reader指针。
 	 * @param [in] pubData 远端Writer配置信息。
 	 */
+#ifdef DDSSECURITY
+	void addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure = false);
+#else
 	void addReaderMatch(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 获取网络传输模块对象。
@@ -316,9 +332,12 @@ public:
 	 */
 	std::vector<std::shared_ptr<MessageTransmitter>> GetMessageTransmitters();
 
-	void TransmittersSendMessage(LocatorVec& destinationList, char* message, uint32_t length);
+	/* 向同一目标的地址发送 */
+	void TransmittersSendMessage(LocatorVec destinationList, char* message, uint32_t length);
+	/* std::vector<LocatorVec>&  destinationList 采用二级存储, 第一级存储目标，第二级存储同一目标的地址 */
+	void TransmittersSendMessage(std::vector<LocatorVec>& destinationList, char* message, uint32_t length);
 
-	void FlowRateLimitedMessageSend(LocatorVec& destinationList, char* message, uint32_t length);
+	ReturnCode_t FlowRateLimitedMessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length, const Duration_t& timeOut);
 
 	void TransmittersConnect(const LocatorVec& remoteLocator);
 
@@ -425,6 +444,20 @@ public:
 
 	void GetMatchedEntitys(const EntityId_t& entity, InstanceHandleSeq& handles) const;
 	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
+
+#ifdef DDSSECURITY
+	// addReaderMatch中涉及安全部分的工作
+	WriterSampleList* addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData);
+
+	std::map<EntityId_t, std::shared_ptr<Writer>>* GetWriterMap()
+	{
+		return &writers_;
+	}
+	std::map<EntityId_t, std::shared_ptr<Reader>>* GetReaderMap()
+	{
+		return &readers_;
+	}
+#endif // DDSSECURITY
 private:
 	DomainParticipantQos qos_;
 
@@ -446,14 +479,17 @@ private:
 	std::map<std::string, std::vector<SubscriptionBuiltinTopicData> > localReaders_;
 	std::map<std::string, std::vector<PublicationBuiltinTopicData> > localWriters_;
 
+	// 本地缓存发现的远端DiscoveredReaderData和DiscoveredWriterData
 	std::map<GUID_t, DiscoveredReaderData> remoteReaders_;
 	std::map<GUID_t, DiscoveredWriterData> remoteWriters_;
-
-
 	// const DomainParticipantImpl* const domainImpl_ ;
     std::unique_ptr<FlowRateLimitedManager> flowRateLimitedManager_;
 
     std::unique_ptr<FlowControlManager> flowControlManager_;
+
+	std::unique_ptr<DynamicPerformanceRegulator> regulator_;
+
+	std::shared_ptr<Timer> hbTimer_;
 
 	std::map<EntityId_t, std::shared_ptr<Writer>> writers_;
 	
@@ -487,6 +523,12 @@ private:
 
 	/* 互斥访问matchEntitys_ */
 	mutable std::mutex mtxMatchEntitys_;
+
+#ifdef DDSSECURITY
+public:
+	//新增所属域参与者
+	DomainParticipantImpl* participantImpl_;
+#endif // DDSSECURITY
 };
 
 TRAVODDS_NAMESPACE_END

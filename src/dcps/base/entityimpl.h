@@ -67,6 +67,11 @@ public:
      */
     virtual const InstanceHandle_t& get_instance_handle() const;
 
+    virtual const GUID_t& get_guid() const;
+#ifdef DDSSECURITY
+    GUID_t get_guid_value();
+#endif
+
     // add for language wrapper, store user-defined data in the entit)
     /**
      * @brief 设置objectData_变量值为data。

@@ -39,11 +39,9 @@ void FlowController::UnregisterWriter(std::shared_ptr<Writer> writer)
 	}
 }
 
-
-
-void FlowSyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change)
+ReturnCode_t FlowSyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
-	writer->DeliveryData(change);
+	return writer->DeliveryData(change, timeOut);
 }
 
 void FlowSyncController::ReSendDataFrag(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet)
@@ -61,9 +59,11 @@ FlowAsyncController::FlowAsyncController(Participant* participant, const FlowCon
 {
 }
 
-void FlowAsyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change)
+ReturnCode_t FlowAsyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
-	scheduler_->AddSendData(writer, change);
+	static_cast<void>(timeOut);
+	 scheduler_->AddSendData(writer, change);
+	 return RETCODE_OK;
 }
 
 void FlowAsyncController::ReSendDataFrag(StatefulWriter* writer, std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet)
@@ -80,7 +80,7 @@ FlowSemiSyncController::FlowSemiSyncController(Participant* participant, const F
 {
 }
 
-void FlowSemiSyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change)
+ReturnCode_t FlowSemiSyncController::AddNewData(Writer* writer, std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
-	writer->DeliveryData(change);
+	return writer->DeliveryData(change, timeOut);
 }

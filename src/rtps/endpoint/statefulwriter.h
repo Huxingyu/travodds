@@ -16,7 +16,6 @@
 
 TRAVODDS_NAMESPACE_BEGIN
 
-class Timer;
 
 /**
  * StatefulWriter类，Writer子类,管理使用可靠传输模式向匹配的Reader发送的数据。
@@ -44,6 +43,10 @@ public:
 	 * @param [in] subData  远端Reader配置参数。
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData);
+	
+#ifdef DDSSECURITY
+	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderData &subData, bool isSecure);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 添加与当前Writer匹配的远端Reader代理。
@@ -100,7 +103,7 @@ public:
 	 *
 	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief Ack报文接收处理函数。
@@ -129,7 +132,18 @@ public:
  *
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
-	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, bool flowControl);
+	ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const std::vector<std::shared_ptr<ReaderProxy>>& readerProxys, const Duration_t& timeOut);
+#ifdef DDSSECURITY
+	/**
+	 * @brief Data报文封装控制及发送控制函数，用于Volatile数据。
+	 *
+	 * @param [in] change		  Data报文发送请求句柄。
+	 * @param [in] readerProxy	  Data报文接收的DataReader句柄。
+	 *
+	 * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
+	 */
+	ReturnCode_t DeliveryDataToReaderForVolatile(std::shared_ptr<CacheChange> change, std::shared_ptr<ReaderProxy> readerProxy, const Duration_t& timeOut);
+#endif
 
 	/**
 	 * @brief Heartbeat报文发送控制函数。
@@ -174,7 +188,7 @@ public:
  *
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
-	ReturnCode_t ReSendData(std::shared_ptr<ReaderProxy> readerProxy, bool flowControl = false);
+	ReturnCode_t ReSendData(std::shared_ptr<ReaderProxy> readerProxy);
 	/**
  * @brief 根据分片报文发送请求需重传序列号列表，重新封装并发送需要重传的分片报文数据。
  *
@@ -184,7 +198,7 @@ public:
  * @return 发送成功返回RETCODE_OK，否则返回RETCODE_ERROR。
  */
 	/* 重传分片数据 */
-	ReturnCode_t ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet, bool flowControl = false);
+	ReturnCode_t ReSendDataFrag(std::shared_ptr<ReaderProxy> readerProxy, const NackFragSubMessage_t& FragSet);
 private:
 	/**
 	 * @brief 根据输入的报文发送请求生成ChangeForReader类对象。
@@ -210,10 +224,11 @@ private:
 	 */
 	void SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderProxy>);
 
+#ifdef DDSSECURITY
+    int EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
 private:
 	std::map<GUID_t, std::shared_ptr<ReaderProxy>> matchedReaders_;
-
-	std::shared_ptr<Timer> timer_;
 
 	std::mutex readerPorxyMutex_;
 

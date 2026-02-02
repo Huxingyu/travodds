@@ -24,6 +24,9 @@ class Participant;
 class MessageTransmitter;
 //class ReceiveBuffer;
 class Endpoint;
+#ifdef DDSSECURITY
+class DomainParticipantImpl;
+#endif // DDSSECURITY
 /**
  * @brief MessageProcessor类，RTPS报文封装解析类。
  */
@@ -249,8 +252,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	 ReturnCode_t InterpretSubmessage(char*& message,
-		uint32_t messageLen);
+	 ReturnCode_t InterpretSubmessage(std::shared_ptr<Message_t> message);
 
 	 /**
 	  * @brief 解析RTPS报文头。
@@ -271,7 +273,7 @@ public:
 	  *
 	  * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	  */
-	 ReturnCode_t InterpretDataMessage(char* message,
+	 ReturnCode_t InterpretDataMessage(std::shared_ptr<Message_t> message,
 		SubMessageHeader_t & submessageHeader,
 		Receive_t & messageReceiver);
 
@@ -319,7 +321,7 @@ public:
 	  *
 	  * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	  */
-	 ReturnCode_t InterpretDataFragMessage(char * message,
+	 ReturnCode_t InterpretDataFragMessage(std::shared_ptr<Message_t> message,
 		SubMessageHeader_t & submessageHeader,
 		Receive_t & messageReceiver);
 
@@ -412,7 +414,11 @@ public:
 
 private:
 	Participant* participant_;
-
+#ifdef DDSSECURITY
+public:
+	/* @brief 所属域参与者 */
+	DomainParticipantImpl* participantImpl_;
+#endif // DDSSECURITY
 };
 TRAVODDS_NAMESPACE_END
 #endif

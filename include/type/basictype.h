@@ -80,40 +80,20 @@ struct MIGRtpsKeyHash {
 		if (this->length != right.length) {
 			return false;
 		}
-
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] != right.value[i]) {
-				return false;
-			}
-		}
-		return true;
+		return (memcmp(this->value, right.value, this->length) == 0);
 	}
 
 	bool operator != (const MIGRtpsKeyHash& right) const {
 		if (this->length != right.length) {
 			return true;
 		}
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] != right.value[i]) {
-				return true;
-			}
-		}
-		return false;
+		return (memcmp(this->value, right.value, this->length) != 0);
 	}
 	bool operator > (const MIGRtpsKeyHash& right) const {
 		if (this->length != right.length) {
 			return false;
 		}
-		for (uint32_t i = 0; i < this->length; i++) {
-			if (this->value[i] > right.value[i]) {
-				return true;
-			} else if (this->value[i] == right.value[i]) {
-				continue;
-			} else {
-				return false;
-			}
-		}
-		return false;
+		return (memcmp(this->value, right.value, this->length) > 0);
 	}
 	MIGRtpsKeyHash& operator = (const MIGRtpsKeyHash& right) {
 		this->length = right.length;
@@ -192,17 +172,12 @@ struct InstanceHandle_t {
 };
 
 const InstanceHandle_t HANDLE_NIL;
-
+struct GUID_t;
 struct BuiltinTopicKey_t {
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
 
 	/* wangyi Cyclone DDS 适配 添加构造函数初始化  */
-	BuiltinTopicKey_t()
-	{
-		value[0] = 0;
-		value[1] = 0;
-		value[2] = 0;
-		value[3] = 0;
+	BuiltinTopicKey_t() : value{0} {
 	}
 
 	bool operator==(const BuiltinTopicKey_t& other) const {
@@ -231,6 +206,18 @@ struct BuiltinTopicKey_t {
 		return false;
 	}
 
+	BuiltinTopicKey_t& operator=(const GUID_t& guid) {
+		memcpy(this, &guid, sizeof(BuiltinTopicKey_t));
+		return *this;
+	}
+
+	BuiltinTopicKey_t& operator=(const GUID_t* guid) {
+		if (guid != nullptr) {
+			memcpy(this, guid, sizeof(BuiltinTopicKey_t));
+		}
+		return *this;
+	}
+
 };
 
 /* 获取当前时间并赋值到Time_t结构数据中 */
@@ -242,8 +229,8 @@ static void CurrentTimeSinceUnixEpoch(
 	auto t_since_epoch = system_clock::now().time_since_epoch();
 	auto secs_t = duration_cast<seconds>(t_since_epoch);
 	t_since_epoch -= secs_t;
-	secs = static_cast<long>(secs_t.count());
-	nanosecs = static_cast<unsigned long>(duration_cast<nanoseconds>(t_since_epoch).count());
+	secs = static_cast<int32_t>(secs_t.count());
+	nanosecs = static_cast<uint32_t>(duration_cast<nanoseconds>(t_since_epoch).count());
 }
 
 struct Duration_t {
@@ -419,8 +406,71 @@ using StringSeq = Sequence<std::string>;
 struct Property_t {
 	std::string name;
 	std::string value;
+    bool propagate;
+    Property_t() = default;
+    Property_t(const Property_t& property) :name(property.name),value(property.value),propagate(property.propagate) {}
+
+    Property_t(const std::string& name_, const std::string& value_, bool propagate_ = false) :name(name_), value(value_),propagate(propagate_) {}
+
+    Property_t& operator =(const Property_t& property)
+    {
+        this->name = property.name;
+        this->value = property.value;
+        this->propagate = property.propagate;
+        return *this;
+    }
+
+    bool operator ==(const Property_t& right) const
+    {
+        return (this->name == right.name) && (this->value == right.value);
+    }
+
+    void property(const std::string& name_, const std::string& value_, bool propagate_)
+    {
+        name = name_;
+        value = value_;
+        propagate = propagate_;
+    }
+
 };
+typedef Property_t Property;
+
 using PropertySeq = Sequence<Property_t>;
+
+struct BinaryProperty_t {
+	/** @brief   名称，由厂商自己约定。 */
+	std::string name;
+	/** @brief   名称对应的值。 */
+	Sequence<unsigned char> value;
+	bool propagate;
+    BinaryProperty_t() :propagate(false) {}
+
+    BinaryProperty_t(const BinaryProperty_t& property) :name(property.name),
+        value(property.value), propagate(property.propagate)
+    {
+    }
+
+    BinaryProperty_t(const std::string& name, const std::vector<uint8_t>& value) :name(name), value(value), propagate(false)
+    {
+    }
+
+    BinaryProperty_t& operator=(const BinaryProperty_t& property)
+    {
+        this->name = property.name;
+        this->value = property.value;
+        this->propagate = property.propagate;
+        return *this;
+    }
+
+    bool operator==(const BinaryProperty_t& right) const
+    {
+        return (this->name == right.name) && (this->value == right.value);
+    }
+
+};
+typedef BinaryProperty_t BinaryProperty;
+
+using BinaryPropertySeq = Sequence<BinaryProperty_t>;
 
 struct SampleInfo {
 	/*  （READ或NOT_READ）-代表是否已读取过相应的数据样本  */
@@ -463,9 +513,7 @@ struct SampleInfo {
 		  publication_handle(HANDLE_NIL),
 		  disposed_generation_count(0), no_writers_generation_count(0), sample_rank(0),
 		  generation_rank(0), absolute_generation_rank(0), reception_sequence_number(0),
-		  valid_data(false)
-		  
-	{
+		  write_sequence_number(0), valid_data(false) {
 
 	}
 };

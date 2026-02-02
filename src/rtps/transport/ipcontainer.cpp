@@ -16,8 +16,20 @@
 
 USING_TRAVODDS_NAMESPACE
 
+std::vector<InfoIP_t> IpContainer::ips_;
+std::mutex IpContainer::mtx_;
 bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
 {
+	std::lock_guard<std::mutex> lock(mtx_);
+    if (!ips_.empty()) {
+		for (const auto& ip : ips_) {
+            if (containLoopback && (ip.type == IPV4_LOCAL || ip.type == IPV6_LOCAL)) {
+                continue;
+            }
+            ips.push_back(ip);
+        }
+		return true;
+     }
 #if defined(_WIN32)
     constexpr DWORD IfOperStatusUp = 1;
     DWORD ret, size = 0;
@@ -61,7 +73,17 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
             char ipStr[INET6_ADDRSTRLEN] = { 0 };
             DWORD ipStrLength = sizeof(ipStr);
             InfoIP_t info;
-            info.dev = std::string(aa->AdapterName);
+            int size_needed = WideCharToMultiByte(CP_UTF8, 0, aa->FriendlyName, -1, NULL, 0, NULL, NULL);
+            if (size_needed > 0) {
+                info.dev.resize(size_needed, 0);
+                WideCharToMultiByte(CP_UTF8, 0, aa->FriendlyName, -1, &info.dev[0], size_needed, NULL, NULL);
+
+            }
+
+            // 移除末尾的 null 终止符
+            if (!info.dev.empty() && info.dev.back() == '\0') {
+                info.dev.pop_back();
+            }
 
             if (family == AF_INET) {
                 info.type = IPV4;
@@ -85,20 +107,21 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
                 if (memcmp(info.address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1", 16) == 0) {
                     info.type = IPV6_LOCAL;
                 }
+				info.scope_id = sin6->sin6_scope_id;
             }
 
             info.name = std::string(ipStr);
-
-            // 跳过,异常info，或不需要的回环地址
-            if (!containLoopback && (info.type == IPV6_LOCAL || info.type == IPV4_LOCAL)) {
-                continue;
-            }
 
             // 获取网络前缀长度(子网掩码)
             if (ua->Length <= offsetof(IP_ADAPTER_UNICAST_ADDRESS_LH, OnLinkPrefixLength)) {
                 info.mask = (family == AF_INET) ? 32 : 128; // 默认全掩码
             } else {
                 info.mask = ua->OnLinkPrefixLength;
+            }
+
+			ips_.push_back(info);
+            if (!containLoopback && (info.type == IPV6_LOCAL || info.type == IPV4_LOCAL)) {
+                continue;
             }
 
             ips.push_back(info);
@@ -142,12 +165,10 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
             if (memcmp(info.address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1", 16) == 0) {
                 info.type = IPV6_LOCAL;
             }
+            info.scope_id = sin6->sin6_scope_id;
         }
 
         info.name = std::string(ipStr);
-        if (!containLoopback && (info.type == IPV4_LOCAL || info.type == IPV6_LOCAL)) {
-            continue;
-        }
 
         // 获取子网掩码长度
         if (ifa->ifa_netmask) {
@@ -166,10 +187,48 @@ bool IpContainer::GetInfoIPs(std::vector<InfoIP_t>& ips, bool containLoopback)
             info.mask = (family == AF_INET) ? 32 : 128; // 默认全掩码
         }
 
+        ips_.push_back(info);
+        if (!containLoopback && (info.type == IPV4_LOCAL || info.type == IPV6_LOCAL)) {
+            continue;
+        }
+
         ips.push_back(info);
     }
 
     freeifaddrs(ifaddr);
 #endif
     return true;
+}
+
+uint32_t IpContainer::GetAdapterScopeId(const octet* address)
+{
+    for (auto& ip : ips_) {
+        if (ip.type == IPV6 || ip.type == IPV6_LOCAL) {
+            uint8_t prefix_len = ip.mask;
+
+            // 计算需要比较的字节数和位掩码
+            int bytes_to_compare = prefix_len / 8;
+            int bits_to_compare = prefix_len % 8;
+
+            // 比较完整的字节
+            if (bytes_to_compare > 0 &&
+                memcmp(ip.address, address, bytes_to_compare) != 0) {
+                continue;
+            }
+
+            // 比较剩余的位
+            if (bits_to_compare > 0) {
+                uint8_t mask = 0xFF << (8 - bits_to_compare);
+                if ((ip.address[bytes_to_compare] & mask) !=
+                    (address[bytes_to_compare] & mask)) {
+                    continue;
+                }
+            }
+
+            // 找到匹配的网络
+            return ip.scope_id;
+        }
+    }
+
+    return 0;
 }

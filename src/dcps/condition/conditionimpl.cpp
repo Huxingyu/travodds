@@ -22,6 +22,9 @@ bool ConditionImpl::get_trigger_value() const
 void ConditionImpl::Notify()
 {
 	std::lock_guard<std::mutex> lock(mtx_);
+	if (waitSets_.empty()) {
+		return;
+	}
 	for (const auto& it : waitSets_) {
 		it->Notify();
 	}

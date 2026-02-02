@@ -15,6 +15,8 @@
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/historycache/historycache.h"
 #include "rtps/messages/cdrmessage_t.h"
+#include "rtps/transport/transportgroup.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 
 class FlowController;
@@ -133,7 +135,7 @@ public:
      *
      * @return RETCODE_UNSUPPORTED。
      */
-	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, bool flowControl = false);
+	virtual ReturnCode_t DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut);
 
 	/**
 	 * @brief 数据传输。
@@ -159,6 +161,9 @@ public:
 	 * @param [in] subData 远端Reader配置信息。
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData) = 0;
+#ifdef DDSSECURITY
+	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderSecureData& subData, bool isSecure) = 0;
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 接收Ack报文。
@@ -234,6 +239,13 @@ public:
 	 * @return 返回数据写者缓冲区指针。
 	 */
 	std::shared_ptr<HistoryCache> GetWriterCache();
+	
+#ifdef DDSSECURITY
+	 void ResetLastChangeSequenceNumber();
+#endif // DDSSECURITY
+private:
+    /* 写入锁  */
+    mutable std::mutex wirterMtx_;
 protected:
 
 	bool pushMode_ = true;
@@ -247,6 +259,7 @@ protected:
 	std::map<InstanceHandle_t, bool> matchHandles_;
 	DataWriterImpl* datawriter_ = nullptr;
 	FlowController* flowController_;
+	TransportGroup transportGroup_;
 };
 
 TRAVODDS_NAMESPACE_END

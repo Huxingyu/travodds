@@ -42,7 +42,11 @@ using SpdpDataMap = std::map<BuiltinTopicKey_t, SPDPdiscoveredParticipantData>;
 
 struct DiscoveredWriterData
 {
+#ifdef DDSSECURITY
+	PublicationBuiltinTopicSecureData ddsPublicationData;
+#else
 	PublicationBuiltinTopicData ddsPublicationData;
+#endif //DDSSECURITY
 	GUID_t remoteWriterGuid;
 	/* rtps v2.5 Figure 8.30 */
 	GUID_t remoteGroupGuid;
@@ -53,7 +57,11 @@ struct DiscoveredWriterData
 
 struct DiscoveredReaderData
 {
+#ifdef DDSSECURITY
+	SubscriptionBuiltinTopicSecureData ddsSubscriptionData;
+#else
 	SubscriptionBuiltinTopicData ddsSubscriptionData;
+#endif //DDSSECURITY
 	/* rtps v2.5 Figure 8.30 */
 	GUID_t remoteReaderGuid;
 	GUID_t remoteGroupGuid;
@@ -61,6 +69,13 @@ struct DiscoveredReaderData
 	LocatorSeq multicastLocatorList;
 	ContentFilterProperty_t contentFilter;
 };
+
+#ifdef DDSSECURITY
+
+typedef DiscoveredReaderData DiscoveredReaderSecureData;
+typedef DiscoveredWriterData DiscoveredWriterSecureData;
+
+#endif // DDSSECURITY
 
 struct DiscoveredTopicData
 {

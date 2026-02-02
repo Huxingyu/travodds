@@ -1,4 +1,4 @@
-#include "rtps/messages/messageprocessor.h"
+ #include "rtps/messages/messageprocessor.h"
 #include "rtps/endpoint/endpoint.h"
 #include "rtps/endpoint/reader.h"
 #include "rtps/endpoint/writer.h"
@@ -11,6 +11,11 @@
 #include "common/log/logger.h"
 #include <iostream>
 #include <asio.hpp>
+#ifdef  DDSSECURITY
+#include "dcps/domain/domainparticipantimpl.h"
+#include "rtps/discovery/discovery.h"
+#endif //  DDSSECURITY
+
 USING_TRAVODDS_NAMESPACE;
 
 /************************************************************
@@ -19,6 +24,9 @@ USING_TRAVODDS_NAMESPACE;
 MessageProcessor::MessageProcessor(Participant* participant)
 	: participant_(participant)
 {
+#ifdef  DDSSECURITY
+	participantImpl_ = participant_->participantImpl_;
+#endif //  DDSSECURITY
 }
 
 MessageProcessor::~MessageProcessor()
@@ -71,6 +79,22 @@ ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageB
 	
 	shift += sizeof(EntityId_t);
 	memcpy(messageBuf.buffer - shift, &dataSubMessage.writerId, sizeof(EntityId_t));
+	
+	//PND 跟fastdds保持一致
+#ifdef DDSSECURITY
+	if (dataSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
+	}
+	if (dataSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
+	}
+	if (dataSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER) {
+		dataSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
+	}
+	if (dataSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER) {
+		dataSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
+	}
+#endif
 	
 	shift += sizeof(EntityId_t);
 	memcpy(messageBuf.buffer - shift, &dataSubMessage.readerId, sizeof(EntityId_t));
@@ -172,7 +196,21 @@ ReturnCode_t MessageProcessor::EncapsulateHeartBeatMessage(SerializedBuffer& mes
 		shift += sizeof(HeartBeatSubMessage_t) - surplus;
 
 	}
-
+	//PND 跟fastdds保持一致
+#ifdef DDSSECURITY
+	if (heartBeatSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
+	}
+	if (heartBeatSubMessage.writerId == ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER) {
+		heartBeatSubMessage.readerId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
+	}
+#endif
 	return RETCODE_OK;
 }
 
@@ -474,7 +512,8 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 
 	MessageHeader_t Header;
 	memcpy(&Header, message, sizeof(Header));
-	message += sizeof(Header);
+	int headerLen = sizeof(Header);
+	message += headerLen;
 
 	memcpy(messageReceiver.sourceGuidPrefix.value, Header.guidPrefix.value, sizeof(GuidPrefix_t));
 	messageReceiver.sourceVersion = Header.version;
@@ -487,79 +526,306 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 /************************************************************
 ** 功能描述：解析子报文 指针地址同步修改，故参数使用传引用
 *************************************************************/
-ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t messageLen)
+ReturnCode_t MessageProcessor::InterpretSubmessage(std::shared_ptr<Message_t> message)
 {
 	ReturnCode_t ret = RETCODE_OK;
 
-	if (messageLen < sizeof(MessageHeader_t)) {
+	if (message->length < sizeof(MessageHeader_t)) {
 		return ret;
 	}
 
 	Receive_t messageReceiver;
 
- 	ret = InterpretMessageHeader(message, messageReceiver);
+ 	ret = InterpretMessageHeader(message->buffer, messageReceiver);
 	if (ret != RETCODE_OK) {
 		TRAVODDS_LOG(LOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
-	messageLen -= sizeof(MessageHeader_t);
+	message->length -= sizeof(MessageHeader_t);
+	
+#ifdef DDSSECURITY
+    // 安全扩展相关
+    uint32_t secDataLength = 0;
+    bool procingSecSubmsg = false;
+    SecurityPluginInstanceImpl &secPlugin = participantImpl_->secPlugin_;
+    bool enabledSec = participantImpl_->enableDDSSec_;
+    ParticipantCryptoHandle receiverCryptoHdl = participantImpl_->cryptoHdl_;
+    GuidPrefix_t remoteGuidPrefix = messageReceiver.sourceGuidPrefix;
+    ParticipantCryptoHandle senderCryptoHdl = NULL;
+	std::shared_ptr<Spdp> spdp = participantImpl_->GetDiscovery()->GetSpdp();
+    if (spdp) {
+        senderCryptoHdl = spdp->GetRemoteParticipantCryptoHandle(&remoteGuidPrefix);
+    }
+    SecurityException secExce;
+	SerializedBuffer secDecodedSubmsg;
+#endif // DDSSECURITY
 
 	SubMessageHeader_t subMessageHeader;
 
 	do{
 		/* 解析子报文头 */
-		memcpy(&subMessageHeader, message, sizeof(SubMessageHeader_t));
+		memcpy(&subMessageHeader, message->buffer, sizeof(SubMessageHeader_t));
 
 		/* 判断报文字节序 与本地字节序不一致需要进行转换 */
 		if (DEFAULT_ENDIAN != (subMessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG)){
 			subMessageHeader.subMessageLength = ntohs(subMessageHeader.subMessageLength);
 		}
 			
+#ifdef DDSSECURITY
+        // 之前检测到SEC_PREFIX，并且当前子消息不是SEC_POSTFIX
+        if (procingSecSubmsg && subMessageHeader.subMessageId != SEC_POSTFIX)
+        {
+            //累计安全消息长度
+            secDataLength += (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            subMessageHeader.subMessageId = SEC_SUB_MSG;
+        }
+#endif // DDSSECURITY
 		switch (subMessageHeader.subMessageId) {
 			case DATA:
 				ret = InterpretDataMessage(message, subMessageHeader, messageReceiver);
 				break;
 			case HEARTBEAT:
-				ret = InterpretHeartbeatMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretHeartbeatMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case ACKNACK:
-				ret = InterpretAckNackMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretAckNackMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case DATA_FRAG:
 				ret = InterpretDataFragMessage(message, subMessageHeader, messageReceiver);
 				break;
 			case NACK_FRAG:
-				ret = InterpretNackFragMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretNackFragMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case GAP:
-				ret = InterpretGapMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretGapMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case INFO_TS:
-				ret = InterpretINFOTSMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretINFOTSMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case INFO_SRC:
-				ret = InterpretINFOSRCMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretINFOSRCMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case INFO_DST:
-				ret = InterpretINFODSTMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretINFODSTMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case PAD:
 				/* ret = InterpretINFOPadMessage(message, subMessageHeader, messageReceiver); */
 				break;
 			case HEARTBEAT_FRAG:
-				ret = InterpretHeartbeatFragMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretHeartbeatFragMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
 			case INFO_REPLY:
-				ret = InterpretINFOREPLYMessage(message, subMessageHeader, messageReceiver);
+				ret = InterpretINFOREPLYMessage(message->buffer, subMessageHeader, messageReceiver);
 				break;
+#ifdef DDSSECURITY
+        case SEC_SUB_MSG: //不作处理，上面已经累计长度了
+        {
+            if (!participantImpl_->enableDDSSec_)
+            {
+                break;
+            }
+            else
+            {
+                break;
+            }
+        }
+        // 遇到SEC_POSTFIX，开始处理之前累计的安全数据
+        case SEC_POSTFIX:
+        {
+            if (!participantImpl_->enableDDSSec_ || senderCryptoHdl == SEC_NIL_HANDLE)
+            {
+                // not supporting security or not ready
+                break;
+            }
+            if (!procingSecSubmsg)
+            {
+                // 异常状况，没有与之对应的SEC_PREFIX
+                break;
+            }
+            //secDataLength为PREFIX到POSTFIX总长度
+            DatawriterCryptoHandle writerCryptoHdl;
+            DatareaderCryptoHandle readerCryptoHdl;
+            SecureSubmessageCategory_t submsgCategorty;
+            SerializedBuffer plainData;
+            SerializedBuffer encodedData; //指向message即需要被解密的数据
+            plainData.buffer_size = secDataLength; //预留secDataLength空间，最终解密肯定会小于secDataLength
+            plainData.buffer = new char[secDataLength];
+            encodedData.buffer = message->buffer - secDataLength; //指向从PREFIX子消息开始的整体区域
+            secDataLength += (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            encodedData.buffer_size = secDataLength;
+
+            if (!participantImpl_->secPlugin_.crypto_transform->preprocess_secure_submsg(
+                &writerCryptoHdl,
+                &readerCryptoHdl,
+                &submsgCategorty,
+                &encodedData,
+                1,
+                receiverCryptoHdl,
+                senderCryptoHdl,
+                &secExce))
+            {
+				delete[]plainData.buffer;
+				if (secExce.minor_code == 5) {
+					break; //wait to init remote_participant->writers_key or readers_key
+				}
+				TRAVODDS_LOG(LOG_ERROR, "preprocess_secure_submsg failed."
+                    "\n  Code: %d"
+                    "\n  Minor code: %d"
+                    "\n  Message: %s",
+                    secExce.code,
+                    secExce.minor_code,
+                    secExce.message);
+                break;
+            }
+            switch (submsgCategorty)
+            {
+            case DATAWRITER_SUBMESSAGE:
+            {
+                CryptoWriterSubmessageAttributes writerEncodeAttr;
+                if (!participantImpl_->secPlugin_.crypto_transform->get_datawriter_submessage_encode_attributes(
+                    SEC_NIL_HANDLE, &writerEncodeAttr))
+                {
+					TRAVODDS_LOG(LOG_ERROR, "get_datawriter_submessage_encode_attributes failed.");
+                    break;
+                }
+                if (!participantImpl_->secPlugin_.crypto_transform->decode_datawriter_submessage(
+                    &plainData,
+                    &encodedData,
+                    1,
+                    readerCryptoHdl,
+                    writerCryptoHdl,
+                    &secExce))
+                {
+					delete[]plainData.buffer;
+                    return -2;
+                }
+                procingSecSubmsg = false; //表示此次处理安全子消息结束
+
+                SubMessageHeader_t tmpSubMessageHeader;
+                memcpy(&tmpSubMessageHeader, plainData.buffer, sizeof(SubMessageHeader_t));
+
+                //message减去SEC_POSTFIX
+                message->buffer += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+				message->length -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+
+                //拷贝plainData代表的子消息缓存到message
+                message->buffer -= sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                message->length += sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                memcpy(message->buffer, plainData.buffer, plainData.buffer_size);
+                delete[]plainData.buffer;
+                continue;
+            }
+            case DATAREADER_SUBMESSAGE:
+            {
+                CryptoReaderSubmessageAttributes readerEncodeAttr;
+                if (!participantImpl_->secPlugin_.crypto_transform->get_datareader_submessage_encode_attributes(
+                    SEC_NIL_HANDLE, &readerEncodeAttr))
+                {
+					TRAVODDS_LOG(LOG_ERROR, "get_datareader_submessage_encode_attributes failed.");
+                    break;
+                }
+                if (!participantImpl_->secPlugin_.crypto_transform->decode_datareader_submessage(
+                    &plainData,
+                    &encodedData,
+                    1,
+                    writerCryptoHdl,
+                    readerCryptoHdl,
+                    &secExce))
+                {
+					delete[]plainData.buffer;
+                    return -2;
+                }
+                procingSecSubmsg = false; //表示此次处理安全子消息结束
+
+                SubMessageHeader_t tmpSubMessageHeader;
+                memcpy(&tmpSubMessageHeader, plainData.buffer, sizeof(SubMessageHeader_t));
+
+                //message减去SEC_POSTFIX
+                message->buffer += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+                message->length -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+
+                //拷贝plainData代表的子消息缓存到message
+                message->buffer -= sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                message->length += sizeof(SubMessageHeader_t) + tmpSubMessageHeader.subMessageLength;
+                memcpy(message->buffer, plainData.buffer, plainData.buffer_size);
+                delete[]plainData.buffer;
+                continue;
+            }
+            default:
+            {
+                break;
+            }
+            //procingSecSubmsg = false;
+            }
+            break;
+        }
+        case SEC_PREFIX:
+        {
+            if (!participantImpl_->enableDDSSec_)
+            {
+                break;
+            }
+            //累计SEC_PREFIX子消息长度到安全消息长度
+            secDataLength = (subMessageHeader.subMessageLength + sizeof(SubMessageHeader_t));
+            procingSecSubmsg = true; //表明正在处理安全子消息
+            break;
+        }
+        //解析RTPS报文的前缀
+        case SRTPS_PREFIX:
+        {
+            //decode_rtps_message
+            if (!participantImpl_->enableDDSSec_
+                || !participantImpl_->secAttributes_.is_rtps_protected
+                || senderCryptoHdl == SEC_NIL_HANDLE
+                || senderCryptoHdl == NULL)
+            {
+                return ret;
+                // not supporting security or not ready
+                break;
+            }
+            SerializedBuffer plainData;
+            SerializedBuffer encodedData; //指向message即需要被解密的数据
+
+            plainData.buffer_size = message->length + 28;
+            plainData.buffer = new char[message->length + 28];
+
+            // 需要带上消息头解析
+            encodedData.buffer = message->buffer - sizeof(MessageHeader_t);
+            encodedData.buffer_size = message->length + 28;
+            if (!participantImpl_->secPlugin_.crypto_transform->decode_rtps_message(
+                &plainData,
+                &encodedData,
+                1,
+                receiverCryptoHdl,
+                senderCryptoHdl,
+                &secExce))
+            {
+				delete[]plainData.buffer;
+                return -2;
+            }
+
+            //将plainData拷贝到message，然后再遍历解析已经解析好的rtps报文的子报文
+            //当前message指向rtps头部之后, plainData缓冲区拷贝到新的rtps起始位置
+            memcpy(message->buffer - sizeof(MessageHeader_t) + message->length - plainData.buffer_size,
+                plainData.buffer,
+                plainData.buffer_size);
+            //指向新的rtps header之后区域
+            message->buffer = message->buffer + message->length - plainData.buffer_size;
+            message->length = plainData.buffer_size - sizeof(MessageHeader_t);
+            continue;
+        }
+        case SRTPS_POSTFIX:
+            //ret = InterpretSRTPSPOSTFIXMessage(message, subMessageHeader, messageReceiver);
+            break;
+#endif // DDSSECURITY
 			default:
 				ret = RETCODE_SUBMESSAGE_INVALID;
 				break;
 		}
 
-		message += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
-		messageLen -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
-	} while (messageLen > 0);
+		message->buffer += sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+		message->length -= sizeof(SubMessageHeader_t) + subMessageHeader.subMessageLength;
+	} while (message->length > 0);
 
 	return ret;
 }
@@ -568,12 +834,11 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(char *& message, uint32_t mes
 /************************************************************
 ** 功能描述：解析Data子报文 指针地址不同步修改，故不使用传引用
 *************************************************************/
-ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
+ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> message,
 	SubMessageHeader_t & submessageHeader,
 	Receive_t & messageReceiver)
 {
 	uint32_t messageShift = 0;
-	uint32_t serializedPayloadLen = 0;
 	/* 解析 flags 每一位 */
 	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool inlineQosFlag = (submessageHeader.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
@@ -590,17 +855,17 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 
 	//messageReceiver.nonStandardPayloadFlag = nonStandardPayloadFlag;
 
-	memcpy(&dataSubMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
+	memcpy(&dataSubMessage.header, message->buffer + messageShift, sizeof(SubMessageHeader_t));
 	messageShift += sizeof(SubMessageHeader_t);
-	memcpy(&dataSubMessage.extraFlags, message + messageShift, sizeof(SubMessageFlag_t) * 2 );
+	memcpy(&dataSubMessage.extraFlags, message->buffer + messageShift, sizeof(SubMessageFlag_t) * 2 );
 	messageShift += sizeof(SubMessageFlag_t) * 2 ;
-	memcpy(&dataSubMessage.octetsToInlineQos, message + messageShift, sizeof(uint16_t));
+	memcpy(&dataSubMessage.octetsToInlineQos, message->buffer + messageShift, sizeof(uint16_t));
 	messageShift += sizeof(uint16_t);
-	memcpy(&dataSubMessage.readerId, message + messageShift, sizeof(EntityId_t));
+	memcpy(&dataSubMessage.readerId, message->buffer + messageShift, sizeof(EntityId_t));
 	messageShift += sizeof(EntityId_t);
-	memcpy(&dataSubMessage.writerId, message + messageShift, sizeof(EntityId_t));
+	memcpy(&dataSubMessage.writerId, message->buffer + messageShift, sizeof(EntityId_t));
 	messageShift += sizeof(EntityId_t);
-	memcpy(&dataSubMessage.writerSN, message + messageShift, sizeof(SequenceNumber_t));
+	memcpy(&dataSubMessage.writerSN, message->buffer + messageShift, sizeof(SequenceNumber_t));
 	messageShift += sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
@@ -618,17 +883,16 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 
 	/*  判断是否存在inlineQos */
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message, messageShift, dataSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataSubMessage.inlineQos, endiannessFlag);
 	}
 
 	/* 判断是否有Serialized Data数据 */
 	if (dataFlag || keyFlag) {
-		dataSubMessage.serializedPayload = (unsigned char*)message + messageShift;
+		dataSubMessage.serializedPayload.data = message->buffer + messageShift;
 		/* 报文长度 */
-		serializedPayloadLen = dataSubMessage.header.subMessageLength + sizeof(SubMessageHeader_t) - messageShift;
-		messageShift += serializedPayloadLen;
-	} else {
-		dataSubMessage.serializedPayload = NULL;
+		dataSubMessage.serializedPayload.length = dataSubMessage.header.subMessageLength + sizeof(SubMessageHeader_t) - messageShift;
+		dataSubMessage.serializedPayload.originMessage = message;
+		messageShift += dataSubMessage.serializedPayload.length;
 	}
 
 	std::list<EntityId_t> readerList;
@@ -640,10 +904,10 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(char * message,
 	} else {
 		readerList.push_back(dataSubMessage.readerId);
 	}
-	for (auto entittyId : readerList) {
+	for (const auto& entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
-			reader->ReceiveDataMessage(messageReceiver, dataSubMessage, dataSubMessage.serializedPayload, serializedPayloadLen);
+			reader->ReceiveDataMessage(messageReceiver, dataSubMessage, dataSubMessage.serializedPayload);
 		}
 	}
 	return RETCODE_OK;
@@ -819,7 +1083,7 @@ ReturnCode_t MessageProcessor::InterpretAckNackMessage(char* message, SubMessage
 	return RETCODE_OK;
 }
 
-ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
+ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_t> message,
 	SubMessageHeader_t& submessageHeader,
 	Receive_t& messageReceiver)
 {
@@ -849,7 +1113,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	//messageShift += sizeof(SequenceNumber_t);
 	
 	// 对于结构字节 4、2、2、4、4、8的顺序，32位或64位系统下，内存对齐无padding直接使用 memcpy
-	memcpy(&dataFragSubMessage, message, sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t));
+	memcpy(&dataFragSubMessage, message->buffer, sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t));
 	messageShift = sizeof(SubMessageHeader_t) + sizeof(SubMessageFlag_t) * 2 + sizeof(uint16_t) + sizeof(EntityId_t) * 2 + sizeof(SequenceNumber_t);
 
 	/* 判断报文字节序 与本地字节序不一致需要进行转换 */
@@ -865,7 +1129,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 		return RETCODE_ERROR;
 	}
 
-	memcpy(&dataFragSubMessage.dataFrag, message + messageShift, sizeof(DataFrag_t));
+	memcpy(&dataFragSubMessage.dataFrag, message->buffer + messageShift, sizeof(DataFrag_t));
 	messageShift += sizeof(DataFrag_t);
 	/* 大小端转换 */
 	if (IS_LITTLE_ENDIAN != endiannessFlag) {
@@ -877,13 +1141,16 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 
 	/* 判断是否存在inlineQos*/
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message, messageShift, dataFragSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, endiannessFlag);
 	}
 
 	if (!keyFlag) {
-		dataFragSubMessage.serializedPayload = (unsigned char*)message + messageShift;
+		dataFragSubMessage.serializedPayload.data = message->buffer + messageShift;
 		/* 报文长度 */
 		serializedPayloadLen = dataFragSubMessage.header.subMessageLength + sizeof(SubMessageHeader_t) - messageShift;
+		dataFragSubMessage.serializedPayload.length = serializedPayloadLen;
+		dataFragSubMessage.serializedPayload.originMessage = message;
+
 		messageShift += serializedPayloadLen;
 	} else {
 	}
@@ -899,7 +1166,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(char* message,
 	for (const auto& entittyId : readerList) {
 		std::shared_ptr<Reader> reader = participant_->GetReader(entittyId);
 		if (reader) {
-			reader->ReceiveDataFragMessage(messageReceiver, dataFragSubMessage, dataFragSubMessage.serializedPayload, serializedPayloadLen);
+			reader->ReceiveDataFragMessage(messageReceiver, dataFragSubMessage, dataFragSubMessage.serializedPayload);
 		}
 	}
 

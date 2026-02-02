@@ -80,7 +80,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len);
+	ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data);
 
 	/**
 	 * @brief DATA分片报文参数解析和DATA分片报文合并，并将合并后的用户报文存储到CacheChange中等待回传到用户层。
@@ -92,7 +92,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, SerializedPayload data, uint32_t len);
+	ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data);
 
 	/**
 	 * @brief Heartbeat报文参数解析和并根据报文内容判断是否存在丢包，将报文接收情况进行分析并控制ACK报文的构建与发送。
@@ -164,6 +164,11 @@ public:
 	 */
 	ReturnCode_t SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg);
 
+#ifdef DDSSECURITY
+	WriterProxyMap* GetMatchedWriters() {
+		return &matchedWriters_;
+	}
+#endif // DDSSECURITY
 private:	
 	/**
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器初始化函数。
@@ -174,6 +179,13 @@ private:
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器超时执行回传功能函数。
 	 */
 	void TimerExpired();
+
+#ifdef DDSSECURITY
+	/**
+	 * @brief 加密子消息缓存。
+	 */
+	int EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+#endif // DDSSECURITY
 private:
 	WriterProxyMap matchedWriters_;
 };

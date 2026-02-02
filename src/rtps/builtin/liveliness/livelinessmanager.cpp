@@ -41,6 +41,16 @@ LivelinessManager::~LivelinessManager()
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageDataReader_->GetGuid());
 		participant_->DeleteReader(handle);
 	}
+#ifdef DDSSECURITY
+    if (ParticipantMessageSecureDataWriter_) {
+        InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageSecureDataWriter_->GetGuid());
+        participant_->DeleteWriter(handle);
+    }
+    if (ParticipantMessageSecureDataReader_) {
+        InstanceHandle_t handle = Conversion::ToInstanceHandle(ParticipantMessageSecureDataReader_->GetGuid());
+        participant_->DeleteReader(handle);
+    }
+#endif // DDSSECURITY
 }
 
 void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipantData & data)
@@ -51,7 +61,11 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
+#ifdef DDSSECURITY
+	writerData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
+#else
 	writerData.ddsPublicationData = ParticipantMessageDataWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+#endif //DDSSECURITY
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -60,7 +74,11 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER;
+#ifdef DDSSECURITY
+	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+#else
 	readerData.ddsSubscriptionData = ParticipantMessageDataReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+#endif //DDSSECURITY
 	participant_->AddRemoteReader(readerData);
 }
 
@@ -71,6 +89,14 @@ void LivelinessManager::RemoveParticipantMessageProxy(GUID_t guid)
 
 	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER;
 	participant_->RemoveRemoteWriter(guid);
+#ifdef DDSSECURITY
+	//ParticipantMessageSecure扩展
+	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER;
+	participant_->RemoveRemoteReader(guid);
+
+	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER;
+	participant_->RemoveRemoteWriter(guid);
+#endif // DDSSECURITY	
 }
 
 
@@ -338,6 +364,27 @@ void LivelinessManager::SetParticipantMessageDataReader(std::shared_ptr<DataRead
 	reader->SetReaderListener(this);
 }
 
+#ifdef DDSSECURITY
+void LivelinessManager::SetParticipantMessageSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
+{
+    DataWriterQos writerQos;
+    dataWriter->get_qos(writerQos);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER, true, ENTITY_WRITER);
+    std::shared_ptr<Writer> writer = participant_->CreateWriter(dataWriter.get(), writerQos, guid, true);
+    ParticipantMessageSecureDataWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
+}
+
+void LivelinessManager::SetParticipantMessageSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader)
+{
+    DataReaderQos readerQos;
+    dataReader->get_qos(readerQos);
+	GUID_t guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER, true, ENTITY_READER);
+    std::shared_ptr<Reader> reader = participant_->CreateReader(dataReader.get(), readerQos, guid, true);
+    ParticipantMessageSecureDataReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
+
+    reader->SetReaderListener(this);
+}
+#endif // DDSSECURITY
 bool LivelinessManager::AssertLiveliness(GUID_t guid, bool localWriter, LivelinessQosPolicyKind kind)
 {
 	if (true == localWriter) {
@@ -447,6 +494,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 		{
 			for (size_t i = 0; i < 12; ++i)
 			{
+				// 解析出Participant的标识guid.prefix
 				guid.prefix.value[i] = change->serializedBuffer->buffer[i + 4];
 			}
 			livelinessKind = (LivelinessQosPolicyKind)(change->serializedBuffer->buffer[19] - octet(1));
@@ -460,7 +508,7 @@ void LivelinessManager::on_data_available(std::shared_ptr<CacheChange> change)
 			livelinessKind = (LivelinessQosPolicyKind)change->instanceHandle.keyHash.value[15];
 		}
 
-		if (CompareGuidPrefix(guid.prefix, ParticipantMessageDataReader_->GetGuid().prefix)) {
+		if (guid.prefix == ParticipantMessageDataReader_->GetGuid().prefix) {
 			/* TODO 日志 */
 			//AGILOG(AGILOG_ERROR, "CompareGuidPrefix Err");
 			return;

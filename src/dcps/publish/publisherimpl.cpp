@@ -90,8 +90,27 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 		TRAVODDS_LOG(LOG_ERROR, "typeSupport[%s] is nullptr", topic->get_type_name());
 		return nullptr;
 	}
+
+#ifdef DDSSECURITY
+	SecurityException secExce;
+	if (participant_->enableDDSSec_) {
+		if (!participant_->secPlugin_.access_control->check_create_datawriter(
+			participant_->permissionHdl_,
+			participant_->GetDomainId(),
+			topic->get_name(),
+			&qosT,
+			&qos_.partition,
+			NULL,
+			&secExce)) {
+			TRAVODDS_LOG(LOG_ERROR, "Create DataWrier failed on Publisher %s: rejected by access control plugin.");
+			return nullptr;
+		}
+	}
+#endif // DDSSECURITY
+
 	DataWriter* datawriter = nullptr;
 	std::unique_ptr<DataWriterImpl> datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
+
 	if (!datawriterPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datawriter Err");
 		return nullptr;
@@ -99,6 +118,13 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 	GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_WRITER);
 	datawriterPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
 	datawriter = datawriterPtr.get();
+
+#ifdef DDSSECURITY
+	//数据读者获取安全属性
+	datawriterPtr->GetSecAttributes();
+	//填充缓存的builtinSecureData_
+	datawriterPtr->FillSecureData();
+#endif
 
 	std::lock_guard<std::mutex> lock(mtxWriters_);
 	writerHandles_.insert({ datawriterPtr->get_instance_handle(), std::move(datawriterPtr) });
@@ -126,10 +152,11 @@ ReturnCode_t PublisherImpl::delete_datawriter(DataWriter*& datawriter)
     }
 	
     InstanceHandle_t handle = datawriter->get_instance_handle();
-
-	participant_->GetRelatedParticipant()->DeleteWriter(handle);
-	std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-	discovery->RemovePublicationData(handle);
+	if (dynamic_cast<DataWriterImpl*>(datawriter)->IsEnable()) {
+		participant_->GetRelatedParticipant()->DeleteWriter(handle);
+		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+		discovery->RemovePublicationData(handle);
+	}
 
     std::lock_guard<std::mutex> lock(mtxWriters_);
     auto it = writerHandles_.find(handle);
@@ -213,11 +240,12 @@ ReturnCode_t PublisherImpl::delete_contained_entities()
 
 	for (auto itor = writerHandles_.begin(); itor != writerHandles_.end(); itor++) {
 		DataWriter* datawriter = itor->second.get();
-
-		InstanceHandle_t handle = datawriter->get_instance_handle();
-		participant_->GetRelatedParticipant()->DeleteWriter(handle);
-		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-		discovery->RemovePublicationData(handle);
+		if (dynamic_cast<DataWriterImpl*>(datawriter)->IsEnable()) {
+			InstanceHandle_t handle = datawriter->get_instance_handle();
+			participant_->GetRelatedParticipant()->DeleteWriter(handle);
+			std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+			discovery->RemovePublicationData(handle);
+		}
 	}
 	
 	writerHandles_.clear();

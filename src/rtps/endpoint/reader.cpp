@@ -29,7 +29,7 @@ Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 Reader::~Reader()
 {
 }
-ReturnCode_t Reader::ReadOrTake(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
+ReturnCode_t Reader::ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
 	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
 {
 	InstanceHandle_t handle = HANDLE_NIL;
@@ -38,7 +38,7 @@ ReturnCode_t Reader::ReadOrTake(SerializedBufferSeq& dataValues, SampleInfoSeq& 
 	
 	/* 循环读取所有的Instance的数据 */
 	do {
-		if (dataValues.length() >= maxSamples) {
+		if (dataValues.size() >= maxSamples) {
 			break;
 		}
 
@@ -49,14 +49,14 @@ ReturnCode_t Reader::ReadOrTake(SerializedBufferSeq& dataValues, SampleInfoSeq& 
 
 	} while (RETCODE_ERROR != ret);
 
-	if (0 >= dataValues.length()) {
+	if (0 >= dataValues.size()) {
 		return RETCODE_NO_DATA;
 	}
 		
 	return RETCODE_OK;
 }
 
-ReturnCode_t Reader::ReadOrTakeInstance(SerializedBufferSeq & dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+ReturnCode_t Reader::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
 {
 	GetRelatedDataReader()->SetStatus(false);
@@ -129,7 +129,7 @@ ReturnCode_t Reader::ReadOrTakeInstance(SerializedBufferSeq & dataValues, Sample
 	return ret;
 }
 
-ReturnCode_t Reader::ReadOrTakeNextInstance(SerializedBufferSeq & dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
+ReturnCode_t Reader::ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
 	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
 {
 	InstanceHandle_t takeHandle = HANDLE_NIL;
@@ -164,6 +164,7 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	for (; itor != instanceHandles_.end(); itor++) {
 		if (handle < *itor) {
 			instanceHandles_.insert(itor, handle);
+			readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
 			break;
 		}
 		if (handle == *itor) {
@@ -172,6 +173,7 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	}
 
 	if (itor == instanceHandles_.end()) {
+		readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
 		instanceHandles_.insert(itor, handle);
 	}
 

@@ -136,12 +136,6 @@ public:
 	 */
 	void Run();
 
-	/**
-	 * @brief 设置线程名描述。
-	 *  长度16字节包括休止符。
-	 */
-	void SetThreadName();
-
 	/* 支持跳过当前定时执行，重新设置间隔时间 */
 	// void restartTimer();
 	//
@@ -178,8 +172,6 @@ private:
 	std::atomic_bool exit_;
 
 	std::atomic_bool restart_;
-	/* run计数 */
-	std::atomic_size_t runs_;
 	
 	std::condition_variable_any cva_;
 

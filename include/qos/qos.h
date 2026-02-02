@@ -14,6 +14,8 @@
 
 #include "travodds_dll.h"
 #include "type/basictype.h"
+#include "security/securitycommon.h"
+#include "security/propertyqospolicy.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -313,18 +315,41 @@ struct DiscoveredMethodQosPolicy {
 	DiscoveryProtocolQosPolicyKind kind { DISCOVER_UDPv4_QOS };
 };
 
-struct DomainParticipantFactoryQos {
-	EntityFactoryQosPolicy entity_factory;
+/**
+ * @brief 动态性能调整配置参数
+ */
+struct DynamicAdjustQosPolicy {
+	// 分数阈值因子 - 当计算出的性能分数超过此阈值时触发调整
+	// score_threshold_factor 值域 为 [0 , 80]，值越高网络性能问题越严重
+	int32_t score_threshold_factor;
+	// 调整周期
+	Duration_t adjustment_interval;            // 调整间隔
 
-	DomainParticipantFactoryQos() {
-	}
+	DynamicAdjustQosPolicy() : score_threshold_factor(50.0), adjustment_interval(TIME_INFINITE) {
+	};
+};
+
+struct NetworkInterfaceQosPolicy {
+	StringSeq interface_whitelist;
+};
+
+struct DomainParticipantFactoryQos {
+    EntityFactoryQosPolicy entity_factory;
+    /* 属性列表 */
+    PropertyQosPolicy property;
+    DomainParticipantFactoryQos() {
+    }
 };
 
 struct DomainParticipantQos {
 	UserDataQosPolicy user_data;
 	EntityFactoryQosPolicy entity_factory;
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	TransportQosPolicy transport;
-	DiscoveredMethodQosPolicy dicovery;
+	DiscoveredMethodQosPolicy discovery;
+	NetworkInterfaceQosPolicy network_interface;
+	DynamicAdjustQosPolicy dynamic_adjust;
 	DomainParticipantQos() {
 	}
 };
@@ -364,7 +389,8 @@ struct DataWriterQos {
 	OwnershipQosPolicy           ownership;
 	OwnershipStrengthQosPolicy   ownership_strength;
 	WriterDataLifecycleQosPolicy writer_data_lifecycle;
-
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	DataWriterQos() {
 		reliability.kind = RELIABLE_RELIABILITY_QOS;
 	}
@@ -393,7 +419,8 @@ struct DataReaderQos {
 	OwnershipQosPolicy            ownership;
 	TimeBasedFilterQosPolicy      time_based_filter;
 	ReaderDataLifecycleQosPolicy  reader_data_lifecycle;
-
+    /* 属性列表 */
+    PropertyQosPolicy property;
 	DataReaderQos() {
 	}
 };

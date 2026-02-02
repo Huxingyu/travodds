@@ -56,7 +56,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, SerializedPayload data, uint32_t len);
+	ReturnCode_t ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data);
 
 	/**
 	 * @brief DATA分片报文参数解析和DATA分片报文合并，并将合并后的用户报文存储到CacheChange中等待回传到用户层。
@@ -68,7 +68,7 @@ public:
 	 *
 	 * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
-	ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, SerializedPayload data, uint32_t len);
+	ReturnCode_t ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data);
 
 	/**
 	 * 未实现
@@ -145,6 +145,11 @@ public:
 	 */
 	void AssertWriterLiveliness(const GUID_t & guid);
 
+#ifdef DDSSECURITY
+	std::map<GUID_t, std::shared_ptr<WriterProxy>>* GetMatchWriters() {
+		return &matchWriters_;
+	}
+#endif // DDSSECURITY
 private:
 	std::map<GUID_t, std::shared_ptr<WriterProxy>> matchWriters_;
 

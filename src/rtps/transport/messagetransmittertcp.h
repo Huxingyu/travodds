@@ -70,6 +70,11 @@ public:
 		uint32_t length,
 		uint16_t priority = -1);
 
+	/**
+	 * @brief 设置当前发送线程运行状态为停止，即更改runFlag_变量值为false。
+	 */
+	virtual void SetStop() override;
+
 protected:
 	/**
      * @brief 构造函数。
@@ -187,6 +192,7 @@ private:
 		std::shared_ptr<asio::ip::tcp::socket> socket;
 		SendPhase phase;
 		uint16_t priority;
+		std::mutex mtx;
 		SendSession() : socket(nullptr), phase(SendPhase::DISCONNECT), priority(0) {}
 		SendSession(std::shared_ptr<asio::ip::tcp::socket> s, SendPhase c, uint16_t p)
 			: socket(s), phase(c), priority(p) {
@@ -223,10 +229,10 @@ private:
 	virtual asio::ip::tcp::endpoint GetReciveEndpoint(const uint32_t port) = 0;
 	virtual std::shared_ptr<asio::ip::tcp::socket> GetSocketInit() = 0;
 
-protected:
-	asio::io_context& ioContext_;
 private:
-	asio::strand<asio::io_context::executor_type> strandWrite_;
+	asio::io_context ioContext_;
+	asio::executor_work_guard<asio::io_context::executor_type> workGuard_;
+	std::thread ioThread_;
 
 	// Acceptor用于接受连接
 	std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;

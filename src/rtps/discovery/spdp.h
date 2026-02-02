@@ -19,6 +19,11 @@
 #include "rtps/discovery/sedp.h"
 #include "dcps/publish/datawriterimpl.h"
 #include "dcps/subscribe/datareaderimpl.h"
+#ifdef DDSSECURITY
+#include "security/crycommonsource.h"
+#include "security/authentication.h"
+#include <set>
+#endif // DDSSECURITY
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -30,6 +35,51 @@ struct ParticipantStatus_t
 	double leaseDuration;
 	double recvTime;
 };
+
+#ifdef DDSSECURITY
+/**
+ * @typedef struct DiscoveryDPInfo
+ * @brief   用于表示发现发现的DomainParticipant。
+ */
+typedef struct DiscoveryDPInfo
+{
+	/** @brief   用于表示对端DomainParticipant信息。 */
+	SPDPdiscoveredParticipantData pData_;
+	/** @brief   上一个SequenceNumber。 */
+	SequenceNumber_t lastSeq_;
+	/** @brief   用于获取定时器回调函数中相应的SPDP。 */
+	Spdp* owner_;
+
+	enum DDSSECURITY_ENDPOINT_STATE
+	{
+		DDSSEC_HANDSHAKE_EMPTY,
+		DDSSEC_HANDSHAKE_REQUESTING,
+		DDSSEC_HANDSHAKE_WAITING_REQUEST,
+		DDSSEC_HANDSHAKE_WAITING_REPLY,
+		DDSSEC_HANDSHAKE_WAITING_FINAL,
+		DDSSEC_HANDSHAKE_OK,
+		DDSSEC_WAITING_CRYPTO_TOKEN,
+		DDSSEC_OK,
+	};
+	/** @brief 指明对端DomainParticipant是否启用了安全 */
+	bool enableDDSSec_;
+	/** @brief 指明对端DomainParticipant与本地DomainParticipant关联的状态 */
+	DDSSECURITY_ENDPOINT_STATE endpointState_;
+	/** @brief 远端DomainParticipant身份验证句柄 */
+	IdentityHandle identityHdl_;
+	/** @brief 远端DomainParticipant握手句柄 */
+	HandshakeHandle handshakeHdl_;
+	/** @brief 远端DomainParticipant握手消息 */
+	bool handshakMsgInit_ = false;
+	ParticipantStatelessMessage* handshakeMsg_ = NULL;
+	/** @brief 远端DomainParticipant共用密钥 */
+	SharedSecretHandle sharedSecretHdl_ = NULL;
+	/** @brief 远端DomainParticipant访问控制句柄 */
+	PermissionsHandle permissionsHdl_ = NULL;
+	/** @brief 远端DomainParticipant加密句柄 */
+	ParticipantCryptoHandle cryptoHdl_ = NULL;
+}DiscoveryDPInfo;
+#endif // DDSSECURITY
 
 /**
  * @brief Spdp类，内置发现控制读写者数据收发控制类。
@@ -72,6 +122,11 @@ public:
 	 */
 	void SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader);
 
+#ifdef DDSSECURITY
+	void SetParticipantSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
+	void SetParticipantSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader);
+#endif //DDSSECURITY
+	
 	/**
 	 * @brief 删除DDS通信参与者节点信息。
 	 *
@@ -154,6 +209,48 @@ public:
 	 */
 	bool FindIgnoredParticipants(GUID_t guid);
 
+#ifdef DDSSECURITY
+	Discovery* GetDiscovery();
+
+	bool ValidateParticipantGenericMessage(GUID_t destGuid);
+
+	int ValidateRemoteParticipant(DiscoveryDPInfo* dpInfo);
+
+	/**
+     * @fn ZR_INT32 SpdpCleanupRemoteSecRsc(DiscoveryDPInfo* dpInfo);
+     *
+     * @brief 清除远端安全相关资源
+     *
+     * @param dpInfo        远端关联的资源
+     *
+     * @return 成功返回0，否则返回非0值。
+     */
+    int SpdpCleanupRemoteSecRsc(DiscoveryDPInfo* dpInfo);
+
+	void RemoveDiscoveryDPInfoFromDiscParts(const GuidPrefix_t& prefix);
+
+	ParticipantCryptoHandle GetRemoteParticipantCryptoHandle(const GuidPrefix_t* remotePrefix);
+
+	SharedSecretHandle GetRemoteParticipantSharedSecret(const GuidPrefix_t* remotePrefix);
+
+	//void AddHandShakeRetryTimer(const Time_t& time, const GUID_t& guid);
+	//void RemoveHandShakeRetryTimer(const GUID_t& guid);
+	void AddHandShakeMsg(const GUID_t& guid);
+	void RemoveHandShakeMsg(const GUID_t& guid);
+	//void HandShakeRetry(GUID_t remoteGuid, ParticipantStatelessMessage* handshakeMsg);
+	void HandShakeRetrys();
+	// 远端域参与者对应的DiscoveryDPInfo TODO域参与者下线移除
+	std::map<GuidPrefix_t, DiscoveryDPInfo*> discParts_;
+
+	//std::map<GUID_t, int> handshakeRetryCounts_;
+	//std::map<GUID_t, std::shared_ptr<Timer>> handshakeTimers_;
+	std::shared_ptr<Timer> handshakeTimer_;
+	std::set<GUID_t> remoteGuidRetrySet;
+	std::mutex remoteGuidRetrySetMutex;
+	SerializedBuffer* bigEndianMsgData_;
+
+#endif // DDSSECURITY
+
 private:
 
 	/**
@@ -171,13 +268,17 @@ private:
 	 *
 	 * @param [in] data  远端参与者配置信息。
 	 */
-	void ReceiveSPDPdiscoveredParticipantData(const SPDPdiscoveredParticipantData& data);
+	void ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& data);
 
 private:
 	Participant* participant_;
 	std::shared_ptr<StatelessWriter> writer_ = nullptr;
 	std::shared_ptr<StatelessReader> reader_ = nullptr;
 
+public:
+	std::shared_ptr<StatefulWriter> writerSecure_ = nullptr;
+	std::shared_ptr<StatefulReader> readerSecure_ = nullptr;
+private:
 	SpdpDataMap remoteParticipantData_;
 	std::map<BuiltinTopicKey_t, ParticipantStatus_t> remoteParticipantStatus_;
 	std::mutex mutex_;
@@ -190,7 +291,6 @@ private:
 	
 	std::shared_ptr<MemoryPool> memoryPool_;
 
-	
 	Duration_t leaseDuration_;
 	std::shared_ptr<Timer> timer_;
 };

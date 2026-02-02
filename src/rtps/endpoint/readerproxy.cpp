@@ -18,6 +18,12 @@ ReaderProxy::ReaderProxy(const GUID_t& readerGuid, const GUID_t groupGuid,
 	ackedSeq_(SEQUENCENUMBER_ZERO),
 	relatedSeqnum_(SEQUENCENUMBER_ZERO)
 {
+	std::sort(unicastLocatorList_.begin(), unicastLocatorList_.end(),
+		[](const Locator_t& a, const Locator_t& b) {
+			return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
+		});
+	//std::sort(unicastLocatorList_.begin(), unicastLocatorList_.end());
+	//unicastLocatorList_.erase(std::unique(unicastLocatorList_.begin(), unicastLocatorList_.end()), unicastLocatorList_.end());
 }
 
 void ReaderProxy::AckedChangesSet(SequenceNumber_t committedSeqNum)
@@ -25,7 +31,10 @@ void ReaderProxy::AckedChangesSet(SequenceNumber_t committedSeqNum)
 	SequenceNumber_t minSeq = writerCache_->GetSeqNumMin();
 	SequenceNumber_t maxSeq = writerCache_->GetSeqNumMax();
 	
-	acknowledgeChanges_.clear();
+	{
+		std::lock_guard<std::mutex> lock(ackmtex_);
+		acknowledgeChanges_.clear();
+	}
 
 	for (; minSeq <= maxSeq; minSeq++) {
 		std::shared_ptr<CacheChange> change = writerCache_->GetChange(minSeq);
@@ -33,6 +42,7 @@ void ReaderProxy::AckedChangesSet(SequenceNumber_t committedSeqNum)
 			continue;
 		}	
 		if (minSeq <= committedSeqNum) {
+			std::lock_guard<std::mutex> lock(ackmtex_);
 			acknowledgeChanges_.push_back(minSeq);
 			
 		}		
@@ -93,8 +103,11 @@ bool ReaderProxy::UnackedChanges()
 {
 	SequenceNumber_t highestAvailableSeqNum = SEQUENCENUMBER_ZERO, highestAckedSeqNum = ackedSeq_;
 	highestAvailableSeqNum = writerCache_->GetSeqNumMax();
-	if (!acknowledgeChanges_.empty()) {
-		highestAckedSeqNum = *acknowledgeChanges_.rbegin();
+	{
+		std::lock_guard<std::mutex> lock(ackmtex_);
+		if (!acknowledgeChanges_.empty()) {
+			highestAckedSeqNum = acknowledgeChanges_.back();
+		}
 	}
 
 	return (highestAvailableSeqNum > highestAckedSeqNum);
@@ -115,7 +128,7 @@ bool ReaderProxy::IsAcked(SequenceNumber_t number)
 		return true;
 	}
 
-
+	std::lock_guard<std::mutex> lock(ackmtex_);
 	auto it = std::find(acknowledgeChanges_.begin(), acknowledgeChanges_.end(), number);
 	if (it != acknowledgeChanges_.end()) {
 		return true;
@@ -240,6 +253,7 @@ void ReaderProxy::AckedChangeSet(SequenceNumber_t committedSeqNum)
 		}
 
 		if (minSeq == committedSeqNum) {
+			std::lock_guard<std::mutex> lock(ackmtex_);
 			acknowledgeChanges_.push_back(minSeq);
 		}
 	}

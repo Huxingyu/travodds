@@ -88,16 +88,39 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 		TRAVODDS_LOG(LOG_ERROR, "typeSupport[%s] is nullptr", a_topic->get_type_name());
 		return nullptr;
 	}
+#ifdef DDSSECURITY
+    if (participant_->enableDDSSec_) {
+        SecurityException secExce;
+        if (!participant_->secPlugin_.access_control->check_create_datareader(
+            participant_->permissionHdl_,
+            participant_->GetDomainId(),
+            a_topic->get_name(),
+            &qosT,
+            &qos_.partition,
+            NULL,
+            &secExce))
+        {
+            TRAVODDS_LOG(LOG_ERROR, "Create DataReader failed: rejected by access control plugin.");
+            return nullptr;
+        }
+    }
+#endif // DDSSCURITY
+
 	DataReader* reader = nullptr;
 	std::unique_ptr<DataReaderImpl> datareaderPtr = std::make_unique<DataReaderImpl>(a_topic, qosT, a_listener, mask, this, typeSupport);
 
-	if (!datareaderPtr.get()) {
+    if (!datareaderPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datareader[%s] fail", a_topic->get_type_name());
 		return nullptr;
 	}
     GUID_t guid = participant_->GetRelatedParticipant()->GenerateGuid(ENTITYID_UNKNOWN, typeSupport->has_key(), ENTITY_READER);
 	//InstanceHandle_t handle = DomainParticipantImpl::GenerateInstanceHandle(readrPtr->GetGuid());
-	datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
+    datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
+#ifdef DDSSECURITY
+//数据读者获取安全属性并填充掩码
+    datareaderPtr->GetSecAttributes();
+    datareaderPtr->FillSecureData();
+#endif // DDSSCURITY
 	reader = datareaderPtr.get();
 	std::lock_guard<std::mutex> lock(mtxReaders_);
 	readerHandles_.insert({ datareaderPtr->get_instance_handle(), std::move(datareaderPtr) });
@@ -110,9 +133,6 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 			return nullptr;
 		}
 	}
-
-
-
 	return reader;
 }
 
@@ -127,10 +147,11 @@ ReturnCode_t SubscriberImpl::delete_datareader(DataReader*& a_dataReader)
         return RETCODE_PRECONDITION_NOT_MET;
     }
     InstanceHandle_t handle = a_dataReader->get_instance_handle();
-
-	participant_->GetRelatedParticipant()->DeleteReader(handle);
-	std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-	discovery->RemoveSubscriptionData(handle);
+    if (dynamic_cast<DataReaderImpl*>(a_dataReader)->IsEnable()) {
+        participant_->GetRelatedParticipant()->DeleteReader(handle);
+        std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+        discovery->RemoveSubscriptionData(handle);
+    }
 
     std::lock_guard<std::mutex> lock(mtxReaders_);
     auto it = readerHandles_.find(handle);
@@ -204,7 +225,7 @@ ReturnCode_t SubscriberImpl::notify_datareaders() const
     return RETCODE_OK;
 }
 
-const DomainParticipant *SubscriberImpl::get_participant() const
+DomainParticipant *SubscriberImpl::get_participant()
 {
     return participant_;
 }
@@ -216,12 +237,12 @@ ReturnCode_t SubscriberImpl::delete_contained_entities()
 
 	for (auto itor = readerHandles_.begin(); itor != readerHandles_.end(); itor++) {
 		DataReader* datareader = itor->second.get();
-
-		InstanceHandle_t handle = datareader->get_instance_handle();
-		participant_->GetRelatedParticipant()->DeleteReader(handle);
-		std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
-		discovery->RemoveSubscriptionData(handle);
-
+        if (dynamic_cast<DataReaderImpl*>(datareader)->IsEnable()) {
+            InstanceHandle_t handle = datareader->get_instance_handle();
+            participant_->GetRelatedParticipant()->DeleteReader(handle);
+            std::shared_ptr<Discovery> discovery = participant_->GetDiscovery();
+            discovery->RemoveSubscriptionData(handle);
+        }
 		if (RETCODE_OK != datareader->delete_contained_entities()) {
 			TRAVODDS_LOG(LOG_ERROR, "delete_contained_entities Err")
 			return RETCODE_PRECONDITION_NOT_MET;

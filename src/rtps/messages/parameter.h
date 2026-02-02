@@ -15,6 +15,10 @@
 #include "type/basictype.h"
 #include "qos/qos.h"
 #include "rtps/discovery/discoverydata.h"
+#ifdef DDSSECURITY
+#include "security/participantgenericmessage.h"
+#include "security/participantmessagedata.h"
+#endif // DDSSECURITY
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -78,6 +82,15 @@ enum ParameterId : uint16_t {
 	PID_SECURE_WRITER_GROUP_INFO            = 0x0066,    // new add
 	PID_KEY_HASH                            = 0x0070,
 	PID_STATUS_INFO                         = 0x0071,
+
+#ifdef DDSSECURITY
+	PID_IDENTITY_TOKEN                      = 0x1001, 
+	PID_PERMISSIONS_TOKEN                   = 0x1002, 
+	PID_DATA_TAGS                           = 0x1003, 
+	PID_ENDPOINT_SECURITY_INFO              = 0x1004, 
+	PID_PARTICIPANT_SECURITY_INFO           = 0x1005, 
+	PID_IDENTITY_STATUS_TOKEN               = 0x1006, 
+#endif // DDSSECURITY
 
 	//Deprecated By Version 2.4
     //PID_MULTICAST_IPADDRESS                 = 0x0011,
@@ -235,6 +248,7 @@ public:
 	 * @param [in,out] msg 报文指针。
 	 */
 	void writerMsg(octet* msg) {
+		msg = nullptr;
 		return;
 	}
 	/**
@@ -875,6 +889,135 @@ inline void Parameter<ContentFilterInfo_t>::writerMsg(octet* msg)
 	}
 }
 
+#ifdef DDSSECURITY
+//DataHolder
+template <>
+inline uint16_t Parameter<DataHolder>::size()
+{
+    uint32_t inSize = 0;
+    inSize += (4u + (parameter_.class_id.size() + 3u) & ~3u); //string class_id 占用四字节长度和本身
+    inSize += 4; //properties长度占用
+    for (uint32_t i = 0; i < parameter_.properties.size(); i++) {
+		inSize += 4u + ((StringSize(parameter_.properties[i].name) + 3u) & ~3u);
+		inSize += 4u + ((StringSize(parameter_.properties[i].value) + 3u) & ~3u);
+    }
+    inSize += 4; //binary_properties长度占用
+    for (uint32_t i = 0; i < parameter_.binary_properties.size(); i++) {
+		inSize += 4u + ((StringSize(parameter_.binary_properties[i].name) + 3u) & ~3u);
+        inSize += 4; //parameter_.binary_properties[i]的value长度占用
+        inSize += parameter_.binary_properties[i].value.size(); //parameter_.binary_properties[i]的value占用
+        inSize = (inSize + 3u) & ~3u; //对齐填补
+    }
+    return inSize;
+}
+template <>
+inline void Parameter<DataHolder>::writerMsg(octet* msg)
+{
+    uint32_t inOffset = 0;
+    inOffset += WriterString(msg + inOffset, parameter_.class_id); //发送class_id
+    uint32_t num = parameter_.properties.size();
+    WriterUInt32(msg + inOffset, num); //发送properties序列长度
+    inOffset += 4;
+
+    for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送
+        inOffset += WriterString(msg + inOffset, parameter_.properties[i].name);
+        inOffset += WriterString(msg + inOffset, parameter_.properties[i].value);
+    }
+
+    num = parameter_.binary_properties.size();
+    WriterUInt32(msg + inOffset, num); //发送binary_properties序列长度
+    inOffset += 4;
+
+    for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送
+        inOffset += WriterString(msg + inOffset, parameter_.binary_properties[i].name); //name
+        uint32_t len_Value = parameter_.binary_properties[i].value.size();//value 长度
+        WriterUInt32(msg + inOffset, len_Value);
+        inOffset += 4;
+        for (uint32_t j = 0; j < len_Value; j++) {//value逐个字节写入
+            *(msg + inOffset) = static_cast<octet>(parameter_.binary_properties[i].value[i]);
+            inOffset += 1;
+        }
+    }
+}
+template <>
+inline uint16_t Parameter<ParticipantSecurityInfo>::size()
+{
+	return 8;
+}
+template <>
+inline void Parameter<ParticipantSecurityInfo>::writerMsg(octet* msg)
+{
+	uint32_t inOffset = 0;
+	WriterUInt32(msg + inOffset, parameter_.participant_security_atributes);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.plugin_participant_security_attributes);
+	inOffset += 4;
+}
+//DataTags_t
+template <>
+inline uint16_t Parameter<DataTags_t>::size()
+{
+	uint32_t inSize = 4; //这四字节存储数组数，Tag_t个数
+	for (uint32_t i = 0; i < parameter_.tags.size(); i++) {
+		inSize += (4u + (parameter_.tags[i].name.size() + 3u) & ~3u);
+		inSize += (4u + (parameter_.tags[i].value.size() + 3u) & ~3u);
+	}
+	return inSize;
+}
+template <>
+inline void Parameter<DataTags_t>::writerMsg(octet* msg)
+{
+	uint32_t inOffset = 0;
+	uint32_t num = parameter_.tags.size();
+	WriterUInt32(msg + inOffset, num); //发送tags序列长度
+	inOffset += 4;
+
+	for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送
+		inOffset += WriterString(msg + inOffset, parameter_.tags[i].name);
+		inOffset += WriterString(msg + inOffset, parameter_.tags[i].value);
+	}
+}
+//EndpointSecurityInfo
+template <>
+inline uint16_t Parameter<EndpointSecurityInfo>::size()
+{
+	return 8;
+}
+template <>
+inline void Parameter<EndpointSecurityInfo>::writerMsg(octet* msg)
+{
+	uint32_t inOffset = 0;
+	WriterUInt32(msg + inOffset, parameter_.endpoint_security_attributes);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.plugin_endpoint_security_attributes);
+	inOffset += 4;
+}
+//MessageIdentity
+template <>
+inline uint16_t Parameter<MessageIdentity>::size()
+{
+	return 16 + 8;
+}
+template <>
+inline void Parameter<MessageIdentity>::writerMsg(octet* msg)
+{
+	uint32_t inOffset = 0;
+	WriterUInt32(msg + inOffset, parameter_.sourceGuid.value[0]);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.sourceGuid.value[1]);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.sourceGuid.value[2]);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.sourceGuid.value[3]);
+	inOffset += 4;
+	WriterInt32(msg + inOffset, parameter_.sequenceNumber.high);
+	inOffset += 4;
+	WriterUInt32(msg + inOffset, parameter_.sequenceNumber.low);
+	inOffset += 4;
+}
+
+#endif // DDSSECURITY
+
 //OriginalWriterInfo_t
 template <>
 inline uint16_t Parameter<OriginalWriterInfo_t>::size()
@@ -993,6 +1136,23 @@ public:
 	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
 	 */
 	ParameterList(const DiscoveredReaderData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
+
+//	/**
+//	 * @brief DiscoveredWriterSecureData结构对应构造函数。
+//	 *
+//	 * @param [in] data DiscoveredWriterSecureData结构对象。
+//	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+//	 */
+//	ParameterList(const DiscoveredWriterSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
+//	/**
+//	 * @brief DiscoveredReaderData结构对应构造函数。
+//	 *
+//	 * @param [in] data DiscoveredReaderData结构对象。
+//	 * @param [in] endian 大小端字节序标志（默认值：DEFAULT_ENDIAN）。
+//	 */
+//	ParameterList(const DiscoveredReaderSecureData& data, const EndiannessKind& endian = PL_DEFAULT_ENDIAN);
+//#endif // DDSSECURITY
+
 	/**
 	 * @brief DiscoveredTopicData结构对应构造函数。
 	 *
@@ -1025,6 +1185,23 @@ public:
 	 * @param [out] data DiscoveredTopicData结构对象。
 	 */
 	void GetDiscoveredData(DiscoveredTopicData& data);
+
+#ifdef DDSSECURITY
+	/**
+	* @brief 将Parameter集合数据转换为DiscoveredWriterSecureData结构数据。
+	*
+	* @param [out] data DiscoveredWriterSecureData结构对象。
+	*/
+	void GetDiscoveredSecureData(DiscoveredWriterSecureData& data);
+	/**
+	 * @brief 将Parameter集合数据转换为DiscoveredReaderSecureData结构数据。
+	 *
+	 * @param [out] data DiscoveredReaderSecureData结构对象。
+	 */
+	void GetDiscoveredSecureData(DiscoveredReaderSecureData& data);
+
+	void GetParticipantMessageSecureData(ParticipantMessageSecureData& data);
+#endif // DDSSECURITY
 
 	/**
 	 * @brief 获取参数集合总长度

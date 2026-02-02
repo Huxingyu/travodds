@@ -156,7 +156,7 @@ SequenceNumber_t HistoryCache::GetSeqNumMax()
 	return cacheChanges_.rbegin()->first;
 }
 
-ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples, InstanceHandle_t handle,
+ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples, InstanceHandle_t handle,
 	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake)
 {
 	changeMutex_.lock();
@@ -179,8 +179,8 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 				sampleInfo.valid_data = true;
 			}
 			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
-
-			dataValues.push_back(*(*cache)->serializedBuffer);
+			sampleInfo.source_timestamp = (*cache)->sourceTimespace;
+			dataValues.push_back(*cache);
 			sampleInfos.push_back(sampleInfo);
 
 			/* 修改数据的状态  */
@@ -189,17 +189,13 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 
 			/* 获取后删除数据 */
 			if (shouleTake) {
-				if ((*cache)->serializedBuffer) {
-					delete (*cache)->serializedBuffer;
-					(*cache)->serializedBuffer = nullptr;
-				}
 				cache = itor->second.cacheChanges.erase(cache);
 			}
 			else {
 				cache++;
 			}
 			/* 获取的数据个数 大于 max_samples设置，停止获取数据  */
-			if (dataValues.length() == maxSamples) {
+			if (dataValues.size() == maxSamples) {
 				break;
 			}
 		}
@@ -207,7 +203,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(SerializedBufferSeq& dataValues, S
 
 	changeMutex_.unlock();
 
-	return dataValues.length() == 0 ? RETCODE_NO_DATA : RETCODE_OK;
+	return dataValues.size() == 0 ? RETCODE_NO_DATA : RETCODE_OK;
 }
 
 

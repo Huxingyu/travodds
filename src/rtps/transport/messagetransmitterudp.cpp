@@ -4,7 +4,7 @@
 USING_TRAVODDS_NAMESPACE;
 
 MessageTransmitterUDP::MessageTransmitterUDP(std::shared_ptr<MessageProcessor> messageProcessor)
-	: MessageTransmitter(messageProcessor), ioContext_(AsioContext::GetIOContext())
+	: MessageTransmitter(messageProcessor), ioContext_()
 {
 }
 
@@ -23,7 +23,9 @@ MessageTransmitterUDP::~MessageTransmitterUDP()
 		}
 		socketItor.second.clear();
 	}
+
 	sendSocketMap_.clear();
+	ioContext_.stop();
 }
 
 ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
@@ -246,7 +248,7 @@ ReturnCode_t MessageTransmitterUDP::AddRecvSocket(Locator_t receiveAddr)
 
 	try {
 		// 创建一个UDP监听socket
-		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = GetSocketInit();
+		std::shared_ptr<asio::ip::udp::socket> newRecvSocket = GetReciveSocketInit(rAddr.port);
 		// 监听的本地端点，使用系统自动分配的端口
 		asio::ip::udp::endpoint local_endpoint = GetEndpoint(rAddr, true);
 
@@ -360,6 +362,9 @@ ReturnCode_t MessageTransmitterUDP::DropMemberShip(Locator_t receiveAddr)
 
 void MessageTransmitterUDP::SetStop()
 {
+	if (!runFlag_.load()) {
+		return;
+	}
 	MessageTransmitter::SetStop();
 	for (auto& socketItor : receiveSocketMap_) {
 		socketItor.second->cancel();
@@ -369,14 +374,15 @@ void MessageTransmitterUDP::SetStop()
 			itor.second->cancel();
 		}
 	}
-	while (flagNum_.load() > 0) {
+	uint32_t tries = 0;
+	while (flagNum_.load(std::memory_order_acquire) > 0 && tries++ < 20 ) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
 void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> socket)
 {
-	flagNum_.fetch_add(1);
+	flagNum_.fetch_add(1, std::memory_order_release);
 	char* buffer = nullptr;
 	bool ret = receivePool_->getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);
 
@@ -385,7 +391,7 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 		ret = receivePool_->getBuffer(UDP_MAX_MESSAGE_SIZE, buffer);
 	}
 	if (!IsRun()) {
-		flagNum_.fetch_sub(1);
+		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
 	}
 
@@ -396,8 +402,7 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 			if (!ec) {
 				InterpretMessage(buffer, bytes_transferred);
 			} 
-			receivePool_->releaseBuffer(const_cast<char*&>(buffer));
-			flagNum_.fetch_sub(1);
+			flagNum_.fetch_sub(1, std::memory_order_release);
 			if (IsRun()) {
 				AsyncReceive(socket);
 			}
@@ -437,6 +442,10 @@ std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv4::GetSocketInit()
 {
 	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v4());
 }
+std::shared_ptr<UDPReciverSocket> MessageTransmitterUDPv4::GetReciveSocketInit(const uint32_t port)
+{
+	return std::make_shared<UDPReciverSocket>(asio::ip::udp::v4(),"udp.v4."+std::to_string(port));
+}
 MessageTransmitterUDPv6::MessageTransmitterUDPv6(std::shared_ptr<MessageProcessor> messageProcessor)
 	: MessageTransmitterUDP(messageProcessor)
 {
@@ -464,6 +473,10 @@ asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv6::GetSocketInit()
 {
 	return std::make_shared<asio::ip::udp::socket>(ioContext_, asio::ip::udp::v6());
+}
+std::shared_ptr<UDPReciverSocket> MessageTransmitterUDPv6::GetReciveSocketInit(const uint32_t port)
+{
+	return std::make_shared<UDPReciverSocket>(asio::ip::udp::v6(), "udp.v6." + std::to_string(port));
 }
 asio::ip::multicast::outbound_interface MessageTransmitterUDPv6::GetOutboundInterfaceOption(const AsioLocator& locator)
 {
