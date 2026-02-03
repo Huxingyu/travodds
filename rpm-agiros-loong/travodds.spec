@@ -1,6 +1,6 @@
 # 基本信息
 Name:           agiros-loong-travodds
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Travo Data Distribution Service Library
 
@@ -33,7 +33,7 @@ Provides headers and CMake config files for TravoDDS development.
 %define Installprefix /opt/agiros/loong
 # 构建流程
 %prep
-%setup -q
+%autosetup -p1
 
 %build
 mkdir -p build
