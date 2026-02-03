@@ -18,10 +18,13 @@ bool StatusConditionImpl::get_trigger_value() const
 
 ReturnCode_t StatusConditionImpl::set_enabled_statuses(const StatusMask& mask)
 {
-    std::lock_guard<std::mutex> guard(mtx_);
-    bool oldTrigger = (enabledMask_ & status_) != 0;
-    enabledMask_ = mask;
-    bool trigger = (enabledMask_ & status_) != 0;
+    bool oldTrigger = false, trigger = false;
+    {
+        std::lock_guard<std::mutex> guard(mtx_);
+        oldTrigger = (enabledMask_ & status_) != 0;
+        enabledMask_ = mask;
+        trigger = (enabledMask_ & status_) != 0;
+    }
     if (!oldTrigger && trigger) {
         Notify();
     }
@@ -43,10 +46,13 @@ const StatusMask& StatusConditionImpl::get_status() const
 void StatusConditionImpl::set_status(const StatusMask& status, bool addFlag)
 {
     if (addFlag) {
-        std::lock_guard<std::mutex> guard(mtx_);
-        bool oldTrigger = (enabledMask_ & status_) != 0;
-        status_ |= status;
-        bool trigger = (enabledMask_ & status_) != 0;
+        bool oldTrigger = false, trigger = false;
+        {
+            std::lock_guard<std::mutex> guard(mtx_);
+            oldTrigger = (enabledMask_ & status_) != 0;
+            status_ |= status;
+            trigger = (enabledMask_ & status_) != 0;
+        }
         if (!oldTrigger && trigger) {
             Notify();
         }

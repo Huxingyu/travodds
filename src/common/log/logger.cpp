@@ -286,12 +286,144 @@ static std::unique_ptr<AsyncLogger> g_logger;
 
 int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
 {
-    if (!g_logger) {
-        g_logger.reset(new AsyncLogger());
-        g_logger->start();
+    if (g_logger) {
+        return 0;
     }
+    // 根据环境变量（TRAVODDS_LOG_MASK）值来设置日志掩码
+    // 环境变量格式: TRAVODDS_LOG_MASK=console:0xF,file:0xF
+    // 或者: TRAVODDS_LOG_CONSOLE_MASK=0xF 和 TRAVODDS_LOG_FILE_MASK=0xF
     
-    g_logger->setMasks(consoleMask, fileMask);
+    uint32_t finalConsoleMask = consoleMask;
+    uint32_t finalFileMask = fileMask;
+    
+#ifdef _WIN32
+    // Windows平台: 使用_dupenv_s安全获取环境变量
+    char* envValue = nullptr;
+    size_t len = 0;
+    
+    // 尝试获取组合格式的环境变量
+    if (_dupenv_s(&envValue, &len, "TRAVODDS_LOG_MASK") == 0 && envValue != nullptr) {
+        std::string maskStr(envValue);
+        free(envValue);
+        
+        // 解析格式: console:0xF,file:0xF
+        size_t consolePos = maskStr.find("console:");
+        if (consolePos != std::string::npos) {
+            std::string consoleValue = maskStr.substr(consolePos + 8);
+            size_t commaPos = consoleValue.find(',');
+            if (commaPos != std::string::npos) {
+                consoleValue = consoleValue.substr(0, commaPos);
+            }
+            try {
+                finalConsoleMask = std::stoul(consoleValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse console mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
+                       consoleValue.c_str(), consoleMask);
+            }
+        }
+        
+        size_t filePos = maskStr.find("file:");
+        if (filePos != std::string::npos) {
+            std::string fileValue = maskStr.substr(filePos + 5);
+            size_t commaPos = fileValue.find(',');
+            if (commaPos != std::string::npos) {
+                fileValue = fileValue.substr(0, commaPos);
+            }
+            try {
+                finalFileMask = std::stoul(fileValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse file mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
+                       fileValue.c_str(), fileMask);
+            }
+        }
+    } else {
+        // 尝试分别获取console和file的环境变量
+        if (_dupenv_s(&envValue, &len, "TRAVODDS_LOG_CONSOLE_MASK") == 0 && envValue != nullptr) {
+            try {
+                finalConsoleMask = std::stoul(envValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_CONSOLE_MASK: %s, using default 0x%X\n", 
+                       envValue, consoleMask);
+            }
+            free(envValue);
+        }
+        
+        if (_dupenv_s(&envValue, &len, "TRAVODDS_LOG_FILE_MASK") == 0 && envValue != nullptr) {
+            try {
+                finalFileMask = std::stoul(envValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_FILE_MASK: %s, using default 0x%X\n", 
+                       envValue, fileMask);
+            }
+            free(envValue);
+        }
+    }
+#else
+    // Linux/Unix平台: 使用getenv获取环境变量
+    const char* envValue = nullptr;
+    
+    // 尝试获取组合格式的环境变量
+    envValue = getenv("TRAVODDS_LOG_MASK");
+    if (envValue != nullptr) {
+        std::string maskStr(envValue);
+        
+        // 解析格式: console:0xF,file:0xF
+        size_t consolePos = maskStr.find("console:");
+        if (consolePos != std::string::npos) {
+            std::string consoleValue = maskStr.substr(consolePos + 8);
+            size_t commaPos = consoleValue.find(',');
+            if (commaPos != std::string::npos) {
+                consoleValue = consoleValue.substr(0, commaPos);
+            }
+            try {
+                finalConsoleMask = std::stoul(consoleValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse console mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
+                       consoleValue.c_str(), consoleMask);
+            }
+        }
+        
+        size_t filePos = maskStr.find("file:");
+        if (filePos != std::string::npos) {
+            std::string fileValue = maskStr.substr(filePos + 5);
+            size_t commaPos = fileValue.find(',');
+            if (commaPos != std::string::npos) {
+                fileValue = fileValue.substr(0, commaPos);
+            }
+            try {
+                finalFileMask = std::stoul(fileValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse file mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
+                       fileValue.c_str(), fileMask);
+            }
+        }
+    } else {
+        // 尝试分别获取console和file的环境变量
+        envValue = getenv("TRAVODDS_LOG_CONSOLE_MASK");
+        if (envValue != nullptr) {
+            try {
+                finalConsoleMask = std::stoul(envValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_CONSOLE_MASK: %s, using default 0x%X\n", 
+                       envValue, consoleMask);
+            }
+        }
+        
+        envValue = getenv("TRAVODDS_LOG_FILE_MASK");
+        if (envValue != nullptr) {
+            try {
+                finalFileMask = std::stoul(envValue, nullptr, 0);
+            } catch (const std::exception& e) {
+                printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_FILE_MASK: %s, using default 0x%X\n", 
+                       envValue, fileMask);
+            }
+        }
+    }
+#endif
+
+    g_logger.reset(new AsyncLogger());
+    g_logger->setMasks(finalConsoleMask, finalFileMask);
+    g_logger->start();
     return 0;
 }
 

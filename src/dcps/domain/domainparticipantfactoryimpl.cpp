@@ -2,7 +2,6 @@
 #include "dcps/domain/domainparticipantimpl.h"
 #include "qos/qospolicycheck.h"
 #include "common/log/logger.h"
-#include "rtps/transport/asiocontext.h"
 #include "common/sys/sysinfo.h"
 #ifdef DDSSECURITY
 #include "security/propertyqospolicy.h"
@@ -202,6 +201,60 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos(const DomainParticipantFactor
     }
 	qos_ = qos;
 
+#ifdef DDSSECURITY
+    // 根据DomainParticipantFactoryQos加载安全插件，property中会包含多个插件的配置信息
+    // 每个插件的配置信息包含4个键值对，分别是：
+    // dds.sec.plugin_name: 插件名称
+    // 插件名称.library_path: 插件库路径
+    // 插件名称.retrieve_function: 获取插件实例的函数名称
+    // 插件名称.finalize_function: 销毁插件实例的函数名称
+    // 针对每个插件，自动加载并初始化插件实例
+    for (int index = 0; index < qos.property.value.size(); ++index)
+    {
+        Property_t tmpProperty = qos.property.value[index];
+        std::string propertyName = tmpProperty.name;
+        // 如果属性名称以dds.sec.plugin_name结尾，表示是插件名称属性
+        if (propertyName == std::string("dds.sec.plugin_name"))
+        {
+            std::string pluginName = tmpProperty.value; // 插件名称，比如BuiltinPlugin
+            std::string libraryPath;
+            std::string retrieveFuncName;
+            std::string finalizeFuncName;
+
+            // 遍历属性列表，找到对应插件的其他配置信息
+            for (int j = 0; j < qos.property.value.size(); ++j)
+            {
+                Property_t prop = qos.property.value[j];
+                if (prop.name == pluginName + ".library_path")
+                {
+                    libraryPath = prop.value;
+                }
+                else if (prop.name == pluginName + ".retrieve_function")
+                {
+                    retrieveFuncName = prop.value;
+                }
+                else if (prop.name == pluginName + ".finalize_function")
+                {
+                    finalizeFuncName = prop.value;
+                }
+            }
+
+            // 加载安全插件
+            ReturnCode_t loadRet = load_security_plugin(
+                pluginName.c_str(),
+                libraryPath.c_str(),
+                retrieveFuncName.c_str(),
+                finalizeFuncName.c_str());
+            if (loadRet != RETCODE_OK)
+            {
+                TRAVODDS_LOG(LOG_ERROR, "Load security plugin %s failed.", pluginName.c_str());
+                return loadRet;
+            }
+        }
+    }
+
+#endif //DDSSECURITY
+
     return RETCODE_OK;
 }
 
@@ -215,8 +268,6 @@ DomainParticipantFactoryImpl* DomainParticipantFactoryImpl::get_instance()
 {
 	// 确保在获取实例时，获取程序的创建时间戳
 	static std::string timestamp = SysInfo::GetExecutionTimestamp();
-    /* 优先获取网络资源，决定网络资源最后释放 */
-    static AsioContext& as = AsioContext::GetInstance();
     static std::shared_ptr<DomainParticipantFactoryImpl> Impl(new DomainParticipantFactoryImpl);
     return Impl.get();
 }
@@ -326,78 +377,6 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
         return RETCODE_ERROR;
     }
     newModule.libModule = libModule;
-#elif defined(_LINUX)
-    void* libModule = dlopen(file_name, RTLD_LAZY);
-    const char* errorInfo = NULL;
-    if (libModule == NULL)
-    {
-        errorInfo = dlerror();
-        TRAVODDS_LOG(LOG_ERROR, "Failed to load security library \"%s\": %s.", file_name, errorInfo);
-        return RETCODE_ERROR;
-    }
-    GetSecurityPlugInstance getInstProc = (GetSecurityPlugInstance)dlsym(libModule, retrieve_instance_func_name);
-    if (getInstProc == NULL || (errorInfo = dlerror()) != NULL)
-    {
-        dlclose(libModule);
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\": %s.",
-            retrieve_instance_func_name, errorInfo);
-        return RETCODE_ERROR;
-    }
-    newModule.finalizeInstFunc = (FinalizeSecurityPlugInstance)dlsym(libModule, finalize_instance_func_name);
-    if (newModule.finalizeInstFunc == NULL || (errorInfo = dlerror()) != NULL)
-    {
-        dlclose(libModule);
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\": %s.",
-            finalize_instance_func_name, errorInfo);
-        return RETCODE_ERROR;
-    }
-    if (!getInstProc(&newModule.inst))
-    {
-        dlclose(libModule);
-        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
-        return RETCODE_ERROR;
-    }
-    newModule.libModule = libModule;
-#elif defined(_REWORKS)
-    GetSecurityPlugInstance getInstProc = NULL;
-    SymType type;
-    if (symbol_lkup(retrieve_instance_func_name, (void**)&getInstProc, &type) != 0)
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\".",
-            retrieve_instance_func_name);
-        return RETCODE_ERROR;
-    }
-    if (symbol_lkup(finalize_instance_func_name, (void**)&newModule.finalizeInstFunc, &type) != 0)
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\".",
-            finalize_instance_func_name);
-        return RETCODE_ERROR;
-    }
-    if (!getInstProc(&newModule.inst))
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
-        return RETCODE_ERROR;
-    }
-#elif defined(_VXWORKS_66)
-    GetSecurityPlugInstance getInstProc = NULL;
-    SYM_TYPE type;
-    if (symFindByName(sysSymTbl, (char*)retrieve_instance_func_name, (char**)&getInstProc, &type) != OK)
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance retrieving function \"%s\".",
-            retrieve_instance_func_name);
-        return RETCODE_ERROR;
-    }
-    if (symFindByName(sysSymTbl, (char*)finalize_instance_func_name, (char**)&newModule.finalizeInstFunc, &type) != OK)
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to get security instance finalize function \"%s\".",
-            finalize_instance_func_name);
-        return RETCODE_ERROR;
-    }
-    if (!getInstProc(&newModule.inst))
-    {
-        TRAVODDS_LOG(LOG_ERROR, "Failed to retrieve security instance.");
-        return RETCODE_ERROR;
-    }
 #else
     void* libModule = dlopen(file_name, RTLD_LAZY);
     const char* errorInfo = NULL;
@@ -431,8 +410,7 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     }
     newModule.libModule = libModule;
 #endif
-    char* key = (char*)malloc(strlen(plugin_name) + 1);
-    strcpy(key, plugin_name);
+    std::string key = plugin_name;
     (secPlugins_)[key] = newModule;
     return RETCODE_OK;
 }

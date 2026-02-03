@@ -347,7 +347,7 @@ bool WriterProxy::ExistCache(const SequenceNumber_t& seq)
 	return ret;
 }
 
-ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, int32_t len, int32_t startNum, int32_t num)
+ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const SerializedPayload& data, int32_t startNum, int32_t num)
 {
 	std::shared_ptr<CacheChange> cache = nullptr;
 	ReturnCode_t ret = RETCODE_ERROR;
@@ -366,8 +366,20 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
 	if (cache->fragmentSeq.erase(startNum) > 0) {
-		uint32_t shift = (startNum - 1) * cache->fraqmentSize;
-		memcpy(cache->serializedBuffer->buffer + shift, data, len);
+		CacheSerializedBuffer* buffer = new CacheSerializedBuffer();
+		buffer->writer_position = data.length;
+		buffer->buffer_size = data.length;
+		if (data.originMessage->onlyCopy) {
+			/* 只允许拷贝，不允许获得所有权 */
+			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
+			buffer->buffer = buffer->origin_buffer;
+			memcpy(buffer->buffer, data.data, data.length);
+		}
+		else {
+			buffer->buffer = data.data;
+			buffer->originMessage = data.originMessage;
+		}
+		cache->fragmentBufferMap.insert({ startNum, buffer });
 	} else {
 		//TODO  
 		/* 重复接收分片数据 */
@@ -380,6 +392,11 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, char* data, i
 	}
 
 	if (0 == cache->fragmentSeq.size()) {
+		for (auto fragItor = cache->fragmentBufferMap.begin(); fragItor != std::prev(cache->fragmentBufferMap.end()); fragItor++) {
+			fragItor->second->next = std::next(fragItor)->second;
+		}
+		cache->serializedBuffer = cache->fragmentBufferMap.begin()->second;
+		cache->fragmentBufferMap.clear();
 		changeInfo->second.status = RECEIVED;
 	}
 

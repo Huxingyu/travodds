@@ -122,6 +122,11 @@ public:
 	 */
 	void SetParticipantDataReader(std::shared_ptr<DataReaderImpl> dataReader);
 
+#ifdef DDSSECURITY
+	void SetParticipantSecureDataWriter(std::shared_ptr<DataWriterImpl> dataWriter);
+	void SetParticipantSecureDataReader(std::shared_ptr<DataReaderImpl> dataReader);
+#endif //DDSSECURITY
+	
 	/**
 	 * @brief 删除DDS通信参与者节点信息。
 	 *
@@ -270,6 +275,10 @@ private:
 	std::shared_ptr<StatelessWriter> writer_ = nullptr;
 	std::shared_ptr<StatelessReader> reader_ = nullptr;
 
+public:
+	std::shared_ptr<StatefulWriter> writerSecure_ = nullptr;
+	std::shared_ptr<StatefulReader> readerSecure_ = nullptr;
+private:
 	SpdpDataMap remoteParticipantData_;
 	std::map<BuiltinTopicKey_t, ParticipantStatus_t> remoteParticipantStatus_;
 	std::mutex mutex_;

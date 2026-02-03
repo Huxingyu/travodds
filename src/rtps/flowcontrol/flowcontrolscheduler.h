@@ -15,7 +15,7 @@
 
 #include "rtps/flowcontrol/flowcontroltype.h"
 #include "rtps/basictypertps.h"
-
+#include "rtps/messages/cdrmessage_t.h"
 TRAVODDS_NAMESPACE_BEGIN
 class ThreadPool;
 class CacheChange;

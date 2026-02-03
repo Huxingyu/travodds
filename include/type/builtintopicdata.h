@@ -76,21 +76,14 @@ struct PublicationBuiltinTopicData {
 	PartitionQosPolicy 			partition;
 	TopicDataQosPolicy 			topic_data;
 	GroupDataQosPolicy 			group_data;
+#ifdef DDSSECURITY
+	/** @brief 实体安全相关信息 */
+	EndpointSecurityInfo security_info;
+#endif //DDSSECURITY
 	PublicationBuiltinTopicData() {
 		reliability.kind = RELIABLE_RELIABILITY_QOS;
 	}
 };
-
-#ifdef DDSSECURITY
-struct PublicationBuiltinTopicSecureData : public PublicationBuiltinTopicData {
-	/** @brief The data tags */
-	DataTags_t data_tags;
-	/** @brief 实体安全相关信息 */
-	EndpointSecurityInfo security_info;
-	/** @brief 发现过程是否需要被保护 */
-	bool protected_discovery;
-};
-#endif // DDSSECURITY
 
 struct SubscriptionBuiltinTopicData {
 	BuiltinTopicKey_t 			key;
@@ -110,16 +103,22 @@ struct SubscriptionBuiltinTopicData {
 	PartitionQosPolicy 			partition;
 	TopicDataQosPolicy 			topic_data;
 	GroupDataQosPolicy 			group_data;
+#ifdef DDSSECURITY
+	/** @brief 实体安全相关信息 */
+	EndpointSecurityInfo security_info;
+#endif //DDSSECURITY
 };
 
 #ifdef DDSSECURITY
+
+struct PublicationBuiltinTopicSecureData : public PublicationBuiltinTopicData {
+	/** @brief The data tags */
+	DataTags_t data_tags;
+};
+
 struct SubscriptionBuiltinTopicSecureData : SubscriptionBuiltinTopicData {
 	/** @brief The data tags */
 	DataTags_t data_tags;
-	/** @brief 实体安全相关信息 */
-	EndpointSecurityInfo security_info;
-	/** @brief 发现过程是否需要被保护 */
-	bool protected_discovery;
 };
 #endif // DDSSECURITY
 

@@ -18,7 +18,10 @@
 #ifdef DDSSECURITY
 #include "security/securitycommon.h"
 #endif // DDSSECURITY
-
+#include "xtypes/dynamictypebuilderfactory.h"
+#include "xtypes/dynamictypebuilder.h"
+#include "xtypes/dynamicdatafactory.h"
+#include "xtypes/dynamicdatatypesupport.h"
 USING_TRAVODDS_NAMESPACE;
 
 DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos, DataReaderListener* listener, StatusMask mask, SubscriberImpl* sub, TypeSupport* typeSupport)
@@ -28,7 +31,8 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 	  deadlineTimer_(nullptr),
 	  lifespanTimer_(nullptr),
 	  lastInstance_(HANDLE_NIL),
-      history_(nullptr)
+      history_(nullptr),
+	  filter_(nullptr)
 {
 	topic_->Reference();
 	if(topic)
@@ -58,7 +62,7 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 			builtinData_.topic_name = topic->get_name();
 			builtinData_.topic_data = topicQos.topic_data;
 		}
-		ContentFilteredTopic* filteredTopic = dynamic_cast<ContentFilteredTopic*>(topic);
+		ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic);
 		if (filteredTopic) {
 			TopicQos topicQos;
 			filteredTopic->get_related_topic()->get_qos(topicQos);
@@ -70,6 +74,10 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 			contentFilter_.filterClassName = SQL_FILTER_NAME;
 			contentFilter_.filterExpression = filteredTopic->get_filter_expression();
 			filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
+			filteredTopic->AddReader(this);
+
+			filter_ = std::make_shared<DDSSQL::DDSSQLFilter>(typeSupport_->get_dynamictype());
+			filter_->InputSQL(contentFilter_.filterExpression, contentFilter_.expressionParameters);
 		}
 #ifdef DDSSECURITY
 		memcpy(builtinSecureData_.key.value, &handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
@@ -121,6 +129,10 @@ DataReaderImpl::~DataReaderImpl()
 	if (enable_) {
 		reader_->SetRelatedDataReader(nullptr);
 	}
+	ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic_);
+	if (filteredTopic){
+		filteredTopic->RemoveReader(this);
+	}
 	topic_->Dereference();
 	readcdts_.clear();
 	querycdts_.clear();
@@ -139,10 +151,13 @@ DataReaderImpl::~DataReaderImpl()
 	if (enableSec_)
 	{
 		GUID_t drGuid = Conversion::ToGuid(get_instance_handle());
-		if ((drGuid.IsSecureBuiltinEntity()
-			&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
-			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_submessage_protected)
+		//if ((drGuid.IsSecureBuiltinEntity()
+		//	&& drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
+		//	|| secAttributes_.is_payload_protected
+		//	|| secAttributes_.is_submessage_protected)
+		if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER &&
+			(secAttributes_.is_payload_protected ||
+			secAttributes_.is_submessage_protected))
 		{
 			if (secPlugin_ != NULL && secPlugin_->crypto_key_factory != NULL)
 			{
@@ -229,7 +244,7 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
 	sample_infos.unloan();
@@ -242,15 +257,15 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -262,7 +277,7 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
 	sample_infos.unloan();
@@ -272,20 +287,20 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 	return ret;
@@ -297,7 +312,7 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
 	sample_infos.unloan();
@@ -308,15 +323,15 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -328,7 +343,7 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	ReturnCode_t ret = RETCODE_OK;
 	data_values.unloan();
 	sample_infos.unloan();
@@ -339,19 +354,19 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer,littleEndian);
+		CdrDeserializer cdr(&buffer,littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 	return ret;
@@ -364,7 +379,7 @@ ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &samp
 		return RETCODE_NOT_ENABLED;
 	}
     ReturnCode_t ret = RETCODE_OK;
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	SampleInfoSeq sample_infos;
 	ret = reader_->ReadOrTake(datas, sample_infos,1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE);
 	if (RETCODE_OK == ret) {
@@ -372,10 +387,10 @@ ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &samp
 			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 			return ret;
 		}
-		SerializedBuffer* buffer = &datas[0];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[0]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
 		sample_info = sample_infos[0];
 	}
@@ -390,7 +405,7 @@ ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &samp
 		return RETCODE_NOT_ENABLED;
 	}
 	ReturnCode_t ret = RETCODE_OK;
-	SerializedBufferSeq datas;
+	std::vector<std::shared_ptr<CacheChange>> datas;
 	SampleInfoSeq sample_infos;
 	ret = reader_->ReadOrTake(datas, sample_infos, 1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE,true);
 	if (RETCODE_OK == ret) {
@@ -398,15 +413,15 @@ ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &samp
 			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 			return ret;
 		}
-		SerializedBuffer* buffer = &datas[0];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[0]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
 		sample_info = sample_infos[0];
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 
@@ -419,7 +434,7 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, a_handle, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
@@ -427,15 +442,15 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 		
 	}
@@ -448,7 +463,7 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, handle, sample_states, view_states, instance_states,true);
 	if (RETCODE_OK != ret) {
@@ -456,19 +471,19 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 	return ret;
@@ -480,7 +495,7 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states);
 	if (RETCODE_OK != ret) {
@@ -488,15 +503,15 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 	return ret;
@@ -508,7 +523,7 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states,true);
 	if (RETCODE_OK != ret) {
@@ -516,19 +531,19 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 
@@ -541,7 +556,7 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
 		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask());
@@ -550,15 +565,15 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 	}
 
@@ -571,7 +586,7 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	SerializedBufferSeq  datas;
+	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
 		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
@@ -580,19 +595,19 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 		return ret;
 	}
 
-	data_values.length(datas.length());
-	for (int32_t i = 0; i < datas.length(); i++) {
+	data_values.length(datas.size());
+	for (int32_t i = 0; i < datas.size(); i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
-		SerializedBuffer* buffer = &datas[i];
-		bool littleEndian = GetEndianess(buffer);
+		SerializedBuffer buffer = *datas[i]->serializedBuffer;
+		bool littleEndian = GetEndianess(&buffer);
 
-		CdrDeserializer cdr(buffer, littleEndian);
+		CdrDeserializer cdr(&buffer, littleEndian);
 		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
 
-		if (buffer->origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer->origin_buffer);
+		if (buffer.origin_buffer) {
+			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
 		}
 	}
 	return ret;
@@ -800,22 +815,42 @@ ReturnCode_t DataReaderImpl::enable()
 		"dr.lifespan"
 	);
 
+    SetRelatedReader(readerPtr);
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
-	//本地匹配完成后再发送SEPD报文，防止重复匹配
 	DiscoveredReaderData readerData;
-	readerData.ddsSubscriptionData = GetBuiltinTopicData();
-	readerData.contentFilter = contentFilter_;
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
-	discovery->WriteSubscriptionData(readerData);
 #ifdef DDSSECURITY
-	//扩展了会发送DiscoveredReaderSecureData
+	//本地匹配完成后再发送SEPD报文，防止重复匹配
+	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
-	discovery->WriteSubscriptionSecureData(readerSecureData);
+	//readerSecureData.remoteReaderGuid = reader_->GetGuid();
+	if ((builtinSecureData_.security_info.endpoint_security_attributes &
+		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		discovery->WriteSubscriptionSecureData(readerSecureData);
+	}
+	else {
+		discovery->WriteSubscriptionData(readerSecureData);
+	}
+#else
+	//readerData.remoteReaderGuid = reader_->GetGuid();
+	readerData.ddsSubscriptionData = GetBuiltinTopicData();
+	readerData.contentFilter = contentFilter_;
+	discovery->WriteSubscriptionData(readerData);
 #endif // DDSSECURITY
+
 	return RETCODE_OK;
+}
+
+uint64_t DataReaderImpl::get_unread_count()
+{
+	if (history_) {
+		SampleCounters counter = history_->GetSampleCounters(false);
+		return counter.sampleNotRead;
+	}
+	return 0;
 }
 
 void DataReaderImpl::SetRelatedReader(std::shared_ptr<Reader> reader)
@@ -920,9 +955,12 @@ bool DataReaderImpl::GetSecAttributes()
 			secAttributes_.is_discovery_protected = secAttr.is_discovery_protected;
 			secAttributes_.is_liveliness_protected = secAttr.is_liveliness_protected;
 			secAttributes_.is_payload_protected = secAttr.is_payload_protected;
-			//secAttributes_.is_key_protected = secAttr.is_key_protected;
+			secAttributes_.is_key_protected = secAttr.is_key_protected;
 			secAttributes_.is_submessage_protected = secAttr.is_submessage_protected;
 			secAttributes_.plugin_endpoint_attributes = secAttr.plugin_endpoint_attributes;
+
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttr.plugin_endpoint_attributes;
+
 			dp->secPlugin_.access_control->return_datawriter_sec_attributes(&secAttr, &secExce);
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
 				rtpsMsgProtected_ = false;
@@ -950,7 +988,8 @@ bool DataReaderImpl::GetSecAttributes()
 			//|| secAttributes_.is_liveliness_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
 			|| secAttributes_.is_submessage_protected
 			|| secAttributes_.is_payload_protected
-			|| secAttributes_.is_key_protected)
+			//|| secAttributes_.is_key_protected //PND 目前is_liveliness_protected初始化了，但是没做功能适配
+			)
 		{
 			if (dp->secPlugin_.crypto_key_factory == NULL)
 			{
@@ -1045,11 +1084,12 @@ int DataReaderImpl::SetRemoteWriterCryptoTokens(const GUID_t* writerId, const Se
 	if (statelessReader) {
 		std::map<GUID_t, std::shared_ptr<WriterProxy>>* writerMap = statelessReader->GetMatchWriters();
 		if (!writerMap->count(*writerId)) {
-			return -1;
-		}
-		(*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
-		(*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
-		(*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+			//return -1;
+		} else {
+            (*writerMap)[*writerId]->partCryptoHdl_ = writer->partCryptoHdl;
+            (*writerMap)[*writerId]->cryptoHdl_ = writer->cryptoHdl;
+            (*writerMap)[*writerId]->readyForSecComm_ = writer->readyForSecComm;
+        }
 	}
 	return 0;
 }
@@ -1073,12 +1113,13 @@ ReturnCode_t DataReaderImpl::FillSecureData()
 	if (enableSec_) {
 		builtinSecureData_.security_info.endpoint_security_attributes =
 			EndpointSecurityAttributesToMask(&secAttributes_);
+		builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
 	}
 	else
 	{
 		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
 	}
-	builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
+	//builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
 	return RETCODE_OK;
 }
 
@@ -1223,8 +1264,9 @@ bool DataReaderImpl::LifespanTimeout()
 		}
 		else {
 			// 最早的报文缓存已过期，删除该报文。
-			reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
-			earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+			//reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
+			//earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+			break;
 		}
 	}
 	return false;
@@ -1261,4 +1303,42 @@ void DataReaderImpl::NotifyReadConditions()
 SubscriberImpl* DataReaderImpl::getParent()
 {
 	return sub_;
+}
+
+void DataReaderImpl::ContentFilterUpdate()
+{
+	ContentFilteredTopicImpl* filteredTopic = static_cast<ContentFilteredTopicImpl*>(topic_);
+	filteredTopic->get_expression_parameters(contentFilter_.expressionParameters);
+	filter_->InputSQL(contentFilter_.filterExpression, contentFilter_.expressionParameters);
+	if(enable_) {
+		DiscoveredReaderData readerData;
+#ifdef DDSSECURITY
+		readerData.ddsSubscriptionData = builtinSecureData_;
+#else
+		readerData.ddsSubscriptionData = builtinData_;
+#endif
+		readerData.contentFilter = contentFilter_;
+		DomainParticipantImpl* domainParticipant = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant()));
+		std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
+		discovery->WriteSubscriptionData(readerData);
+	}
+}
+
+bool DataReaderImpl::ValidateFilterData(SerializedBuffer* buffer)
+{
+    bool ret = false;
+	if (filter_ != nullptr) {
+		SerializedBuffer buf = *buffer;
+		bool littleEndian = GetEndianess(&buf);
+
+		// 使用DynamicDataFactory创建数据容器
+		DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*typeSupport_->get_dynamictype());
+		DynamicDataTypeSupport typeSupport(typeSupport_->get_dynamictype());
+		CdrDeserializer cdr(&buf, littleEndian);
+		typeSupport.deserialize_data(dyn_data, &cdr, littleEndian);
+		ret = filter_->Validate(dyn_data);
+		DynamicDataFactory::get_instance().delete_data(*dyn_data);
+
+	}
+	return ret;
 }

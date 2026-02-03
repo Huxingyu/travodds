@@ -282,15 +282,6 @@ public:
 	 */
 	static bool ConsistebcyCheckTimeBasedFilterQos(const TimeBasedFilterQosPolicy& qosA, const TimeBasedFilterQosPolicy& qosB);
 
-	/**
-	 * @brief Datawriter与Datareader Qos匹配规则检查。
-	 *
-	 * @param [in] dwQos		DataWriterQos配置信息。
-	 * @param [in] drQos		DataReaderQos配置信息。
-	 * @param [in] qosPolicyId  Qos不一致的ID列表。
-	 */
-	static void CheckQosMatchRule(const DataWriterQos& dwQos, const DataReaderQos& drQos, std::set<QosPolicyId_t>& qosPolicyId);
-
 	static bool IsDangerousPattern(const std::string& pattern);
 };
 TRAVODDS_NAMESPACE_END

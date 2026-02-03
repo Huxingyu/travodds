@@ -226,8 +226,8 @@ void Sedp::SetParticipantStatelessMessageEndpoint(DataWriterImpl* dataWriter, Da
 		TRAVODDS_LOG(LOG_ERROR, "writer is nullptr");
 		return;
 	}
-	participantStatelessMessageWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
-
+	participantStatelessMessageWriter_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
+    //participantStatelessMessageWriter_ = std::dynamic_pointer_cast<StatefulWriter>(writer);
 	DataReaderQos readerQos;
 	dataReader->get_qos(readerQos);
 	guid = participant_->GenerateGuid(ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER, true, ENTITY_READER);
@@ -237,7 +237,8 @@ void Sedp::SetParticipantStatelessMessageEndpoint(DataWriterImpl* dataWriter, Da
 		TRAVODDS_LOG(LOG_ERROR, "reader is nullptr");
 		return;
 	}
-	participantStatelessMessageReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
+	participantStatelessMessageReader_ = std::dynamic_pointer_cast<StatelessReader>(reader);
+    //participantStatelessMessageReader_ = std::dynamic_pointer_cast<StatefulReader>(reader);
 	reader->SetReaderListener(this);
 }
 void Sedp::SetParticipantVolatileSecureMessageEndpoint(DataWriterImpl* dataWriter, DataReaderImpl* dataReader) {
@@ -275,11 +276,19 @@ void Sedp::AddSedpProxy(const SPDPdiscoveredParticipantData& data)
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER;
+#ifdef DDSSECURITY
+	writerData.ddsPublicationData = publicationsWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
+#else
 	writerData.ddsPublicationData = publicationsWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+#endif
 	participant_->AddRemoteWriter(writerData);
 
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER;
+#ifdef DDSSECURITY
+	writerData.ddsPublicationData = subscriptionsWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
+#else
 	writerData.ddsPublicationData = subscriptionsWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+#endif
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -288,111 +297,23 @@ void Sedp::AddSedpProxy(const SPDPdiscoveredParticipantData& data)
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
+#ifdef DDSSECURITY
+	readerData.ddsSubscriptionData = publicationsReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+#else
 	readerData.ddsSubscriptionData = publicationsReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+#endif
 	participant_->AddRemoteReader(readerData);
 
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER;
+#ifdef DDSSECURITY
+	readerData.ddsSubscriptionData = subscriptionsReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+#else
 	readerData.ddsSubscriptionData = subscriptionsReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+#endif
 	participant_->AddRemoteReader(readerData);
-
-	//GUID_t guid;
-	//guid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
-	//ReaderProxy* readerProxy = new ReaderProxy(guid, GUID_UNKNOWN, data.metatrafficUnicastLocatorList, data.metatrafficMulticastLocatorList);
-	//publicationsWriter_->MatchedReaderAdd(readerProxy);
-
-	//guid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER;
-	//readerProxy = new ReaderProxy(guid, GUID_UNKNOWN, data.metatrafficUnicastLocatorList, data.metatrafficMulticastLocatorList);
-	//subscriptionsWriter_->MatchedReaderAdd(readerProxy);
-
-	//guid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER;
-	//WriterProxy* writerProxy = new WriterProxy(guid, GUID_UNKNOWN, data.metatrafficUnicastLocatorList, data.metatrafficMulticastLocatorList);
-	//publicationsReader_->MatchedWriterAdd(writerProxy);
-
-	//guid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER;
-	//writerProxy = new WriterProxy(guid, GUID_UNKNOWN, data.metatrafficUnicastLocatorList, data.metatrafficMulticastLocatorList);
-	//subscriptionsReader_->MatchedWriterAdd(writerProxy);
 }
 
 #ifdef DDSSECURITY
-void Sedp::AddPartSedpProxy(const SPDPdiscoveredParticipantData& data)
-{
-	DiscoveredWriterData writerData;
-	writerData.remoteWriterGuid = Conversion::ToGuid(data.ddsParticipantData.key);
-	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER;
-	writerData.ddsPublicationData = publicationsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	participant_->AddRemoteWriter(writerData);
-
-	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER;
-	writerData.ddsPublicationData = subscriptionsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	participant_->AddRemoteWriter(writerData);
-
-	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER;
-	writerData.ddsPublicationData = participantMessageSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	participant_->AddRemoteWriter(writerData);
-
-	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER;
-	writerData.ddsPublicationData = participantStatelessMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	participant_->AddRemoteWriter(writerData);
-
-	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER;
-	writerData.ddsPublicationData = participantVolatileSecureMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	participant_->AddRemoteWriter(writerData);
-
-	DiscoveredReaderData readerData;
-	readerData.remoteReaderGuid = Conversion::ToGuid(data.ddsParticipantData.key);
-	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
-	readerData.ddsSubscriptionData = publicationsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
-
-	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER;
-	readerData.ddsSubscriptionData = subscriptionsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
-
-	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER;
-	readerData.ddsSubscriptionData = participantMessageSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
-
-	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
-	readerData.ddsSubscriptionData = participantStatelessMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
-
-	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
-	readerData.ddsSubscriptionData = participantVolatileSecureMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	participant_->AddRemoteReader(readerData);
-}
-
-void Sedp::AddRemainSedpProxy(const SPDPdiscoveredParticipantData& data) {
-	//DiscoveredWriterData writerData;
-	//writerData.remoteWriterGuid = Conversion::ToGuid(data.ddsParticipantData.key);
-	//writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-	//writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-	//writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER;
-	//writerData.ddsPublicationData = publicationsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	//participant_->AddRemoteWriter(writerData);
-
-	//writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER;
-	//writerData.ddsPublicationData = subscriptionsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
-	//participant_->AddRemoteWriter(writerData);
-
-	//DiscoveredReaderData readerData;
-	//readerData.remoteReaderGuid = Conversion::ToGuid(data.ddsParticipantData.key);
-	//readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
-	//readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
-	//readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
-	//readerData.ddsSubscriptionData = publicationsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	//participant_->AddRemoteReader(readerData);
-
-	//readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER;
-	//readerData.ddsSubscriptionData = subscriptionsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
-	//participant_->AddRemoteReader(readerData);
-
-	AddSedpProxy(data);
-}
-
 void Sedp::AddBuiltinSpdpProxy(const SPDPdiscoveredParticipantData& data)
 {
 	DomainParticipantImpl* dp = spdp_->GetDiscovery()->GetParticipant();
@@ -403,7 +324,7 @@ void Sedp::AddBuiltinSpdpProxy(const SPDPdiscoveredParticipantData& data)
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER;
-	writerData.ddsPublicationData = participantStatelessMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = participantStatelessMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -411,7 +332,22 @@ void Sedp::AddBuiltinSpdpProxy(const SPDPdiscoveredParticipantData& data)
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER;
-	readerData.ddsSubscriptionData = participantStatelessMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = participantStatelessMessageReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+	participant_->AddRemoteReader(readerData);
+
+	writerData.remoteWriterGuid = Conversion::ToGuid(data.ddsParticipantData.key);
+	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
+	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
+	writerData.remoteWriterGuid.entityId = ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER;
+	writerData.ddsPublicationData = this->spdp_->writerSecure_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
+	participant_->AddRemoteWriter(writerData);
+
+
+	readerData.remoteReaderGuid = Conversion::ToGuid(data.ddsParticipantData.key);
+	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
+	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
+	readerData.remoteReaderGuid.entityId = ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_READER;
+	readerData.ddsSubscriptionData = this->spdp_->readerSecure_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 }
 
@@ -422,10 +358,10 @@ void Sedp::AddBuiltinSedpProxy(const SPDPdiscoveredParticipantData& data)
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER;
-	writerData.ddsPublicationData = publicationsWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = publicationsWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER;
-	writerData.ddsPublicationData = subscriptionsWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = subscriptionsWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -433,10 +369,10 @@ void Sedp::AddBuiltinSedpProxy(const SPDPdiscoveredParticipantData& data)
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER;
-	readerData.ddsSubscriptionData = publicationsReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = publicationsReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER;
-	readerData.ddsSubscriptionData = subscriptionsReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = subscriptionsReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 }
 
@@ -446,7 +382,7 @@ void Sedp::AddVolatileMessageBuiltinSecureSpdpProxy(const SPDPdiscoveredParticip
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER;
-	writerData.ddsPublicationData = participantVolatileSecureMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = participantVolatileSecureMessageWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 	
 	DiscoveredReaderData readerData;
@@ -454,7 +390,8 @@ void Sedp::AddVolatileMessageBuiltinSecureSpdpProxy(const SPDPdiscoveredParticip
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
-	readerData.ddsSubscriptionData = participantVolatileSecureMessageReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = participantVolatileSecureMessageReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
+	readerData.ddsSubscriptionData.key = data.ddsParticipantData.key;
 	participant_->AddRemoteReader(readerData);
 }
 
@@ -464,13 +401,13 @@ void Sedp::AddBuiltinSecureSedpProxy(const SPDPdiscoveredParticipantData& data) 
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER;
-	writerData.ddsPublicationData = publicationsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = publicationsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 	writerData.remoteWriterGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER;
-	writerData.ddsPublicationData = subscriptionsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = subscriptionsSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 	writerData.remoteWriterGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER;
-	writerData.ddsPublicationData = participantMessageSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicData();
+	writerData.ddsPublicationData = participantMessageSecureWriter_->GetRelatedDataWriter()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
@@ -478,13 +415,13 @@ void Sedp::AddBuiltinSecureSedpProxy(const SPDPdiscoveredParticipantData& data) 
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER;
-	readerData.ddsSubscriptionData = publicationsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = publicationsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 	readerData.remoteReaderGuid.entityId = ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER;
-	readerData.ddsSubscriptionData = subscriptionsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = subscriptionsSecureReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 	readerData.remoteReaderGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER;
-	readerData.ddsSubscriptionData = participantMessageSecureReader_->GetRelatedDataReader()->GetBuiltinTopicData();
+	readerData.ddsSubscriptionData = participantMessageSecureReader_->GetRelatedDataReader()->GetBuiltinTopicSecureData();
 	participant_->AddRemoteReader(readerData);
 }
 #endif // DDSSECURITY
@@ -767,12 +704,17 @@ ReturnCode_t Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid
 	data.messageIdentity.sourceGuid = Conversion::ToBuiltinTopicKey(spdp_->GetDiscovery()->GetParticipant()->GetRelatedParticipant()->GetGuid());
 	memset(data.destinationEndpointKey.value, 0, 16);
 	memset(data.sourceEndpointKey.value, 0, 16);
-	++statelessMsgSeqNum_.low;
-	if (statelessMsgSeqNum_.low == 0)
-	{
-		++statelessMsgSeqNum_.high;
+	if (!statelessMsgSeqNumMap_.count(remoteGuid->prefix)) {
+		SequenceNumber_t statelessMsgSeqNum;
+		statelessMsgSeqNumMap_[remoteGuid->prefix] = statelessMsgSeqNum;
 	}
-	data.messageIdentity.sequenceNumber = statelessMsgSeqNum_;
+	(statelessMsgSeqNumMap_[remoteGuid->prefix].low)++;
+	if (statelessMsgSeqNumMap_[remoteGuid->prefix].low == 0)
+	{
+		(statelessMsgSeqNumMap_[remoteGuid->prefix].high)++;
+	}
+	data.messageIdentity.sequenceNumber = statelessMsgSeqNumMap_[remoteGuid->prefix];
+	
 	SerializedBuffer* buffer = new SerializedBuffer;
 	// buffer->buffer_size = 4; //端序CDR编码的数据封装 已经放在了serialized的size计算中了
 	// buffer->buffer_size += ParticipantGenericMessageTypeSupport::get_instance()->get_serialized_data_size(&data, 0); //ParticipantGenericMessageGetSerializedSampleSize(&data);
@@ -816,12 +758,16 @@ void Sedp::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, Parti
 		memcpy(data.destinationParticipantKey.value + 3, &ENTITYID_PARTICIPANT, 4);
 	}
 	memcpy(data.messageIdentity.sourceGuid.value, participantVolatileSecureMessageWriter_->GetGuidPtr(), 16);
-	++statelessMsgSeqNum_.low;
-	if (statelessMsgSeqNum_.low == 0)
-	{
-		++statelessMsgSeqNum_.high;
+	if (!volatileSecureMsgSeqNumMap_.count(remoteGuid->prefix)) {
+		SequenceNumber_t volatileSecureMsgSeqNum;
+		volatileSecureMsgSeqNumMap_[remoteGuid->prefix] = volatileSecureMsgSeqNum;
 	}
-	data.messageIdentity.sequenceNumber = statelessMsgSeqNum_;
+	(volatileSecureMsgSeqNumMap_[remoteGuid->prefix].low)++;
+	if (volatileSecureMsgSeqNumMap_[remoteGuid->prefix].low == 0)
+	{
+		(volatileSecureMsgSeqNumMap_[remoteGuid->prefix].high)++;
+	}
+	data.messageIdentity.sequenceNumber = volatileSecureMsgSeqNumMap_[remoteGuid->prefix];
 	GUID_t remoteReceiverGuid = *remoteGuid;
 	remoteReceiverGuid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER;
 
@@ -963,24 +909,28 @@ void Sedp::TakeDiscoveredWriterSecureData(DiscoveredWriterSecureData& data, Seri
     }
 }
 #endif // DDSSECURITY
+
+#ifdef DDSSECURITY
+void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data, bool isSecure)
+#else
 void Sedp::ReceiveDiscoveredWriterData(DiscoveredWriterData& data)
+#endif // DDSSECURITY
 {
 	SPDPdiscoveredParticipantData participantData;
 	if (RETCODE_OK == spdp_->GetParticipantData(data.ddsPublicationData.participant_key, participantData)) {
 		data.unicastLocatorList = participantData.defaultUnicastLocatorList;
 	}
-
+#ifdef DDSSECURITY
+	participant_->AddRemoteWriter(data, isSecure);
+#else
 	participant_->AddRemoteWriter(data);
+#endif // DDSSECURITY
 }
+
 #ifdef DDSSECURITY
 void Sedp::ReceiveDiscoveredWriterSecureData(DiscoveredWriterSecureData& data) {
 
-    SPDPdiscoveredParticipantData participantData;
-    if (RETCODE_OK == spdp_->GetParticipantData(data.ddsPublicationData.participant_key, participantData)) {
-        data.unicastLocatorList = participantData.defaultUnicastLocatorList;
-    }
-
-    participant_->AddRemoteSecureWriter(data);
+	ReceiveDiscoveredWriterData(data, true);
 }
 #endif // DDSSECURITY
 void Sedp::TakeDiscoveredReaderData(DiscoveredReaderData& data, SerializedBuffer* buffer)
@@ -1028,7 +978,11 @@ void Sedp::TakeParticipantGenericMessageData(ParticipantGenericMessage& data, Se
 }
 #endif // DDSSECURITY
 
+#ifdef DDSSECURITY
+void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data, bool isSecure)
+#else
 void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data)
+#endif // DDSSECURITY
 {
 	SPDPdiscoveredParticipantData participantData;
 	if( RETCODE_OK  == spdp_->GetParticipantData(data.ddsSubscriptionData.participant_key, participantData))
@@ -1036,25 +990,17 @@ void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data)
 		data.unicastLocatorList = participantData.defaultUnicastLocatorList;
 		data.multicastLocatorList = participantData.defaultMulticastLocatorList;
 	}
-
+#ifdef DDSSECURITY
+	participant_->AddRemoteReader(data, isSecure);
+#else
 	participant_->AddRemoteReader(data);
+#endif // DDSSECURITY
 }
 
 #ifdef DDSSECURITY
 void Sedp::ReceiveDiscoveredReaderSecureData(DiscoveredReaderSecureData& data)
 {
-	//TEST
-	if (data.remoteReaderGuid.IsUserDefinedEntity()) {
-		int tmp = 0;
-	}
-
-	SPDPdiscoveredParticipantData participantData;
-	if (RETCODE_OK == spdp_->GetParticipantData(data.ddsSubscriptionData.participant_key, participantData))
-	{
-		data.unicastLocatorList = participantData.defaultUnicastLocatorList;
-		data.multicastLocatorList = participantData.defaultMulticastLocatorList;
-	}
-	participant_->AddRemoteSecureReader(data);
+	return ReceiveDiscoveredReaderData(data, true);
 }
 
 void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data) {
@@ -1075,7 +1021,11 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	//{
 	//	return;
 	//}
-	
+	if (!spdp_->discParts_.count(sourceParticipantGuid.prefix))
+	{
+		TRAVODDS_LOG(LOG_INFO, "The owner of ParticipantGenericMessageData is not in discParts_.");
+		return;
+	}
 	// dpInfo是对应的远端域参与者信息
 	DiscoveryDPInfo* dpInfo = spdp_->discParts_[sourceParticipantGuid.prefix];
 	if (!dpInfo || !dpInfo->enableDDSSec_)
@@ -1131,6 +1081,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 		auto now = std::chrono::system_clock::now();
 		std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
 		if (validationRst == VALIDATION_PENDING_HANDSHAKE_MESSAGE) { //HandshakeMsgSend
+			dpInfo->handshakeMsg_->relatedMessageIdentity.sourceGuid = data.messageIdentity.sourceGuid;
 			ParticipantStatelessMessage* handshakeMsg = dpInfo->handshakeMsg_;
 			if (handshakeMsg == NULL) {
 				return;
@@ -1139,12 +1090,12 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			messageData.push_back(handshakeToken);
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			dpInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
-			//printf("begin_handshake_reply local %s remote %s.\n",
-			//	this->participant_->GetGuid().prefix.toString().c_str(),
-			//	sourceParticipantGuid.prefix.toString().c_str());
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_); //reply
-			Time_t time = { 1, 0 };
-			//this->spdp_->AddHandShakeRetryTimer(time, sourceParticipantGuid);
+
+			//handshakeMsg->messageIdentity.sourceGuid = Conversion::ToBuiltinTopicKey(
+			//	spdp_->GetDiscovery()->GetParticipant()->get_guid_value()); // sourceGuid不赋值为0，但是正常通信
+			dpInfo->handshakeMsg_->relatedMessageIdentity = data.messageIdentity; //Fastdds对端处理reply和final会校验
+
+			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 			this->spdp_->AddHandShakeMsg(sourceParticipantGuid); // 定时器重发reply
 			//reply响应完对端request之后置为DDSSEC_HANDSHAKE_WAITING_FINAL，等待processhandshake
 			dpInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_FINAL;
@@ -1197,6 +1148,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				&secExce);
 		if (validationRst == VALIDATION_OK_FINAL_MESSAGE) {
 			dpInfo->handshakeMsg_->messageData[0] = handshakeToken;
+			dpInfo->handshakeMsg_->relatedMessageIdentity = data.messageIdentity;
 			dp->secPlugin_.authentication->return_handshake_token(&handshakeToken, &secExce);
 			//请求发发送processhandshake之后的msg，通知对端processhandshake
 			//printf("begin_handshake_final local %s remote %s.\n",
@@ -1317,8 +1269,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			SetRemoteDomainEntityCryptoTokens(&data, true);
 		}
 		else if (data.messageClassId == GMCLASSID_SECURITY_AUTH_HANDSHAKE) {
-			//TODO
-			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
+			//WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);
 		}
 		return;
 	}
@@ -1360,6 +1311,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			&secExce);
 		if (dpInfo->cryptoHdl_ == SEC_NIL_HANDLE)
 		{
+			TRAVODDS_LOG(LOG_ERROR, "failed to register_matched_remote_participant.");
 			GuidPrefix_t guidPrefix = Conversion::ToGuid(dpInfo->pData_.ddsParticipantData.key).prefix;
 			spdp_->SpdpCleanupRemoteSecRsc(dpInfo);
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
@@ -1386,6 +1338,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				dp->cryptoHdl_,
 				dpInfo->cryptoHdl_,
 				&secExce)) {
+				TRAVODDS_LOG(LOG_ERROR, "failed to create_local_participant_crypto_tokens.");
 			}
 			cryptoTokensSample.messageClassId = GMCLASSID_SECURITY_PARTICIPANT_CRYPTO_TOKENS;
 			// send tokens
