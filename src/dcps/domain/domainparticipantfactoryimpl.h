@@ -429,10 +429,6 @@ public:
 #ifdef _WIN32
         //HMODULE libModule;
         void* libModule;
-#elif defined(_LINUX)
-        void* libModule;
-#elif defined(_VXWORKS_66)
-
 #else 
         void* libModule;
 #endif
