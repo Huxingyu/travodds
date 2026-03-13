@@ -1153,7 +1153,7 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 			DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
 		}
 #else
-		DeliveryDataToReaders(change, readerProxys, TIME_INFINITE);
+		DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
 #endif //DDSSECURITY
 	}
 

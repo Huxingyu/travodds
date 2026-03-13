@@ -33,7 +33,6 @@ Provides headers and CMake config files for TravoDDS development.
 %define Installprefix /opt/agiros/loong
 # 构建流程
 %prep
-#%setup -q
 %autosetup -p1
 
 %build
