@@ -407,7 +407,7 @@ public:
 		const char* file_name,
 		const char* retrieve_instance_func_name,
 		const char* finalize_instance_func_name) = 0;
-
+    virtual ReturnCode_t unload_security_plugin(const char* plugin_name) = 0;
 };
 
 TRAVODDS_NAMESPACE_END
