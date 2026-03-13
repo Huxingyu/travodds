@@ -327,8 +327,8 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     DomainParticipantFactoryImpl::SecurityPluginModule newModule;
     if (secPlugins_.find(plugin_name) != secPlugins_.end())
     {
-        TRAVODDS_LOG(LOG_DEBUG, "%s existed.", plugin_name);
-        return RETCODE_ERROR;
+        TRAVODDS_LOG(LOG_INFO, "%s existed, unload it before load.", plugin_name);
+        unload_security_plugin(plugin_name);
     }
 #ifdef _WIN32
     HMODULE libModule = LoadLibraryA(file_name);
@@ -415,6 +415,19 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     return RETCODE_OK;
 }
 
+ReturnCode_t DomainParticipantFactoryImpl::unload_security_plugin(const char* plugin_name)
+{
+    if (secPlugins_.find(plugin_name) == secPlugins_.end())
+    {
+        TRAVODDS_LOG(LOG_ERROR, "%s not existed, need not unload.", plugin_name);
+        return RETCODE_ERROR;
+    }
+    SecurityPluginModule module = secPlugins_[plugin_name];
+    module.finalizeInstFunc();
+    secPlugins_.erase(plugin_name);
+    return RETCODE_OK;
+}
+
 #else
 ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     const char* plugin_name,
@@ -425,5 +438,9 @@ ReturnCode_t DomainParticipantFactoryImpl::load_security_plugin(
     TRAVODDS_LOG(LOG_WARNING, "only ddssecurity mode can call load_security_plugin");
     return RETCODE_UNSUPPORTED;
 }
-
+ReturnCode_t DomainParticipantFactoryImpl::unload_security_plugin(const char* plugin_name)
+{
+    TRAVODDS_LOG(LOG_WARNING, "only ddssecurity mode can call unload_security_plugin");
+    return RETCODE_UNSUPPORTED;
+}
 #endif // DDSSECURITY
