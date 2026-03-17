@@ -183,7 +183,7 @@ public:
                break;
            case 8:
                memcpy(&val_64, &value, sizeof(uint64_t));
-               val_64 = __builtin_bswap32(val_64);
+               val_64 = __builtin_bswap64(val_64);
                tmpValue = val_64;
                break;
            default:
