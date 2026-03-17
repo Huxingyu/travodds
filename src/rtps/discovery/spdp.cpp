@@ -849,8 +849,7 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 						RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 						return;
 					}
-					
-					Time_t time = { 1, 0 };
+				
 					//this->AddHandShakeRetryTimer(time, remoteGuid); //设置定时器重发request
 					this->AddHandShakeMsg(remoteGuid);
 					newDPInfo->endpointState_ = DiscoveryDPInfo::DDSSEC_HANDSHAKE_WAITING_REPLY;
@@ -885,6 +884,7 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			}
 			case VALIDATION_OK_FINAL_MESSAGE: {
 				TRAVODDS_LOG(LOG_DEBUG, "validate_remote_identity okfinal.");
+				//TODO
 			}
 			default:
 			{

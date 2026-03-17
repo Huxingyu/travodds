@@ -168,6 +168,7 @@ public:
         } else {
            T tmpValue = 0;
            switch (typeSize) {
+               //TODO
            case 2:
                tmpValue = __builtin_bswap16(*(uint16_t*)&value);
                break;
@@ -457,7 +458,7 @@ public:
         uint32_t typeSize = sizeof(T);
         // 对齐数据
         uint32_t offset = alignSize(typeSize);
-        char s_alignedData[15] = { 0 };
+
         SerializedBuffer* retBuffer = curProcessMsgBlock_->readData(nullptr, offset);
         if (!retBuffer) {
             return false;

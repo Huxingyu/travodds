@@ -889,7 +889,6 @@ ReturnCode_t DomainParticipantImpl::security_check()
         SecurityException exceptionInfo;
         BuiltinTopicKey_t originKey; //4个32位数 16字节
         memcpy(originKey.value, handle_.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-        handle_.keyHash.value[0];
         BuiltinTopicKey_t adjustedKey;
         if (secPlugin_.authentication == nullptr) {
             TRAVODDS_LOG(LOG_ERROR, "validate_local_identity failed because authentication is null!\n");
@@ -927,7 +926,8 @@ ReturnCode_t DomainParticipantImpl::security_check()
         // 将哈希后的域参与者唯一标识adjusted_participant_key赋值给实体
         memcpy(handle_.keyHash.value, adjustedKey.value, 16);
         GUID_t* guid = participant_->GetGuidPtr();
-        memcpy(&guid->prefix, handle_.keyHash.value, 12);
+        //memcpy(&guid->prefix, handle_.keyHash.value, 12);
+        memcpy(&guid->prefix.value, handle_.keyHash.value, 12);
         // validate_local_permissions
         permissionHdl_ = secPlugin_.access_control->validate_local_permissions(
             secPlugin_.authentication,
@@ -1100,14 +1100,13 @@ DomainId_t DomainParticipantImpl::GetDomainId()
 bool DomainParticipantImpl::ExistSecConfig()
 {
     Property_t* prikey = NULL;  //私钥
-    Property_t* prikey_password = NULL; //私钥
+    //Property_t* prikey_password = NULL; //私钥
     Property_t* permission = NULL; //auth_permission.smime
     Property_t* governance = NULL; //auth_governance.smime
     Property_t* certificate = NULL; //用户证书
     Property_t* ca = NULL; //CA证书
     Property_t* permission_ca = NULL; //访问控制配置，例如democa.pem文件内容
-    Property_t* crl = NULL;
-    int ret = 0;
+    //Property_t* crl = NULL;
     //判定必须需要的配置项
     for (unsigned int i = 0; i < qos_.property.value.size(); i++)
     {
@@ -1131,17 +1130,17 @@ bool DomainParticipantImpl::ExistSecConfig()
             continue;
         }
         //私钥
-        if (curProperty->name == "dds.sec.auth.password")
-        {
-            prikey_password = curProperty;
-            continue;
-        }
+        //if (curProperty->name == "dds.sec.auth.password")
+        //{
+        //    prikey_password = curProperty;
+        //    continue;
+        //}
         //证书注销列表
-        if (curProperty->name == "dds.sec.auth.certificate_revocation_list")
-        {
-            crl = curProperty;
-            continue;
-        }
+        //if (curProperty->name == "dds.sec.auth.certificate_revocation_list")
+        //{
+        //    crl = curProperty;
+        //    continue;
+        //}
         //访问控制配置
         if (curProperty->name == "dds.sec.access.permissions_ca")
         {

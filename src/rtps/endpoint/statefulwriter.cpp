@@ -118,8 +118,8 @@ void StatefulWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& su
 	rdInfo.cryptoHdl = SEC_NIL_HANDLE;
 	rdInfo.readyForSecComm = false;
 	if (dw->statistic_.enableSec && dw->secPlugin_ != NULL && 
-		(dwGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) ||
-		dwGuid.IsUserDefinedEntity()) { //用户自定义实体或者是volatile内置实体
+		(dwGuid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER ||
+		dwGuid.IsUserDefinedEntity())) { //用户自定义实体或者是volatile内置实体
 		if (dw->statistic_.secAttributes.is_payload_protected
 			|| dw->statistic_.secAttributes.is_submessage_protected)
 		{
@@ -497,7 +497,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			srcBuffer.buffer = buffer->buffer - shift;
 			srcBuffer.buffer_size = buffer->buffer_size + shift;;
 
-			int dataRet;
+			int dataRet = 0;
 			// 子消息加密后长度 包含DataFrag头部，DataFrag其他信息，DataFrag负载的长度
 			uint32_t encodeDataSize = 0;
 			if (encodeSubMsg) {
@@ -505,6 +505,11 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 				encodeBuffer.buffer = new char[encodeBuffer.buffer_size];
 				//encode_datawriter_message
 				dataRet = EncodeSubMsgBuffer(NULL, srcBuffer, encodeBuffer);
+				if (dataRet != 0) {
+					TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+					delete[] encodeBuffer.buffer;
+					return RETCODE_ERROR;
+				}
 				//加密后的子消息放到encodeRtpsBuffer的缓冲区尾部
 				memcpy(encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size,
 					encodeBuffer.buffer,
@@ -656,7 +661,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		srcBuffer.buffer = change->serializedBuffer->buffer - shift;
 		srcBuffer.buffer_size = change->serializedBuffer->buffer_size + shift;;
 
-		int dataRet;
+		int dataRet = 0;
 		// 子消息加密后长度 包含Data头部，Data其他信息，Data负载的长度
 		uint32_t encodeDataSize = 0;
 		// 子消息加密 encodeRtpsBuffer包含DATA头和DATA其他信息
@@ -665,6 +670,11 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			encodeBuffer.buffer = new char[encodeBuffer.buffer_size];
 			//encode_datawriter_message
 			dataRet = EncodeSubMsgBuffer(NULL, srcBuffer, encodeBuffer);
+			if (dataRet != 0) {
+				TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+				delete[] encodeBuffer.buffer;
+				return RETCODE_ERROR;
+			}
 			//加密后的子消息放到encodeRtpsBuffer的缓冲区尾部
 			memcpy(encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size,
 				encodeBuffer.buffer,
@@ -783,7 +793,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReaderForVolatile(std::shared_ptr<Cac
 
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected; //volatile这个值一般为true
-	bool encodeRtpsMsg = false; //volatile这个值为false
+	//bool encodeRtpsMsg = false; //volatile这个值为false
 
 	std::vector<LocatorVec> dstLocators;
 	std::set<GuidPrefix_t> prefixs;
@@ -831,7 +841,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReaderForVolatile(std::shared_ptr<Cac
 	srcBuffer.buffer = change->serializedBuffer->buffer - shift;
 	srcBuffer.buffer_size = change->serializedBuffer->buffer_size + shift;;
 
-	int dataRet;
+	int dataRet = 0;
 	// 子消息加密后长度 包含Data头部，Data其他信息，Data负载的长度
 	uint32_t encodeDataSize = 0;
 	// 子消息加密 encodeRtpsBuffer包含DATA头和DATA其他信息
@@ -840,6 +850,11 @@ ReturnCode_t StatefulWriter::DeliveryDataToReaderForVolatile(std::shared_ptr<Cac
 		encodeBuffer.buffer = new char[encodeBuffer.buffer_size];
 		//encode_datawriter_message
 		dataRet = EncodeSubMsgBuffer(readerProxy, srcBuffer, encodeBuffer);
+		if (dataRet != 0) {
+			TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+			delete[] encodeBuffer.buffer;
+			return RETCODE_ERROR;
+		}
 		//加密后的子消息放到encodeRtpsBuffer的缓冲区尾部
 		memcpy(encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size,
 			encodeBuffer.buffer,
@@ -940,7 +955,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
 
 	//加密前的子消息长度
-	uint32_t lengthHeartBeatMsgBefore = 0;
 	uint32_t lengthGapMsgBefore = 0;
 
 #ifdef DDSSECURITY
@@ -974,22 +988,25 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 	// 序列化Heartbeat, bufffer指向Heartbeat头部位置
 	MessageProcessor::EncapsulateHeartBeatMessage(bufffer, shift, hbMsg);
-	lengthHeartBeatMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
 
 #ifdef DDSSECURITY
-	int dataRet;
+	int dataRet = 0;
 	//加密后的子消息长度
 	uint32_t lengthHeartBeatMsg = 0;
 	uint32_t lengthGapMsg = 0;
-	uint32_t lengthHeaderMsg = 0;
 	//加密heartbeat子消息
 	if (encodeSubMsg) {
 		tmpEncodeBuffer.buffer_size = bufffer.buffer_size * 10; //TODO 长度计算
 		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
 		//encode_datawriter_message
 		dataRet = EncodeSubMsgBuffer(readerProxy, bufffer, tmpEncodeBuffer);
+		if (dataRet != 0) {
+			TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+			delete[] tmpEncodeBuffer.buffer;
+			return RETCODE_ERROR;
+		}
 		lengthHeartBeatMsg = tmpEncodeBuffer.buffer_size;
 		//拷贝到encodeData末尾
 		memcpy(encodeData + 1224 * 2 - lengthHeartBeatMsg, tmpEncodeBuffer.buffer, lengthHeartBeatMsg);
@@ -1041,7 +1058,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	}
 
 #ifdef DDSSECURITY
-	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 	if (encodeSubMsg) { //如果之前加密了子消息
 		// tmpPlainBuffer指向加密后的消息(包含Heartbeat和Gap)
 		tmpPlainBuffer.buffer_size = lengthHeartBeatMsg + lengthGapMsg;
@@ -1236,7 +1252,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	shift = 0;
 
 #ifdef DDSSECURITY
-	int dataRet;
+	int dataRet = 0;
 	//加密后的子消息长度
 	uint32_t lengthGapMsg = 0;
 	//加密heartbeat子消息
@@ -1245,6 +1261,11 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 		tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
 		//encode_datawriter_message
 		dataRet = EncodeSubMsgBuffer(proxy, bufffer, tmpEncodeBuffer);
+		if (dataRet != 0) {
+			TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+			delete[] tmpEncodeBuffer.buffer;
+			return;
+		}
 		lengthGapMsg = tmpEncodeBuffer.buffer_size;
 		//拷贝到encodeData末尾
 		memcpy(encodeData + 1224 * 2 - lengthGapMsg, tmpEncodeBuffer.buffer, lengthGapMsg);
@@ -1253,7 +1274,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 #endif // DDSSECURITY
 
 #ifdef DDSSECURITY
-	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 	if (encodeSubMsg) { //如果之前加密了子消息
 		// tmpPlainBuffer指向加密后的消息(包含Gap)
 		tmpPlainBuffer.buffer_size = lengthGapMsg;
