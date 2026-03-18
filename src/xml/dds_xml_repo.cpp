@@ -1222,7 +1222,7 @@ bool DDSXMLRepo::parsePropertySeq(XMLElement* element, PropertyQosPolicy& qos)
         // 验证名字是否合法，依赖NextSiblingElement("element") 应该不用
         // 验证除了element是否有其他节点 这步应该可以没有
         // 取值
-        unsigned int curlen = qos.value.size();
+        // unsigned int curlen = qos.value.size();
         Property_t propertyEle;
         parseProperty(childEle, propertyEle);//解析出结构体
         qos.value.push_back(propertyEle);//插入seq
@@ -1234,7 +1234,7 @@ bool DDSXMLRepo::parseBinaryPropertySeq(XMLElement* element, PropertyQosPolicy& 
 {
     //SequenceData<BinaryProperty_t>
     //注释seq_clear，在qos继承时添加而不覆盖
-    const char* memberName = "element";
+    //const char* memberName = "element";
     //遍历子元素,value下有若干组element
     for (XMLElement* childEle = element->FirstChildElement(); childEle; childEle = childEle->NextSiblingElement("element"))
     {

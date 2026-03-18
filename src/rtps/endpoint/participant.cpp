@@ -368,8 +368,9 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		itor->second->GetFlowController()->UnregisterWriter(itor->second);
 		writers_.erase(itor);
 	} else {
-		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
-		return RETCODE_ERROR;
+		//已经通过sedp通知节点退出，dr和dw之间还有数据缓存处理，正常流程，不应该算做错误
+		//TRAVODDS_LOG(LOG_DEBUG, "handle not exist");
+		//return RETCODE_ERROR;
 	}
 	{
 		std::unique_lock<std::mutex> lock(mtxEndpoints_);

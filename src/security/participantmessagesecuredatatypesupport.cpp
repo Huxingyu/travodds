@@ -24,7 +24,7 @@ int ParticipantMessageSecureDataTypeSupport::copy_data(void* dst, void* src) {
 unsigned int ParticipantMessageSecureDataTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    // unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(char), sizeof(structData->m_kind) / sizeof(char), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(char), structData->m_extraData.size(), currentAlignment);
@@ -32,11 +32,14 @@ unsigned int ParticipantMessageSecureDataTypeSupport::get_serialized_data_size(v
 }
 
 unsigned int ParticipantMessageSecureDataTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
 int ParticipantMessageSecureDataTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) 
 {
+    (void)endian;
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseTypeArray((char*)structData->m_kind, sizeof(structData->m_kind) / sizeof(char))) {
@@ -56,10 +59,11 @@ int ParticipantMessageSecureDataTypeSupport::serialize_data(void* data, CdrSeria
 }
 
 int ParticipantMessageSecureDataTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
+    // char tmpCharEnum = 0;
+    // short tmpShortEnum = 0;
     int tmpIntEnum = 0;
     if (!cdr->deserializeBaseTypeArray((char*)structData->m_kind, sizeof(structData->m_kind) / sizeof(char))) {
         fprintf(stderr, "Deserialization failed for field: structData->m_kind\n");
@@ -82,8 +86,11 @@ TypeObject* ParticipantMessageSecureDataTypeSupport::get_typeobject() {
 }
 
 int ParticipantMessageSecureDataTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 

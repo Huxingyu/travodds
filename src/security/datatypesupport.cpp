@@ -27,7 +27,7 @@ int BuiltinTopicKey_tTypeSupport::copy_data(void* dst, void* src) {
 unsigned int BuiltinTopicKey_tTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), sizeof(structData->value) / sizeof(int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
@@ -35,14 +35,15 @@ unsigned int BuiltinTopicKey_tTypeSupport::get_serialized_data_size(void* data, 
 unsigned int BuiltinTopicKey_tTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), sizeof(structData->value) / sizeof(int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int BuiltinTopicKey_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
-    uint32_t tmpLength = 0;
+    //uint32_t tmpLength = 0;
     if (!cdr->serializeBaseTypeArray((int*)structData->value, sizeof(structData->value) / sizeof(int))) {
         fprintf(stderr, "Serialization failed for field: structData->value\n");
         return -1;
@@ -51,11 +52,8 @@ int BuiltinTopicKey_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
 }
 
 int BuiltinTopicKey_tTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseTypeArray((int*)structData->value, sizeof(structData->value) / sizeof(int))) {
         fprintf(stderr, "Deserialization failed for field: structData->value\n");
         return -1;
@@ -68,8 +66,11 @@ TypeObject* BuiltinTopicKey_tTypeSupport::get_typeobject() {
 }
 
 int BuiltinTopicKey_tTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -130,26 +131,28 @@ int SequenceNumber_tTypeSupport::copy_data(void* dst, void* src) {
 }
 
 unsigned int SequenceNumber_tTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
-    SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
+    (void)data;
+    //SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int SequenceNumber_tTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
+    (void)data;
+    //SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int SequenceNumber_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->low)) {
         fprintf(stderr, "Serialization failed for field: structData->low\n");
         return -1;
@@ -162,11 +165,8 @@ int SequenceNumber_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
 }
 
 int SequenceNumber_tTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->low)) {
         fprintf(stderr, "Deserialization failed for field: structData->low\n");
         return -1;
@@ -183,8 +183,11 @@ TypeObject* SequenceNumber_tTypeSupport::get_typeobject() {
 }
 
 int SequenceNumber_tTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -247,7 +250,7 @@ int MessageIdentityTypeSupport::copy_data(void* dst, void* src) {
 unsigned int MessageIdentityTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->sourceGuid, currentAlignment);
     currentAlignment += SequenceNumber_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->sequenceNumber, currentAlignment);
     return currentAlignment - initialAlignment;
@@ -256,7 +259,7 @@ unsigned int MessageIdentityTypeSupport::get_serialized_data_size(void* data, un
 unsigned int MessageIdentityTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_max_serialized_data_size(&structData->sourceGuid, currentAlignment);
     currentAlignment += SequenceNumber_tTypeSupport::get_instance()->get_max_serialized_data_size(&structData->sequenceNumber, currentAlignment);
     return currentAlignment - initialAlignment;
@@ -264,7 +267,7 @@ unsigned int MessageIdentityTypeSupport::get_max_serialized_data_size(void* data
 
 int MessageIdentityTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
-    uint32_t tmpLength = 0;
+    //uint32_t tmpLength = 0;
     if (BuiltinTopicKey_tTypeSupport::get_instance()->serialize_data((void*)&structData->sourceGuid, cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->sourceGuid\n");
         return -1;
@@ -278,10 +281,6 @@ int MessageIdentityTypeSupport::serialize_data(void* data, CdrSerializer* cdr, i
 
 int MessageIdentityTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (BuiltinTopicKey_tTypeSupport::get_instance()->deserialize_data(&structData->sourceGuid, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->sourceGuid\n");
         return -1;
@@ -298,8 +297,11 @@ TypeObject* MessageIdentityTypeSupport::get_typeobject() {
 }
 
 int MessageIdentityTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    MessageIdentity* structData = static_cast<MessageIdentity*>(data);
-    bool memberHasKey = false;
+    (void)cdr;
+    (void)endian;
+    (void)data;
+    //MessageIdentity* structData = static_cast<MessageIdentity*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -362,19 +364,21 @@ int Property_tTypeSupport::copy_data(void* dst, void* src) {
 unsigned int Property_tTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     Property_t* structData = static_cast<Property_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     currentAlignment += CdrSerializer::getStringSize(structData->value.size() + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int Property_tTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
 int Property_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     Property_t* structData = static_cast<Property_t*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
         fprintf(stderr, "Serialization failed for field: structData->name\n");
         return -1;
@@ -387,11 +391,8 @@ int Property_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int en
 }
 
 int Property_tTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     Property_t* structData = static_cast<Property_t*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->name)) {
         fprintf(stderr, "Deserialization failed for field: structData->name\n");
         return -1;
@@ -408,8 +409,11 @@ TypeObject* Property_tTypeSupport::get_typeobject() {
 }
 
 int Property_tTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    Property_t* structData = static_cast<Property_t*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //Property_t* structData = static_cast<Property_t*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -472,7 +476,7 @@ int BinaryProperty_tTypeSupport::copy_data(void* dst, void* src) {
 unsigned int BinaryProperty_tTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned char), structData->value.size(), currentAlignment);
@@ -480,10 +484,13 @@ unsigned int BinaryProperty_tTypeSupport::get_serialized_data_size(void* data, u
 }
 
 unsigned int BinaryProperty_tTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
 int BinaryProperty_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
@@ -503,11 +510,12 @@ int BinaryProperty_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
 }
 
 int BinaryProperty_tTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
+    //char tmpCharEnum = 0;
+    //short tmpShortEnum = 0;
+    //int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->name)) {
         fprintf(stderr, "Deserialization failed for field: structData->name\n");
         return -1;
@@ -529,8 +537,11 @@ TypeObject* BinaryProperty_tTypeSupport::get_typeobject() {
 }
 
 int BinaryProperty_tTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 

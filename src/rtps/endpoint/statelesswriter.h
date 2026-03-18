@@ -121,7 +121,7 @@ public:
 	 *
 	 * @return 返回0表示加密成功，其余失败。
 	 */
-	int EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
+	int EncodeSubMsgBuffer(SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
 #endif // DDSSECURITY
 
 private:

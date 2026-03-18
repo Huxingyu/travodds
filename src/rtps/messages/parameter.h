@@ -895,7 +895,7 @@ template <>
 inline uint16_t Parameter<DataHolder>::size()
 {
     uint32_t inSize = 0;
-    inSize += (4u + (parameter_.class_id.size() + 3u) & ~3u); //string class_id 占用四字节长度和本身
+    inSize += (4u + ((parameter_.class_id.size() + 3u) & ~3u)); //class_id
     inSize += 4; //properties长度占用
     for (uint32_t i = 0; i < parameter_.properties.size(); i++) {
 		inSize += 4u + ((StringSize(parameter_.properties[i].name) + 3u) & ~3u);
@@ -959,8 +959,8 @@ inline uint16_t Parameter<DataTags_t>::size()
 {
 	uint32_t inSize = 4; //这四字节存储数组数，Tag_t个数
 	for (uint32_t i = 0; i < parameter_.tags.size(); i++) {
-		inSize += (4u + (parameter_.tags[i].name.size() + 3u) & ~3u);
-		inSize += (4u + (parameter_.tags[i].value.size() + 3u) & ~3u);
+		inSize += (4u + ((parameter_.tags[i].name.size() + 3u) & ~3u));
+		inSize += (4u + ((parameter_.tags[i].value.size() + 3u) & ~3u));
 	}
 	return inSize;
 }
