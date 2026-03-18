@@ -13,6 +13,7 @@
 #define TRAVODDS_COMMON_SEQUENCE_SEQUENCE_H
 
 #include "common/sequence/sequencebase.h"
+#include <stdexcept>
 #include <vector>
 
 /**

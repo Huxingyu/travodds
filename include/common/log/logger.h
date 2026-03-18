@@ -27,13 +27,13 @@ TRAVODDS_NAMESPACE_BEGIN
 typedef enum LogType
 {
     /** @brief  程序出现不可忽略的错误。  */
-    LOG_ERROR = 0x0001 << 1,
+    LOG_ERROR = 0x0001 << 0,
     /** @brief  警告信息但是能够正常运行。  */
-    LOG_WARNING = 0x0001 << 2,
+    LOG_WARNING = 0x0001 << 1,
+    /** @brief  通知用户视角信息。  */
+    LOG_INFO = 0x0001 << 2,
     /** @brief  系统管理员视角的信息,比如一些调试信息。  */
     LOG_DEBUG = 0x0001 << 3,
-    /** @brief  通知用户视角信息。  */
-    LOG_INFO = 0x0001 << 4,
 } LogType;
 
 /**
@@ -44,7 +44,7 @@ typedef enum LogType
  * @param    consoleMask    输出到控制台的日志等级掩码.
  * @param    fileMask       输出到日志文件的日志等级掩码.
  */
-int32_t LogInitial(uint32_t consoleMask = 0xffff, uint32_t fileMask = 0xffff);
+int32_t LogInitial(uint32_t consoleMask = 0x0007, uint32_t fileMask = 0x0007);
 
 /**
  * @fn  int32_t LogDestroy();
