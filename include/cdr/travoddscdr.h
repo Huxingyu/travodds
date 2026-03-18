@@ -167,15 +167,24 @@ public:
             curProcessMsgBlock_ = retBuffer;
         } else {
            T tmpValue = 0;
+           uint16_t val_16 = 0;
+           uint32_t val_32 = 0;
+           uint64_t val_64 = 0;
            switch (typeSize) {
            case 2:
-               tmpValue = __builtin_bswap16(*(uint16_t*)&value);
+               memcpy(&val_16, &value, sizeof(uint16_t));
+               val_16 = __builtin_bswap16(val_16);
+               tmpValue = val_16;
                break;
            case 4:
-               tmpValue = __builtin_bswap32(*(uint32_t*)&value);
+               memcpy(&val_32, &value, sizeof(uint32_t));
+               val_32 = __builtin_bswap32(val_32);
+               tmpValue = val_32;
                break;
            case 8:
-               tmpValue = __builtin_bswap64(*(uint64_t*)&value);
+               memcpy(&val_64, &value, sizeof(uint64_t));
+               val_64 = __builtin_bswap64(val_64);
+               tmpValue = val_64;
                break;
            default:
                return false;
@@ -457,7 +466,7 @@ public:
         uint32_t typeSize = sizeof(T);
         // 对齐数据
         uint32_t offset = alignSize(typeSize);
-        char s_alignedData[15] = { 0 };
+
         SerializedBuffer* retBuffer = curProcessMsgBlock_->readData(nullptr, offset);
         if (!retBuffer) {
             return false;

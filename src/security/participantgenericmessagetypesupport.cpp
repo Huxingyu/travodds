@@ -26,7 +26,7 @@ int DataHolderTypeSupport::copy_data(void* dst, void* src) {
 unsigned int DataHolderTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     DataHolder* structData = static_cast<DataHolder*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getStringSize(structData->class_id.size() + 1, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->properties.size(); ++i) {
@@ -40,6 +40,8 @@ unsigned int DataHolderTypeSupport::get_serialized_data_size(void* data, unsigne
 }
 
 unsigned int DataHolderTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -78,9 +80,9 @@ int DataHolderTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int en
 int DataHolderTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     DataHolder* structData = static_cast<DataHolder*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
+    //char tmpCharEnum = 0;
+    //short tmpShortEnum = 0;
+    //int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->class_id)) {
         fprintf(stderr, "Deserialization failed for field: structData->class_id\n");
         return -1;
@@ -115,8 +117,11 @@ TypeObject* DataHolderTypeSupport::get_typeobject() {
 }
 
 int DataHolderTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    DataHolder* structData = static_cast<DataHolder*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //DataHolder* structData = static_cast<DataHolder*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -179,7 +184,7 @@ int ParticipantGenericMessageTypeSupport::copy_data(void* dst, void* src) {
 unsigned int ParticipantGenericMessageTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     // PND
     currentAlignment += 4; //00010000
     currentAlignment += MessageIdentityTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->messageIdentity, currentAlignment);
@@ -196,6 +201,8 @@ unsigned int ParticipantGenericMessageTypeSupport::get_serialized_data_size(void
 }
 
 unsigned int ParticipantGenericMessageTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -257,9 +264,9 @@ int ParticipantGenericMessageTypeSupport::serialize_data(void* data, CdrSerializ
 int ParticipantGenericMessageTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
+    //char tmpCharEnum = 0;
+    //short tmpShortEnum = 0;
+    //int tmpIntEnum = 0;
     //PND
     uint8_t cdr_le;
     uint16_t dig = 0;
@@ -319,8 +326,11 @@ TypeObject* ParticipantGenericMessageTypeSupport::get_typeobject() {
 }
 
 int ParticipantGenericMessageTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //ParticipantGenericMessage* structData = static_cast<ParticipantGenericMessage*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
