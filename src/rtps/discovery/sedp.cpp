@@ -723,13 +723,15 @@ ReturnCode_t Sedp::WriteParticipantStatelessMessageData(const GUID_t* remoteGuid
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
 	CdrSerializer cdr(buffer);
 	uint32_t res = ParticipantGenericMessageTypeSupport::get_instance()->serialize_data(&data, &cdr, true);//ParticipantGenericMessageSerialize(&data, buffer);
-
+	if (res != 0) {
+		TRAVODDS_LOG(LOG_ERROR, "serialize ParticipantGenericMessage fail.");
+	}
 	Time_t cur_time;
 	DomainParticipant::get_current_time(cur_time);
 	InstanceHandle_t handle;
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
-	//data.messageIdentity.sourceGuid.value;
-	GUID_t guid = participant_->GetGuid();
+	// data.messageIdentity.sourceGuid.value;
+	// GUID_t guid = participant_->GetGuid();
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(participant_->GetGuid());
 	for (int i = 0; i < 4; ++i) {
 		//value[i] = data.messageIdentity.sourceGuid.value[i];
@@ -777,12 +779,14 @@ void Sedp::WriteParticipantVolatileSecureMessage(const GUID_t* remoteGuid, Parti
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
 	CdrSerializer cdr(buffer);
 	uint32_t res = ParticipantGenericMessageTypeSupport::get_instance()->serialize_data(&data, &cdr, true);//ParticipantGenericMessageSerialize(&data, buffer);
-
+	if (res != 0) {
+		TRAVODDS_LOG(LOG_ERROR, "serialize ParticipantGenericMessage fail.");
+	}
 	Time_t cur_time;
 	DomainParticipant::get_current_time(cur_time);
 	InstanceHandle_t handle;
 	BUILTIN_TOPIC_KEY_TYPE_NATIVE value[4];
-	data.messageIdentity.sourceGuid.value;
+	// data.messageIdentity.sourceGuid.value;
 	for (int i = 0; i < 4; ++i) {
 		value[i] = data.messageIdentity.sourceGuid.value[i];
 	}
@@ -1004,8 +1008,7 @@ void Sedp::ReceiveDiscoveredReaderSecureData(DiscoveredReaderSecureData& data)
 }
 
 void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data) {
-	GUID_t destGuid;
-	memcpy(&destGuid, data.destinationParticipantKey.value, 16);
+	GUID_t destGuid = Conversion::ToGuid(data.destinationParticipantKey);
 	DomainParticipantImpl* dp = spdp_->GetDiscovery()->GetParticipant();
 	GUID_t localParticipantGuid = dp->GetRelatedParticipant()->GetGuid();
 	// 判断目标是否是自己
@@ -1078,8 +1081,6 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 				(char*)spdp_->bigEndianMsgData_->buffer,
 				spdp_->bigEndianMsgData_->buffer_size,
 				&secExce);
-		auto now = std::chrono::system_clock::now();
-		std::time_t now_ms = std::chrono::system_clock::to_time_t(now);
 		if (validationRst == VALIDATION_PENDING_HANDSHAKE_MESSAGE) { //HandshakeMsgSend
 			dpInfo->handshakeMsg_->relatedMessageIdentity.sourceGuid = data.messageIdentity.sourceGuid;
 			ParticipantStatelessMessage* handshakeMsg = dpInfo->handshakeMsg_;
@@ -1373,10 +1374,8 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 
 uint32_t Sedp::SetRemoteDomainEntityCryptoTokens(const ParticipantVolatileSecureMessage* sample, bool isReader)
 {
-	GUID_t srcGuid;
-	GUID_t destGuid;
-	memcpy(&srcGuid, sample->sourceEndpointKey.value, 16);
-	memcpy(&destGuid, sample->destinationEndpointKey.value, 16);
+	GUID_t srcGuid = Conversion::ToGuid(sample->sourceEndpointKey);
+	GUID_t destGuid = Conversion::ToGuid(sample->destinationEndpointKey);
 	if (isReader) {
 		if (destGuid == GUID_UNKNOWN)
 		{

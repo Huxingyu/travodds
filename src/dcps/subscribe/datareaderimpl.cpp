@@ -931,7 +931,7 @@ bool DataReaderImpl::GetSecAttributes()
 		SecurityException secExce;
 		GUID_t guid = Conversion::ToGuid(handle_);
 		//participantstatestatelessmessageredaer的安全实体的reader 或者是用户自定义读者实体
-		if (guid.IsSecureBuiltinEntity() && guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER
+		if ((guid.IsSecureBuiltinEntity() && guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER)
 			|| (guid.IsUserDefinedEntity() && guid.entityId != ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER))
 		{
 			// Access_Control 创建的数据读者若为内置安全相关实体或者非内置实体，需要获取安全属性
@@ -998,7 +998,7 @@ bool DataReaderImpl::GetSecAttributes()
 				return false;
 			}
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER) {
-				unsigned int tmplen = secAttributes_.ac_endpoint_properties.size();
+				// unsigned int tmplen = secAttributes_.ac_endpoint_properties.size();
 				Property_t tmpProperty;
 				tmpProperty.name = "dds.sec.builtin_endpoint_name";
 				tmpProperty.value = "BuiltinParticipantVolatileMessageSecureReader";

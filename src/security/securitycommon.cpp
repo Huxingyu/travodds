@@ -28,7 +28,7 @@ ParticipantSecurityAttributesMask ParticipantSecurityAttributesToMask(Participan
 		rst |= PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_LIVELINESS_PROTECTED;
 	}
 	// todo: add more attributes
-	if (rst == PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID)
+	if (rst == static_cast<ParticipantSecurityAttributesMask>(PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID))
 	{
 		rst = 0;
 	}
@@ -67,7 +67,7 @@ EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurity
 		rst |= ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_KEY_PROTECTED;
 	}
 	// todo: add more attributes
-	if (rst == ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID)
+	if (rst == static_cast<EndpointSecurityAttributesMask>(ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID))
 	{
 		rst = 0;
 	}

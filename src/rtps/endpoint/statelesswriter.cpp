@@ -337,14 +337,19 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			SerializedBuffer encodeBuffer;
 			srcBuffer.buffer = buffer->buffer - shift;
 			srcBuffer.buffer_size = buffer->buffer_size + shift;
-			int dataRet;
+			int dataRet = 0;
 			// 子消息加密后长度 包含DataFrag头部，DataFrag其他信息，DataFrag负载的长度
 			uint32_t encodeDataSize = 0;
 			if (encodeSubMsg) {
 				encodeBuffer.buffer_size = srcBuffer.buffer_size * 10; //TODO 分配子消息加密后空间
 				encodeBuffer.buffer = new char[encodeBuffer.buffer_size];
 				//encode_datawriter_message
-				dataRet = EncodeSubMsgBuffer(NULL, srcBuffer, encodeBuffer);
+				dataRet = EncodeSubMsgBuffer(srcBuffer, encodeBuffer);
+				if (dataRet != 0) {
+					TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+					delete[] encodeBuffer.buffer;
+					return RETCODE_ERROR;
+				}
 				//加密后的子消息放到encodeRtpsBuffer（encodeBuf）的缓冲区尾部
 				memcpy(encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size,
 					encodeBuffer.buffer,
@@ -404,7 +409,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 					&secExce))
 				{
 					delete[]encodeBuffer.buffer;
-					return -1;
+					return RETCODE_ERROR;
 				}
 				//将encodeBuffer拷贝到encodeRtpsBuffer
 				encodeRtpsBuffer.buffer = encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size;
@@ -486,7 +491,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
         SerializedBuffer encodeBuffer;
         srcBuffer.buffer = change->serializedBuffer->buffer - shift;
         srcBuffer.buffer_size = change->serializedBuffer->buffer_size + shift;;
-        int dataRet;
+        int dataRet = 0;
         // 子消息加密后长度 包含Data头部，Data其他信息，Data负载的长度
         uint32_t encodeDataSize = 0;
         //子消息加密 encodeRtpsBuffer包含DATA头和DATA其他信息
@@ -494,7 +499,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
             encodeBuffer.buffer_size = srcBuffer.buffer_size * 10; //TODO 分配子消息加密后空间
             encodeBuffer.buffer = new char[encodeBuffer.buffer_size];
             //encode_datawriter_message
-            dataRet = EncodeSubMsgBuffer(NULL, srcBuffer, encodeBuffer);
+            dataRet = EncodeSubMsgBuffer(srcBuffer, encodeBuffer);
+			if (dataRet != 0) {
+				TRAVODDS_LOG(LOG_ERROR, "Failed to encode submessage.");
+				delete[] encodeBuffer.buffer;
+				return RETCODE_ERROR;
+			}
             //加密后的子消息放到encodeRtpsBuffer的缓冲区尾部
             memcpy(encodeRtpsBuffer.buffer + encodeRtpsBuffer.buffer_size - encodeBuffer.buffer_size,
                 encodeBuffer.buffer,
@@ -647,7 +657,7 @@ ReturnCode_t StatelessWriter::ReceiveNackFragMessage(const Receive_t&  headerMsg
 }
 
 #ifdef DDSSECURITY
-int StatelessWriter::EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> readerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer)
+int StatelessWriter::EncodeSubMsgBuffer(SerializedBuffer& buffer, SerializedBuffer& encodeBuffer)
 {
 	bool isEncode = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected

@@ -567,8 +567,8 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
 
 	//加密前的子消息长度
-	uint32_t lengthAckNackMsgBefore = 0;
-	uint32_t lengthInfoMsgBefore = 0;
+	// uint32_t lengthAckNackMsgBefore = 0;
+	// uint32_t lengthInfoMsgBefore = 0;
 #ifdef DDSSECURITY
 	SerializedBuffer tmpPlainBuffer;
 	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放
@@ -591,7 +591,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 
 	// 序列化AckNack, bufffer指向AckNack头部位置
 	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg); // 出参shift为AckNack消息长度
-	lengthAckNackMsgBefore = shift;
+	// lengthAckNackMsgBefore = shift;
 	bufffer.buffer_size = shift;
 
 #ifdef DDSSECURITY
@@ -618,7 +618,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	dstMsg.guidPrefix = writerProxy->GetGuid().prefix;
 	dstMsg.header.flags = 0x01;
 	MessageProcessor::EncapsulateINFODSTMessage(bufffer, shift, dstMsg); // 出参shift为Info长度
-	lengthInfoMsgBefore = shift;
+	// lengthInfoMsgBefore = shift;
 
 #ifdef DDSSECURITY
 	// 加密序列化的Info
@@ -741,7 +741,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
 	//加密前的子消息长度
-	uint32_t lengthNackFragMsgBefore = 0;
+	//uint32_t lengthNackFragMsgBefore = 0;
 
 #ifdef DDSSECURITY
 	SerializedBuffer tmpPlainBuffer;
@@ -762,7 +762,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 
 	// 序列化NackFrag, bufffer指向Nack头部位置
 	MessageProcessor::EncapsulateNackFragMessage(bufffer, shift, nackMsg); // 出参shift为Nack消息长度
-	lengthNackFragMsgBefore = shift;
+	// lengthNackFragMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
 
@@ -925,7 +925,7 @@ void StatefulReader::TimerExpired()
 int StatefulReader::EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer)
 {
 	if (datareader_->enableSec_) {
-		GUID_t writerGuid = writerProxy->GetGuid();
+		// GUID_t writerGuid = writerProxy->GetGuid();
 		if (datareader_->secAttributes_.is_submessage_protected) {
 			SecurityException secExce;
 			DatawriterCryptoHandle* writerHdls = NULL;

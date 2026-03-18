@@ -27,13 +27,13 @@ struct ParticipantBuiltinTopicData
 	PropertySeq                 sys_info;
 #ifdef DDSSECURITY
 	/** @brief 指明该Participant内置主题数据中是否包含安全相关数据。 */
-	bool contains_security_data;
+	bool contains_security_data = false;
 	/** @brief The identity token */
 	IdentityToken identity_token;
 	/** @brief The permissions token */
 	PermissionsToken permissions_token;
 	/** @brief Information describing the participant security */
-	ParticipantSecurityInfo security_info;
+	ParticipantSecurityInfo security_info = { 0 };
 #endif // DDSSECURITY
 };
 
