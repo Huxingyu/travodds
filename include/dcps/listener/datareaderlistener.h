@@ -33,6 +33,7 @@ public:
      */
     virtual void on_data_available(DataReader* reader)
     {
+        static_cast<void>(reader);
     }
 
 
@@ -44,7 +45,8 @@ public:
      */
     virtual void on_sample_rejected(DataReader* reader, const SampleRejectedStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 
 
@@ -56,7 +58,8 @@ public:
      */
     virtual void on_liveliness_changed(DataReader* reader, const LivelinessChangedStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 
     /**
@@ -67,7 +70,8 @@ public:
      */
     virtual void on_requested_deadline_missed(DataReader* reader, const RequestedDeadlineMissedStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 
     /**
@@ -78,7 +82,8 @@ public:
      */
     virtual void on_requested_incompatible_qos(DataReader* reader, const RequestedIncompatibleQosStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 
     /**
@@ -89,7 +94,8 @@ public:
      */
     virtual void on_subscription_matched(DataReader* reader, const SubscriptionMatchedStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 
     /**
@@ -100,7 +106,8 @@ public:
      */
     virtual void on_sample_lost(DataReader* reader, const SampleLostStatus& status)
     {
-
+        static_cast<void>(reader);
+        static_cast<void>(status);
     }
 };
 

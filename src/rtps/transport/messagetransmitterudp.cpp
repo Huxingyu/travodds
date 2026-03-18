@@ -119,6 +119,7 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 
 ReturnCode_t MessageTransmitterUDP::SendAddrRemove(Locator_t destination)
 {
+	static_cast<void>(destination);
 	return ReturnCode_t();
 }
 
@@ -398,9 +399,8 @@ void MessageTransmitterUDP::AsyncReceive(std::shared_ptr<asio::ip::udp::socket> 
 	std::shared_ptr<asio::ip::udp::endpoint> sender_endpoint = std::make_shared<asio::ip::udp::endpoint>();
 	socket->async_receive_from(asio::buffer(buffer, UDP_MAX_MESSAGE_SIZE), *sender_endpoint,
 		[this, buffer, socket, sender_endpoint](const std::error_code& ec, std::size_t bytes_transferred) {
-			ReturnCode_t ret = RETCODE_OK;
 			if (!ec) {
-				InterpretMessage(buffer, bytes_transferred);
+				InterpretMessage(buffer, static_cast<uint32_t>(bytes_transferred));
 			} 
 			flagNum_.fetch_sub(1, std::memory_order_release);
 			if (IsRun()) {
@@ -430,13 +430,13 @@ asio::ip::multicast::outbound_interface MessageTransmitterUDPv4::GetOutboundInte
 asio::ip::udp::endpoint MessageTransmitterUDPv4::GetEndpoint(const AsioLocator& locator, bool recive)
 {
 	if (locator.IsMulticast() && recive) {
-		return asio::ip::udp::endpoint(asio::ip::udp::v4(), locator.port);
+		return asio::ip::udp::endpoint(asio::ip::udp::v4(), static_cast<uint16_t>(locator.port));
 	}
-	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v4>(), locator.port);
+	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v4>(), static_cast<uint16_t>(locator.port));
 }
 asio::ip::udp::endpoint MessageTransmitterUDPv4::GetReciveEndpoint(const uint32_t port)
 {
-	return asio::ip::udp::endpoint(asio::ip::address::from_string("0.0.0.0"), port);
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("0.0.0.0"), static_cast<uint16_t>(port));
 }
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv4::GetSocketInit()
 {
@@ -462,13 +462,13 @@ asio::ip::multicast::join_group MessageTransmitterUDPv6::GetJoinGroupOption(cons
 asio::ip::udp::endpoint MessageTransmitterUDPv6::GetEndpoint(const AsioLocator& locator, bool recive)
 {
 	if (locator.IsMulticast() && recive) {
-		return asio::ip::udp::endpoint(asio::ip::udp::v6(), locator.port);
+		return asio::ip::udp::endpoint(asio::ip::udp::v6(), static_cast<uint16_t>(locator.port));
 	}
-	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v6>(), locator.port);
+	return asio::ip::udp::endpoint(locator.GetAddress<asio::ip::address_v6>(), static_cast<uint16_t>(locator.port));
 }
 asio::ip::udp::endpoint MessageTransmitterUDPv6::GetReciveEndpoint(const uint32_t port)
 {
-	return asio::ip::udp::endpoint(asio::ip::address::from_string("::"), port);
+	return asio::ip::udp::endpoint(asio::ip::address::from_string("::"), static_cast<uint16_t>(port));
 }
 std::shared_ptr<asio::ip::udp::socket> MessageTransmitterUDPv6::GetSocketInit()
 {

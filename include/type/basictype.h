@@ -71,8 +71,7 @@ struct MIGRtpsKeyHash {
 		length = MIG_RTPS_KEY_HASH_MAX_LENGTH;
 	}
 
-	MIGRtpsKeyHash(const MIGRtpsKeyHash& other) : length(other.length), value{ 0 } {
-
+	MIGRtpsKeyHash(const MIGRtpsKeyHash& other) : value{ 0 },  length(other.length) {
 		memcpy(this->value, other.value, this->length);
 	}
 
@@ -335,48 +334,7 @@ struct Duration_t {
 	}
 };
 
-struct Time_t {
-	int32_t sec;
-	uint32_t nanosec;
-	/* wangyi 获取当前时间 */
-	static void now(Time_t& ret) {
-		CurrentTimeSinceUnixEpoch(ret.sec, ret.nanosec);
-	}
-
-	/* wangyi 时间转换（Time_t 格式转换为纳秒） */
-	int64_t ToNs() const
-	{
-		int64_t nano = sec * static_cast<int64_t>(1000000000ULL);
-		nano += nanosec;
-		return nano;
-	}
-
-	// 重载不等于运算符
-	bool operator!=(const Time_t& other) const {
-		return !(*this == other);
-	}
-
-	// 重载相等运算符
-	bool operator==(const Time_t& other) const {
-		return sec == other.sec && nanosec == other.nanosec;
-	}
-
-	// 重载小于运算符
-	bool operator<(const Time_t& other) const {
-		if (sec < other.sec) {
-			return true;
-		}
-		else if (sec == other.sec) {
-			return nanosec < other.nanosec;
-		}
-		return false;
-	}
-
-	// 重载大于运算符
-	bool operator>(const Time_t& other) const {
-		return other < *this;
-	}
-};
+using Time_t = Duration_t;
 
 #define TIME_ZERO {0, 0}
 #define TIME_INVALID {-1, 0xffffffff}
@@ -386,7 +344,7 @@ struct Time_t {
 // Pre-defined values
 // ----------------------------------------------------------------------
 
-const	uint32_t			    LENGTH_UNLIMITED = -1;
+const	uint32_t			    LENGTH_UNLIMITED = ~0u;
 
 const	int32_t			    DURATION_INFINITE_SEC = 0x7fffffff;
 const	uint32_t	DURATION_INFINITE_NSEC = 0x7fffffff;
@@ -406,7 +364,7 @@ using StringSeq = Sequence<std::string>;
 struct Property_t {
 	std::string name;
 	std::string value;
-    bool propagate;
+    bool propagate = false;
     Property_t() = default;
     Property_t(const Property_t& property) :name(property.name),value(property.value),propagate(property.propagate) {}
 
@@ -512,8 +470,9 @@ struct SampleInfo {
 		  instance_handle(HANDLE_NIL),
 		  publication_handle(HANDLE_NIL),
 		  disposed_generation_count(0), no_writers_generation_count(0), sample_rank(0),
-		  generation_rank(0), absolute_generation_rank(0), reception_sequence_number(0),
-		  write_sequence_number(0), valid_data(false) {
+		  generation_rank(0), absolute_generation_rank(0), 
+		  valid_data(false), 
+		  reception_sequence_number(0),  write_sequence_number(0) {
 
 	}
 };

@@ -252,7 +252,7 @@ public:
 	 *
 	 * @return GUID前缀值。
 	 */
-	GuidPrefix_t GetGuidPrefix();
+	GuidPrefix_t GetGuidPrefix() const;
 
 	/**
 	 * @brief 添加本地Writer。

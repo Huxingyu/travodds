@@ -5,7 +5,7 @@
 USING_TRAVODDS_NAMESPACE;
 
 HistoryCache::HistoryCache(const HistoryQosPolicy& historyQos, const ResourceLimitsQosPolicy& resourceLimitsQos, const TopicKind_t& topicKind)
-	: historyQos_(historyQos), resourceLimitesQos_(resourceLimitsQos), topicKind_(topicKind)
+	: topicKind_(topicKind), resourceLimitesQos_(resourceLimitsQos), historyQos_(historyQos)
 {
 	if (resourceLimitesQos_.max_samples <= 0) {
 		resourceLimitesQos_.max_samples = std::numeric_limits<int32_t>::max();
@@ -43,7 +43,7 @@ HistoryCache::~HistoryCache()
 
 bool HistoryCache::IsFull()
 {
-	if (cacheChanges_.size() >= maxSamples_) {
+	if (cacheChanges_.size() >= static_cast<size_t>(maxSamples_)) {
 		return true;
 	}
 
@@ -162,6 +162,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheC
 	changeMutex_.lock();
 	auto itor = instanceChanges_.find(handle);
 	if (itor != instanceChanges_.end()) {
+		int32_t presize = static_cast<int32_t>( dataValues.size());
 		for (auto cache = itor->second.cacheChanges.begin(); cache != itor->second.cacheChanges.end(); ) {
 			/* 判断状态是否符合,数据状态不符合不条件数据  */
 			if (0 == (sampleStates & (*cache)->sampleInfo.sample_state) || 
@@ -175,6 +176,9 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheC
 			sampleInfo = (*cache)->sampleInfo;
 			sampleInfo.view_state = itor->second.viewState;
 			sampleInfo.instance_state = itor->second.instanceState;
+			sampleInfo.absolute_generation_rank =(* itor->second.cacheChanges.rbegin())->sampleInfo.disposed_generation_count
+				+ (*itor->second.cacheChanges.rbegin())->sampleInfo.no_writers_generation_count - itor->second.disposedGenerationCount - itor->second.noWritersGenerationCount;
+
 			if ((*cache)->kind == ALIVE) {
 				sampleInfo.valid_data = true;
 			}
@@ -195,12 +199,18 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheC
 				cache++;
 			}
 			/* 获取的数据个数 大于 max_samples设置，停止获取数据  */
-			if (dataValues.size() == maxSamples) {
+			if (dataValues.size() == static_cast<size_t>(maxSamples)) {
 				break;
 			}
 		}
-	}
+		int32_t cursize = static_cast<int32_t>(dataValues.size());
+		int32_t dis = cursize - presize;
 
+		for (int32_t i = presize; i < cursize - 1; i++) {
+			sampleInfos[i].sample_rank = dis - (i - presize) - 1;
+			sampleInfos[i].generation_rank = sampleInfos[cursize - 1].disposed_generation_count + sampleInfos[cursize - 1].no_writers_generation_count - sampleInfos[i].disposed_generation_count - sampleInfos[i].no_writers_generation_count;
+		}
+	}
 	changeMutex_.unlock();
 
 	return dataValues.size() == 0 ? RETCODE_NO_DATA : RETCODE_OK;
@@ -269,22 +279,27 @@ ReturnCode_t HistoryCache::UpdataSampleInstance(const InstanceHandle_t& handle, 
 {
 	ReturnCode_t ret = RETCODE_OK;
 	auto& insChange = instanceChanges_[handle];
-	
-	if(!shared) {
-		if(insChange.aliveWriter.empty()) {
-			insChange.aliveWriter.insert({ writerGuid,ownershipStrength });
-		} 
-		else {
-			if(insChange.aliveWriter.begin()->first != writerGuid && insChange.aliveWriter.begin()->second >= ownershipStrength) {
-				return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+
+	if (insChange.aliveWriter.empty()) {
+		insChange.aliveWriter.insert({ writerGuid,ownershipStrength });
+		if (!shared) {
+			insChange.maxOwnershipStrength = { writerGuid,ownershipStrength };
+		}
+	} else {
+		insChange.aliveWriter[writerGuid] = ownershipStrength;
+
+		if (!shared && insChange.maxOwnershipStrength.first != writerGuid && insChange.maxOwnershipStrength.second >= ownershipStrength) {
+			if (changeKind == NOT_ALIVE_UNREGISTERED || changeKind == NOT_ALIVE_DISPOSED_UNREGISTERED) {
+				insChange.aliveWriter.erase(writerGuid);
 			}
-			if (insChange.aliveWriter.begin()->first != writerGuid) {
-				insChange.aliveWriter.erase(insChange.aliveWriter.begin());
-			}
-			insChange.aliveWriter[writerGuid] = ownershipStrength;
+			return RETCODE_EXCLUSIVE_OWNERSHIP_QOS_NOT_MAX;
+		}
+		if (!shared) {
+			insChange.maxOwnershipStrength.first = writerGuid;
+			insChange.maxOwnershipStrength.second = ownershipStrength;
 		}
 	}
-
+	
 	switch (changeKind)
 	{
 	case ALIVE:
@@ -297,14 +312,32 @@ ReturnCode_t HistoryCache::UpdataSampleInstance(const InstanceHandle_t& handle, 
 	case NOT_ALIVE_DISPOSED:
 		UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, insChange);
 		break;
-
-	case NOT_ALIVE_DISPOSED_UNREGISTERED:
 	case NOT_ALIVE_UNREGISTERED:
 		insChange.aliveWriter.erase(writerGuid);
-		if(insChange.aliveWriter.empty()) {
+		if (insChange.aliveWriter.empty()) {
 			UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, insChange);
-		} else {
-			UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, insChange);
+			insChange.maxOwnershipStrength = { GUID_UNKNOWN, 0 };
+			break;
+		}
+		if (!shared && insChange.maxOwnershipStrength.first == writerGuid) {
+			insChange.maxOwnershipStrength = { GUID_UNKNOWN, 0 };
+			for (const auto& aliveWriter : insChange.aliveWriter) {
+				if (aliveWriter.second > insChange.maxOwnershipStrength.second) {
+					insChange.maxOwnershipStrength = aliveWriter;
+				}
+			}
+		}
+		break;
+	case NOT_ALIVE_DISPOSED_UNREGISTERED:
+		UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, insChange);
+		insChange.aliveWriter.erase(writerGuid);
+     	if (!shared && insChange.maxOwnershipStrength.first == writerGuid) {
+			insChange.maxOwnershipStrength = { GUID_UNKNOWN, 0 };
+			for (const auto& aliveWriter : insChange.aliveWriter) {
+				if (aliveWriter.second > insChange.maxOwnershipStrength.second) {
+					insChange.maxOwnershipStrength = aliveWriter;
+				}
+			}
 		}	
 		break;
 	default:
@@ -343,13 +376,28 @@ void HistoryCache::UpdateState(const InstanceStateKind& state, CacheChangeVector
 	if(cacheChange.instanceState == state) {
 		return;
 	}
+	if (cacheChange.instanceState == ALIVE_INSTANCE_STATE && state == NOT_ALIVE_DISPOSED_INSTANCE_STATE) {
+		counters_.instanceAlive -=  cacheChange.cacheChanges.size();
+		counters_.instanceDisposed += cacheChange.cacheChanges.size();
+	} else if (cacheChange.instanceState == ALIVE_INSTANCE_STATE && state == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE) {
+		counters_.instanceAlive -= cacheChange.cacheChanges.size();
+		counters_.instanceNoWriters += cacheChange.cacheChanges.size();
+	} else if (cacheChange.instanceState == NOT_ALIVE_DISPOSED_INSTANCE_STATE && state == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE) {
+		counters_.instanceDisposed -= cacheChange.cacheChanges.size();
+		counters_.instanceNoWriters += cacheChange.cacheChanges.size();
+	} else if (cacheChange.instanceState == NOT_ALIVE_DISPOSED_INSTANCE_STATE && state == ALIVE_INSTANCE_STATE) {
+		counters_.instanceDisposed -= cacheChange.cacheChanges.size();
+		counters_.instanceAlive += cacheChange.cacheChanges.size();
+		cacheChange.disposedGenerationCount++;
+	} else if (cacheChange.instanceState == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE && state == ALIVE_INSTANCE_STATE) {
+		counters_.instanceNoWriters -= cacheChange.cacheChanges.size();
+		counters_.instanceAlive += cacheChange.cacheChanges.size();
+		cacheChange.noWritersGenerationCount++;
+	} else if (cacheChange.instanceState == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE && state == NOT_ALIVE_DISPOSED_INSTANCE_STATE) {
+		counters_.instanceNoWriters -= cacheChange.cacheChanges.size();
+		counters_.instanceDisposed += cacheChange.cacheChanges.size();
+	}
 	cacheChange.instanceState = state;
-	bool isAlive = state == ALIVE_INSTANCE_STATE;
-	bool isDisposed = state == NOT_ALIVE_DISPOSED_INSTANCE_STATE;
-	bool isNoWriters = state == NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
-	counters_.instanceAlive += (isAlive ? 1 : -1) * cacheChange.cacheChanges.size();
-	counters_.instanceDisposed += (isDisposed ? 1 : -1) * cacheChange.cacheChanges.size();
-	counters_.instanceNoWriters += (isNoWriters ? 1 : -1) * cacheChange.cacheChanges.size();
 	counters_.change.store(true);
 }
 
@@ -390,7 +438,7 @@ bool HistoryCache::IsFull(const InstanceHandle_t& handle)
 	if (changesItor == instanceChanges_.end()) {
 		return false;
 	}
-	return changesItor->second.cacheChanges.size() == changesItor->second.maxSamples;
+	return changesItor->second.cacheChanges.size() == static_cast<size_t>( changesItor->second.maxSamples);
 }
 void HistoryCache::RemoveOldestChangeByInstance(const InstanceHandle_t& handle)
 {
@@ -459,7 +507,7 @@ bool HistoryCache::WriterWaitFor(const std::chrono::nanoseconds& time_out, Write
 				}
 			}
 			else {
-				return changesItor->second.cacheChanges.size() < changesItor->second.maxSamples;
+				return changesItor->second.cacheChanges.size() < static_cast<size_t>(changesItor->second.maxSamples);
 			}
 		});
 	
@@ -500,16 +548,18 @@ void HistoryCache::SetNextDeadline(const InstanceHandle_t& handle, const std::ch
 	readinstance.nextDeadline = nextDeadline;
 
 	if (timeout) {
-		//std::map<GUID_t, int32_t>::iterator itor =
-		//	std::min_element(readinstance.aliveWriter.begin(), readinstance.aliveWriter.end(),
-		//		[](const std::pair<GUID_t, int32_t>& a, const std::pair<GUID_t, int32_t>& b) {
-		//			return a.second < b.second;
-		//		}
-		//	);
-		if (readinstance.aliveWriter.empty()) {
-			UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, readinstance);
-		} else {
-			UpdateState(NOT_ALIVE_DISPOSED_INSTANCE_STATE, readinstance);
+		if (readinstance.maxOwnershipStrength.first != GUID_UNKNOWN) {
+			readinstance.aliveWriter.erase(readinstance.maxOwnershipStrength.first);
+			readinstance.maxOwnershipStrength = { GUID_t(), 0 };
+			if (readinstance.aliveWriter.empty()) {
+				UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, readinstance);
+			} else  {
+				for (const auto& aliveWriter : readinstance.aliveWriter) {
+					if (aliveWriter.second > readinstance.maxOwnershipStrength.second) {
+						readinstance.maxOwnershipStrength = aliveWriter;
+					}
+				}
+			}
 		}
 	}
 }
@@ -522,14 +572,38 @@ void HistoryCache::UpAllDeadline(const std::chrono::steady_clock::time_point& ne
 	}
 }
 
-int32_t HistoryCache::GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache)
+bool HistoryCache::GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextTime)
 {
-	int32_t lostcounts = 0;
 	std::unique_lock<std::mutex> lock(changeMutex_);
-	auto& readinstance = instanceChanges_[cache->instanceHandle];
-	lostcounts = cache->sequenceNumber - readinstance.lastSeqNum -1;
-	readinstance.lastSeqNum = cache->sequenceNumber;
-	return lostcounts;
+	if (instanceChanges_.empty()) {
+		return false;
+	}
+	std::map<InstanceHandle_t, CacheChangeVector>::iterator itor =
+		std::min_element(instanceChanges_.begin(), instanceChanges_.end(),
+			[](const auto& a, const auto& b) {
+				return a.second.nextTimeBasedFilte < b.second.nextTimeBasedFilte;
+			}
+		);
+	handle = itor->first;
+	nextTime = itor->second.nextTimeBasedFilte;
+	return true;
+}
+
+void HistoryCache::SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache)
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	auto& readinstance = instanceChanges_[handle];
+	readinstance.nextTimeBasedFilte = std::chrono::steady_clock::time_point();
+	cache = std::move(readinstance.lastCache);
+}
+
+void HistoryCache::RsetAllTimeBasedFilte()
+{
+	std::unique_lock<std::mutex> lock(changeMutex_);
+	for (auto& it : instanceChanges_) {
+		it.second.nextTimeBasedFilte = std::chrono::steady_clock::time_point();
+		it.second.lastCache.reset();
+	}
 }
 
 void HistoryCache::RemoveRemoteWriter(const GUID_t& guid)
@@ -538,7 +612,15 @@ void HistoryCache::RemoveRemoteWriter(const GUID_t& guid)
 	for (auto& ins : instanceChanges_) {
 		ins.second.aliveWriter.erase(guid);
 		if (ins.second.aliveWriter.empty()) {
-			ins.second.instanceState = NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
+			ins.second.maxOwnershipStrength = { GUID_UNKNOWN, 0 };
+			UpdateState(NOT_ALIVE_NO_WRITERS_INSTANCE_STATE, ins.second);
+		} else if (ins.second.maxOwnershipStrength.first == guid) {
+			ins.second.maxOwnershipStrength = { GUID_UNKNOWN, 0 };
+			for (const auto& aliveWriter : ins.second.aliveWriter) {
+				if (aliveWriter.second > ins.second.maxOwnershipStrength.second) {
+					ins.second.maxOwnershipStrength = aliveWriter;
+				}
+			}
 		}
 	}
 }

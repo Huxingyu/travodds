@@ -878,13 +878,6 @@ public:
 	void SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache);
 
 	/**
-	 * @brief 获取最后样本实例丢包数。
-	 *
-	 * @return 返回样本实例丢包数。
-	 */
-	int32_t GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache);
-
-	/**
 	 * @brief Qos策略中deadline Qos相关定时器超时执行函数。
 	 */
 	void DeadlineTimeout();
@@ -901,7 +894,7 @@ public:
 	/**
 	 * @brief 删除过期样本的方法，在lifespan Qos相关定时器超时执行函数。
 	 */
-	bool LifespanTimeout();
+	//bool LifespanTimeout();
 
 	 /**
 	  * @brief 更新活跃度更改情况。
@@ -960,7 +953,7 @@ private:
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
 	/* wangyi lifespan 定时器 */
-	std::shared_ptr<Timer> lifespanTimer_;
+	// std::shared_ptr<Timer> lifespanTimer_;
 	SubscriptionBuiltinTopicData builtinData_;
 #ifdef DDSSECURITY
 	SubscriptionBuiltinTopicSecureData builtinSecureData_;

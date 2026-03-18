@@ -16,7 +16,7 @@ bool SafeQueue::Empty()
 	return queue_.empty();
 }
 
-int32_t SafeQueue::Size()
+size_t SafeQueue::Size()
 {
 	std::unique_lock<std::mutex> lock(mutex_); // 互斥信号变量加锁，防止m_queue被改变
 	return queue_.size();
@@ -45,7 +45,7 @@ ThreadPool::ThreadPool(const int32_t threadNum)
 {
 	threads_.resize(threadNum);
 
-	for (int32_t i = 0; i < threads_.size(); ++i) {
+	for (uint32_t i = 0; i < threads_.size(); ++i) {
 		threads_.at(i) = std::make_shared<std::thread>(&ThreadPool::ThreadWorker, this); // 分配工作线程
 	}
 }
@@ -59,7 +59,7 @@ void ThreadPool::shutdown()
 {
 	shutdown_ = true;
 	lock_.notify_all(); // 通知，唤醒所有工作线程
-	for (int32_t i = 0; i < threads_.size(); ++i) {
+	for (uint32_t i = 0; i < threads_.size(); ++i) {
 		// 判断线程是否在等待
 		if (threads_.at(i)->joinable()) {
 			threads_.at(i)->join(); // 将线程加入到等待队列

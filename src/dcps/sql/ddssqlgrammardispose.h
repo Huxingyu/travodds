@@ -167,9 +167,9 @@ namespace DDSSQL {
                             n->end());
                     }
                 }
-                std::vector<int32_t> arrayIndex; // 默认无数组索引
-                for(int i = 1;i< n->children.size();i++) {
-                    int32_t index = static_cast<int32_t>(std::stoul(n->children[i]->children[0]->content()));
+                std::vector<uint32_t> arrayIndex; // 默认无数组索引
+                for(size_t i = 1;i< n->children.size();i++) {
+                    uint32_t index = std::stoul(n->children[i]->children[0]->content());
                     if (mdesc.type_->descriptor_.kind_ == TK_ARRAY && index >= mdesc.type_->descriptor_.bound_[i - 1]) {
                         throw pegtl::parse_error(
                             "Array index out of bounds for field '" + memberName + "'.",

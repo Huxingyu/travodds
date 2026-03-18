@@ -375,7 +375,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 		flowController_->ReSendData(this,proxy);
 	}
 	/* 需要强制回复一个HB报文 */
-	if (ackMsg.header.flags & !SubMessageFlag::FINAL_FLAG) {
+	if (ackMsg.header.flags & ~SubMessageFlag::FINAL_FLAG) {
 		//TODO 
 		WriteHeartbeat(proxy, true);
 	}
@@ -957,6 +957,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	//加密前的子消息长度
 	uint32_t lengthGapMsgBefore = 0;
 
+
 #ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected
@@ -1033,7 +1034,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		bufffer.buffer = bufffer.buffer - size;  //bufffer指向gapMsg起始位置
 		
 		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg); // 出参shift为gapMsg长度
-		lengthGapMsgBefore = shift;
 		bufffer.buffer_size += shift; //bufffer长度gap+heartbeat
 		shift = 0;
 
@@ -1134,6 +1134,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy)
 {
+	static_cast<void>(readerProxy);
 	//TODO 
 	TRAVODDS_LOG(LOG_ERROR, " not support interface");
 	return RETCODE_UNSUPPORTED;
@@ -1183,7 +1184,6 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 void StatefulWriter::RemoveAllAckedData()
 {
 	auto seq = writerCache_->GetSeqNumMin();
-	bool remove = true;
 	while (IsAckedByAll(seq)) {
 		writerCache_->RemoveChange(seq);
 		seq = writerCache_->GetSeqNumMin();
@@ -1207,7 +1207,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	gapMsg.readerId = proxy->GetGuid().entityId;
 	gapMsg.gapStart = seqVec[0];
 	gapMsg.gapList.bitmapBase = gapMsg.gapStart + 1;
-	int32_t i = 0;
+	size_t i = 0;
 	for (i = 1; i < seqVec.size(); i++) {
 		if (seqVec[i] - gapMsg.gapList.bitmapBase > 0) {
 			break;
@@ -1231,7 +1231,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
-	uint32_t lengthGapMsgBefore = 0;
 
 #ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
@@ -1247,7 +1246,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 #endif // DDSSECURITY
 	// 序列化Gap, bufffer指向Gap头部位置
 	MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
-	lengthGapMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
 
@@ -1386,8 +1384,8 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
         }
 
 		/* TODO  */
-		int32_t fragSendCount = 0;
-		for (int32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
+		uint32_t fragSendCount = 0;
+		for (uint32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
 			if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
 
 		        if(nullptr == buffer){

@@ -13,12 +13,12 @@
 USING_TRAVODDS_NAMESPACE;
 
 DynamicPerformanceRegulator::DynamicPerformanceRegulator(const DynamicAdjustQosPolicy& policy, FlowRateLimitedManager* flowRateLimitedManager)
-	: count_(0), flowRateLimitedManager_(flowRateLimitedManager), config_(policy)
+	: flowRateLimitedManager_(flowRateLimitedManager), config_(policy), count_(0)
 {
     if (policy.adjustment_interval != Duration_t(TIME_INFINITE)) {
 		// 设置调整间隔
 		timer_ = TimerManager::CreateTimer(
-			reinterpret_cast<const Time_t&>(policy.adjustment_interval),
+			policy.adjustment_interval,
 			[this]() {
 				this->UpdateNetDevStats();
 			},
@@ -432,6 +432,8 @@ DynamicPerformanceRegulator::Score  DynamicPerformanceRegulator::CalculateMetric
 				return true;
 			}
 		}
+#else
+		static_cast<void>(interface);
 #endif
 		return false;
 	}

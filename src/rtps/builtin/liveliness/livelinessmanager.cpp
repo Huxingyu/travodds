@@ -8,11 +8,11 @@
 #include <algorithm>
 USING_TRAVODDS_NAMESPACE
 
-LivelinessManager::LivelinessManager(Participant* participant):participant_(participant)
+LivelinessManager::LivelinessManager(Participant* participant):participant_(participant), automaticReaders_(false)
 {
 	GUID_t tmpGuid = participant_->GetGuid();
-	uint32_t id = 0;
-	memcpy(&tmpGuid.entityId, &id, sizeof(EntityId_t));
+	memset(&tmpGuid.entityId.entityKey, 0, sizeof(OctetArray3));
+	tmpGuid.entityId.entityKind = 0;
 	autoHandle_ = Conversion::ToInstanceHandle(tmpGuid);
 	manualHandle_ = autoHandle_;
 	autoHandle_.keyHash.value[15] = AUTOMATIC_LIVELINESS_QOS + octet(1);
@@ -56,7 +56,7 @@ LivelinessManager::~LivelinessManager()
 void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipantData & data)
 {
 	DiscoveredWriterData writerData;
-	memcpy(&writerData.remoteWriterGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+	writerData.remoteWriterGuid = Conversion::ToGuid(data.ddsParticipantData.key);
 	writerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	writerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
@@ -69,7 +69,7 @@ void LivelinessManager::AddParticipantMessageProxy(const SPDPdiscoveredParticipa
 	participant_->AddRemoteWriter(writerData);
 
 	DiscoveredReaderData readerData;
-	memcpy(&readerData.remoteReaderGuid, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+	readerData.remoteReaderGuid = Conversion::ToGuid(data.ddsParticipantData.key);
 	readerData.unicastLocatorList = data.metatrafficUnicastLocatorList;
 	readerData.multicastLocatorList = data.metatrafficMulticastLocatorList;
 
@@ -189,12 +189,9 @@ bool LivelinessManager::RemoveLivelinessWriter(std::shared_ptr<Writer>  writerPt
 
 void LivelinessManager::SetTimer(const LivelinessQosPolicy & qos)
 {
-	Duration_t ret = TIME_ZERO;
 	/* 自动发送和检测时间获取 */
 	double milliSec(Conversion::ToMilliSecondsDouble(qos.lease_duration) * 0.5);
 	Time_t periodTime = Conversion::MilliSecondsToTime(milliSec);
-	Duration_t periodDuration = Conversion::TimeToDuration(periodTime);
-
 
 	std::shared_ptr<Timer> timer;
 	std::map<GUID_t, std::shared_ptr<Writer>> writers;
@@ -330,7 +327,9 @@ bool LivelinessManager::SendLivelinessMessage(const InstanceHandle_t& instance)
 	size += sizeof(InstanceHandle_t);
 	buffer->buffer_size = size;
 	
-	int ret = MemoryPool::GetInstance()->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->buffer);
+	if (!MemoryPool::GetInstance()->getBuffer(buffer->buffer_size + BUFF_SHIFT, buffer->buffer)) {
+		return false;
+	}
 	buffer->buffer = buffer->buffer + BUFF_SHIFT;
 	memcpy(buffer->buffer, data, sizeof(data));
 	
@@ -442,7 +441,7 @@ void LivelinessManager::UpdateLivelinessLostStatus(const GUID_t& writerGuid, std
 
 void LivelinessManager::RemoteStatusChanged(const GUID_t& writerGuid, const LivelinessQosPolicy& livelinessQos, WriterStatus status)
 {
-
+	static_cast<void>(livelinessQos);
 	bool alive, ensure;
 
 	if (status == WriterStatus::LIVELINESSALIVE){
