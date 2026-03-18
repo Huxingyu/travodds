@@ -547,8 +547,6 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(std::shared_ptr<Message_t> me
     // 安全扩展相关
     uint32_t secDataLength = 0;
     bool procingSecSubmsg = false;
-    SecurityPluginInstanceImpl &secPlugin = participantImpl_->secPlugin_;
-    bool enabledSec = participantImpl_->enableDDSSec_;
     ParticipantCryptoHandle receiverCryptoHdl = participantImpl_->cryptoHdl_;
     GuidPrefix_t remoteGuidPrefix = messageReceiver.sourceGuidPrefix;
     ParticipantCryptoHandle senderCryptoHdl = NULL;

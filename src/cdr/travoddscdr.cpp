@@ -197,12 +197,12 @@ bool CdrSerializer::serializeBaseTypeArray(const wchar_t* value, uint32_t length
 
 bool CdrSerializer::serializeLongDouble(LongDouble value) 
 {
-    uint32_t ldSize = sizeof(long double);
+    // uint32_t ldSize = sizeof(long double);
     static char s_alignedData[8] = { 0 };
     // 16字节按照8字节对齐
     uint32_t offset = (~index_ + 1) & (8 - 1);
     index_ += offset;
-    SerializedBuffer* retBuffer = curProcessMsgBlock_->writeData(s_alignedData, offset);
+    curProcessMsgBlock_->writeData(s_alignedData, offset);
     // 填充0
     if (useLittleEndian_ == isLittleEndian()) {
         return serializeBaseTypeArray(value.c, sizeof(LongDouble));
@@ -210,7 +210,7 @@ bool CdrSerializer::serializeLongDouble(LongDouble value)
         // 交换value.c的字节序
         LongDouble tmpValue = value;
         // 交换字节序
-        for (int32_t i = 0; i < sizeof(LongDouble) / 2; ++i) {
+        for (size_t i = 0; i < sizeof(LongDouble) / 2; ++i) {
             tmpValue.c[i] = tmpValue.c[sizeof(LongDouble) - 1 - i];
         }
         return serializeBaseTypeArray(tmpValue.c, sizeof(LongDouble));
@@ -262,6 +262,7 @@ bool CdrSerializer::serializeWString(const std::wstring& value)
 
 bool CdrSerializer::getKeyHash(char* keyHash, bool forceMd5)
 {
+    (void)forceMd5;
 	MD5 md5;
 	SerializedBuffer* current = tgaMsgBlock_;
 	// 依次更新到md5中
@@ -311,6 +312,7 @@ uint32_t CdrSerializer::getWStringSize(uint32_t length, uint32_t currentAlignmen
 
 char* CdrSerializer::serializeParameterHeader(bool useExtended, bool mustUnderstand, uint32_t memberId)
 {
+    (void)mustUnderstand;
     char* lenBlock = nullptr;
     unsigned short tmpShort = 0;
     uint32_t lengthSize = 2;

@@ -467,9 +467,9 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 		SerializedBuffer* curEncodeSubBuffer = NULL;
 		SerializedBuffer* preEncodeSubBuffer = NULL;
-		int curEncodeSubBufferSize = 0;
-		int encodeBufferShift = 0;
-		int encodeBufferSize = encodeBuffer->buffer_size;
+		uint32_t curEncodeSubBufferSize = 0;
+		uint32_t encodeBufferShift = 0;
+		uint32_t encodeBufferSize = encodeBuffer->buffer_size;
 		//SerializedBuffer* encodeBufferHeader = new SerializedBuffer;
 		//逐个构造链表的每一部分buffer
 		for (int i = 0; i < encodeSubBufferNum; ++i) {
@@ -1109,8 +1109,8 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 		}
 		statistic_.enableSec = false;
 		//TODO
-		if (guid.IsSecureBuiltinEntity()
-			&& guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER
+		if ((guid.IsSecureBuiltinEntity()
+			&& guid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER)
 			|| statistic_.secAttributes.is_write_protected
 			|| statistic_.secAttributes.is_read_protected
 			|| statistic_.secAttributes.is_discovery_protected
@@ -1121,7 +1121,7 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 			) 
 		{
 			if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
-				unsigned int tmplen = statistic_.secAttributes.ac_endpoint_properties.size();
+				//unsigned int tmplen = statistic_.secAttributes.ac_endpoint_properties.size();
 				std::string tmpName = "dds.sec.builtin_endpoint_name";
 				std::string tmpValue = "BuiltinParticipantVolatileMessageSecureWriter";
 				Property_t tmpProperty;

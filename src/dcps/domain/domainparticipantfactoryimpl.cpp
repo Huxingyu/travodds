@@ -73,7 +73,7 @@ DomainParticipant* DomainParticipantFactoryImpl::create_participant(DomainId_t d
 	DDSSecurityPluginInstance* pluginPtr = NULL;
     Property_t pluginNameProperty;
     bool hasPluginConfig = false; // 是否配置了插件
-    for (int index = 0; index < qos.property.value.size(); ++index)
+    for (size_t index = 0; index < qos.property.value.size(); ++index)
     {
         Property_t tmpProperty = qos.property.value[index];
         // 如果有使用的插件名称属性
@@ -209,7 +209,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos(const DomainParticipantFactor
     // 插件名称.retrieve_function: 获取插件实例的函数名称
     // 插件名称.finalize_function: 销毁插件实例的函数名称
     // 针对每个插件，自动加载并初始化插件实例
-    for (int index = 0; index < qos.property.value.size(); ++index)
+    for (size_t index = 0; index < qos.property.value.size(); ++index)
     {
         Property_t tmpProperty = qos.property.value[index];
         std::string propertyName = tmpProperty.name;
@@ -222,7 +222,7 @@ ReturnCode_t DomainParticipantFactoryImpl::set_qos(const DomainParticipantFactor
             std::string finalizeFuncName;
 
             // 遍历属性列表，找到对应插件的其他配置信息
-            for (int j = 0; j < qos.property.value.size(); ++j)
+            for (size_t j = 0; j < qos.property.value.size(); ++j)
             {
                 Property_t prop = qos.property.value[j];
                 if (prop.name == pluginName + ".library_path")
