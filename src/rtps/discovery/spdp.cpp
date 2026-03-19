@@ -503,6 +503,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
 	list.WriterToMessage((octet*)buffer->buffer, size);
 
+#ifdef DDSSECURITY
 	SerializedBuffer* bufferSecure = new SerializedBuffer;
 	ParameterList listSecure(data);
 	size = listSecure.GetMessageSize();
@@ -510,6 +511,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 	memoryPool_->getBuffer(bufferSecure->buffer_size + BUFF_SHIFT, bufferSecure->origin_buffer);
 	bufferSecure->buffer = bufferSecure->origin_buffer + BUFF_SHIFT;
 	listSecure.WriterToMessage((octet*)bufferSecure->buffer, size);
+#endif // DDSSECURITY
 
 	InstanceHandle_t handle;
 	memcpy(handle.keyHash.value, data.ddsParticipantData.key.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
@@ -526,7 +528,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 		//TODO 记录日志
 		TRAVODDS_LOG(LOG_ERROR, "writer_ AddBuiltinCache ret= %d", ret);
 	}
-
+#ifdef DDSSECURITY
 	cacheChange = writerSecure_->NewChange(ALIVE, bufferSecure, handle, time);
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "create participantSecure newChange Err");
@@ -537,6 +539,7 @@ void Spdp::WriteSpdPdiscoveredParticipantData(SPDPdiscoveredParticipantData& dat
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "writerSecure_ AddBuiltinCache ret= %d", ret);
 	}
+#endif // DDSSECURITY
 }
 
 void Spdp::RemoveSpdPdiscoveredParticipantData(GUID_t & guid)

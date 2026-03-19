@@ -29,10 +29,10 @@ public:
 	 * @brief 构造函数。
 	 */
 	Endpoint() 
-		: participant_(nullptr), 
+		: reliabilityLevel_(0),
 		  topicKind_({ WITH_KEY }),
-		  reliabilityLevel_(0),
-		  endpointId_(ENTITYID_UNKNOWN)
+		  endpointId_(ENTITYID_UNKNOWN),
+		  participant_(nullptr)
 	{
 	}
 

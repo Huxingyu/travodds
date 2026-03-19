@@ -31,7 +31,7 @@ public:
      */
     virtual void on_data_on_readers(Subscriber* subscriber)
     {
-	    
+        static_cast<void>(subscriber);
     }
 };
 

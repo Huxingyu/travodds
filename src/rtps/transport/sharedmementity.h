@@ -36,7 +36,7 @@ protected:
     const char* objectName_;
     const char* mutexName_;
 	size_t sharedMemSize_ = 1024;
-    uint32_t remaining_ = ~0;
+    uint32_t remaining_ = ~0u;
 
     std::unique_ptr<InterprocessType::managed_shared_memory> segment_;
     std::unique_ptr<InterprocessType::named_mutex> mutex_;

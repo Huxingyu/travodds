@@ -127,10 +127,14 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 	//QOS处理
 	//TODO
-	if (datareader_) {
+	if (datareader_ && (ENTITYKIND_USER_WRITER_NO_KEY == guid.entityId.entityKind || ENTITYKIND_USER_WRITER_WITH_KEY == guid.entityId.entityKind)) {
 		datareader_->SetLastinstanceHandle(cache);
-
-		int32_t lostcount = datareader_->GetInstanceLostcounts(cache);
+		SequenceNumber_t& last =  matchWriters_[guid]->lastMaxRecvSeq;
+		int32_t lostcount = 0;
+		if (last < cache->sequenceNumber) {
+			lostcount = cache->sequenceNumber - last - 1;
+			last = cache->sequenceNumber;
+		}
 		if (lostcount > 0) {
 			datareader_->OnSampleLost(lostcount);
 		}
@@ -221,7 +225,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			dataFragCache->fragmentTatolNum += 1;
 		}
 
-		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
+		for (uint32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
 			dataFragCache->fragmentSeq.insert(i);
 		}
 
@@ -315,10 +319,15 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
             dataFragCache->serializedBuffer = plainData;
         }
 #endif // DDSSECURITY
-		if(datareader_) {
+		if (datareader_ &&(ENTITYKIND_USER_WRITER_NO_KEY == guid.entityId.entityKind || ENTITYKIND_USER_WRITER_WITH_KEY == guid.entityId.entityKind)) {
 			datareader_->SetLastinstanceHandle(dataFragCache);
 
-			int32_t lostcount = datareader_->GetInstanceLostcounts(dataFragCache);
+			SequenceNumber_t& last = matchWriters_[guid]->lastMaxRecvSeq;
+			int32_t lostcount = 0;
+			if (last < dataFragCache->sequenceNumber) {
+				lostcount = dataFragCache->sequenceNumber - last - 1;
+				last = dataFragCache->sequenceNumber;
+			}
 			if (lostcount > 0) {
 				datareader_->OnSampleLost(lostcount);
 			}
@@ -427,9 +436,7 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 		}
 	}
 	/* wangyi 删除旧数据 */
-	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
-		readerCache_->RemoveRemoteWriter(writerGuid);
-	}
+	readerCache_->RemoveRemoteWriter(writerGuid);
 	matchWriters_.erase(writerGuid);
 }
 

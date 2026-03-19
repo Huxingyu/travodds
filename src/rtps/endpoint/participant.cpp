@@ -38,12 +38,12 @@ USING_TRAVODDS_NAMESPACE;
 // }
 
 Participant::Participant(DomainId_t id, const GUID_t& guid,std::shared_ptr<ThreadPool> threadPool)
-	: domainId_(id), readerId_(0), writerId_(0), nextId_(0),
-	  protocolVersion_(PROTOCOLVERSION),
+	: protocolVersion_(PROTOCOLVERSION),
 	  vendorId_(VENDORID_PROSIMA),
-	  threadPool_(threadPool),
+      readerId_(0), writerId_(0), nextId_(0), domainId_(id),
+	  flowRateLimitedManager_(nullptr),
 	  flowControlManager_(nullptr),
-	  flowRateLimitedManager_(nullptr)
+	  threadPool_(threadPool)
 {
 	guid_ = guid;
 
@@ -372,7 +372,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		return RETCODE_ERROR;
 	}
 	{
-		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		std::unique_lock<std::mutex> plock(mtxEndpoints_);
 		endpoints_.erase(guid.entityId);
 	}
 	
@@ -407,7 +407,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		return RETCODE_ERROR;
 	}
 	{
-		std::unique_lock<std::mutex> lock(mtxEndpoints_);
+		std::unique_lock<std::mutex> plock(mtxEndpoints_);
 		endpoints_.erase(guid.entityId);
 	}
 	
@@ -753,8 +753,6 @@ ReturnCode_t Participant::AddLocalReader(std::shared_ptr<Reader> reader)
 GUID_t Participant::GenerateGuid(const EntityId_t& EntityID, bool key, EntityType type)
 {
 	GUID_t guid;
-	char cKey = 0;
-
 	guid.prefix = guid_.prefix;
 
 	if (ENTITYID_UNKNOWN != EntityID) {
@@ -794,12 +792,10 @@ GUID_t Participant::GenerateGuid(const EntityId_t& EntityID, bool key, EntityTyp
 
 GUID_t Participant::GenerateGuid(const InstanceHandle_t& handle)
 {
-	GUID_t guid;
-	memcpy(&guid, handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
-	return guid;
+	return Conversion::ToGuid(handle);
 }
 
-GuidPrefix_t Participant::GetGuidPrefix()
+GuidPrefix_t Participant::GetGuidPrefix() const
 {
 	return guid_.prefix;
 }

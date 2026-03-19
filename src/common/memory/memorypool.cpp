@@ -81,7 +81,8 @@ BufferNode* MemoryPool::allocate(uint32_t size)
 BufferNode* MemoryPool::findBestFit(uint32_t size)
 {
 	// 使用 lower_bound 找到第一个大于或等于 size_ 的节点
-	NodeInfo node = { size, 0 };
+	NodeInfo node = {  };
+	node.dataSize = size;
 	auto it = freeBuffers_.lower_bound(node);
 
 	if (it == freeBuffers_.end()) {

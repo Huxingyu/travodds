@@ -4,9 +4,9 @@ USING_TRAVODDS_NAMESPACE;
 
 ReaderLocator::ReaderLocator(const GUID_t& readerGuid, const LocatorSeq& locatorList)
 	: remoteGuid_(readerGuid),
+	  highestSentChangeSN_(SEQUENCENUMBER_UNKNOWN),
 	  locatorList_(locatorList),
-	  expectsInlineQos_(false),
-	  highestSentChangeSN_(SEQUENCENUMBER_UNKNOWN)
+	  expectsInlineQos_(false)
 {
 }
 

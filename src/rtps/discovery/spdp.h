@@ -34,6 +34,7 @@ struct ParticipantStatus_t
 	BuiltinTopicKey_t key;
 	double leaseDuration;
 	double recvTime;
+	ParticipantStatus_t() : leaseDuration(0), recvTime(0) {}
 };
 
 #ifdef DDSSECURITY

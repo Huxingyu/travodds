@@ -37,6 +37,8 @@ MessageTransmitterSHM::~MessageTransmitterSHM()
 
 ReturnCode_t MessageTransmitterSHM::SendAddrAdd(Locator_t source, Locator_t destination, uint16_t priority)
 {
+	static_cast<void>(priority);
+
 	if (source.kind != destination.kind || destination.kind != kind_ || !IsLocalhost(destination) || !IsRun()) {
 		return RETCODE_ERROR;
 	}
@@ -64,6 +66,7 @@ ReturnCode_t MessageTransmitterSHM::SendAddrRemove(Locator_t destination)
 			it->second->Shutdown();
 			it->second->Close();
 		} catch (const std::exception& e) {
+			static_cast<void>(e);
 		}
 		sendSockets_.erase(it);
 	}
@@ -91,6 +94,7 @@ ReturnCode_t  MessageTransmitterSHM::ReceiveAddrAdd(Locator_t receiveAddr)
 		AsyncAccept();
 
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		acceptor_.reset();
 		return RETCODE_ERROR;
 	}
@@ -104,6 +108,7 @@ ReturnCode_t MessageTransmitterSHM::MessageSend(
 	uint32_t length,
 	uint16_t priority)
 {
+	static_cast<void>(priority);
 	if (source.kind != destination.kind || destination.kind != kind_ || !IsLocalhost(destination) || !IsRun()) {
 		return RETCODE_ERROR;
 	}
@@ -119,7 +124,7 @@ ReturnCode_t MessageTransmitterSHM::MessageSend(
 	try {
 		sendsocket->Write(message, length);
 	} catch (const std::exception& e) {
-		TRAVODDS_LOG(LOG_ERROR,
+		TRAVODDS_LOG(LOG_DEBUG,
 			"send exception: %s", e.what());
 		return RETCODE_ERROR;
 	}
@@ -132,10 +137,14 @@ void MessageTransmitterSHM::SetStop()
 		return;
 	}
 	MessageTransmitter::SetStop();
-	acceptor_->Shutdown();
-
-	for (auto& socketItor : sendSockets_) {
-		socketItor.second->Shutdown();
+	if (acceptor_) {
+		acceptor_->Shutdown();
+	}
+	{
+		std::lock_guard<std::mutex> lock(sendSocketsMtx_);
+		for (auto& socketItor : sendSockets_) {
+			socketItor.second->Shutdown();
+		}
 	}
 
 	for (auto& socketItor : recvSockets_) {
@@ -168,7 +177,7 @@ void MessageTransmitterSHM::AsyncAccept()
 
 	try {
 		std::shared_ptr<SharedMemSocket> newSocket = std::make_shared<SharedMemSocket>(
-			[this](char* message, const size_t& len) {
+			[this](char* message, const uint32_t& len) {
 				this->InterpretMessage(message, len);
 			}
 		);
@@ -178,7 +187,7 @@ void MessageTransmitterSHM::AsyncAccept()
 				if (!ec) {
 				    recvSockets_.insert(newSocket);
 				} else {
-					TRAVODDS_LOG(LOG_ERROR,
+					TRAVODDS_LOG(LOG_DEBUG,
 						"Accept error: %s", ec->what());
 				}
 				flagNum_.fetch_sub(1, std::memory_order_release);
@@ -188,7 +197,7 @@ void MessageTransmitterSHM::AsyncAccept()
 			});
 
 	} catch (const std::exception& e) {
-		TRAVODDS_LOG(LOG_ERROR,
+		TRAVODDS_LOG(LOG_DEBUG,
 			"socket_accept exception: %s", e.what());
 		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;

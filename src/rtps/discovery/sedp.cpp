@@ -13,9 +13,8 @@
 #endif // DDSSECURITY
 USING_TRAVODDS_NAMESPACE
 
-Sedp::Sedp(Participant* participant,Spdp* spdp)
-	: participant_(participant),
-	  spdp_(spdp),
+Sedp::Sedp(Participant* participant,Spdp* spdp)  
+	: spdp_(spdp), participant_(participant),
 	  memoryPool_(MemoryPool::GetInstance())
 {
 }
@@ -1093,7 +1092,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			dpInfo->handshakeMsg_->messageClassId = GMCLASSID_SECURITY_AUTH_HANDSHAKE;
 
 			//handshakeMsg->messageIdentity.sourceGuid = Conversion::ToBuiltinTopicKey(
-			//	spdp_->GetDiscovery()->GetParticipant()->get_guid_value()); // sourceGuid不赋值为0，但是正常通信
+			//	spdp_->GetDiscovery()->GetParticipant()->get_guid()); // sourceGuid不赋值为0，但是正常通信
 			dpInfo->handshakeMsg_->relatedMessageIdentity = data.messageIdentity; //Fastdds对端处理reply和final会校验
 
 			WriteParticipantStatelessMessageData(&sourceParticipantGuid, *dpInfo->handshakeMsg_);

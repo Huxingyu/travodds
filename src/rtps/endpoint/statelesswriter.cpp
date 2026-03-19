@@ -18,7 +18,7 @@ USING_TRAVODDS_NAMESPACE;
 
 
 StatelessWriter::StatelessWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
-	: Writer(qos, kind), timer_(nullptr), resendDataPeriod_(TIME_INFINITE)
+	: Writer(qos, kind),  resendDataPeriod_(TIME_INFINITE), timer_(nullptr)
 {
 	guid_ = guid;
 }

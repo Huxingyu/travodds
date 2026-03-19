@@ -23,7 +23,7 @@ void MessageTransmitter::SetStop()
 {
 	runFlag_.store(false);
 }
-uint32_t MessageTransmitter::GetTransmitterKind()
+int32_t MessageTransmitter::GetTransmitterKind() const
 {
 	return kind_;
 }

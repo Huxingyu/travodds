@@ -36,7 +36,7 @@ public:
 	 * 
 	 * @param [in] max 序列空间大小最大值。
 	 */
-	SequenceData(int32_t max);
+	SequenceData(uint32_t max);
 	/**
 	 * @brief 析构函数。
 	 */
@@ -74,14 +74,14 @@ public:
 	 *
 	 * @return 序列当前长度。
 	 */
-	virtual int32_t length() const override;
+	virtual uint32_t length() const override;
 
 	/**
 	 * @brief 设置序列最大长度。
 	 *
 	 * @param [in] newLength 序列新的最大长度。
 	 */
-	virtual bool length(int32_t newLength) override;
+	virtual bool length(uint32_t newLength) override;
 	/**
 	 * @brief 序列空间释放。
 	 */
@@ -133,7 +133,7 @@ SequenceData<T>::SequenceData(const SequenceData& other)
 	*this = other;
 }
 template<typename T>
-SequenceData<T>::SequenceData(int32_t max)
+SequenceData<T>::SequenceData(uint32_t max)
 	: SequenceData()
 {
 	resize(max);
@@ -188,17 +188,14 @@ void SequenceData<T>::push_back(T& data)
 	maximum_++;
 }
 template<typename T>
-int32_t SequenceData<T>::length() const
+uint32_t SequenceData<T>::length() const
 {
 	return length_;
 }
 
 template<typename T>
-bool SequenceData<T>::length(int32_t newLength)
+bool SequenceData<T>::length(uint32_t newLength)
 {
-	if (newLength < 0) {
-		return false;
-	}
 	if (newLength <= maximum_) {
 		length_ = newLength;
 		return true;
@@ -228,7 +225,7 @@ void SequenceData<T>::resize(uint32_t maximum) {
 template<typename T>
 void SequenceData<T>::release()
 {
-	for (int32_t i = 0; i < maximum_; ++i) {
+	for (uint32_t i = 0; i < maximum_; ++i) {
 		T* data = datas_[i];
 		delete data;
 	}

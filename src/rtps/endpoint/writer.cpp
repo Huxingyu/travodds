@@ -6,11 +6,11 @@
 USING_TRAVODDS_NAMESPACE;
 
 Writer::Writer(const DataWriterQos& qos, const TopicKind_t& kind)
-	: qos_(qos),
-	  nackResponseDelay_({ 0, 200u * 1000u * 1000u }),
+	: nackResponseDelay_({ 0, 200u * 1000u * 1000u }),
+	  heartBeatPeriod_(TIME_ZERO),
 	  nackSuppressionDuration_(TIME_ZERO),
 	  lastChangeSequenceNumber_(TIME_ZERO),
-	  heartBeatPeriod_(TIME_ZERO),
+	  qos_(qos),
 	  writerCache_(new HistoryCache(qos.history, qos.resource_limits, kind)),
 	  flowController_(nullptr)
 {
@@ -65,8 +65,6 @@ HistoryQosPolicy
 ******************************/
 ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 {
-	ReturnCode_t ret = RETCODE_OK;
-
 	if (nullptr == cacheChange) {
 		return RETCODE_ERROR;
 	}
@@ -97,15 +95,17 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 
 ReturnCode_t Writer::WaitForAcknowledgments(const Duration_t & max_wait)
 {
+	static_cast<void>(max_wait);
 	return RETCODE_OK;
 }
 
 bool Writer::IsAckedByAll(SequenceNumber_t changeSeqNum)
 {
+	static_cast<void>(changeSeqNum);
 	return true;
 }
 
-bool Writer::IsPushMode()
+bool Writer::IsPushMode() const
 {
 	return pushMode_;
 }
@@ -117,11 +117,14 @@ std::shared_ptr<HistoryCache> Writer::GetWriteCache()
 
 bool Writer::DataFilter(std::shared_ptr<CacheChange> change)
 {
+	static_cast<void>(change);
 	return true;
 }
 
 ReturnCode_t Writer::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
 {
+	static_cast<void>(change);
+	static_cast<void>(timeOut);
 	return RETCODE_UNSUPPORTED;
 }
 
@@ -134,9 +137,14 @@ DataWriterImpl*  Writer::GetRelatedDataWriter()
 	return datawriter_;
 }
 
-DataWriterQos & Writer::GetQos()
+const DataWriterQos & Writer::GetQos()
 {
 	return qos_;
+}
+
+void Writer::SetQos(const DataWriterQos& qos)
+{
+	qos_ = qos;
 }
 
 ReturnCode_t Writer::AddBuiltinCache(std::shared_ptr<CacheChange> cacheChange)

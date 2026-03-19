@@ -5,9 +5,9 @@
 USING_TRAVODDS_NAMESPACE;
 ContentFilteredTopicImpl::ContentFilteredTopicImpl(const std::string& name, Topic* related_topic, const std::string& filter_expression, const StringSeq& expression_parameters, DomainParticipant* participant)
     : TopicDescriptionImpl(name, related_topic->get_type_name(), dynamic_cast<DomainParticipantImpl*>(participant)), 
+      relatedTopic_(dynamic_cast<TopicImpl*>(related_topic)),
       filterExpression_(filter_expression), 
-      expressionParameters_(expression_parameters),
-      relatedTopic_(dynamic_cast<TopicImpl*>(related_topic))
+      expressionParameters_(expression_parameters)
 {
     relatedTopic_->Reference();
 }

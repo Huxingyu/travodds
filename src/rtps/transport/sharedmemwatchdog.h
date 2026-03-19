@@ -22,6 +22,7 @@ public:
 	static const SharedMemWatchdog& GetInstance();
 	virtual ~SharedMemWatchdog();
 	ReturnCode_t InsertPortProcess(const uint32_t& port) const;
+	bool ErasePort(const uint32_t& port) const;
     
 private:
 	SharedMemWatchdog();

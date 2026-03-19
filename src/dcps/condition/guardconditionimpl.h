@@ -31,7 +31,7 @@ public:
 	/**
 	 * @brief 构造函数。
 	 */
-	GuardConditionImpl(GuardCondition* guard);;
+	GuardConditionImpl(GuardCondition* guard);
 
 	/**
 	 * @brief 设置trigger_value。

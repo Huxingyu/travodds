@@ -45,7 +45,7 @@ private:
 IntervalCalculator intervalCalculator_;
 
 LivelinessAssert::LivelinessAssert(LivelinessManager* livelinessManager, bool localWriter)
-:livelinessManager_(livelinessManager), writers_(), mutex_(), checkedWrtier_(nullptr), localWriter_(localWriter)
+: localWriter_(localWriter), writers_(), mutex_(), checkedWrtier_(nullptr), livelinessManager_(livelinessManager)
 {
     Time_t time = TIME_INFINITE;
     timer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "LivelinessAssert");
