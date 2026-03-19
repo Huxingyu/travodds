@@ -6,13 +6,13 @@
 USING_TRAVODDS_NAMESPACE;
 
 Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
-	: qos_(qos),
-	  heartbeatResponseDelay_(TIME_INVALID),
+	: heartbeatResponseDelay_(TIME_INVALID),
 	  heartbeatSuppressionDuration_(TIME_INVALID),
 	  readerCache_(std::make_shared<HistoryCache>(qos.history, qos.resource_limits, kind)),
 	  expectsInlineQos_(false),
 	  lastSequenceNumber_(SEQUENCENUMBER_ZERO),
 	  readerListener_(nullptr),
+	  qos_(qos),
 	  datareader_(nullptr)
 {
 	if (BEST_EFFORT == qos_.reliability.kind) {
@@ -23,7 +23,6 @@ Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 	}
 		
 	instanceHandles_.push_back(HANDLE_NIL);
-	lastTime_ = { 0,0 };
 }
 
 Reader::~Reader()
@@ -61,70 +60,12 @@ ReturnCode_t Reader::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>
 {
 	GetRelatedDataReader()->SetStatus(false);
 	ReturnCode_t ret = RETCODE_OK;
-	/* 实例样本最新的状态  */
-	SampleInfo info = sampleInfos_[handle];
-	/* 实例样本在缓冲区最新数据的样本 */
-	SampleInfo handleInfo;
-	/* 实例样本读取到的最新状态 */
-	SampleInfo readInfo;
-	int32_t size = 0;
-	/* 读取 */
-	//if((0 == (viewStates & info.view_state))|| (0 == (instanceStates & info.instance_state)) ){
-	//	return RETCODE_NO_DATA;
-	//}
 
 	ret = readerCache_->ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, handle, sampleStates, viewStates, instanceStates, shouldTake);
 	if (RETCODE_OK != ret) {
 		return ret;
 	}
 
-	/* 修改状态  */
-	size = sampleInfos.length();
-
-	if (0 > size) {
-		readInfo = sampleInfos[size - 1];
-	}
-	handleInfo = GetLastInstanceSampleInfo(handle);
-
-	for (int32_t i = 0; i < sampleInfos.length(); i++) {
-		SampleInfo sampleInfo = sampleInfos[i];
-
-		/*  从缓冲区读取时赋值状态  */
-		//sampleInfo.sample_state;
-		/*  在申明Cachce空间时，获取当前Instancehandle的SampleInfo的相关信息时赋值  */
-		//sampleInfo.source_timestamp;
-		//sampleInfo.instance_handle;
-		//sampleInfo.publication_handle;
-		//sampleInfo.disposed_generation_count;
-		//sampleInfo.no_writers_generation_count;
-		
-		/* 更新为最新的状态 */
-		//sampleInfo.view_state = handleInfo.view_state;
-		//sampleInfo.instance_state = handleInfo.instance_state;
-
-		/* 读取到的数据，读取到数据个数（剩余数据的个数） */
-		sampleInfo.sample_rank = --size;
-
-		/* (读取到最新sampleInfo.disposed_generation_count + 读取到最新SampleInfo.no_writers_generation_count) - 
-			(当前sampleInfo.disposed_generation_count + 当前SampleInfo.no_writers_generation_count) */
-		sampleInfo.generation_rank = (readInfo.disposed_generation_count + readInfo.no_writers_generation_count) -
-			(sampleInfo.disposed_generation_count + sampleInfo.no_writers_generation_count);
-
-		/* (样本最新sampleInfo.disposed_generation_count + 样本最新SampleInfo.no_writers_generation_count) - 
-			(当前sampleInfo.disposed_generation_count + 当前SampleInfo.no_writers_generation_count) */
-		sampleInfo.absolute_generation_rank = (handleInfo.disposed_generation_count + handleInfo.no_writers_generation_count) -
-												(sampleInfo.disposed_generation_count + sampleInfo.no_writers_generation_count);
-
-		/* * 代表DataSample是否包含数据，或者仅用于传递实例instance_state的更改 */
-		sampleInfo.valid_data = true;
-
-	}
-
-	/* 如果读取到的是实例的最后一个样本数据，将是实例的view状态修改为NOT_NEW_VIEW_STATE */
-	//TODO  需要判断样本是最后一个数据 
-	//if (readInfo.reception_sequence_number == handleInfo.reception_sequence_number) {
-	//	sampleInfos_[handle].view_state = NOT_NEW_VIEW_STATE;
-	//}
 	GetRelatedDataReader()->NotifyReadConditions();
 	return ret;
 }
@@ -183,7 +124,6 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	cacheChange->sequenceNumber = lastSequenceNumber_++;
 	cacheChange->serializedBuffer = data;
 
-	cacheChange->sampleInfo = sampleInfos_[handle];
 	cacheChange->sampleInfo.instance_handle = handle;
 	cacheChange->sampleInfo.publication_handle = pubHandle;
 	cacheChange->sampleInfo.source_timestamp = sourceTimespace;
@@ -191,34 +131,6 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 
 	return cacheChange;
 }
-SampleInfo Reader::GetLastInstanceSampleInfo(const InstanceHandle_t& handle)
-{
-	return sampleInfo_;
-}
-
-void Reader::ChangeSampleInfoByLiveliness()
-{
-	for (auto sampleInfo : sampleInfos_) {
-		sampleInfo.second.no_writers_generation_count++;
-	}
-}
-
-
-/* 远端的DW调用Dispose函数，修改对应instance实例的状态 */
-void Reader::ChangeSampleInfoByDWDisposed(const InstanceHandle_t& handl)
-{
-	for (auto sampleInfo : sampleInfos_) {
-		sampleInfo.second.disposed_generation_count++;
-	}
-	//TODO  begin修改History的中相关实例的的样本状态；
-	
-	// 将样本的状态修改为  NOT_ALIVE_DISPOSED_INSTANCE_STATE
-
-	//TODO end
-	
-
-
-} 
 
 void Reader::SetReaderListener(ReaderListener* listener)
 {
@@ -241,28 +153,19 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 	///* 根据HistoryQos的值进行设置 */
 	if (KEEP_LAST_HISTORY_QOS == qos_.history.kind || BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
-		auto  changesItor = readerCache_->instanceChanges_.find(cache->instanceHandle);
-		if (changesItor == readerCache_->instanceChanges_.end()) {
-			return REJECTED_BY_INSTANCES_LIMIT;
-		}
 		/*  满了，删除最旧的数据  */
-		if (changesItor->second.cacheChanges.size() == changesItor->second.maxSamples) {
-			auto change = changesItor->second.cacheChanges.begin();
-			readerCache_->RemoveSampleCounters((*change)->sampleInfo.sample_state, changesItor->second.viewState, changesItor->second.instanceState);
+		if (vitOut->second.cacheChanges.size() == static_cast<size_t>(vitOut->second.maxSamples)) {
+			auto change = vitOut->second.cacheChanges.begin();
+			readerCache_->RemoveSampleCounters((*change)->sampleInfo.sample_state, vitOut->second.viewState, vitOut->second.instanceState);
 			readerCache_->cacheChanges_.erase((*change)->sequenceNumber);
-			changesItor->second.cacheChanges.erase(change);
+			vitOut->second.cacheChanges.erase(change);
 		}
 	}
 	else {
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
-		auto  changesItor = readerCache_->instanceChanges_.find(cache->instanceHandle);
-		if (changesItor == readerCache_->instanceChanges_.end()) {
-			return REJECTED_BY_INSTANCES_LIMIT;
-		}
-
 		auto time_out = std::chrono::seconds(qos_.reliability.max_blocking_time.sec) + std::chrono::nanoseconds(qos_.reliability.max_blocking_time.nanosec);
 		bool ret0 = readerCache_->changeVar_.wait_for(lock, time_out,
-			[&]() { return changesItor->second.cacheChanges.size() < changesItor->second.maxSamples; });
+			[&]() { return vitOut->second.cacheChanges.size() < static_cast<size_t>(vitOut->second.maxSamples); });
 
 		if (!ret0) {
 			return REJECTED_BY_SAMPLES_PER_INSTANCE_LIMIT;
@@ -275,17 +178,21 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 
 	//wangyi time_based_filter 过滤判断
 	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
+		auto now = std::chrono::steady_clock::now();
 		//wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数
-		Duration_t ltime = Conversion::TimeToDuration(cache->sourceTimespace);
-		Duration_t costTime = ltime - lastTime_;
-		if (costTime < qos_.time_based_filter.minimum_separation) {
+		if (now < vitOut->second.nextTimeBasedFilte) {
+			vitOut->second.lastCache = cache;
 			return RETCODE_TIME_BASED_FILTER;
 		}
+		vitOut->second.lastCache.reset();
+		vitOut->second.nextTimeBasedFilte = now + std::chrono::nanoseconds(qos_.time_based_filter.minimum_separation.ToNs());
 
-		lastTime_ = ltime;
 		/* 更新定时器时间 */
-		if (lastNewCacheTimer_ != nullptr) {
-			lastNewCacheTimer_->UpdatePeriod(Conversion::ToMilliSecondsDouble(qos_.time_based_filter.minimum_separation) * 1.5);
+		if (lastNewCacheTimer_) {
+			std::chrono::steady_clock::time_point nextTime;
+			readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime);
+			auto period = nextTime - std::chrono::steady_clock::now();
+			lastNewCacheTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
 		}
 	}
 
@@ -311,11 +218,10 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 		auto& ins = readerCache_->instanceChanges_[cache->instanceHandle];
 		ins.cacheChanges.push_back(cache);
 		readerCache_->AddSampleCounters(cache->sampleInfo.sample_state, ins.viewState, ins.instanceState);
-	}
 
-	/* 更新接收到数据的状态 */
-	sampleInfo_ = cache->sampleInfo;
-	sampleInfos_[cache->instanceHandle] = cache->sampleInfo;
+		cache->sampleInfo.disposed_generation_count = ins.disposedGenerationCount;
+		cache->sampleInfo.no_writers_generation_count = ins.noWritersGenerationCount;
+	}
 
 	return RETCODE_OK;
 }
@@ -375,9 +281,17 @@ void Reader::SetRelatedDataReader(DataReaderImpl* reader)
 	datareader_ = reader;
 }
 
-DataReaderQos Reader::GetQos()
+const DataReaderQos& Reader::GetQos()
 {
 	return qos_;
+}
+
+void Reader::SetQos(const DataReaderQos& qos)
+{
+	if (qos.time_based_filter.minimum_separation != qos_.time_based_filter.minimum_separation) {
+		readerCache_->RsetAllTimeBasedFilte();
+	}
+	qos_ = qos;
 }
 
 void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) const

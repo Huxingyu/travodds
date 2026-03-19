@@ -6,6 +6,7 @@
 #include "rtps/transport/messagetransmitter.h"
 #include <rtps/builtin/liveliness/livelinessmanager.h>
 #include "common/log/logger.h"
+#include "common/timeconversion.h"
 #ifdef DDSSECURITY
 #include "dcps/subscribe/subscriberimpl.h"
 #include "dcps/publish/publisherimpl.h"
@@ -16,7 +17,13 @@ StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, con
 	: Reader(qos, kind)
 {
 	guid_ = guid;
-	InitlastNewCacheTimer();
+	/* wangyi TIME_BASED_FILTER 最后一包数据定时器 */
+	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
+		lastNewCacheTimer_ = TimerManager::CreateTimer(
+			qos.time_based_filter.minimum_separation, 
+			[&]() {this->TimerExpired(); }, 
+			"lastNewCacheTimer");
+	}
 }
 
 StatefulReader::~StatefulReader()
@@ -66,9 +73,7 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 		}
 	}
 	/* wangyi 删除旧数据 */
-	if (qos_.ownership.kind == EXCLUSIVE_OWNERSHIP_QOS) {
-		readerCache_->RemoveRemoteWriter(writerProxy->GetGuid());
-	}
+	readerCache_->RemoveRemoteWriter(writerProxy->GetGuid());
 	matchedWriters_.erase(writerProxy->GetGuid());
 }
 
@@ -147,12 +152,6 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	cache->sequenceNumber = dataMsg.writerSN;
 	cache->inlineQos = dataMsg.inlineQos;
 
-	/* wangyi 记录最新信息 */
-	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
-		lastNewCache_ = cache;
-		lastNewGuid_ = guid;
-	}
-
 	ReturnCode_t ret = RETCODE_OK;
 
 	ret = proxy->AddReliableDataCache(cache, qos_.durability.kind);
@@ -222,16 +221,11 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		if (0 != dataMsg.dataFrag.sampleSize % dataMsg.dataFrag.fragmentSize) {
 			dataFragCache->fragmentTatolNum += 1;
 		}
-		for (int32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
+		for (uint32_t i = 1; i <= dataFragCache->fragmentTatolNum; i++) {
 			dataFragCache->fragmentSeq.insert(i);
 		}
-		ReturnCode_t ret = proxy->AddReliableDataCache(dataFragCache, qos_.durability.kind, false);
+		proxy->AddReliableDataCache(dataFragCache, qos_.durability.kind, false);
 
-		/* wangyi 记录最新信息 */
-		if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
-			lastNewCache_ = dataFragCache;
-			lastNewGuid_ = guid;
-		}
 	}
 
 	proxy->AddFragData(dataMsg.writerSN, data, dataMsg.dataFrag.fragmentStartingNum, dataMsg.dataFrag.fragmentsInSubmessage);
@@ -304,7 +298,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	if (set.bitmap.size != 0 || flags.finalFlag) {
 		//TODO 存在丢包，或者强制回复Ack报文。创建Ack报文进行回复 
 		/* 1. 先给分片数据发送NackFrag  */
-		for (int32_t i = 0; i < nackFragVec.size(); i++) {
+		for (size_t i = 0; i < nackFragVec.size(); i++) {
 			nackFragVec[i].readerId = guid_.entityId;
 			nackFragVec[i].writerId = heartMsg.writerId;
 			nackFragVec[i].count = heartMsg.count;
@@ -377,7 +371,7 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 		return RETCODE_OK;
 	}
 	bool groupInfoFlag = (gapInfo.header.flags & SubMessageFlag::GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool filteredCountFlag = (gapInfo.header.flags & SubMessageFlag::FILTERED_COUNT_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool filteredCountFlag = (gapInfo.header.flags & SubMessageFlag::FILTERED_COUNT_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	/*  判断报文是否有效  */
 	SequenceNumber_t seq = SEQUENCENUMBER_ZERO;
@@ -404,11 +398,10 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 	}
 
 	SeqNumberVec seqVec;
-	int32_t i = 0;
 	for (seq = gapInfo.gapStart; seq < gapInfo.gapList.bitmapBase; seq++) {
 		seqVec.push_back(seq);
 	}
-	for (auto i = 0; i < gapInfo.gapList.bitmap.size; i++) {
+	for (uint32_t i = 0; i < gapInfo.gapList.bitmap.size; i++) {
 		if (gapInfo.gapList.bitmap.IsBitSet(i) ) {
 			seq = gapInfo.gapList.bitmapBase + i;
 			seqVec.push_back(seq);
@@ -866,20 +859,44 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 
 
 }
-
-void StatefulReader::InitlastNewCacheTimer()
-{
-	/* wangyi TIME_BASED_FILTER 最后一包数据定时器 */
-	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO) && qos_.reliability.kind == RELIABLE_RELIABILITY_QOS) {
-		Time_t time = TIME_INFINITE;
-		lastNewCacheTimer_ = TimerManager::CreateTimer(time, [&]() {this->TimerExpired(); }, "lastNewCacheTimer");
+void StatefulReader::SetQos(const DataReaderQos& qos) {
+	if (qos.time_based_filter.minimum_separation != qos_.time_based_filter.minimum_separation) {
+		readerCache_->RsetAllTimeBasedFilte();
+		if (qos.time_based_filter.minimum_separation == Duration_t(TIME_ZERO)) {
+			lastNewCacheTimer_.reset();
+		} else {
+			if (lastNewCacheTimer_) {
+				lastNewCacheTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qos.time_based_filter.minimum_separation));
+			} else{
+				lastNewCacheTimer_ = TimerManager::CreateTimer(
+					qos.time_based_filter.minimum_separation,
+					[&]() {this->TimerExpired(); },
+					"lastNewCacheTimer");
+			}
+		}
 	}
+	qos_ = qos;
 }
 
 void StatefulReader::TimerExpired()
 {
+	std::shared_ptr<CacheChange> cache = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
+		std::chrono::steady_clock::time_point nextTime;
+		readerCache_->SetNextTimeBasedFilte(lastInstance_, cache);
+		readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime);
+		auto period = nextTime - std::chrono::steady_clock::now();
+		lastNewCacheTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
+	}
+	if (cache == nullptr) {
+		return;
+	}
+
+	GUID_t wirterguid = cache->writerGuid;
+
 	std::shared_ptr<WriterProxy> proxy = nullptr;
-	auto itor = matchedWriters_.find(lastNewGuid_);
+	auto itor = matchedWriters_.find(wirterguid);
 	if (itor != matchedWriters_.end()) {
 		proxy = itor->second;
 	}
@@ -887,7 +904,7 @@ void StatefulReader::TimerExpired()
 		return;
 	}
 
-	ReturnCode_t ret = AddChanges(lastNewCache_);
+	ReturnCode_t ret = AddChanges(cache);
 
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -903,21 +920,15 @@ void StatefulReader::TimerExpired()
 	}
 
 	if (RETCODE_OK != ret && datareader_) {
-		datareader_->OnSampleRejected(lastNewCache_->instanceHandle, (SampleRejectedStatusKind)ret);
+		datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 	}
 
 	//TODO 提交数据 
 	if (readerListener_) {
-		readerListener_->on_data_available(lastNewCache_);
+		readerListener_->on_data_available(cache);
 	}
 	else if (datareader_) {
 		datareader_->OnDataAvaible();
-	}
-
-	/* 最新数据提交后重置等待时间 */
-	Duration_t time = TIME_INFINITE;
-	if (lastNewCacheTimer_ != nullptr) {
-		lastNewCacheTimer_->UpdatePeriod(time);
 	}
 }
 

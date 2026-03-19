@@ -159,7 +159,7 @@ public:
 		size_t len = s.size();
 		// 检查最后一个字符是否是 '\0'（可选）
 		bool has_null = !s.empty() && s.back() != '\0';
-		return len + (has_null ? 1 : 0);
+		return static_cast<uint16_t>( len + (has_null ? 1 : 0));
 	}
 };
 
@@ -248,7 +248,7 @@ public:
 	 * @param [in,out] msg 报文指针。
 	 */
 	void writerMsg(octet* msg) {
-		msg = nullptr;
+		static_cast<void>(msg);
 		return;
 	}
 	/**
@@ -460,7 +460,7 @@ inline uint32_t Parameter<T>::WriterString(octet* msg, const std::string& str)
 		memcpy(msg + 4, str.data(), str.size());
 		msg[4 + str.size()] = 0;
 	}
-	uint32_t len = 4u + (size + 3u) & ~3u;
+	uint32_t len = 4u +( (size + 3u) & ~3u);
 	memset(msg + 4 + size, 0, len - 4u - size);	
 	return len;
 }
@@ -536,7 +536,7 @@ inline void Parameter<VendorId_t>::writerMsg(octet* msg)
 template <>
 inline uint16_t Parameter<LocatorSeq>::size() 
 {
-	length_ = parameter_.size() * (4 + 24) - 4;
+	length_ = static_cast<uint16_t>(parameter_.size() * (4 + 24) - 4);
 	return length_;
 }
 template <>
@@ -591,7 +591,7 @@ inline uint16_t Parameter<QosPolicy>::size() { \
 } \
 template <> \
 inline void Parameter<QosPolicy>::writerMsg(octet* msg) { \
-    uint32_t size = parameter_.value.size(); \
+    uint32_t size = static_cast<uint32_t>(parameter_.value.size()); \
     WriterUInt32(msg, size); \
     memcpy(msg + 4, parameter_.value.data(), size); \
     uint16_t len = MessageSize();\
@@ -728,7 +728,7 @@ inline uint16_t Parameter<PartitionQosPolicy>::size()
 template <>
 inline void Parameter<PartitionQosPolicy>::writerMsg(octet* msg) 
 {
-	uint32_t num = parameter_.name.size();
+	uint32_t num = static_cast<uint32_t>(parameter_.name.size());
 	WriterUInt32(msg,num);
 	uint32_t inOffset = 4;
 	for (uint32_t i = 0; i < num; i++) {
@@ -793,7 +793,7 @@ inline void Parameter<ContentFilterProperty_t>::writerMsg(octet* msg)
 	inOffset += WriterString(msg + inOffset, parameter_.filterClassName);
 	inOffset += WriterString(msg + inOffset, parameter_.filterExpression);
 
-	uint32_t num = parameter_.expressionParameters.size();
+	uint32_t num = static_cast<uint32_t>(parameter_.expressionParameters.size());
 	WriterUInt32(msg + inOffset, num);
 	inOffset += 4;
 	for (uint32_t i = 0; i < num; i++) {
@@ -854,7 +854,8 @@ template <>
 inline void Parameter<PropertySeq>::writerMsg(octet* msg)
 {
 	uint32_t inOffset = 0;
-	inOffset += WriterUInt32(msg, parameter_.size());
+	uint32_t ui32 = static_cast<uint32_t>(parameter_.size());
+	inOffset += WriterUInt32(msg, ui32);
 	for (const auto& prop : parameter_) {
 		inOffset += WriterString(msg + inOffset, prop.name);
 		inOffset += WriterString(msg + inOffset, prop.value);
@@ -864,22 +865,22 @@ inline void Parameter<PropertySeq>::writerMsg(octet* msg)
 template <>
 inline uint16_t Parameter<ContentFilterInfo_t>::size()
 {
-	uint32_t inSize = 4;
-	inSize += 4 * parameter_.filterResult.size();
-	inSize += 4;
-	inSize += 16 * parameter_.filterSignatures.size();
+	uint32_t inSize = 4u;
+	inSize += 4u * static_cast<uint32_t>(parameter_.filterResult.size());
+	inSize += 4u;
+	inSize += 16u * static_cast<uint32_t>(parameter_.filterSignatures.size());
 	return inSize;
 }
 template <>
 inline void Parameter<ContentFilterInfo_t>::writerMsg(octet* msg)
 {
-	uint32_t num = parameter_.filterResult.size();
+	uint32_t num = static_cast<uint32_t>(parameter_.filterResult.size());
 	uint32_t inOffset = 0;
 	inOffset += WriterUInt32(msg, num);
 	for (uint32_t i = 0; i < num; i++) {
 		inOffset += WriterInt32(msg + inOffset, parameter_.filterResult[i]);
 	}
-	num = parameter_.filterSignatures.size();
+	num = static_cast<uint32_t>(parameter_.filterSignatures.size());
 	inOffset += WriterUInt32(msg, num);
 	for (uint32_t i = 0; i < num; i++) {
 		inOffset += WriterInt32(msg + inOffset, parameter_.filterSignatures[i][0]);
@@ -1023,9 +1024,9 @@ template <>
 inline uint16_t Parameter<OriginalWriterInfo_t>::size()
 {
 	uint32_t inSize = 24;
-	uint32_t num = parameter_.originalWriterQos.size();
+	uint32_t num = static_cast<uint32_t>(parameter_.originalWriterQos.size());
 	for (uint32_t i = 0; i < num; i++) {
-		inSize += 4 + (parameter_.originalWriterQos[i].length + 3u) & ~3u;
+		inSize += 4 + ( (parameter_.originalWriterQos[i].length + 3u) & ~3u);
 	}
 	return inSize + 4u;
 }
@@ -1035,13 +1036,13 @@ inline void Parameter<OriginalWriterInfo_t>::writerMsg(octet* msg)
 	memcpy(msg, &parameter_.originalWriterGUID, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	WriterInt32(msg + 16, parameter_.originalWriterSN.high);
 	WriterUInt32(msg + 20, parameter_.originalWriterSN.low);
-	uint32_t num = parameter_.originalWriterQos.size();
+	uint32_t num = static_cast<uint32_t> (parameter_.originalWriterQos.size());
 	uint32_t inOffset = 24;
 	for (uint32_t i = 0; i < num; i++) {
 		WriterUInt16(msg + inOffset, parameter_.originalWriterQos[i].parameterId);
 		WriterUInt16(msg + inOffset + 2, parameter_.originalWriterQos[i].length);
 		memcpy(msg + inOffset + 4, parameter_.originalWriterQos[i].value.data(), parameter_.originalWriterQos[i].length);
-		uint32_t padLen = 4 + (parameter_.originalWriterQos[i].length + 3u) & ~3u;
+		uint32_t padLen = 4 + ((parameter_.originalWriterQos[i].length + 3u) & ~3u);
 		memset(msg + inOffset + 4 + parameter_.originalWriterQos[i].length, 0, padLen - 4 - parameter_.originalWriterQos[i].length);
 		inOffset += padLen;
 	}
@@ -1359,6 +1360,8 @@ inline void ParameterList::AddParameter<Locator_t>(const ParameterId& pid, const
 }
 template <>
 inline void ParameterList::AddParameter<Parameter_t>(const ParameterId& pid, const Parameter_t& parameter, uint16_t length) {
+	static_cast<void>(pid);
+	static_cast<void>(length);
 	std::string data;
 	data.resize(4 + parameter.value.size());
 	octet* src = (octet*)&parameter;
@@ -1371,7 +1374,7 @@ inline void ParameterList::AddParameter<Parameter_t>(const ParameterId& pid, con
 		data[3] = src[2];
 	}
 	memcpy(&data[4], parameter.value.data(), parameter.length);
-	LoadMessage((octet*)data.data(), data.size());
+	LoadMessage((octet*)data.data(), static_cast<uint32_t>(data.size()));
 }
 template <>
 inline bool ParameterList::GetParameter(const ParameterId& pid, Parameter_t& parameter) const {

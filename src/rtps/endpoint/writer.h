@@ -110,7 +110,7 @@ public:
 	 *
 	 * @return pushMode_值。
 	 */
-	bool IsPushMode();
+	bool IsPushMode() const;
 
 	/**
 	 * @brief 获取HistoryCache缓存指针。
@@ -188,7 +188,9 @@ public:
 	 *
 	 * @return DataWriter Qos配置。
 	 */
-	DataWriterQos& GetQos();
+	const DataWriterQos& GetQos();
+
+	void SetQos(const DataWriterQos& qos);
 
 	/**
 	 * @brief 添加内置缓存。

@@ -72,12 +72,12 @@ struct EnhancedNetworkMetrics {
     double multicastRatio;         // 多播流量比例
 
     EnhancedNetworkMetrics()
-        : rxRatembps(0), txRatembps(0),
+        : linkSpeed(0), rxRatembps(0), txRatembps(0),
         rxPacketLossRate(0), rxErrorRate(0),
         rxFifoErrorRate(0), rxFrameErrorRate(0),
         txErrorRate(0), txDropRate(0), txFifoErrorRate(0),
         txCollisionRate(0), txCarrierErrorRate(0),
-        multicastRatio(0), linkSpeed(0) {
+        multicastRatio(0) {
     }
 };
 

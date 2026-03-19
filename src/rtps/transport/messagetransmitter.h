@@ -35,7 +35,7 @@ public:
 	 * @param [in] messageProcessor MessageProcessor指针。
 	 */
 	MessageTransmitter(std::shared_ptr<MessageProcessor> messageProcessor)
-		: messageProcessor_(messageProcessor), receivePool_(MemoryPool::GetInstance()), runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID)
+		: runFlag_(true), flagNum_(0), kind_(LOCATOR_KIND_INVALID) , receivePool_(MemoryPool::GetInstance()), messageProcessor_(messageProcessor)
 	{
 	}
 
@@ -127,7 +127,7 @@ public:
 	 *
 	 * @return kind_变量值。
 	 */
-	uint32_t GetTransmitterKind();
+	int32_t GetTransmitterKind() const;
 
 	/**
 	 * @brief 设置默认的IP地址。

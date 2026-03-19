@@ -11,8 +11,9 @@ SharedMemEntity::SharedMemEntity(const char* sharedMemoryName, const char* objec
 			open_or_create, sharedMemoryName_, sharedMemSize_);
 		mutex_ = std::make_unique<named_mutex>(open_or_create, mutexName_);
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		CleanupResources();
-		throw e;
+		throw;
 	}
 }
 

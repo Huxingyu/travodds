@@ -42,7 +42,8 @@ public:
      */
     virtual void on_liveliness_lost(DataWriter* writer, const LivelinessLostStatus& status)
     {
-
+		static_cast<void>(writer);
+		static_cast<void>(status);
     }
 
     /**
@@ -53,7 +54,8 @@ public:
      */
     virtual void on_offered_deadline_missed(DataWriter* writer, const OfferedDeadlineMissedStatus& status)
     {
-
+        static_cast<void>(writer);
+        static_cast<void>(status);
     }
 
     /**
@@ -64,7 +66,8 @@ public:
      */
     virtual void on_offered_incompatible_qos(DataWriter* writer, const OfferedIncompatibleQosStatus& status)
     {
-
+        static_cast<void>(writer);
+        static_cast<void>(status);
     }
 
     /**
@@ -75,7 +78,8 @@ public:
      */
     virtual void on_publication_matched(DataWriter* writer, const PublicationMatchedStatus& status)
     {
-
+        static_cast<void>(writer);
+        static_cast<void>(status);
     }
 
 };

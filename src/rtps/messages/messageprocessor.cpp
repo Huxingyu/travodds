@@ -33,16 +33,19 @@ MessageProcessor::~MessageProcessor()
 {
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+
 ReturnCode_t MessageProcessor::EncapsulateDATAMessage(SerializedBuffer& messageBuf,
 											uint32_t& shift,
 											DataSubMessage_t& dataSubMessage)
 {
-	uint32_t bShift = shift;
-	bool endiannessFlag = (dataSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	// uint32_t bShift = shift;
+	// bool endiannessFlag = (dataSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool inlineQosFlag = (dataSubMessage.header.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool dataFlag = (dataSubMessage.header.flags & SubMessageFlag::DATA_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool keyFlag = (dataSubMessage.header.flags & SubMessageFlag::KEY_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool nonStandardPayloadFlag = (dataSubMessage.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool dataFlag = (dataSubMessage.header.flags & SubMessageFlag::DATA_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool keyFlag = (dataSubMessage.header.flags & SubMessageFlag::KEY_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool nonStandardPayloadFlag = (dataSubMessage.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	dataSubMessage.header.subMessageId = DATA;
 
@@ -117,11 +120,11 @@ ReturnCode_t MessageProcessor::EncapsulateDataFragMessage(SerializedBuffer& mess
 												uint32_t& shift,
 												DataFragSubMessage_t& dataFragSubMessage)
 {
-	uint32_t bShift = shift;
-	bool endiannessFlag = (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	// uint32_t bShift = shift;
+	// bool endiannessFlag = (dataFragSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool inlineQosFlag = (dataFragSubMessage.header.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool nonStandardPayloadFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool keyFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_KEY_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool nonStandardPayloadFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool keyFlag = (dataFragSubMessage.header.flags & SubMessageFlag::FRAG_KEY_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	dataFragSubMessage.header.subMessageId = DATA_FRAG;
 
@@ -446,23 +449,27 @@ ReturnCode_t MessageProcessor::EncapsulateINFOREPLYMessage(SerializedBuffer& mes
 	shift += sizeof(SubMessageHeader_t);
 	uint32_t sizeShift = shift;
 
-	uint32_t iSize = infoReplySubMessage.unicastLocatorList.size();
+	uint32_t iSize = static_cast<uint32_t>(infoReplySubMessage.unicastLocatorList.size());
 	memcpy(messageBuf.buffer + shift, &iSize, sizeof(uint32_t));
 	shift += sizeof(uint32_t);
-	for (int32_t i = 0; i < iSize; i++) {
-		memcpy(messageBuf.buffer + shift, &infoReplySubMessage.unicastLocatorList[i], sizeof(Locator_t));
-		shift += sizeof(Locator_t);
+	for (uint32_t i = 0; i < iSize; i++) {
+		memcpy(messageBuf.buffer + shift, &infoReplySubMessage.unicastLocatorList[i].kind, sizeof(int32_t));
+		memcpy(messageBuf.buffer + shift + 4u, &infoReplySubMessage.unicastLocatorList[i].port, sizeof(uint32_t));
+		memcpy(messageBuf.buffer + shift + 8u, &infoReplySubMessage.unicastLocatorList[i].address, 16u);
+		shift += 24u;
 	}
 	
 	bool multicastFlag = (infoReplySubMessage.header.flags & SubMessageFlag::MULTICAST_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (multicastFlag) {
-		iSize = infoReplySubMessage.multicastLocatorList.size();
+		iSize = static_cast<uint32_t>(infoReplySubMessage.multicastLocatorList.size());
 		memcpy(messageBuf.buffer + shift, &iSize, sizeof(uint32_t));
 		shift += sizeof(uint32_t);
-		for (int32_t i = 0; i < iSize; i++) {
-			memcpy(messageBuf.buffer + shift, &infoReplySubMessage.multicastLocatorList[i], sizeof(Locator_t));
-			shift += sizeof(Locator_t);
+		for (uint32_t i = 0; i < iSize; i++) {
+			memcpy(messageBuf.buffer + shift, &infoReplySubMessage.multicastLocatorList[i].kind, sizeof(int32_t));
+			memcpy(messageBuf.buffer + shift + 4u, &infoReplySubMessage.multicastLocatorList[i].port, sizeof(uint32_t));
+			memcpy(messageBuf.buffer + shift + 8u, &infoReplySubMessage.multicastLocatorList[i].address, 16u);
+			shift += 24u;
 		}
 	}
 
@@ -842,7 +849,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> m
 	bool inlineQosFlag = (submessageHeader.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool dataFlag = (submessageHeader.flags & SubMessageFlag::DATA_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool keyFlag = (submessageHeader.flags & SubMessageFlag::KEY_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (keyFlag && dataFlag) {
 		TRAVODDS_LOG(LOG_ERROR, "Message received with Data and Key Flag set, ignoring");
@@ -919,8 +926,8 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatMessage(char * message,
 	Receive_t& messageReceiver)
 {
 	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool livelinessFlag = (submessageHeader.flags & SubMessageFlag::LIVELINESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool livelinessFlag = (submessageHeader.flags & SubMessageFlag::LIVELINESS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool groupInfoFlag = (submessageHeader.flags & SubMessageFlag::HB_GROUPINFO_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	HeartBeatSubMessage_t heartBeatSubMessage;
@@ -982,6 +989,7 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatFragMessage(char* message,
 	SubMessageHeader_t& submessageHeader, 
 	Receive_t& messageReceiver)
 {
+	static_cast<void>(submessageHeader);
 	HeartBeatFragSubMessage_t heartBeatFragSubMessage;
 	memcpy(&heartBeatFragSubMessage, message, sizeof(HeartBeatFragSubMessage_t));
 
@@ -1027,8 +1035,9 @@ ReturnCode_t MessageProcessor::InterpretHeartbeatFragMessage(char* message,
 
 ReturnCode_t MessageProcessor::InterpretAckNackMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
-	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
+	static_cast<void>(submessageHeader);
+	// bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
 	AcknackSubMessage_t ackMessage{};
 	uint32_t messageShift = 0;
 	memcpy(&ackMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
@@ -1057,7 +1066,7 @@ ReturnCode_t MessageProcessor::InterpretAckNackMessage(char* message, SubMessage
 		messageShift += uilen;
 		/* 大小端转换 */
 		if (DEFAULT_ENDIAN != (ackMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
-			for (int32_t i = 0; i < uilen; i++) {
+			for (uint32_t i = 0; i < uilen; i++) {
 				ackMessage.readerSNState.bitmap.bits[i] = ntohl(ackMessage.readerSNState.bitmap.bits[i]);
 			}
 		}
@@ -1089,7 +1098,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 	uint32_t serializedPayloadLen = 0;
 	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool inlineQosFlag = (submessageHeader.flags & SubMessageFlag::INLINE_QOS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool nonStandardPayloadFlag = (submessageHeader.flags & SubMessageFlag::FRAG_NON_STANDARD_PAYLOAD_FLAG) != SubMessageFlag::NONE_FLAG;
 	bool keyFlag = (submessageHeader.flags & SubMessageFlag::FRAG_KEY_FLAG) != SubMessageFlag::NONE_FLAG;
 	
 
@@ -1173,6 +1182,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 
 ReturnCode_t MessageProcessor::InterpretINFOTSMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
+	static_cast<void>(submessageHeader);
 	InfoTimestamp_t infoTs;
 
 	memcpy(&infoTs, message, sizeof(InfoTimestamp_t));
@@ -1189,6 +1199,7 @@ ReturnCode_t MessageProcessor::InterpretINFOTSMessage(char* message, SubMessageH
 
 ReturnCode_t MessageProcessor::InterpretINFOSRCMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
+	static_cast<void>(submessageHeader);
 	InfoSource_t InfoSrc;
 
 	memcpy(&InfoSrc, message, sizeof(InfoSource_t));
@@ -1205,6 +1216,7 @@ ReturnCode_t MessageProcessor::InterpretINFODSTMessage(char* message,
 	SubMessageHeader_t& submessageHeader, 
 	Receive_t& messageReceiver)
 {
+	static_cast<void>(submessageHeader);
 	InfoDestinationSubMessage_t InfoDst;
 
 	memcpy(&InfoDst, message, sizeof(InfoDestinationSubMessage_t));
@@ -1248,8 +1260,8 @@ ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 ReturnCode_t MessageProcessor::InterpretNackFragMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
 {
 	NackFragSubMessage_t nackFragMessage{};
-	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
-	bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
+	// bool finalFlag = (submessageHeader.flags & SubMessageFlag::FINAL_FLAG) != SubMessageFlag::NONE_FLAG;
 	uint32_t messageShift = 0;
 	memcpy(&nackFragMessage.header, message + messageShift, sizeof(SubMessageHeader_t));
 	messageShift += sizeof(SubMessageHeader_t);
@@ -1281,7 +1293,7 @@ ReturnCode_t MessageProcessor::InterpretNackFragMessage(char* message, SubMessag
 		messageShift += uilen;
 		/* 大小端转换 */
 		if (DEFAULT_ENDIAN != (nackFragMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
-			for (int32_t i = 0; i < uilen; i++) {
+			for (uint32_t i = 0; i < uilen; i++) {
 				nackFragMessage.fragmentNumberState.bitmap.bits[i] = ntohl(nackFragMessage.fragmentNumberState.bitmap.bits[i]);
 			}
 		}
@@ -1309,6 +1321,7 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 	SubMessageHeader_t& submessageHeader, 
 	Receive_t& messageReceiver)
 {
+	static_cast<void>(messageReceiver);
 	uint32_t messageLen = 0;
 	InfoReplySubMessage_t infoReplyMessage;
 	infoReplyMessage.header = submessageHeader;
@@ -1325,9 +1338,11 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 		iSize = htonl(iSize);
 	}
 	infoReplyMessage.unicastLocatorList.resize(iSize);
-	for (int32_t i = 0; i < iSize; i++) {
-		memcpy(&infoReplyMessage.unicastLocatorList[i], message + messageLen, sizeof(Locator_t));
-		messageLen += sizeof(Locator_t);
+	for (uint32_t i = 0; i < iSize; i++) {
+		memcpy(&infoReplyMessage.unicastLocatorList[i].kind, message + messageLen, sizeof(int32_t));
+		memcpy(&infoReplyMessage.unicastLocatorList[i].port, message + messageLen + 4u, sizeof(uint32_t));
+		memcpy(&infoReplyMessage.unicastLocatorList[i].address, message + messageLen + 8u, 16u);
+		messageLen += 24u;
 		/* 大小端转换 */
 		if (IS_LITTLE_ENDIAN != endiannessFlag) {
 			infoReplyMessage.unicastLocatorList[i].kind = htonl(infoReplyMessage.unicastLocatorList[i].kind);
@@ -1343,9 +1358,11 @@ ReturnCode_t MessageProcessor::InterpretINFOREPLYMessage(char* message,
 			iSize = htonl(iSize);
 		}
 		infoReplyMessage.multicastLocatorList.resize(iSize);
-		for (int32_t i = 0; i < iSize; i++) {
-			memcpy(&infoReplyMessage.multicastLocatorList[i], message + messageLen, sizeof(Locator_t));
-			messageLen += sizeof(Locator_t);
+		for (uint32_t i = 0; i < iSize; i++) {
+			memcpy(&infoReplyMessage.multicastLocatorList[i].kind, message + messageLen, sizeof(int32_t));
+			memcpy(&infoReplyMessage.multicastLocatorList[i].port, message + messageLen + 4u, sizeof(uint32_t));
+			memcpy(&infoReplyMessage.multicastLocatorList[i].address, message + messageLen + 8u, 16u);
+			messageLen += 24u;
 			/* 大小端转换 */
 			if (IS_LITTLE_ENDIAN != endiannessFlag) {
 				infoReplyMessage.unicastLocatorList[i].kind = htonl(infoReplyMessage.unicastLocatorList[i].kind);
@@ -1393,7 +1410,7 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 		messageShift += uilen;
 		/* 大小端转换 */
 		if (DEFAULT_ENDIAN != (gapSubMessage.header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
-			for (int32_t i = 0; i < uilen; i++) {
+			for (uint32_t i = 0; i < uilen; i++) {
 				gapSubMessage.gapList.bitmap.bits[i] = ntohl(gapSubMessage.gapList.bitmap.bits[i]);
 			}
 		}
@@ -1451,3 +1468,5 @@ ReturnCode_t MessageProcessor::InterpretGapMessage(char* message, SubMessageHead
 
 	return RETCODE_OK;
 }
+
+#pragma GCC diagnostic pop

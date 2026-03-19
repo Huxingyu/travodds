@@ -88,12 +88,13 @@ ReturnCode_t MessageTransmitterTCP::SendAddrRemove(Locator_t destination)
 		auto it = sendSocketMap_.find(destination);
 		if (it != sendSocketMap_.end()) {
 			try {
-				if (it->second->socket->is_open()) {
+				if (it->second->socket && it->second->socket->is_open()) {
 					it->second->socket->shutdown(asio::ip::tcp::socket::shutdown_send);
 					it->second->socket->close();
 				}
 			}
 			catch (const std::exception& e) {
+				static_cast<void>(e);
 			}
 			sendSocketMap_.erase(it);
 		}
@@ -170,6 +171,7 @@ ReturnCode_t MessageTransmitterTCP::ReceiveAddrAdd(Locator_t receiveAddr)
 
 ReturnCode_t MessageTransmitterTCP::ReceiveAddrRemove(Locator_t ReceiveAddr)
 {
+	static_cast<void>(ReceiveAddr);
 	return ReturnCode_t();
 }
 
@@ -228,7 +230,7 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 				}
 			}
 		} else {
-			TRAVODDS_LOG(LOG_ERROR
+			TRAVODDS_LOG(LOG_DEBUG
 				, "[TCP Mode] Failed to send message, port %d , len = %d\n",
 				destination.port, length + sizeof(TCPHeader));
 		}
@@ -384,7 +386,7 @@ void MessageTransmitterTCP::AsyncAccept()
 					AsyncReceive(session);
 
 				} else {
-					TRAVODDS_LOG(LOG_ERROR,
+					TRAVODDS_LOG(LOG_DEBUG,
 						"[TCP Mode] Accept error: %s", ec.message().c_str());
 				}
 				flagNum_.fetch_sub(1, std::memory_order_release);
@@ -396,7 +398,7 @@ void MessageTransmitterTCP::AsyncAccept()
 		);
 
 	} catch(const std::exception& e){
-		TRAVODDS_LOG(LOG_ERROR,
+		TRAVODDS_LOG(LOG_DEBUG,
 			"[TCP Mode] socket_accept exception: %s", e.what());
 		flagNum_.fetch_sub(1, std::memory_order_release);
 		return;
@@ -483,12 +485,10 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 		}
 
 		// 创建目标端点并连接
-		asio::ip::tcp::endpoint remote_endpoint = GetEndpoint(dest); 
-
-
+		std::shared_ptr<asio::ip::tcp::endpoint> remote_endpoint = std::make_shared<asio::ip::tcp::endpoint>(GetEndpoint(dest));
 		// 异步连接
-		newSendSocket->async_connect(remote_endpoint,
-			[this, newSendSocket, src, dest, priority] (asio::error_code ec) {
+		newSendSocket->async_connect(*remote_endpoint,
+			[this, newSendSocket, src, dest, priority, remote_endpoint] (asio::error_code ec) {
 				std::lock_guard<std::mutex> lock(sendSocketsMtx_);
 				// 检查是否已经被其他连接覆盖
 				auto it = sendSocketMap_.find(dest);
@@ -501,7 +501,7 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 					it->second->priority = priority;
 				} else {
 					// 连接失败
-					TRAVODDS_LOG(LOG_ERROR, 
+					TRAVODDS_LOG(LOG_DEBUG,
 						"Connection failed to %s:%d: %s",
 						dest.GetStringAddress().data(), dest.port, ec.message().data());
 					sendSocketMap_.erase(it);
@@ -538,13 +538,13 @@ MessageTransmitterTCPv4::MessageTransmitterTCPv4(std::shared_ptr<MessageProcesso
 asio::ip::tcp::endpoint MessageTransmitterTCPv4::GetEndpoint(const AsioLocator& locator, bool recive)
 {
 	if (recive) {
-		return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), locator.port);
+		return asio::ip::tcp::endpoint(asio::ip::tcp::v4(), static_cast<uint16_t>(locator.port));
 	}
-	return asio::ip::tcp::endpoint(locator.GetAddress<asio::ip::address_v4>(), locator.port);
+	return asio::ip::tcp::endpoint(locator.GetAddress<asio::ip::address_v4>(), static_cast<uint16_t>(locator.port));
 }
 asio::ip::tcp::endpoint MessageTransmitterTCPv4::GetReciveEndpoint(const uint32_t port)
 {
-	return asio::ip::tcp::endpoint(asio::ip::address::from_string("0.0.0.0"), port);
+	return asio::ip::tcp::endpoint(asio::ip::address::from_string("0.0.0.0"), static_cast<uint16_t>(port));
 }
 std::shared_ptr<asio::ip::tcp::socket> MessageTransmitterTCPv4::GetSocketInit()
 {
@@ -559,7 +559,7 @@ MessageTransmitterTCPv6::MessageTransmitterTCPv6(std::shared_ptr<MessageProcesso
 asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetEndpoint(const AsioLocator& locator, bool recive)
 {
 	if (recive) {
-		return asio::ip::tcp::endpoint(asio::ip::tcp::v6(), locator.port);
+		return asio::ip::tcp::endpoint(asio::ip::tcp::v6(), static_cast<uint16_t>(locator.port));
 	}
 	auto addr = locator.GetAddress<asio::ip::address_v6>();
 
@@ -567,11 +567,11 @@ asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetEndpoint(const AsioLocator& 
 		// 链路本地地址 需要设置作用域ID
 		addr.scope_id(IpContainer::GetAdapterScopeId(locator.address));
 	}
-	return asio::ip::tcp::endpoint(addr, locator.port);
+	return asio::ip::tcp::endpoint(addr, static_cast<uint16_t>(locator.port));
 }
 asio::ip::tcp::endpoint MessageTransmitterTCPv6::GetReciveEndpoint(const uint32_t port)
 {
-	return asio::ip::tcp::endpoint(asio::ip::address::from_string("::"), port);
+	return asio::ip::tcp::endpoint(asio::ip::address::from_string("::"), static_cast<uint16_t>(port));
 }
 std::shared_ptr<asio::ip::tcp::socket> MessageTransmitterTCPv6::GetSocketInit()
 {

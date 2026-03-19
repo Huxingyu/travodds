@@ -9,14 +9,14 @@ WriterProxy::WriterProxy(const GUID_t& writerGuid, const GUID_t& groupGuid,
       remoteGroupGuid_(groupGuid),
 	  unicastLocatorList_(unicastLocatorList),
 	  multicastLocatorList_(multicastLocatorList),
+	  dataMaxSizeSerialized_(0),
 	  submitSeq_(SEQUENCENUMBER_ZERO),
 	  insertSeq_(SEQUENCENUMBER_ZERO),
-	  dataMaxSizeSerialized_(0),
+	  changes_from_writer(nullptr),
 	  hbCount_(0),
 	  hbFragCount_(0),
 	  ackSendCount_(0),
-	  nackSendCount_(0),
-	  changes_from_writer(nullptr)
+	  nackSendCount_(0)
 {
 }
 
@@ -27,14 +27,8 @@ GUID_t WriterProxy::GetGuid()
 
 void WriterProxy::Init(SequenceNumber_t first, SequenceNumber_t last)
 {
-	//while(first <= last)
-	//{
-	//	ChangeFromWriter changeFromWriter;
-	//	changeFromWriter.sequenceNumber = first;
-	//	changeFromWriter.status = UNKNOWN;
-	//	changesFromWriter_.push_back(changeFromWriter);
-	//	first++;
-	//}
+	static_cast<void>(first);
+	static_cast<void>(last);
 }
 
 SequenceNumber_t WriterProxy::AvailableChangesMax()
@@ -175,7 +169,7 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 
 		if (submitSeq_ != SEQUENCENUMBER_ZERO) {
 			LostChangesUpdate(hbMsg.firstSN, true);
-			lostCount = LostChanges().size();
+			lostCount = static_cast<int32_t>(LostChanges().size());
 		}
 		SequenceNumber_t seq = AvailableChangesMax();
 		submitSeq_ = seq == SEQUENCENUMBER_ZERO ? hbMsg.firstSN : seq;
@@ -387,7 +381,7 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const Seriali
 	}
 
 	// yuguxu 移除其他包含的所有分片号
-	for (uint32_t i = startNum + 1; i < startNum + num; i++) {
+	for (int32_t i = startNum + 1; i < startNum + num; i++) {
 		cache->fragmentSeq.erase(i);
 	}
 

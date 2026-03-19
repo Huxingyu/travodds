@@ -48,7 +48,7 @@ private:
 	Participant* participant_;
 	int32_t maxBytesPerPeriod_; // 每个周期内最大发送字节数，0表示不限制
 	int32_t bytesAvailableThisPeriod_; // 当前周期内可发送的字节数
-	int64_t periodMs_; // 周期长度，单位毫秒
+	uint64_t periodMs_; // 周期长度，单位毫秒
 	int32_t currentTicket_;
 	std::atomic<int32_t> nextTicket_;
 	std::set<int32_t> timeoutTicket_; // 记录超时的ticket

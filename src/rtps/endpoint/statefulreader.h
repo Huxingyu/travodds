@@ -164,17 +164,14 @@ public:
 	 */
 	ReturnCode_t SendNackFragMessage(std::shared_ptr<WriterProxy> writerProxy, NackFragSubMessage_t& nackMsg);
 
+	void SetQos(const DataReaderQos& qos);
+
 #ifdef DDSSECURITY
 	WriterProxyMap* GetMatchedWriters() {
 		return &matchedWriters_;
 	}
 #endif // DDSSECURITY
 private:	
-	/**
-	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器初始化函数。
-	 */
-	void InitlastNewCacheTimer();
-
 	/**
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器超时执行回传功能函数。
 	 */

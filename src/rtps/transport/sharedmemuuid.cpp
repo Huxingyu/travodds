@@ -33,8 +33,9 @@ SharedMemUUID::SharedMemUUID()
 			shareduuid_->referenceCount = 1;
 		}
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		CleanupResources();
-		throw e;
+		throw;
 	}
 }
 
@@ -66,7 +67,7 @@ SharedMemUUID::~SharedMemUUID()
 			shareduuid_ = nullptr;
 		}
 	} catch (const std::exception& e) {
-		throw e;
+		static_cast<void>(e);
 	}
 }
 

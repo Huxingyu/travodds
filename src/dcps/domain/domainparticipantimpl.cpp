@@ -163,7 +163,12 @@ Publisher* DomainParticipantImpl::create_publisher(const PublisherQos& qos, Publ
         pubHandles_.insert({ pubPtr->get_instance_handle(), std::move(pubPtr) });
     }
     if (enable_ && qos_.entity_factory.autoenable_created_entities) {
-        ReturnCode_t ret = pub->enable();
+        if (RETCODE_OK != pub->enable()) {
+            delete_publisher(pub);
+            pub = nullptr;
+            TRAVODDS_LOG(LOG_ERROR, "pub->enable Err");
+            return nullptr;
+        }
     }
 	return pub;
 }
@@ -214,7 +219,12 @@ Subscriber* DomainParticipantImpl::create_subscriber(const SubscriberQos& qos, S
         subHandles_.insert({ subPtr->get_instance_handle(), std::move(subPtr) });
     }
     if (enable_ && qos_.entity_factory.autoenable_created_entities) {
-        ReturnCode_t ret = sub->enable();
+        if (RETCODE_OK != sub->enable()) {
+            delete_subscriber(sub);
+            sub = nullptr;
+            TRAVODDS_LOG(LOG_ERROR, "sub->enable Err");
+            return nullptr;
+        }
     }
 	return sub;
 }
@@ -266,40 +276,44 @@ Topic* DomainParticipantImpl::create_topic(const std::string& topic_name, const 
 		TRAVODDS_LOG(LOG_ERROR, "CheckQos Err");
 		return nullptr;
 	}
-    std::lock_guard<std::mutex> lock(mtxTopics_);
-    if (topics_.find(topic_name) != topics_.end()) {
-		TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] is created", topic_name.c_str(), type_name.c_str());
-        return nullptr;
-    }
-	Topic* topic = nullptr;
-
-#ifdef DDSSECURITY
-    if (enableDDSSec_) {
-        SecurityException secExce;
-        if (!secPlugin_.access_control->check_create_topic(
-            permissionHdl_,
-            domainId_,
-            topic_name.c_str(),
-            &qosT,
-            &secExce))
-        {
-            return topic;
+    Topic* topic = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mtxTopics_);
+        if (topics_.find(topic_name) != topics_.end()) {
+            TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] is created", topic_name.c_str(), type_name.c_str());
+            return nullptr;
         }
-    }
+#ifdef DDSSECURITY
+        if (enableDDSSec_) {
+            SecurityException secExce;
+            if (!secPlugin_.access_control->check_create_topic(
+                permissionHdl_,
+                domainId_,
+                topic_name.c_str(),
+                &qosT,
+                &secExce))
+            {
+                return topic;
+            }
+        }
 #endif // DDSSECURITY
-
-	std::shared_ptr<TopicImpl> topicPtr = std::make_shared<TopicImpl>(topic_name, type_name, qosT, listener, mask, this);
-	if (!topicPtr.get()) {
-		TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] create failed", topic_name.c_str(), type_name.c_str());
-		return nullptr;
-	}
-    topic = topicPtr.get();
-    
-    topicHandles_.insert({ topicPtr->get_instance_handle(), topicPtr });
-    topics_.insert({ topic_name, topicPtr });
+        std::shared_ptr<TopicImpl> topicPtr = std::make_shared<TopicImpl>(topic_name, type_name, qosT, listener, mask, this);
+        if (!topicPtr.get()) {
+            TRAVODDS_LOG(LOG_ERROR, "topic[%s:%s] create failed", topic_name.c_str(), type_name.c_str());
+            return nullptr;
+        }
+        topic = topicPtr.get();
+        topicHandles_.insert({ topicPtr->get_instance_handle(), topicPtr });
+        topics_.insert({ topic_name, topicPtr });
+    }
 
 	if (enable_ && qos_.entity_factory.autoenable_created_entities) {
-		ReturnCode_t ret = topic->enable();
+        if (RETCODE_OK != topic->enable()) {
+            delete_topic(topic);
+			topic = nullptr;
+            return nullptr;
+        }
+
 	}
     condTopics_.notify_all();
 	return topic;
@@ -518,18 +532,21 @@ ReturnCode_t DomainParticipantImpl::ignore_participant(const InstanceHandle_t& h
 ReturnCode_t DomainParticipantImpl::ignore_topic(const InstanceHandle_t& handle)
 {
 	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
+    static_cast<void>(handle);
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::ignore_publication(const InstanceHandle_t& handle)
 {
 	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
+    static_cast<void>(handle);
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::ignore_subscription(const InstanceHandle_t& handle)
 {
 	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
+    static_cast<void>(handle);
     return RETCODE_UNSUPPORTED;
 }
 
@@ -691,12 +708,15 @@ ReturnCode_t DomainParticipantImpl::get_discovered_participant_data(ParticipantB
 
 ReturnCode_t DomainParticipantImpl::get_discovered_topics(InstanceHandleSeq& topic_handles) const
 {
+	static_cast<void>(topic_handles);
 	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
 
 ReturnCode_t DomainParticipantImpl::get_discovered_topic_data(TopicBuiltinTopicData& topic_data, const InstanceHandle_t& topic_handle) const
 {
+	static_cast<void>(topic_data);
+	static_cast<void>(topic_handle);
 	TRAVODDS_LOG(LOG_ERROR, "domainparticipant not support interface");
     return RETCODE_UNSUPPORTED;
 }
@@ -871,11 +891,7 @@ std::shared_ptr<Discovery> DomainParticipantImpl::GetDiscovery() const
 
 InstanceHandle_t DomainParticipantImpl::GenerateInstanceHandle(const GUID_t& guid)
 {
-	InstanceHandle_t handle;
-
-	memcpy(handle.keyHash.value, &guid, sizeof(GUID_t));
-
-	return handle;
+	return Conversion::ToInstanceHandle(guid);
 }
 #ifdef DDSSECURITY
 ReturnCode_t DomainParticipantImpl::security_check()

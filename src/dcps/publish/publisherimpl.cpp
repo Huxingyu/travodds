@@ -126,8 +126,10 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 	datawriterPtr->FillSecureData();
 #endif
 
-	std::lock_guard<std::mutex> lock(mtxWriters_);
-	writerHandles_.insert({ datawriterPtr->get_instance_handle(), std::move(datawriterPtr) });
+	{
+		std::lock_guard<std::mutex> lock(mtxWriters_);
+		writerHandles_.insert({ datawriterPtr->get_instance_handle(), std::move(datawriterPtr) });
+	}
 
 	if (enable_ && qos_.entity_factory.autoenable_created_entities) {
 		if (RETCODE_OK != datawriter->enable()) {

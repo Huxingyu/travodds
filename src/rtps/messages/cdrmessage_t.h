@@ -60,6 +60,8 @@ struct Receive_t {
 	bool haveTimestame;
 	Time_t timestamp;
 	uint32_t messageLen;
+	Receive_t() : sourceVersion(PROTOCOLVERSION), sourceVendorId(VENDORID_PROSIMA), haveTimestame(false), timestamp(TIME_ZERO), messageLen(0) {
+	}
 };
 
 struct Bitmap_t {
@@ -151,6 +153,8 @@ struct MessageHeader_t {
 	ProtocolVersion_t version;
 	VendorId_t vendorId;
 	GuidPrefix_t guidPrefix;
+	MessageHeader_t() : protocol{ 'R','T','P','S' }, version(PROTOCOLVERSION), vendorId(VENDORID_PROSIMA) {
+	}
 };
 
 /**
