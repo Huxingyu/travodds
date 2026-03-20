@@ -53,7 +53,7 @@ ReturnCode_t DynamicTypeBuilder::apply_annotation_to_member(
 }
 
 unsigned int DynamicTypeBuilder::get_annotation_count() const {
-    return annotation_.size();
+    return static_cast<uint32_t>(annotation_.size());
 }
 
 ReturnCode_t
@@ -100,7 +100,7 @@ DynamicTypeBuilder::get_member_by_name(DynamicTypeMember &member,
 }
 
 unsigned int DynamicTypeBuilder::get_member_count() const {
-    return member_.size();
+    return static_cast<uint32_t>(member_.size());
 }
 
 std::string DynamicTypeBuilder::get_name() const { return descriptor_.name_; }

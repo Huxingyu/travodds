@@ -35,7 +35,7 @@ class QueryConditionImpl;
 
 #ifdef DDSSECURITY
 class Spdp;
-class SecurityPluginInstanceImpl;
+struct SecurityPluginInstanceImpl;
 
 typedef struct WriterSampleList
 {

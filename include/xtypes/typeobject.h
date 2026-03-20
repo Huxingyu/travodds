@@ -145,6 +145,7 @@ public:
 class DDS_TYPE_API AnnotationUsageMember {
 public:
     bool operator<(const AnnotationUsageMember& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::MemberId member_id;
@@ -156,6 +157,7 @@ public:
 class DDS_TYPE_API AnnotationUsage {
 public:
     bool operator<(const AnnotationUsage& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId type_id;
@@ -174,6 +176,7 @@ enum TypeFlag {
 class DDS_TYPE_API TypeProperty {
 public:
     bool operator<(const TypeProperty& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::TypeFlag flag;
@@ -191,6 +194,7 @@ enum TypeMemberId {
 class DDS_TYPE_API Type {
 public:
     bool operator<(const Type& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::TypeProperty property;// @id(TRAVODDS::PROPERTY_TYPE_MEMBER_ID) 
@@ -210,6 +214,7 @@ enum MemberFlag {
 class DDS_TYPE_API MemberProperty {
 public:
     bool operator<(const MemberProperty& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::MemberFlag flag;
@@ -228,6 +233,7 @@ enum MemberMemberId {
 class DDS_TYPE_API Member {
 public:
     bool operator<(const Member& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::MemberProperty property;// @id(TRAVODDS::PROPERTY_MEMBER_MEMBER_ID) 
@@ -244,6 +250,7 @@ enum StructureTypeMemberId {
 class DDS_TYPE_API StructureType : public TRAVODDS::Type {
 public:
     bool operator<(const StructureType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId base_type;// @id(TRAVODDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID) 
@@ -259,6 +266,7 @@ enum UnionMemberMemberId {
 class DDS_TYPE_API UnionMember : public TRAVODDS::Member {
 public:
     bool operator<(const UnionMember& rhs) const {
+        (void)rhs;
         return false;
     }
     std::vector<int> label;// @id(TRAVODDS::LABEL_UNIONMEMBER_MEMBER_ID) 
@@ -273,6 +281,7 @@ enum UnionTypeMemberId {
 class DDS_TYPE_API UnionType : public TRAVODDS::Type {
 public:
     bool operator<(const UnionType& rhs) const {
+        (void)rhs;
         return false;
     }
     std::vector<TRAVODDS::UnionMember> member;// @id(TRAVODDS::MEMBER_UNIONTYPE_MEMBER_ID) 
@@ -287,6 +296,7 @@ enum AnnotationMemberMemberId {
 class DDS_TYPE_API AnnotationMember : public TRAVODDS::Member {
 public:
     bool operator<(const AnnotationMember& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::AnnotationMemberValue default_value;// @id(TRAVODDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID) 
@@ -302,6 +312,7 @@ enum AnnotationTypeMemberId {
 class DDS_TYPE_API AnnotationType : public TRAVODDS::Type {
 public:
     bool operator<(const AnnotationType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId base_type;// @id(TRAVODDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID) 
@@ -317,6 +328,7 @@ enum AliasTypeMemberId {
 class DDS_TYPE_API AliasType : public TRAVODDS::Type {
 public:
     bool operator<(const AliasType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId base_type;// @id(TRAVODDS::BASE_TYPE_ALIASTYPE_MEMBER_ID) 
@@ -336,6 +348,7 @@ enum CollectionTypeMemberId {
 class DDS_TYPE_API CollectionType : public TRAVODDS::Type {
 public:
     bool operator<(const CollectionType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId element_type;// @id(TRAVODDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID) 
@@ -351,6 +364,7 @@ enum ArrayTypeMemberId {
 class DDS_TYPE_API ArrayType : public TRAVODDS::CollectionType {
 public:
     bool operator<(const ArrayType& rhs) const {
+        (void)rhs;
         return false;
     }
     std::vector<TRAVODDS::Bound> bound;// @id(TRAVODDS::BOUND_ARRAYTYPE_MEMBER_ID) 
@@ -366,6 +380,7 @@ enum MapTypeMemberId {
 class DDS_TYPE_API MapType : public TRAVODDS::CollectionType {
 public:
     bool operator<(const MapType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::_TypeId key_element_type;// @id(TRAVODDS::KEY_ELEMENT_TYPE_MAPTYPE_MEMBER_ID) 
@@ -381,6 +396,7 @@ enum SequenceTypeMemberId {
 class DDS_TYPE_API SequenceType : public TRAVODDS::CollectionType {
 public:
     bool operator<(const SequenceType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::Bound bound;// @id(TRAVODDS::BOUND_SEQUENCETYPE_MEMBER_ID) 
@@ -395,6 +411,7 @@ enum StringTypeMemberId {
 class DDS_TYPE_API StringType : public TRAVODDS::CollectionType {
 public:
     bool operator<(const StringType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::Bound bound;// @id(TRAVODDS::BOUND_STRINGTYPE_MEMBER_ID) 
@@ -405,6 +422,7 @@ public:
 class DDS_TYPE_API Bit {
 public:
     bool operator<(const Bit& rhs) const {
+        (void)rhs;
         return false;
     }
     int index;
@@ -421,6 +439,7 @@ enum BitSetTypeMemberId {
 class DDS_TYPE_API BitSetType : public TRAVODDS::Type {
 public:
     bool operator<(const BitSetType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::Bound bit_bound;// @id(TRAVODDS::BIT_BOUND_BITSETTYPE_MEMBER_ID) 
@@ -432,6 +451,7 @@ public:
 class DDS_TYPE_API EnumeratedConstant {
 public:
     bool operator<(const EnumeratedConstant& rhs) const {
+        (void)rhs;
         return false;
     }
     int value;
@@ -448,6 +468,7 @@ enum EnumerationTypeMemberId {
 class DDS_TYPE_API EnumerationType : public TRAVODDS::Type {
 public:
     bool operator<(const EnumerationType& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::Bound bit_bound;// @id(TRAVODDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID) 
@@ -459,6 +480,7 @@ public:
 class DDS_TYPE_API _Module {
 public:
     bool operator<(const _Module& rhs) const {
+        (void)rhs;
         return false;
     }
     std::string name;
@@ -503,6 +525,7 @@ public:
 class DDS_TYPE_API TypeLibrary {
 public:
     bool operator<(const TypeLibrary& rhs) const {
+        (void)rhs;
         return false;
     }
     std::vector<TRAVODDS::TypeLibraryElement> element;
@@ -512,6 +535,7 @@ public:
 class DDS_TYPE_API TypeObject {
 public:
     bool operator<(const TypeObject& rhs) const {
+        (void)rhs;
         return false;
     }
     TRAVODDS::TypeLibrary library;// @id(0) 

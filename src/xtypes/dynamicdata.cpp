@@ -350,6 +350,7 @@ MemberId DynamicData::get_member_id_by_name(const std::string &name) const {
 }
 
 MemberId DynamicData::get_member_id_at_index(size_t index) const { 
+    (void)index;
     return MEMBER_ID_INVALID; 
 }
 
@@ -476,7 +477,7 @@ size_t DynamicData::get_item_count() const {
         TypeDescriptor descriptor;
         ret = type_.get_descriptor(descriptor);
         if (ret != RETCODE_OK) {
-            return -1;
+            return SIZE_MAX;
         }
         size_t size = 1;
         for (const auto &bound : descriptor.bound_) {
@@ -484,7 +485,7 @@ size_t DynamicData::get_item_count() const {
         }
         auto it = value_.find(MEMBER_ID_INVALID);
         if (it == value_.end()) {
-            return -1;
+            return SIZE_MAX;
         }
         switch (descriptor.element_type_->get_kind()) {
         case TK_BOOLEAN: {
@@ -561,14 +562,14 @@ size_t DynamicData::get_item_count() const {
     case TK_STRING8: {
         auto it = value_.find(MEMBER_ID_INVALID);
         if (it == value_.end()) {
-            return -1;
+            return SIZE_MAX;
         }
         return it->second.string_value.size();
     }
     case TK_STRING16: {
         auto it = value_.find(MEMBER_ID_INVALID);
         if (it == value_.end()) {
-            return -1;
+            return SIZE_MAX;
         }
         return it->second.wstring_value.size();
     }
@@ -576,7 +577,7 @@ size_t DynamicData::get_item_count() const {
         TypeDescriptor descriptor;
         ret = type_.get_descriptor(descriptor);
         if (ret != RETCODE_OK) {
-            return -1;
+            return SIZE_MAX;
         }
         size_t size = 1;
         for (const auto &bound : descriptor.bound_) {
@@ -613,7 +614,7 @@ size_t DynamicData::get_item_count() const {
     default:
         break;
     }
-    return -1;
+    return SIZE_MAX;
 }
 
 size_t TRAVODDS::DynamicData::get_memberid_item_count(MemberId id) const {
@@ -630,11 +631,13 @@ size_t TRAVODDS::DynamicData::get_memberid_item_count(MemberId id) const {
 }
 
 DynamicData* DynamicData::loan_value(MemberId id) {
+    (void)id;
     // TODO: 实现值借用逻辑
     return nullptr;
 }
 
 int DynamicData::return_loaned_value(DynamicData &data) {
+    (void)data;
     // TODO: 实现值归还逻辑
     return RETCODE_OK;
 }

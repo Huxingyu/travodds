@@ -288,9 +288,9 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
             SecurityException secExce;
             secExce.message[0] = '\0';
             WriterSampleList* matchWriter = nullptr;
-            auto itor = datareader_->writerSampleList_.find(guid);
-            if (itor != datareader_->writerSampleList_.end()) {
-                matchWriter = itor->second;
+            auto itor_matchWriter = datareader_->writerSampleList_.find(guid);
+            if (itor_matchWriter != datareader_->writerSampleList_.end()) {
+                matchWriter = itor_matchWriter->second;
             }
             else {
 				MemoryPool::GetInstance()->releaseBuffer(plainData->origin_buffer);

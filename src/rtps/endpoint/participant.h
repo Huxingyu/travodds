@@ -31,7 +31,7 @@ class FlowRateLimitedManager;
 class DynamicPerformanceRegulator;
 
 #ifdef DDSSECURITY
-class WriterSampleList;
+struct WriterSampleList;
 #endif //DDSSECURITY
 
 enum EntityType : char{
