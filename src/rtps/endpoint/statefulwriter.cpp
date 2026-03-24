@@ -933,7 +933,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		return RETCODE_OK;
 	}
 		
-
 	HeartBeatSubMessage_t hbMsg;
 	SequenceNumber_t minSeq = writerCache_->GetSeqNumMin();
 	SequenceNumber_t maxSeq = writerCache_->GetSeqNumMax();
@@ -954,11 +953,9 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
 
+#ifdef DDSSECURITY
 	//加密前的子消息长度
 	uint32_t lengthGapMsgBefore = 0;
-
-
-#ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected
 		&& guid_.IsUserDefinedEntity();
@@ -1034,6 +1031,9 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		bufffer.buffer = bufffer.buffer - size;  //bufffer指向gapMsg起始位置
 		
 		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg); // 出参shift为gapMsg长度
+#ifdef DDSSECURITY
+		lengthGapMsgBefore = shift; //缓存gapMsg长度 子消息加密使用
+#endif //DDSSECURITY
 		bufffer.buffer_size += shift; //bufffer长度gap+heartbeat
 		shift = 0;
 
@@ -1047,6 +1047,10 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 			tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
 			//encode_datawriter_message
 			dataRet = EncodeSubMsgBuffer(readerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+			if (dataRet != 0) {
+				delete[] tmpEncodeBuffer.buffer;
+				return RETCODE_ERROR;
+			}
 			lengthGapMsg = tmpEncodeBuffer.buffer_size;
 			//拷贝到encodeData
 			memcpy(encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg,
@@ -1095,7 +1099,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 			&secExce))
 		{
 			delete[]tmpEncodeBuffer.buffer;
-			return -1;
+			return RETCODE_ERROR;
 		}
 		// 存到encodeData
 		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
