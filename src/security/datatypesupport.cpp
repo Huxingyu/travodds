@@ -365,8 +365,8 @@ unsigned int Property_tTypeSupport::get_serialized_data_size(void* data, unsigne
     Property_t* structData = static_cast<Property_t*>(data);
     unsigned int initialAlignment = currentAlignment;
     //unsigned int tmpAlignment = 0;
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->value.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->value.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -477,9 +477,9 @@ unsigned int BinaryProperty_tTypeSupport::get_serialized_data_size(void* data, u
     BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
     unsigned int initialAlignment = currentAlignment;
     //unsigned int tmpAlignment = 0;
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
-    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned char), structData->value.size(), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned char), static_cast<uint32_t>(structData->value.size()), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -502,7 +502,7 @@ int BinaryProperty_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
         fprintf(stderr, "Serialization length failed for field: structData->value\n");
         return -1;
     }
-    if (!cdr->serializeBaseTypeArray(structData->value.data(), structData->value.size())) {
+    if (!cdr->serializeBaseTypeArray(structData->value.data(), static_cast<uint32_t>(structData->value.size()))) {
         fprintf(stderr, "Serialization failed for field: structData->value\n");
         return -1;
     }

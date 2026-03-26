@@ -650,7 +650,7 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 		if (writerProxy == NULL)
 		{
 			partHdls = dp->secParticipants_.data();
-			partHdlsCount = dp->secParticipants_.size();
+			partHdlsCount = static_cast<uint32_t>(dp->secParticipants_.size());
 		}
 		else
 		{
@@ -793,7 +793,7 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 		if (writerProxy == NULL)
 		{
 			partHdls = dp->secParticipants_.data();
-			partHdlsCount = dp->secParticipants_.size();
+			partHdlsCount = static_cast<uint32_t>(dp->secParticipants_.size());
 		}
 		else
 		{
@@ -944,7 +944,7 @@ int StatefulReader::EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy,
 			if (writerProxy == NULL)
 			{
 				writerHdls = datareader_->secWriters_.data();
-				writerHdlsCount = datareader_->secWriters_.size();
+				writerHdlsCount = static_cast<uint32_t>(datareader_->secWriters_.size());
 			}
 			else
 			{

@@ -887,7 +887,7 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 			}
 			case VALIDATION_OK_FINAL_MESSAGE: {
 				TRAVODDS_LOG(LOG_DEBUG, "validate_remote_identity okfinal.");
-				//TODO
+				return;
 			}
 			default:
 			{

@@ -259,7 +259,14 @@ std::string SysInfo::GetExecutionTimestampStatic()
     auto time = std::chrono::system_clock::to_time_t(start_time);
 
     std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S(UTC+8)");
+    struct tm timeinfo = { };
+
+#ifdef _WIN32
+    localtime_s(&timeinfo, &time);
+#else
+    localtime_r(&time, &timeinfo);
+#endif
+    oss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S(UTC+8)");
     return oss.str();
 }
 

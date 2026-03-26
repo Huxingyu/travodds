@@ -28,8 +28,6 @@ int TRAVODDS::_TypeIdTypeSupport::copy_data(void* dst, void* src) {
 
 unsigned int TRAVODDS::_TypeIdTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
-    unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case TRAVODDS::BOOLEAN_TYPE:
@@ -56,8 +54,6 @@ unsigned int TRAVODDS::_TypeIdTypeSupport::get_serialized_data_size(void* data, 
 
 unsigned int TRAVODDS::_TypeIdTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
-    unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case TRAVODDS::BOOLEAN_TYPE:
@@ -83,8 +79,8 @@ unsigned int TRAVODDS::_TypeIdTypeSupport::get_max_serialized_data_size(void* da
 }
 
 int TRAVODDS::_TypeIdTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
         fprintf(stderr, "Serialization failed for field: structData->u_\n");
         return -1;
@@ -119,10 +115,8 @@ int TRAVODDS::_TypeIdTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
 }
 
 int TRAVODDS::_TypeIdTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->u_)) {
         fprintf(stderr, "Deserialization failed for field: structData->u_\n");
         return -1;
@@ -161,7 +155,9 @@ TypeObject* TRAVODDS::_TypeIdTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::_TypeIdTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -223,8 +219,6 @@ int TRAVODDS::AnnotationMemberValueTypeSupport::copy_data(void* dst, void* src) 
 
 unsigned int TRAVODDS::AnnotationMemberValueTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
-    unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(short), currentAlignment);
     switch(structData->u_) {
     case TRAVODDS::BOOLEAN_TYPE:
@@ -270,19 +264,21 @@ unsigned int TRAVODDS::AnnotationMemberValueTypeSupport::get_serialized_data_siz
         currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
         break;
     case TRAVODDS::STRING_TYPE:
-        currentAlignment += CdrSerializer::getStringSize(structData->string_value.size() + 1, currentAlignment);
+        currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->string_value.size()) + 1, currentAlignment);
         break;
     }
     return 0;
 }
 
 unsigned int TRAVODDS::AnnotationMemberValueTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
 int TRAVODDS::AnnotationMemberValueTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->u_)) {
         fprintf(stderr, "Serialization failed for field: structData->u_\n");
         return -1;
@@ -383,10 +379,8 @@ int TRAVODDS::AnnotationMemberValueTypeSupport::serialize_data(void* data, CdrSe
 }
 
 int TRAVODDS::AnnotationMemberValueTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->u_)) {
         fprintf(stderr, "Deserialization failed for field: structData->u_\n");
         return -1;
@@ -491,7 +485,9 @@ TypeObject* TRAVODDS::AnnotationMemberValueTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::AnnotationMemberValueTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -554,7 +550,6 @@ int TRAVODDS::AnnotationUsageMemberTypeSupport::copy_data(void* dst, void* src) 
 unsigned int TRAVODDS::AnnotationUsageMemberTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
@@ -563,7 +558,6 @@ unsigned int TRAVODDS::AnnotationUsageMemberTypeSupport::get_serialized_data_siz
 unsigned int TRAVODDS::AnnotationUsageMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->get_max_serialized_data_size(&structData->value, currentAlignment);
     return currentAlignment - initialAlignment;
@@ -571,7 +565,6 @@ unsigned int TRAVODDS::AnnotationUsageMemberTypeSupport::get_max_serialized_data
 
 int TRAVODDS::AnnotationUsageMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->member_id)) {
         fprintf(stderr, "Serialization failed for field: structData->member_id\n");
         return -1;
@@ -585,10 +578,6 @@ int TRAVODDS::AnnotationUsageMemberTypeSupport::serialize_data(void* data, CdrSe
 
 int TRAVODDS::AnnotationUsageMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->member_id)) {
         fprintf(stderr, "Deserialization failed for field: structData->member_id\n");
         return -1;
@@ -605,8 +594,9 @@ TypeObject* TRAVODDS::AnnotationUsageMemberTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::AnnotationUsageMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -669,7 +659,6 @@ int TRAVODDS::AnnotationUsageTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::AnnotationUsageTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::AnnotationUsage* structData = static_cast<TRAVODDS::AnnotationUsage*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->member.size(); ++i) {
@@ -679,6 +668,8 @@ unsigned int TRAVODDS::AnnotationUsageTypeSupport::get_serialized_data_size(void
 }
 
 unsigned int TRAVODDS::AnnotationUsageTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -706,9 +697,6 @@ int TRAVODDS::AnnotationUsageTypeSupport::serialize_data(void* data, CdrSerializ
 int TRAVODDS::AnnotationUsageTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AnnotationUsage* structData = static_cast<TRAVODDS::AnnotationUsage*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
         return -1;
@@ -732,8 +720,9 @@ TypeObject* TRAVODDS::AnnotationUsageTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::AnnotationUsageTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::AnnotationUsage* structData = static_cast<TRAVODDS::AnnotationUsage*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -796,17 +785,15 @@ int TRAVODDS::TypePropertyTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::TypePropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::TypeProperty* structData = static_cast<TRAVODDS::TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::TypePropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::TypeProperty* structData = static_cast<TRAVODDS::TypeProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
     currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
@@ -815,7 +802,6 @@ unsigned int TRAVODDS::TypePropertyTypeSupport::get_max_serialized_data_size(voi
 
 int TRAVODDS::TypePropertyTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::TypeProperty* structData = static_cast<TRAVODDS::TypeProperty*>(data);
-    uint32_t tmpLength = 0;
     switch(16 / 8) {
     case 1:
         if (!cdr->serializeBaseType(static_cast<char>(structData->flag))) {
@@ -853,7 +839,6 @@ int TRAVODDS::TypePropertyTypeSupport::serialize_data(void* data, CdrSerializer*
 
 int TRAVODDS::TypePropertyTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::TypeProperty* structData = static_cast<TRAVODDS::TypeProperty*>(data);
-    unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
@@ -900,8 +885,9 @@ TypeObject* TRAVODDS::TypePropertyTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::TypePropertyTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::TypeProperty* structData = static_cast<TRAVODDS::TypeProperty*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -985,6 +971,8 @@ unsigned int TRAVODDS::TypeTypeSupport::get_serialized_data_size(void* data, uns
 }
 
 unsigned int TRAVODDS::TypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -1034,9 +1022,6 @@ int TRAVODDS::TypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, in
 int TRAVODDS::TypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::Type* structData = static_cast<TRAVODDS::Type*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -1090,12 +1075,9 @@ TypeObject* TRAVODDS::TypeTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::TypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::Type* structData = static_cast<TRAVODDS::Type*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -1158,18 +1140,16 @@ int TRAVODDS::MemberPropertyTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::MemberPropertyTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::MemberProperty* structData = static_cast<TRAVODDS::MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->type_id, currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::MemberPropertyTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::MemberProperty* structData = static_cast<TRAVODDS::MemberProperty*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(16 / 8, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->type_id, currentAlignment);
@@ -1179,7 +1159,6 @@ unsigned int TRAVODDS::MemberPropertyTypeSupport::get_max_serialized_data_size(v
 
 int TRAVODDS::MemberPropertyTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::MemberProperty* structData = static_cast<TRAVODDS::MemberProperty*>(data);
-    uint32_t tmpLength = 0;
     switch(16 / 8) {
     case 1:
         if (!cdr->serializeBaseType(static_cast<char>(structData->flag))) {
@@ -1221,7 +1200,6 @@ int TRAVODDS::MemberPropertyTypeSupport::serialize_data(void* data, CdrSerialize
 
 int TRAVODDS::MemberPropertyTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::MemberProperty* structData = static_cast<TRAVODDS::MemberProperty*>(data);
-    unsigned int tmpLength = 0;
     char tmpCharEnum = 0;
     short tmpShortEnum = 0;
     int tmpIntEnum = 0;
@@ -1272,8 +1250,9 @@ TypeObject* TRAVODDS::MemberPropertyTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::MemberPropertyTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::MemberProperty* structData = static_cast<TRAVODDS::MemberProperty*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -1357,6 +1336,8 @@ unsigned int TRAVODDS::MemberTypeSupport::get_serialized_data_size(void* data, u
 }
 
 unsigned int TRAVODDS::MemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -1406,9 +1387,6 @@ int TRAVODDS::MemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
 int TRAVODDS::MemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::Member* structData = static_cast<TRAVODDS::Member*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -1462,12 +1440,9 @@ TypeObject* TRAVODDS::MemberTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::MemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::Member* structData = static_cast<TRAVODDS::Member*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
+    (void)data;
+    (void)cdr;
+    (void)endian;
     return 0;
 }
 
@@ -1552,6 +1527,8 @@ unsigned int TRAVODDS::StructureTypeTypeSupport::get_serialized_data_size(void* 
 }
 
 unsigned int TRAVODDS::StructureTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -1605,9 +1582,6 @@ int TRAVODDS::StructureTypeTypeSupport::serialize_data(void* data, CdrSerializer
 int TRAVODDS::StructureTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::StructureType* structData = static_cast<TRAVODDS::StructureType*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -1666,11 +1640,6 @@ TypeObject* TRAVODDS::StructureTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::StructureTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::StructureType* structData = static_cast<TRAVODDS::StructureType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -1744,13 +1713,15 @@ unsigned int TRAVODDS::UnionMemberTypeSupport::get_serialized_data_size(void* da
     tmpAlignment = currentAlignment;
     currentAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
-    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), structData->label.size(), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), static_cast<uint32_t>(structData->label.size()), currentAlignment);
     currentAlignment += tmpAlignment;
     currentAlignment += (currentAlignment & 3) == 0 ? 0 : (4 - (currentAlignment & 3));
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::UnionMemberTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -1777,7 +1748,7 @@ int TRAVODDS::UnionMemberTypeSupport::serialize_data(void* data, CdrSerializer* 
         fprintf(stderr, "Serialization length failed for field: structData->label\n");
         return -1;
     }
-    if (!cdr->serializeBaseTypeArray(structData->label.data(), structData->label.size())) {
+    if (!cdr->serializeBaseTypeArray(structData->label.data(), static_cast<uint32_t>(structData->label.size()))) {
         fprintf(stderr, "Serialization failed for field: structData->label\n");
         return -1;
     }
@@ -1789,9 +1760,6 @@ int TRAVODDS::UnionMemberTypeSupport::serialize_data(void* data, CdrSerializer* 
 int TRAVODDS::UnionMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::UnionMember* structData = static_cast<TRAVODDS::UnionMember*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -1842,11 +1810,6 @@ TypeObject* TRAVODDS::UnionMemberTypeSupport::get_typeobject() {
 
 int TRAVODDS::UnionMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::UnionMember* structData = static_cast<TRAVODDS::UnionMember*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -1929,6 +1892,8 @@ unsigned int TRAVODDS::UnionTypeTypeSupport::get_serialized_data_size(void* data
 }
 
 unsigned int TRAVODDS::UnionTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -1968,10 +1933,7 @@ int TRAVODDS::UnionTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
 
 int TRAVODDS::UnionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::UnionType* structData = static_cast<TRAVODDS::UnionType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
+    uint32_t tmpLength = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2024,11 +1986,6 @@ TypeObject* TRAVODDS::UnionTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::UnionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::UnionType* structData = static_cast<TRAVODDS::UnionType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -2123,7 +2080,6 @@ unsigned int TRAVODDS::AnnotationMemberTypeSupport::get_max_serialized_data_size
 
 int TRAVODDS::AnnotationMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationMember* structData = static_cast<TRAVODDS::AnnotationMember*>(data);
-    uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
@@ -2150,10 +2106,6 @@ int TRAVODDS::AnnotationMemberTypeSupport::serialize_data(void* data, CdrSeriali
 
 int TRAVODDS::AnnotationMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AnnotationMember* structData = static_cast<TRAVODDS::AnnotationMember*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2199,11 +2151,6 @@ TypeObject* TRAVODDS::AnnotationMemberTypeSupport::get_typeobject() {
 
 int TRAVODDS::AnnotationMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationMember* structData = static_cast<TRAVODDS::AnnotationMember*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -2292,6 +2239,8 @@ unsigned int TRAVODDS::AnnotationTypeTypeSupport::get_serialized_data_size(void*
 }
 
 unsigned int TRAVODDS::AnnotationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -2344,10 +2293,7 @@ int TRAVODDS::AnnotationTypeTypeSupport::serialize_data(void* data, CdrSerialize
 
 int TRAVODDS::AnnotationTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AnnotationType* structData = static_cast<TRAVODDS::AnnotationType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
+    uint32_t tmpLength = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2406,11 +2352,6 @@ TypeObject* TRAVODDS::AnnotationTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::AnnotationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationType* structData = static_cast<TRAVODDS::AnnotationType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -2505,7 +2446,6 @@ unsigned int TRAVODDS::AliasTypeTypeSupport::get_max_serialized_data_size(void* 
 
 int TRAVODDS::AliasTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AliasType* structData = static_cast<TRAVODDS::AliasType*>(data);
-    uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
@@ -2532,10 +2472,6 @@ int TRAVODDS::AliasTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
 
 int TRAVODDS::AliasTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AliasType* structData = static_cast<TRAVODDS::AliasType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2581,11 +2517,6 @@ TypeObject* TRAVODDS::AliasTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::AliasTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AliasType* structData = static_cast<TRAVODDS::AliasType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -2692,7 +2623,6 @@ unsigned int TRAVODDS::CollectionTypeTypeSupport::get_max_serialized_data_size(v
 
 int TRAVODDS::CollectionTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::CollectionType* structData = static_cast<TRAVODDS::CollectionType*>(data);
-    uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
@@ -2732,10 +2662,6 @@ int TRAVODDS::CollectionTypeTypeSupport::serialize_data(void* data, CdrSerialize
 
 int TRAVODDS::CollectionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::CollectionType* structData = static_cast<TRAVODDS::CollectionType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2787,11 +2713,6 @@ TypeObject* TRAVODDS::CollectionTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::CollectionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::CollectionType* structData = static_cast<TRAVODDS::CollectionType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -2874,6 +2795,8 @@ unsigned int TRAVODDS::ArrayTypeTypeSupport::get_serialized_data_size(void* data
 }
 
 unsigned int TRAVODDS::ArrayTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -2914,9 +2837,6 @@ int TRAVODDS::ArrayTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
 int TRAVODDS::ArrayTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::ArrayType* structData = static_cast<TRAVODDS::ArrayType*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -2969,11 +2889,6 @@ TypeObject* TRAVODDS::ArrayTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::ArrayTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::ArrayType* structData = static_cast<TRAVODDS::ArrayType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -3040,7 +2955,6 @@ int TRAVODDS::MapTypeTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::MapTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += TRAVODDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), currentAlignment);
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->key_element_type, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
@@ -3050,7 +2964,6 @@ unsigned int TRAVODDS::MapTypeTypeSupport::get_serialized_data_size(void* data, 
 unsigned int TRAVODDS::MapTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += TRAVODDS::_TypeIdTypeSupport::get_instance()->get_max_serialized_data_size(&structData->key_element_type, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
@@ -3058,7 +2971,6 @@ unsigned int TRAVODDS::MapTypeTypeSupport::get_max_serialized_data_size(void* da
 
 int TRAVODDS::MapTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
-    uint32_t tmpLength = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound[i]\n");
         return -1;
@@ -3076,10 +2988,6 @@ int TRAVODDS::MapTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
 
 int TRAVODDS::MapTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound[i]\n");
         return -1;
@@ -3101,7 +3009,6 @@ TypeObject* TRAVODDS::MapTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::MapTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
-    bool memberHasKey = false;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -3168,23 +3075,23 @@ int TRAVODDS::SequenceTypeTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::SequenceTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += TRAVODDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::SequenceTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
+    (void)data;
+    //TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int TRAVODDS::SequenceTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
-    uint32_t tmpLength = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound\n");
         return -1;
@@ -3198,10 +3105,6 @@ int TRAVODDS::SequenceTypeTypeSupport::serialize_data(void* data, CdrSerializer*
 
 int TRAVODDS::SequenceTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound\n");
         return -1;
@@ -3219,7 +3122,6 @@ TypeObject* TRAVODDS::SequenceTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::SequenceTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
-    bool memberHasKey = false;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -3286,23 +3188,21 @@ int TRAVODDS::StringTypeTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::StringTypeTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += TRAVODDS::CollectionTypeTypeSupport::get_instance()->get_serialized_data_size((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::StringTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
+    (void)data;
+    //TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned int), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int TRAVODDS::StringTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
-    uint32_t tmpLength = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: structData->bound\n");
         return -1;
@@ -3316,10 +3216,6 @@ int TRAVODDS::StringTypeTypeSupport::serialize_data(void* data, CdrSerializer* c
 
 int TRAVODDS::StringTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Deserialization failed for field: structData->bound\n");
         return -1;
@@ -3337,7 +3233,7 @@ TypeObject* TRAVODDS::StringTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::StringTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
-    bool memberHasKey = false;
+    //bool memberHasKey = false;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -3404,24 +3300,25 @@ int TRAVODDS::BitTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::BitTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::BitTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
+    (void)data;
+    //TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
     currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int TRAVODDS::BitTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
-    uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->index)) {
         fprintf(stderr, "Serialization failed for field: structData->index\n");
         return -1;
@@ -3434,11 +3331,8 @@ int TRAVODDS::BitTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int
 }
 
 int TRAVODDS::BitTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->index)) {
         fprintf(stderr, "Deserialization failed for field: structData->index\n");
         return -1;
@@ -3455,8 +3349,11 @@ TypeObject* TRAVODDS::BitTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::BitTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -3541,6 +3438,8 @@ unsigned int TRAVODDS::BitSetTypeTypeSupport::get_serialized_data_size(void* dat
 }
 
 unsigned int TRAVODDS::BitSetTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -3594,9 +3493,6 @@ int TRAVODDS::BitSetTypeTypeSupport::serialize_data(void* data, CdrSerializer* c
 int TRAVODDS::BitSetTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::BitSetType* structData = static_cast<TRAVODDS::BitSetType*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -3655,11 +3551,6 @@ TypeObject* TRAVODDS::BitSetTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::BitSetTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::BitSetType* structData = static_cast<TRAVODDS::BitSetType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -3726,24 +3617,25 @@ int TRAVODDS::EnumeratedConstantTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::EnumeratedConstantTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::EnumeratedConstantTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
+    (void)data;
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(int), currentAlignment);
     currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int TRAVODDS::EnumeratedConstantTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
-    uint32_t tmpLength = 0;
+    //uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->value)) {
         fprintf(stderr, "Serialization failed for field: structData->value\n");
         return -1;
@@ -3756,11 +3648,8 @@ int TRAVODDS::EnumeratedConstantTypeSupport::serialize_data(void* data, CdrSeria
 }
 
 int TRAVODDS::EnumeratedConstantTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(structData->value)) {
         fprintf(stderr, "Deserialization failed for field: structData->value\n");
         return -1;
@@ -3777,8 +3666,11 @@ TypeObject* TRAVODDS::EnumeratedConstantTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::EnumeratedConstantTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -3863,6 +3755,8 @@ unsigned int TRAVODDS::EnumerationTypeTypeSupport::get_serialized_data_size(void
 }
 
 unsigned int TRAVODDS::EnumerationTypeTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -3916,9 +3810,6 @@ int TRAVODDS::EnumerationTypeTypeSupport::serialize_data(void* data, CdrSerializ
 int TRAVODDS::EnumerationTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::EnumerationType* structData = static_cast<TRAVODDS::EnumerationType*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -3977,11 +3868,6 @@ TypeObject* TRAVODDS::EnumerationTypeTypeSupport::get_typeobject() {
 
 int TRAVODDS::EnumerationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::EnumerationType* structData = static_cast<TRAVODDS::EnumerationType*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
         fprintf(stderr, "Serialization failed for field: \n");
         return -1;
@@ -4048,22 +3934,24 @@ int TRAVODDS::_ModuleTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::_ModuleTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
-    currentAlignment += CdrSerializer::getStringSize(structData->name.size() + 1, currentAlignment);
+    //unsigned int tmpAlignment = 0;
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->name.size()) + 1, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 unsigned int TRAVODDS::_ModuleTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
-    TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
+    (void)data;
+    //TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getStringSize(256, currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
 int TRAVODDS::_ModuleTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
-    uint32_t tmpLength = 0;
+    //uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
         fprintf(stderr, "Serialization failed for field: structData->name\n");
         return -1;
@@ -4072,11 +3960,8 @@ int TRAVODDS::_ModuleTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
 }
 
 int TRAVODDS::_ModuleTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
+    (void)endian;
     TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
-    unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->name)) {
         fprintf(stderr, "Deserialization failed for field: structData->name\n");
         return -1;
@@ -4089,8 +3974,11 @@ TypeObject* TRAVODDS::_ModuleTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::_ModuleTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -4152,7 +4040,7 @@ int TRAVODDS::TypeLibraryElementTypeSupport::copy_data(void* dst, void* src) {
 
 unsigned int TRAVODDS::TypeLibraryElementTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::TypeLibraryElement* structData = static_cast<TRAVODDS::TypeLibraryElement*>(data);
-    unsigned int initialAlignment = currentAlignment;
+    //unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
@@ -4256,7 +4144,7 @@ unsigned int TRAVODDS::TypeLibraryElementTypeSupport::get_serialized_data_size(v
 
 unsigned int TRAVODDS::TypeLibraryElementTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::TypeLibraryElement* structData = static_cast<TRAVODDS::TypeLibraryElement*>(data);
-    unsigned int initialAlignment = currentAlignment;
+    //unsigned int initialAlignment = currentAlignment;
     unsigned int tmpAlignment = 0;
     currentAlignment += (currentAlignment & 1) == 0 ? 0 : (2 - (currentAlignment & 1));
     currentAlignment += 4;
@@ -4360,7 +4248,7 @@ unsigned int TRAVODDS::TypeLibraryElementTypeSupport::get_max_serialized_data_si
 
 int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::TypeLibraryElement* structData = static_cast<TRAVODDS::TypeLibraryElement*>(data);
-    uint32_t tmpLength = 0;
+    //uint32_t tmpLength = 0;
     bool useExtend = true;
     char* lenAddr = nullptr;
     unsigned int beforeLen = 0;
@@ -4702,11 +4590,14 @@ TypeObject* TRAVODDS::TypeLibraryElementTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::TypeLibraryElementTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::TypeLibraryElement* structData = static_cast<TRAVODDS::TypeLibraryElement*>(data);
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::TypeLibraryElement* structData = static_cast<TRAVODDS::TypeLibraryElement*>(data);
+    //bool useExtend = true;
+    //char* lenAddr = nullptr;
+    //unsigned int beforeLen = 0;
+    //unsigned int afterLen = 0;
     return 0;
 }
 
@@ -4769,7 +4660,7 @@ int TRAVODDS::TypeLibraryTypeSupport::copy_data(void* dst, void* src) {
 unsigned int TRAVODDS::TypeLibraryTypeSupport::get_serialized_data_size(void* data, unsigned int currentAlignment) {
     TRAVODDS::TypeLibrary* structData = static_cast<TRAVODDS::TypeLibrary*>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->element.size(); ++i) {
         currentAlignment += TRAVODDS::TypeLibraryElementTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->element[i], currentAlignment);
@@ -4778,6 +4669,8 @@ unsigned int TRAVODDS::TypeLibraryTypeSupport::get_serialized_data_size(void* da
 }
 
 unsigned int TRAVODDS::TypeLibraryTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -4801,9 +4694,6 @@ int TRAVODDS::TypeLibraryTypeSupport::serialize_data(void* data, CdrSerializer* 
 int TRAVODDS::TypeLibraryTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::TypeLibrary* structData = static_cast<TRAVODDS::TypeLibrary*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseType(tmpLength)) {
         fprintf(stderr, "Deserialization length failed for field: structData->element\n");
         return -1;
@@ -4823,8 +4713,11 @@ TypeObject* TRAVODDS::TypeLibraryTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::TypeLibraryTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::TypeLibrary* structData = static_cast<TRAVODDS::TypeLibrary*>(data);
-    bool memberHasKey = false;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::TypeLibrary* structData = static_cast<TRAVODDS::TypeLibrary*>(data);
+    //bool memberHasKey = false;
     return 0;
 }
 
@@ -4908,6 +4801,8 @@ unsigned int TRAVODDS::TypeObjectTypeSupport::get_serialized_data_size(void* dat
 }
 
 unsigned int TRAVODDS::TypeObjectTypeSupport::get_max_serialized_data_size(void* data, unsigned int currentAlignment) {
+    (void)data;
+    (void)currentAlignment;
     return LENGTH_UNLIMITED;
 }
 
@@ -4957,9 +4852,6 @@ int TRAVODDS::TypeObjectTypeSupport::serialize_data(void* data, CdrSerializer* c
 int TRAVODDS::TypeObjectTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::TypeObject* structData = static_cast<TRAVODDS::TypeObject*>(data);
     unsigned int tmpLength = 0;
-    char tmpCharEnum = 0;
-    short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     unsigned int memberId = 0;
     unsigned int length = 0;
     bool useExtend = false;
@@ -5013,12 +4905,10 @@ TypeObject* TRAVODDS::TypeObjectTypeSupport::get_typeobject() {
 }
 
 int TRAVODDS::TypeObjectTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
-    TRAVODDS::TypeObject* structData = static_cast<TRAVODDS::TypeObject*>(data);
-    bool memberHasKey = false;
-    bool useExtend = true;
-    char* lenAddr = nullptr;
-    unsigned int beforeLen = 0;
-    unsigned int afterLen = 0;
+    (void)data;
+    (void)cdr;
+    (void)endian;
+    //TRAVODDS::TypeObject* structData = static_cast<TRAVODDS::TypeObject*>(data);
     return 0;
 }
 

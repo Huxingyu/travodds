@@ -1014,8 +1014,8 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 	if (localParticipantGuid != destGuid) {
 		return;
 	}
-	GUID_t sourceParticipantGuid;
-	memcpy(&sourceParticipantGuid, data.messageIdentity.sourceGuid.value, 12);
+	GUID_t sourceParticipantGuid = Conversion::ToGuid(data.messageIdentity.sourceGuid);
+	//memcpy(&sourceParticipantGuid, data.messageIdentity.sourceGuid.value, 12);
 	sourceParticipantGuid.entityId = ENTITYID_PARTICIPANT;
 	
 	// 此ParticipantGenericMessage对应的远端域参与者未在本地维护

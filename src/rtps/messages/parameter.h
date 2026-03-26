@@ -891,23 +891,22 @@ inline void Parameter<ContentFilterInfo_t>::writerMsg(octet* msg)
 }
 
 #ifdef DDSSECURITY
-//DataHolder
 template <>
 inline uint16_t Parameter<DataHolder>::size()
 {
     uint32_t inSize = 0;
     inSize += (4u + ((parameter_.class_id.size() + 3u) & ~3u)); //class_id
-    inSize += 4; //properties长度占用
+    inSize += 4; //length of properties(4 bytes)
     for (uint32_t i = 0; i < parameter_.properties.size(); i++) {
 		inSize += 4u + ((StringSize(parameter_.properties[i].name) + 3u) & ~3u);
 		inSize += 4u + ((StringSize(parameter_.properties[i].value) + 3u) & ~3u);
     }
-    inSize += 4; //binary_properties长度占用
+    inSize += 4; //length of binary_properties(4 bytes)
     for (uint32_t i = 0; i < parameter_.binary_properties.size(); i++) {
 		inSize += 4u + ((StringSize(parameter_.binary_properties[i].name) + 3u) & ~3u);
-        inSize += 4; //parameter_.binary_properties[i]的value长度占用
-        inSize += parameter_.binary_properties[i].value.size(); //parameter_.binary_properties[i]的value占用
-        inSize = (inSize + 3u) & ~3u; //对齐填补
+        inSize += 4; //parameter_.binary_properties[i] value length (4 bytes)
+        inSize += static_cast<uint32_t>(parameter_.binary_properties[i].value.size()); //parameter_.binary_properties[i] length (length bytes)
+        inSize = (inSize + 3u) & ~3u;
     }
     return inSize;
 }
@@ -915,26 +914,26 @@ template <>
 inline void Parameter<DataHolder>::writerMsg(octet* msg)
 {
     uint32_t inOffset = 0;
-    inOffset += WriterString(msg + inOffset, parameter_.class_id); //发送class_id
-    uint32_t num = parameter_.properties.size();
-    WriterUInt32(msg + inOffset, num); //发送properties序列长度
+    inOffset += WriterString(msg + inOffset, parameter_.class_id); //class_id
+    uint32_t num = static_cast<uint32_t>(parameter_.properties.size());
+    WriterUInt32(msg + inOffset, num); //properties length
     inOffset += 4;
 
-    for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送
+    for (uint32_t i = 0; i < num; i++) {
         inOffset += WriterString(msg + inOffset, parameter_.properties[i].name);
         inOffset += WriterString(msg + inOffset, parameter_.properties[i].value);
     }
 
-    num = parameter_.binary_properties.size();
-    WriterUInt32(msg + inOffset, num); //发送binary_properties序列长度
+    num = static_cast<uint32_t>(parameter_.binary_properties.size());
+    WriterUInt32(msg + inOffset, num); //binary_properties length
     inOffset += 4;
 
-    for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送
+    for (uint32_t i = 0; i < num; i++) {
         inOffset += WriterString(msg + inOffset, parameter_.binary_properties[i].name); //name
-        uint32_t len_Value = parameter_.binary_properties[i].value.size();//value 长度
+        uint32_t len_Value = static_cast<uint32_t>(parameter_.binary_properties[i].value.size());//length of value
         WriterUInt32(msg + inOffset, len_Value);
         inOffset += 4;
-        for (uint32_t j = 0; j < len_Value; j++) {//value逐个字节写入
+        for (uint32_t j = 0; j < len_Value; j++) {
             *(msg + inOffset) = static_cast<octet>(parameter_.binary_properties[i].value[i]);
             inOffset += 1;
         }
@@ -958,7 +957,7 @@ inline void Parameter<ParticipantSecurityInfo>::writerMsg(octet* msg)
 template <>
 inline uint16_t Parameter<DataTags_t>::size()
 {
-	uint32_t inSize = 4; //这四字节存储数组数，Tag_t个数
+	uint32_t inSize = 4; //length of Tag_t
 	for (uint32_t i = 0; i < parameter_.tags.size(); i++) {
 		inSize += (4u + ((parameter_.tags[i].name.size() + 3u) & ~3u));
 		inSize += (4u + ((parameter_.tags[i].value.size() + 3u) & ~3u));
@@ -969,8 +968,8 @@ template <>
 inline void Parameter<DataTags_t>::writerMsg(octet* msg)
 {
 	uint32_t inOffset = 0;
-	uint32_t num = parameter_.tags.size();
-	WriterUInt32(msg + inOffset, num); //发送tags序列长度
+	uint32_t num = static_cast<uint32_t>(parameter_.tags.size());
+	WriterUInt32(msg + inOffset, num); //tags length
 	inOffset += 4;
 
 	for (uint32_t i = 0; i < num; i++) { //逐个properties元素Property_t发送

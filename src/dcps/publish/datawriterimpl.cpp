@@ -1219,7 +1219,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 {
 	if (readerId == NULL || tokens == NULL)
 	{
-		return -1;
+		return 1;
 	}
 	GUID_t guid = Conversion::ToGuid(get_instance_handle());
 	if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
@@ -1241,7 +1241,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 		tokens,
 		&secExce))
 	{
-		return -3;
+		return 1;
 	}
 	rdIter->second.readyForSecComm = true;
 	secReaders_.push_back(rdIter->second.cryptoHdl);
