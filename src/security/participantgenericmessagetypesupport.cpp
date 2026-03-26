@@ -27,7 +27,7 @@ unsigned int DataHolderTypeSupport::get_serialized_data_size(void* data, unsigne
     DataHolder* structData = static_cast<DataHolder*>(data);
     unsigned int initialAlignment = currentAlignment;
     //unsigned int tmpAlignment = 0;
-    currentAlignment += CdrSerializer::getStringSize(structData->class_id.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->class_id.size() + 1), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->properties.size(); ++i) {
         currentAlignment += Property_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->properties[i], currentAlignment);
@@ -192,7 +192,7 @@ unsigned int ParticipantGenericMessageTypeSupport::get_serialized_data_size(void
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->destinationParticipantKey, currentAlignment);
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->destinationEndpointKey, currentAlignment);
     currentAlignment += BuiltinTopicKey_tTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->sourceEndpointKey, currentAlignment);
-    currentAlignment += CdrSerializer::getStringSize(structData->messageClassId.size() + 1, currentAlignment);
+    currentAlignment += CdrSerializer::getStringSize(static_cast<uint32_t>(structData->messageClassId.size()) + 1, currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
     for (size_t i = 0; i < structData->messageData.size(); ++i) {
         currentAlignment += DataHolderTypeSupport::get_instance()->get_serialized_data_size((void*)&structData->messageData[i], currentAlignment);
