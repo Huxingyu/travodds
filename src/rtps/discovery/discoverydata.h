@@ -36,6 +36,9 @@ struct SPDPdiscoveredParticipantData
 	Count_t manualLivelinessCount;
 
 	Duration_t leaseDuration;
+
+	SPDPdiscoveredParticipantData () : domainId(0), protocolVersion(PROTOCOLVERSION), vendorId(VENDORID_PROSIMA), expectsInlineQos(false), availableBuiltinEndpoints(0), builtinEndpointQos(0), manualLivelinessCount(0), leaseDuration(TIME_ZERO) {
+	}
 };
 
 using SpdpDataMap = std::map<BuiltinTopicKey_t, SPDPdiscoveredParticipantData>;
@@ -53,6 +56,7 @@ struct DiscoveredWriterData
 	LocatorSeq unicastLocatorList;
 	LocatorSeq multicastLocatorList;
 	int32_t dataMaxSizeSerialized;
+	DiscoveredWriterData() : dataMaxSizeSerialized(0) {}
 };
 
 struct DiscoveredReaderData

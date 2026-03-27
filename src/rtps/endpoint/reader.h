@@ -21,7 +21,9 @@ TRAVODDS_NAMESPACE_BEGIN
 
 class ReaderListener {
 public:
-	virtual void on_data_available(std::shared_ptr<CacheChange> change) {};
+	virtual void on_data_available(std::shared_ptr<CacheChange> change) {
+		static_cast<void>(change);
+	};
 };
 
 class DataReaderImpl;
@@ -231,7 +233,9 @@ public:
 	 *
 	 * @return 返回DataReader Qos配置信息。
 	 */
-	DataReaderQos GetQos();
+	const DataReaderQos& GetQos();
+
+	virtual void SetQos(const DataReaderQos& qos);
 
 	/**
 	 * @brief 判定一个特定的Writer是否与当前Reader已匹配。
@@ -266,34 +270,6 @@ public:
 	 */
 	std::shared_ptr<HistoryCache> GetReaderCache();
 
-private:
-
-	/*****************************************/
-	/* 下方函数没有具体实现功能 TODO */
-	/**
-	 * @brief 获取保存在缓冲区中最新样本的状态信息。
-	 *
-	 * @param [in] handle 实例句柄。
-	 *
-	 * @return 样本状态信息SampleInfo对象。
-	 */
-	SampleInfo GetLastInstanceSampleInfo(const InstanceHandle_t& handle);
-	/**
-	 * @brief 本地DataReader触发LivelinessQoS，修改本地实例样本的状态。
-	 */
-	void ChangeSampleInfoByLiveliness();
-	
-	/**
-	 * @brief 远端的DW调用Dispose函数，修改对应instance实例的状态。
-	 *
-	 * @param [in] handle 实例句柄。
-	 */
-	void ChangeSampleInfoByDWDisposed(const InstanceHandle_t& handl);
-	/******************************************/
-
-
-
-
 protected:
 	Duration_t heartbeatResponseDelay_;
 	Duration_t heartbeatSuppressionDuration_;
@@ -303,15 +279,8 @@ protected:
 	/* jd 保存样本的实例信息,并且大小进行排序 */
 	std::list<InstanceHandle_t> instanceHandles_;
 
-	/* 每个实例对应的样本的信息,此处 sample_state、view_state、instance_state 均无效，且不会同步更新 */
-	std::map<InstanceHandle_t, SampleInfo> sampleInfos_;
-	/* 此处 sample_state、view_state、instance_state 均无效，且不会同步更新 */
-	SampleInfo sampleInfo_;
-
 	/* 接收到的数据信息的最新的数据序号  */
 	SequenceNumber_t lastSequenceNumber_;
-
-	//std::map<InstanceHandle_t, SampleInfo> statusCache_;
 
 	ReaderListener* readerListener_;
 	
@@ -319,11 +288,10 @@ protected:
 
 	DataReaderImpl* datareader_;
 
-	Duration_t lastTime_;
 	/* wangyi 最新的样本 */
-	std::shared_ptr<CacheChange> lastNewCache_;
 	std::shared_ptr<Timer> lastNewCacheTimer_;
-	GUID_t lastNewGuid_;
+	InstanceHandle_t lastInstance_;
+	mutable std::mutex lastInstanceMtx_;
 
 	/* 报文处理锁 */
 	std::mutex dataMutex_;

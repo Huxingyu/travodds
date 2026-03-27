@@ -142,12 +142,13 @@ private:
         std::stringstream ss;
         ss << getProcessName() << "_" << getProcessId() << "_";
         
-        struct tm timeinfo;
+        struct tm timeinfo = {  };
 #ifdef _WIN32
-        struct tm* tm_ptr = localtime(&time_t);
-        if (tm_ptr) {
-            timeinfo = *tm_ptr;
-        }
+        //struct tm* tm_ptr = localtime(&time_t);
+        //if (tm_ptr) {
+        //    timeinfo = *tm_ptr;
+        //}
+        localtime_s(&timeinfo, &time_t);
 #else
         localtime_r(&time_t, &timeinfo);
 #endif
@@ -317,6 +318,7 @@ int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
             try {
                 finalConsoleMask = std::stoul(consoleValue, nullptr, 0);
             } catch (const std::exception& e) {
+                (void)e;
                 printf("[TRAVODDS][WARNING] Failed to parse console mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
                        consoleValue.c_str(), consoleMask);
             }
@@ -332,6 +334,7 @@ int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
             try {
                 finalFileMask = std::stoul(fileValue, nullptr, 0);
             } catch (const std::exception& e) {
+                (void)e;
                 printf("[TRAVODDS][WARNING] Failed to parse file mask from TRAVODDS_LOG_MASK: %s, using default 0x%X\n", 
                        fileValue.c_str(), fileMask);
             }
@@ -342,6 +345,7 @@ int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
             try {
                 finalConsoleMask = std::stoul(envValue, nullptr, 0);
             } catch (const std::exception& e) {
+                (void)e;
                 printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_CONSOLE_MASK: %s, using default 0x%X\n", 
                        envValue, consoleMask);
             }
@@ -352,6 +356,7 @@ int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
             try {
                 finalFileMask = std::stoul(envValue, nullptr, 0);
             } catch (const std::exception& e) {
+                (void)e;
                 printf("[TRAVODDS][WARNING] Failed to parse TRAVODDS_LOG_FILE_MASK: %s, using default 0x%X\n", 
                        envValue, fileMask);
             }
@@ -451,12 +456,13 @@ void LogToConsole(LogType type, const char* file, const char* func,
     // 生成时间戳
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
-    struct tm timeinfo;
+    struct tm timeinfo = {  };
 #ifdef _WIN32
-    struct tm* tm_ptr = localtime(&time_t);
-    if (tm_ptr) {
-        timeinfo = *tm_ptr;
-    }
+    //struct tm* tm_ptr = localtime(&time_t);
+    //if (tm_ptr) {
+    //    timeinfo = *tm_ptr;
+    //}
+    localtime_s(&timeinfo, &time_t);
 #else
     localtime_r(&time_t, &timeinfo);
 #endif

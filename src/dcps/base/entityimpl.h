@@ -51,7 +51,7 @@ public:
      *
      * @return 对触发状态设置为1的StatusMask的常量引用。
      */
-    virtual const StatusMask& get_status_change() const;
+    virtual const StatusMask& get_status_changes() const;
 
     /**
      * @brief 此函数用于启用实体
@@ -67,10 +67,7 @@ public:
      */
     virtual const InstanceHandle_t& get_instance_handle() const;
 
-    virtual const GUID_t& get_guid() const;
-#ifdef DDSSECURITY
-    GUID_t get_guid_value();
-#endif
+    virtual GUID_t get_guid() const;
 
     // add for language wrapper, store user-defined data in the entit)
     /**

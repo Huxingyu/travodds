@@ -31,6 +31,7 @@ bool QosPolicyCheck::IsDangerousPattern(const std::string& pattern)
 ReturnCode_t QosPolicyCheck::CheckQos(const DomainParticipantFactoryQos& qos)
 {
 	/* yuguxu 所包含QoS无规范限制 */
+	static_cast<void>(qos);
 	return RETCODE_OK;
 }
 
@@ -193,6 +194,8 @@ ReturnCode_t QosPolicyCheck::CheckDeadlineAndTimeBasedFilter(const DeadlineQosPo
 bool QosPolicyCheck::CanQosBeUpdated(const DomainParticipantFactoryQos& curQos, const DomainParticipantFactoryQos& tagQos)
 {
 	/* yuguxu 所包含QoS无不可更改 */
+	static_cast<void>(curQos);
+	static_cast<void>(tagQos);
 	return true;
 }
 

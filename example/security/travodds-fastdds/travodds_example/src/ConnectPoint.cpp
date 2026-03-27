@@ -93,16 +93,18 @@ int main(int argc, char* argv[])
         int retCode;
         retCode = factory->load_security_plugin(
             "SecurityPlugin",
-            "libSecurityPlugin.so",
+            "SecurityPlugin.dll",
             "SecPluginGetInstance",
             "SecPluginFinalize");
         if (retCode != 0)
         {
             printf("load_security_plugin failed(%d).", retCode);
+            while (1) {
+            }
             return -1;
         }
 
-        int sample_count = 100;
+        int sample_count = 0;
         DomainParticipant* participant = NULL;
         Publisher* publisher = NULL;
         Topic* topic = NULL;
@@ -124,6 +126,8 @@ int main(int argc, char* argv[])
                 0, "default_lib",
                 "default_profile", "example_pub", NULL, PUBLICATION_MATCHED_STATUS);
             if (participant == NULL) {
+                while (1) {
+                }
                 fprintf(stderr, "create_participant error\n");
                 return -1;
             }
@@ -177,12 +181,14 @@ int main(int argc, char* argv[])
         int retCode;
         retCode = factory->load_security_plugin(
             "SecurityPlugin",
-            "libSecurityPlugin.so",
+            "SecurityPlugin.dll",
             "SecPluginGetInstance",
             "SecPluginFinalize");
         if (retCode != 0)
         {
             printf("load_security_plugin failed(%d).", retCode);
+            while (1) {
+            }
             return -1;
         }
 
@@ -209,6 +215,8 @@ int main(int argc, char* argv[])
                 "default_profile", "example_pub", NULL, PUBLICATION_MATCHED_STATUS);
             if (participant == NULL) {
                 fprintf(stderr, "create_participant error\n");
+                while (1) {
+                }
                 return -1;
             }
             //participant = factory->create_participant(0, PARTICIPANT_QOS_DEFAULT, NULL, PUBLICATION_MATCHED_STATUS);
@@ -394,6 +402,8 @@ int main(int argc, char* argv[])
     }
     else {
         return 0;
+    }
+    while (1) {
     }
 }
 

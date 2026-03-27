@@ -54,7 +54,7 @@ public:
      *
      * @return 对触发状态设置为1的StatusMask位掩码引用。
      */
-    virtual const StatusMask& get_status_change() const = 0;
+    virtual const StatusMask& get_status_changes() const = 0;
 
     /**
      * @brief 此函数用于启用实体
@@ -70,7 +70,7 @@ public:
      */
     virtual const InstanceHandle_t& get_instance_handle() const = 0;
 
-    virtual const GUID_t& get_guid() const = 0;
+    virtual GUID_t get_guid() const = 0;
 
     // add for language wrapper, store user-defined data in the entit)
     /**

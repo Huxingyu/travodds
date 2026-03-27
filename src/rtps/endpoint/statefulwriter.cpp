@@ -375,7 +375,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 		flowController_->ReSendData(this,proxy);
 	}
 	/* 需要强制回复一个HB报文 */
-	if (ackMsg.header.flags & !SubMessageFlag::FINAL_FLAG) {
+	if (ackMsg.header.flags & ~SubMessageFlag::FINAL_FLAG) {
 		//TODO 
 		WriteHeartbeat(proxy, true);
 	}
@@ -541,13 +541,13 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 				uint32_t partCryptoHdlsCount = 0;
 				DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 				partCryptoHdls = participant->secParticipants_.data();
-				partCryptoHdlsCount = participant->secParticipants_.size();
+				partCryptoHdlsCount = static_cast<uint32_t>(participant->secParticipants_.size());
 				SecurityException secExce;
 
-				SerializedBuffer encodeBuffer;
+				//SerializedBuffer encodeBuffer;
 				SerializedBuffer plainBuffer;
 				//被加密的缓冲 
-				int msgHeaderSize = sizeof(MessageHeader_t);
+				//int msgHeaderSize = sizeof(MessageHeader_t);
 				if (!encodeSubMsg) { //从buffer取
 					plainBuffer.buffer = buffer->buffer - shift; //负载位置buffer->buffer往前shift，shift是DATA子报文一些内容
 					plainBuffer.buffer_size = shift + buffer->buffer_size;
@@ -702,13 +702,13 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			uint32_t partCryptoHdlsCount = 0;
 			DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 			partCryptoHdls = participant->secParticipants_.data();
-			partCryptoHdlsCount = participant->secParticipants_.size();
+			partCryptoHdlsCount = static_cast<uint32_t>(participant->secParticipants_.size());
 			SecurityException secExce;
 
-			SerializedBuffer encodeBuffer;
+			//SerializedBuffer encodeBuffer;
 			SerializedBuffer plainBuffer;
 			//被加密的缓冲 
-			int msgHeaderSize = sizeof(MessageHeader_t);
+			//int msgHeaderSize = sizeof(MessageHeader_t);
 			if (!encodeSubMsg) { //从buffer取
 				plainBuffer.buffer = buffer->buffer - shift; //负载位置buffer->buffer往前shift，shift是DATA子报文一些内容
 				plainBuffer.buffer_size = shift + buffer->buffer_size;
@@ -933,7 +933,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		return RETCODE_OK;
 	}
 		
-
 	HeartBeatSubMessage_t hbMsg;
 	SequenceNumber_t minSeq = writerCache_->GetSeqNumMin();
 	SequenceNumber_t maxSeq = writerCache_->GetSeqNumMax();
@@ -954,10 +953,9 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
 
+#ifdef DDSSECURITY
 	//加密前的子消息长度
 	uint32_t lengthGapMsgBefore = 0;
-
-#ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected
 		&& guid_.IsUserDefinedEntity();
@@ -1033,7 +1031,9 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		bufffer.buffer = bufffer.buffer - size;  //bufffer指向gapMsg起始位置
 		
 		MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg); // 出参shift为gapMsg长度
-		lengthGapMsgBefore = shift;
+#ifdef DDSSECURITY
+		lengthGapMsgBefore = shift; //缓存gapMsg长度 子消息加密使用
+#endif //DDSSECURITY
 		bufffer.buffer_size += shift; //bufffer长度gap+heartbeat
 		shift = 0;
 
@@ -1047,6 +1047,10 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 			tmpEncodeBuffer.buffer = new char[tmpEncodeBuffer.buffer_size];
 			//encode_datawriter_message
 			dataRet = EncodeSubMsgBuffer(readerProxy, tmpPlainBuffer, tmpEncodeBuffer);
+			if (dataRet != 0) {
+				delete[] tmpEncodeBuffer.buffer;
+				return RETCODE_ERROR;
+			}
 			lengthGapMsg = tmpEncodeBuffer.buffer_size;
 			//拷贝到encodeData
 			memcpy(encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg,
@@ -1072,7 +1076,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 		uint32_t partCryptoHdlsCount = 0;
 		DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 		partCryptoHdls = participant->secParticipants_.data();
-		partCryptoHdlsCount = participant->secParticipants_.size();
+		partCryptoHdlsCount = static_cast<uint32_t>(participant->secParticipants_.size());
 		SecurityException secExce;
 		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
 			tmpPlainBuffer.buffer = encodeData + 1224 * 2 - lengthHeartBeatMsg - lengthGapMsg - shift;
@@ -1095,7 +1099,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 			&secExce))
 		{
 			delete[]tmpEncodeBuffer.buffer;
-			return -1;
+			return RETCODE_ERROR;
 		}
 		// 存到encodeData
 		memcpy(encodeData + 1224 * 2 - tmpEncodeBuffer.buffer_size, tmpEncodeBuffer.buffer, tmpEncodeBuffer.buffer_size);
@@ -1134,6 +1138,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 
 ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> readerProxy)
 {
+	static_cast<void>(readerProxy);
 	//TODO 
 	TRAVODDS_LOG(LOG_ERROR, " not support interface");
 	return RETCODE_UNSUPPORTED;
@@ -1161,8 +1166,8 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 		}
 #ifdef DDSSECURITY
 		if (guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
-			for (auto& readerProxy : readerProxys) {
-				DeliveryDataToReaderForVolatile(change, readerProxy, TIME_INFINITE);
+			for (auto& singleReaderProxy : readerProxys) {
+				DeliveryDataToReaderForVolatile(change, singleReaderProxy, TIME_INFINITE);
 			}
 		}
 		else {
@@ -1183,7 +1188,6 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 void StatefulWriter::RemoveAllAckedData()
 {
 	auto seq = writerCache_->GetSeqNumMin();
-	bool remove = true;
 	while (IsAckedByAll(seq)) {
 		writerCache_->RemoveChange(seq);
 		seq = writerCache_->GetSeqNumMin();
@@ -1207,7 +1211,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	gapMsg.readerId = proxy->GetGuid().entityId;
 	gapMsg.gapStart = seqVec[0];
 	gapMsg.gapList.bitmapBase = gapMsg.gapStart + 1;
-	int32_t i = 0;
+	size_t i = 0;
 	for (i = 1; i < seqVec.size(); i++) {
 		if (seqVec[i] - gapMsg.gapList.bitmapBase > 0) {
 			break;
@@ -1231,7 +1235,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 	bufffer.buffer_size = sizeof(HeartBeatSubMessage_t);
 	bufffer.buffer = data;
 	bufffer.buffer = bufffer.buffer + BUFF_SHIFT; //先指向data的1024偏移
-	uint32_t lengthGapMsgBefore = 0;
 
 #ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
@@ -1247,7 +1250,6 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 #endif // DDSSECURITY
 	// 序列化Gap, bufffer指向Gap头部位置
 	MessageProcessor::EncapsulateGapMessage(bufffer, shift, gapMsg);
-	lengthGapMsgBefore = shift;
 	bufffer.buffer_size = shift;
 	shift = 0;
 
@@ -1288,7 +1290,7 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 		uint32_t partCryptoHdlsCount = 0;
 		DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 		partCryptoHdls = participant->secParticipants_.data();
-		partCryptoHdlsCount = participant->secParticipants_.size();
+		partCryptoHdlsCount = static_cast<uint32_t>(participant->secParticipants_.size());
 		SecurityException secExce;
 		if (encodeSubMsg) { // 加密子消息情况下使用encodeData
 			tmpPlainBuffer.buffer = encodeData + 1224 * 2  - lengthGapMsg - shift;
@@ -1386,8 +1388,8 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
         }
 
 		/* TODO  */
-		int32_t fragSendCount = 0;
-		for (int32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
+		uint32_t fragSendCount = 0;
+		for (uint32_t num = 0; (num + datafrag.fragmentNumberState.bitmapBase) <= cache->fragmentTatolNum && num < datafrag.fragmentNumberState.bitmap.size; num++) {
 			if (datafrag.fragmentNumberState.bitmap.IsBitSet(num)) {
 
 		        if(nullptr == buffer){
@@ -1451,7 +1453,7 @@ int StatefulWriter::EncodeSubMsgBuffer(std::shared_ptr<ReaderProxy> readerProxy,
 		}
 		else {
 			rdCryptoHdls = datawriter_->secReaders_.data();
-			rdCryptoHdlsCount = datawriter_->secReaders_.size();
+			rdCryptoHdlsCount = static_cast<uint32_t>(datawriter_->secReaders_.size());
 		}
 	}
 	if (datawriter_->secPlugin_ && !datawriter_->secPlugin_->crypto_transform->encode_datawriter_submessage(

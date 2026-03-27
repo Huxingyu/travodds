@@ -54,7 +54,7 @@ public:
 	 *
 	 * @return 队列大小。
 	 */
-	int32_t Size();
+	size_t Size();
 
 	/**
 	 * @brief 向队列中添加元素。

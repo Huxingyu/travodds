@@ -9,7 +9,7 @@ using namespace DDSSQL;
 using namespace tao::pegtl;
 
 DDSSQLFilter::DDSSQLFilter(DynamicType* dynType)
-	: root_(nullptr), dynType_(dynType)
+	:  dynType_(dynType), root_(nullptr)
 {
 }
 
@@ -108,7 +108,7 @@ std::shared_ptr<TypicalValue> DDSSQLFilter::TransformTreeToValue(const BinaryTre
 		}
 
 	} else if (node.is<PARAMETER>()) {
-		if(node.parameterIndex < 0 || node.parameterIndex >= parameters.size()) {
+		if(node.parameterIndex < 0 || static_cast<uint32_t>(node.parameterIndex) >= parameters.size()) {
 			throw std::out_of_range("Parameter index out of range.");
 		}
 		pegtl::memory_input<> in(parameters[node.parameterIndex], "");

@@ -1,6 +1,6 @@
 #include "common/sequence/sequencebase.h"
 
-int32_t SequenceBase::maximum() const
+uint32_t SequenceBase::maximum() const
 {
 	return maximum_;
 }

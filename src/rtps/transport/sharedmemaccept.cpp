@@ -1,17 +1,17 @@
 #include "rtps/transport/sharedmemaccept.h"
 #include "rtps/transport/sharedmemsocket.h"
 #include "common/sys/sysinfo.h"
-
+#include "rtps/transport/sharedmemwatchdog.h"
 
 
 USING_TRAVODDS_NAMESPACE;
 using namespace TRAVODDS::InterprocessType;
 
 SharedMemAccept::SharedMemAccept(const std::string& port)
-	: port_(port)
+	: pool_(1)
+	, port_(port)
 	, sharedMemoryName_("TravoddsAcceptSharedMemory" + port)
 	, objectName_("TravoddsAcceptsharedAcceptList")
-    , pool_(1)
 	, refs_(0) {
 	try {
 		CleanupResources();
@@ -20,14 +20,16 @@ SharedMemAccept::SharedMemAccept(const std::string& port)
 		sharedAcceptList_ = segment_->construct<SharedAcceptList>(objectName_)(ShmemAllocator(segment_->get_segment_manager()));
 
 	} catch (const interprocess_exception& e) {
-		throw e;
+		static_cast<void>(e);
+		throw;
 	}
 }
 
 SharedMemAccept::~SharedMemAccept()
 {
 	Close();
-	CleanupResources();	
+	CleanupResources();
+	SharedMemWatchdog::GetInstance().ErasePort(std::stoul(port_));
 }
 
 void SharedMemAccept::Accept(std::shared_ptr<SharedMemSocket> socket)
@@ -51,8 +53,9 @@ void SharedMemAccept::Accept(std::shared_ptr<SharedMemSocket> socket)
 			throw std::runtime_error("Accept connect failed.");
 		}
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		refs_.fetch_sub(1, std::memory_order_release);
-		throw e;
+		throw;
 	}
 	refs_.fetch_sub(1, std::memory_order_release);
 }

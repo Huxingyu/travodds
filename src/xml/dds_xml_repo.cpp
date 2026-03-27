@@ -1194,8 +1194,8 @@ bool DDSXMLRepo::parseBinaryProperty(XMLElement* element, BinaryProperty_t& bina
         {
             //取值
             const char* str = childEle->GetText();
-            int length = strlen(str);
-            for (int i = 0; i < length; ++i) {
+            size_t length = strlen(str);
+            for (size_t i = 0; i < length; ++i) {
                 unsigned char octet = str[i];
                 binaryProperty.value.push_back(octet);
             }

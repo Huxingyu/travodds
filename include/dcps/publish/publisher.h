@@ -21,7 +21,7 @@ class DomainParticipant;
 /**
  * @brief Publisher类，用于将数据发送到关联的订阅者。
  */
-class DDS_DLL Publisher : public DomainEntity {
+class DDS_DLL Publisher : public virtual DomainEntity {
 public:
     /**
      * @brief 析构函数。

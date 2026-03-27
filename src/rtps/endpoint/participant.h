@@ -31,7 +31,7 @@ class FlowRateLimitedManager;
 class DynamicPerformanceRegulator;
 
 #ifdef DDSSECURITY
-class WriterSampleList;
+struct WriterSampleList;
 #endif //DDSSECURITY
 
 enum EntityType : char{
@@ -252,7 +252,7 @@ public:
 	 *
 	 * @return GUID前缀值。
 	 */
-	GuidPrefix_t GetGuidPrefix();
+	GuidPrefix_t GetGuidPrefix() const;
 
 	/**
 	 * @brief 添加本地Writer。

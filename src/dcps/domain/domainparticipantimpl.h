@@ -728,7 +728,7 @@ public:
 
 
 private:
-    DomainId_t domainId_ = ~0;
+    DomainId_t domainId_ = ~0u;
     DomainParticipantQos qos_;
 
 

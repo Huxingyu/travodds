@@ -26,7 +26,7 @@ public:
 	 *
 	 * @return 最大可存储空间大小值。
 	 */
-	int32_t maximum() const;
+	uint32_t maximum() const;
 
 	/**
 	 * @brief 获取序列下标对应的元素。
@@ -49,14 +49,14 @@ public:
 	 *
 	 * @return 序列当前长度。
 	 */
-	virtual int32_t length() const = 0;
+	virtual uint32_t length() const = 0;
 
 	/**
 	 * @brief 设置序列最大长度。
 	 *
 	 * @param [in] newLength 序列新的最大长度。
 	 */
-	virtual bool length(int32_t newLength) = 0;
+	virtual bool length(uint32_t newLength) = 0;
 
 	/**
 	 * @brief 序列空间释放。
@@ -74,8 +74,8 @@ protected:
 	 */
 	SequenceBase() = default;
 
-	int32_t maximum_ = 0;
-	int32_t length_ = 0;
+	uint32_t maximum_ = 0;
+	uint32_t length_ = 0;
 	void** elements_ = nullptr;
 };
 

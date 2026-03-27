@@ -136,7 +136,7 @@ struct SequenceNumber_t {
 	 *
 	 * @param Add int32_t 加数。
 	 */
-	SequenceNumber_t operator + (const int32_t Add) const {
+	SequenceNumber_t operator + (const uint32_t Add) const {
 		SequenceNumber_t seq = *this;
 		if (seq.low > (uint32_t)-1 - Add) {
 			++seq.high;
@@ -151,7 +151,7 @@ struct SequenceNumber_t {
 	 *
 	 * @param sub int32_t 减数。
 	 */
- 	SequenceNumber_t operator - (const int32_t sub) const {
+ 	SequenceNumber_t operator - (const uint32_t sub) const {
  		SequenceNumber_t seq = *this;
  		if (this->low < sub) {
  			seq.high--;
@@ -368,6 +368,8 @@ struct Parameter_t
 	ParameterId_t parameterId;
 	uint16_t length;
 	Sequence<octet> value; // Pseudo-IDL: array of non-const length
+	Parameter_t() : parameterId(0), length(0) {
+	}
 };
 using ParameterList_t = std::vector<Parameter_t>;
 

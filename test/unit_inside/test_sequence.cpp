@@ -13,8 +13,6 @@ TEST(SequenceTest, LengthSetterAndGetter) {
     SequenceData<int> seq;
     EXPECT_TRUE(seq.length(5));
     EXPECT_EQ(seq.length(), 5);
-    EXPECT_FALSE(seq.length(-3));
-    EXPECT_EQ(seq.length(), 5);
 }
 
 TEST(SequenceTest, ConstructorWithMaxAndAccess) {

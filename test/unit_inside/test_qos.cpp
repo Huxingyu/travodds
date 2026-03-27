@@ -465,14 +465,15 @@ TEST_F(QoSTest, QoS_dicovery_udpv6) {
 
 TEST_F(QoSTest, QoS_transport_udpv4) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
-
-	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+	DomainParticipantQos qos = PARTICIPANT_QOS_DEFAULT;
+	qos.transport.kinds = TRANSPORT_UDPv4_QOS;
+	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
 		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 
-	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_r = par_r->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
@@ -516,8 +517,8 @@ TEST_F(QoSTest, QoS_transport_udpv4) {
 TEST_F(QoSTest, QoS_transport_udpv6) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipantQos qos = PARTICIPANT_QOS_DEFAULT;
-	qos.transport.removeTransport(TRANSPORT_UDPv4_QOS);
-	qos.transport.addTransport(TRANSPORT_UDPv6_QOS);
+	qos.transport.kinds = TRANSPORT_UDPv6_QOS;
+
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -568,8 +569,7 @@ TEST_F(QoSTest, QoS_transport_udpv6) {
 TEST_F(QoSTest, QoS_transport_tcpv4) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipantQos qos = PARTICIPANT_QOS_DEFAULT;
-	qos.transport.removeTransport(TRANSPORT_UDPv4_QOS);
-	qos.transport.addTransport(TRANSPORT_TCPv4_QOS);
+	qos.transport.kinds = TRANSPORT_TCPv4_QOS;
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -619,8 +619,7 @@ TEST_F(QoSTest, QoS_transport_tcpv4) {
 TEST_F(QoSTest, QoS_transport_tcpv6) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipantQos qos = PARTICIPANT_QOS_DEFAULT;
-	qos.transport.removeTransport(TRANSPORT_UDPv4_QOS);
-	qos.transport.addTransport(TRANSPORT_TCPv6_QOS);
+	qos.transport.kinds = TRANSPORT_TCPv6_QOS;
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -675,8 +674,7 @@ TEST_F(QoSTest, QoS_transport_tcpv6) {
 TEST_F(QoSTest, QoS_transport_shm) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipantQos qos = PARTICIPANT_QOS_DEFAULT;
-	qos.transport.removeTransport(TRANSPORT_UDPv4_QOS);
-	qos.transport.addTransport(TRANSPORT_SHM_QOS);
+	qos.transport.kinds = TRANSPORT_SHM_QOS;
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("WaitSetTest_statuscondition", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -1296,7 +1294,7 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 
 			//此处要删除已经创建的reader 否则会与下面创建的writer进行匹配，无法获取到GroupData
 			subscriber->delete_datareader(reader);
-
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			// 10. 创建DataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_ALL);
@@ -1855,6 +1853,9 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 
 			// 20. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
+
+			// 27. 删除域参与者
+			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 21. 通知被动端已删除
 			NotifyNegative();
@@ -3661,6 +3662,8 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 			// 13. 等待sample_reject回调
 			EXPECT_EQ(listener1.wait_sample_rejected(10000), 0); // 成功
 
+			NotifyPositive();
+
 			// 14. 检查SampleRejectStatus
 			SampleRejectedStatus reject_status;
 			EXPECT_EQ(reader1->get_sample_rejected_status(reject_status), RETCODE_OK);
@@ -3751,6 +3754,8 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 
 			// 12. 发送DataWriter2写入完成信号
 			NotifyNegative();
+
+			WaitNegative();
 
 			// 13. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);

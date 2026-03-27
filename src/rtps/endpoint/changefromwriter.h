@@ -33,6 +33,8 @@ struct ChangeFromWriter {
 	ChangeFromWriterStatusKind status;
 	bool is_relevant;
 	std::shared_ptr<CacheChange> cache;
+	ChangeFromWriter() : sequenceNumber(SEQUENCENUMBER_INVALID), status(UNKNOWN), is_relevant(false), cache(nullptr) {
+	}
 };
 
 using ChangeFromWriterSeq = Sequence<ChangeFromWriter>;

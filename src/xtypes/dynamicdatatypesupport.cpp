@@ -123,7 +123,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
         DynamicType *eleType = type->descriptor_.element_type_;
         if (!eleType) {
             TRAVODDS_LOG(LOG_ERROR, "Element type is not defined for sequence member %s\n", name.c_str());
-            return -1;
+            return 0xffffffff;
         }
         if (isSequence) {
             // 序列化长度
@@ -132,50 +132,50 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
         size_t eleCount = dynamicData->get_memberid_item_count(id);
         switch (eleType->get_kind()) {
         case TRAVODDS::TK_BOOLEAN: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(bool), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(bool), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_CHAR8:
         case TRAVODDS::TK_BYTE: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(octet), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(octet), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_INT16: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int16_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int16_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_ENUM:
         case TRAVODDS::TK_CHAR16:
         case TRAVODDS::TK_INT32: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int32_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int32_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_INT64: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int64_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(int64_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_UINT16: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint16_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint16_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_UINT32: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint32_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint32_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_UINT64: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint64_t), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(uint64_t), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_FLOAT32: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(float), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(float), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_FLOAT64: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(double), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(double), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_FLOAT128: {
-            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(LongDouble), eleCount, currentAlignment);
+            currentAlignment += TRAVODDS::CdrSerializer::getBaseTypeArraySize(sizeof(LongDouble), static_cast<uint32_t>(eleCount), currentAlignment);
             break;
         }
         case TRAVODDS::TK_STRING8: {
@@ -193,7 +193,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
             TRAVODDS::DynamicData::WstringSeq values;
             if (dynamicData->get_wstring_values(values, id) != TRAVODDS::RETCODE_OK) {
                 TRAVODDS_LOG(LOG_ERROR, "Failed to get string16 value for member ID %u\n", id);
-                return -1;
+                return 0xffffffff;
             }
             for (std::wstring& value : values) {
                 currentAlignment += TRAVODDS::CdrSerializer::getWStringSize(static_cast<uint32_t>(value.length()), currentAlignment);
@@ -206,16 +206,18 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
             retcode = dynamicData->get_complex_values(values, id);
             if (retcode != TRAVODDS::RETCODE_OK) {
                 TRAVODDS_LOG(LOG_ERROR, "Failed to get structure sequence for member %s\n", name.c_str());
-                return -1;
+                return 0xffffffff;
             }
             for (DynamicData *value : values) {
                 if (!value) {
                     TRAVODDS_LOG(LOG_ERROR, "Null value in sequence for member %s\n", name.c_str());
-                    return -1;
+                    return 0xffffffff;
                 }
                 currentAlignment += get_serialized_data_size(value, currentAlignment);
             }
         }
+        default:
+            break;
         }
         break;
     }
@@ -253,7 +255,7 @@ unsigned int DynamicDataTypeSupport::get_member_serialize_size(DynamicData *dyna
 unsigned int DynamicDataTypeSupport::get_serialized_data_size(void *data, unsigned int currentAlignment) {
     DynamicData *dynamicData = static_cast<DynamicData *>(data);
     unsigned int initialAlignment = currentAlignment;
-    unsigned int tmpAlignment = 0;
+    //unsigned int tmpAlignment = 0;
     DynamicType &type = dynamicData->get_type();
     for (uint32_t i = 0; i < type.get_member_count(); ++i) {
         DynamicTypeMember member;
@@ -275,7 +277,9 @@ unsigned int DynamicDataTypeSupport::get_serialized_data_size(void *data, unsign
 }
 
 unsigned int DynamicDataTypeSupport::get_max_serialized_data_size(void *data, unsigned int currentAlignment) {
-    return -1;
+    (void)data;
+    (void)currentAlignment;
+    return 0xffffffff;
 }
 
 int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, TRAVODDS::CdrSerializer *cdr, DynamicType *type, TRAVODDS::MemberId id,
@@ -473,7 +477,7 @@ int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, TRAVODDS:
             TRAVODDS_LOG(LOG_ERROR, "Failed to get string16 value for member %s\n", name.c_str());
             return TRAVODDS::RETCODE_ERROR;
         }
-        if (!cdr->serializeWString(value.c_str(), value.length())) {
+        if (!cdr->serializeWString(value.c_str(), static_cast<uint32_t>(value.length()))) {
             TRAVODDS_LOG(LOG_ERROR, "Failed to serialize string16 value for member %s\n", name.c_str());
             return TRAVODDS::RETCODE_ERROR;
         }
@@ -847,7 +851,7 @@ int DynamicDataTypeSupport::serialize_member(DynamicData *dynamicData, TRAVODDS:
                 }
             }
             for (const auto &wstr : values) {
-                if (!cdr->serializeWString(wstr.c_str(), wstr.length())) {
+                if (!cdr->serializeWString(wstr.c_str(), static_cast<uint32_t>(wstr.length()))) {
                     TRAVODDS_LOG(LOG_ERROR, "Failed to serialize string16 value for member %s\n", name.c_str());
                     return TRAVODDS::RETCODE_ERROR;
                 }
