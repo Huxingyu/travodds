@@ -20,7 +20,7 @@
 TRAVODDS_NAMESPACE_BEGIN
 
 using _SEND_SOCKET_MAP = std::map<uint32_t, std::map<uint32_t, std::shared_ptr<asio::ip::udp::socket>>>;
-using _RECV_SOCKET_MAP = std::map<uint16_t, std::shared_ptr<asio::ip::udp::socket>>;
+using _RECV_SOCKET_MAP = std::map<uint32_t, std::shared_ptr<asio::ip::udp::socket>>;
 using _SEND_PORT_SOCKET_MAP = std::map<Locator_t, std::shared_ptr<asio::ip::udp::socket>>;
 
 

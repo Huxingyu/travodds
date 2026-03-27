@@ -34,8 +34,9 @@ std::shared_ptr<Timer> TimerManager::PrivateCreateTimer(const Time_t& time, Time
 }
 
 Timer::Timer(std::chrono::milliseconds period, TimerCallBack callback, TimerType type, const std::string& name)
-	: run_(false), exit_(false), restart_(false), 
-	  callback_(callback), period_(period), type_(type), name_(name)
+	: name_(name), period_(period), callback_(callback), 
+	  run_(false), exit_(false), restart_(false),
+	  type_(type)
 {
 	nextTime_ = std::chrono::steady_clock::now() + period_;
 }

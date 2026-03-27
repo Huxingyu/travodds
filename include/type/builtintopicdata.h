@@ -33,7 +33,7 @@ struct ParticipantBuiltinTopicData
 	/** @brief The permissions token */
 	PermissionsToken permissions_token;
 	/** @brief Information describing the participant security */
-	ParticipantSecurityInfo security_info = { 0 };
+	ParticipantSecurityInfo security_info = { 0, 0 }; 
 #endif // DDSSECURITY
 };
 

@@ -18,7 +18,7 @@ USING_TRAVODDS_NAMESPACE;
 
 
 StatelessWriter::StatelessWriter(const DataWriterQos& qos, const GUID_t& guid, const TopicKind_t& kind)
-	: Writer(qos, kind), timer_(nullptr), resendDataPeriod_(TIME_INFINITE)
+	: Writer(qos, kind),  resendDataPeriod_(TIME_INFINITE), timer_(nullptr)
 {
 	guid_ = guid;
 }
@@ -378,13 +378,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 				uint32_t partCryptoHdlsCount = 0;
 				DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 				partCryptoHdls = dp->secParticipants_.data();
-				partCryptoHdlsCount = dp->secParticipants_.size();
+				partCryptoHdlsCount = static_cast<uint32_t>(dp->secParticipants_.size());
 				SecurityException secExce;
 
-				SerializedBuffer encodeBuffer;
+				//SerializedBuffer encodeBuffer;
 				SerializedBuffer plainBuffer;
 				//被加密的缓冲 
-				int msgHeaderSize = sizeof(MessageHeader_t);
 				if (!encodeSubMsg) { //从buffer取
 					plainBuffer.buffer = buffer->buffer - shift; //负载位置buffer->buffer往前shift，shift是DATA子报文一些内容
 					plainBuffer.buffer_size = shift + buffer->buffer_size;
@@ -445,8 +444,8 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			buffer = buffer->next;
 
 		} while (buffer);
-	} else {
-
+	} 
+	else {
 		DataSubMessage_t dataSubMessage;
 		if (0 != change->serializedBuffer->buffer_size) {
 			dataSubMessage.header.flags |= SubMessageFlag::DATA_FLAG;
@@ -471,8 +470,8 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		uint32_t shift = 0;
 		
 #ifdef DDSSECURITY
-        SerializedBuffer encodeRtpsBuffer;
-        char* encodeBuf = NULL; //开辟的存储加密后缓存
+        SerializedBuffer encodeRtpsBuffer; //存储加密后缓存
+        char* encodeBuf = NULL; 
         if (encodeSubMsg || encodeRtpsMsg) {
             encodeBuf = new char[buffer->buffer_size * 10];
         }
@@ -485,7 +484,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
         MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
 
 #ifdef DDSSECURITY
-        // encodeBuffer为子消息缓冲区
+        // srcBuffer指向被加密子消息
         SerializedBuffer srcBuffer;
         // encodeBuffer为临时开辟缓冲区，存储加密后子消息
         SerializedBuffer encodeBuffer;
@@ -536,13 +535,13 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			uint32_t partCryptoHdlsCount = 0;
 			DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(datawriter_->GetParent()->get_participant());
 			partCryptoHdls = dp->secParticipants_.data();
-			partCryptoHdlsCount = dp->secParticipants_.size();
+			partCryptoHdlsCount = static_cast<uint32_t>(dp->secParticipants_.size());
 			SecurityException secExce;
 
-			SerializedBuffer encodeBuffer;
+			//SerializedBuffer encodeBuffer;
 			SerializedBuffer plainBuffer;
 			//被加密的缓冲 
-			int msgHeaderSize = sizeof(MessageHeader_t);
+			//int msgHeaderSize = sizeof(MessageHeader_t);
 			if (!encodeSubMsg) { //从buffer取
 				plainBuffer.buffer = buffer->buffer - shift; //负载位置buffer->buffer往前shift，shift是DATA子报文一些内容
 				plainBuffer.buffer_size = shift + buffer->buffer_size;
@@ -670,7 +669,7 @@ int StatelessWriter::EncodeSubMsgBuffer(SerializedBuffer& buffer, SerializedBuff
 	uint32_t rdCryptoHdlsCount = 0;
 
 	rdCryptoHdls = datawriter_->secReaders_.data();
-	rdCryptoHdlsCount = datawriter_->secReaders_.size();
+	rdCryptoHdlsCount = static_cast<uint32_t>(datawriter_->secReaders_.size());
 
 	if (datawriter_->secPlugin_ && !datawriter_->secPlugin_->crypto_transform->encode_datawriter_submessage(
 		&encodeBuffer,

@@ -28,11 +28,12 @@ USING_TRAVODDS_NAMESPACE
 
 DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWriterListener* listener, StatusMask mask, PublisherImpl* pub, TypeSupport* typeSupport)
 	: DomainEntityImpl(mask), topic_(dynamic_cast<TopicImpl*>(topic)),
-	  qos_(qos), listener_(listener), pub_(pub), typeSupport_(typeSupport),
+	  qos_(qos), listener_(listener), pub_(pub),
 	  statusMgr_( new DataWriterStatusManager(this)),
 	  deadlineTimer_(nullptr),
 	  lifespanTimer_(nullptr),
-	  memoryPool_(MemoryPool::GetInstance())
+	  memoryPool_(MemoryPool::GetInstance()),
+	  typeSupport_(typeSupport)
 {
 	topic_->Reference();
 
@@ -148,36 +149,47 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
     }
 
 	if (enable_) {
-		if (qos_.deadline.period != qosTemp.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
+		if (qos_.deadline.period != qosTemp.deadline.period && qosTemp.deadline.period != Duration_t(TIME_INFINITE)) {
 			std::chrono::steady_clock::time_point nextTime =
-				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qosTemp.deadline.period));
 			history_->UpAllDeadline(nextTime);
 			if (deadlineTimer_) {
-				deadlineTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+				deadlineTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qosTemp.deadline.period));
 			} else {
                 deadlineTimer_ = TimerManager::CreateTimer(
-					reinterpret_cast<const Time_t&>(qosTemp.deadline.period),
+					qosTemp.deadline.period,
 					[this] {
 						DeadlineTimeout();
 					},
 					"dw.deadline"
                 );
 			}
-		} else if(qos_.deadline.period == Duration_t(TIME_INFINITE)) {
+		} else if(qosTemp.deadline.period == Duration_t(TIME_INFINITE)) {
 			deadlineTimer_.reset();
 		}
 
 		/* wangyi Lifespan 重置 */
-		if (qos_.lifespan.duration != Duration_t(TIME_INFINITE))
+		if (qos_.lifespan.duration != qosTemp.lifespan.duration && qosTemp.lifespan.duration != Duration_t(TIME_INFINITE))
 		{
-			lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
-		} else if(lifespanTimer_) {
-			lifespanTimer_->Exit();
+			if (lifespanTimer_) {
+				lifespanTimer_->UpdatePeriod(qosTemp.lifespan.duration.ToNs() * 1e-6);
+			} else {
+				lifespanTimer_ = TimerManager::CreateTimer(
+					qosTemp.lifespan.duration,
+					[this] {
+						LifespanTimeout();
+					},
+					"dw.lifespan"
+				);
+			}
+		} else if(qosTemp.lifespan.duration == Duration_t(TIME_INFINITE)) {
+			lifespanTimer_.reset();
 		}
 	}
 
 	qos_ = qosTemp;
 
+	writer_->SetQos(qosTemp);
 
     return RETCODE_OK;
 }
@@ -339,7 +351,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 
 	ParameterList_t lineQos;
-	bool fragFlag = false;
 
 	if(typeSupport_->has_key())
 	{
@@ -390,8 +401,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		// 使用DynamicDataFactory创建数据容器
 		DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*typeSupport_->get_dynamictype());
 		DynamicDataTypeSupport typeSupport(typeSupport_->get_dynamictype());
-		CdrDeserializer cdr(bufferHeader);
-		typeSupport.deserialize_data(dyn_data, &cdr, DEFAULT_ENDIAN);
+		CdrDeserializer dycdr(bufferHeader);
+		typeSupport.deserialize_data(dyn_data, &dycdr, DEFAULT_ENDIAN);
 		for (auto& it : readerFilters_) {
 			if (it.second->Validate(dyn_data)) {
 				filterReaders.insert(it.first);
@@ -537,12 +548,15 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		TRAVODDS_LOG(LOG_ERROR, "AddNewCachce Err ret= %d", ret);
 		return ret;
 	}
-	{
-		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
-		lastInstance_ = handle;
-	}
+
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
-		deadlineTimer_->ReStart();
+		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
+		std::chrono::steady_clock::time_point nextTime =
+			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+		history_->SetNextDeadline(handle, nextTime);
+		history_->GetNextDeadline(lastInstance_, nextTime);
+		auto period = nextTime - std::chrono::steady_clock::now();
+		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
 	}
 
 	/* wangyi lifespan qos */
@@ -611,7 +625,11 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 		status[3] = StatusInfoFlag::DISPOSED_FLAG;
 	} else {
 		kind = NOT_ALIVE_UNREGISTERED;
-		status[3] = StatusInfoFlag::DISPOSED_FLAG | StatusInfoFlag::UNREGISTERED_FLAG;
+		status[3] = StatusInfoFlag::UNREGISTERED_FLAG;
+		if (qos_.writer_data_lifecycle.autodispose_unregistered_instances) {
+			kind = NOT_ALIVE_DISPOSED_UNREGISTERED;
+			status[3] |= StatusInfoFlag::DISPOSED_FLAG;
+		}
 	}
 	Parameter_t keyParam, statueParam;
 	keyParam.parameterId = PID_KEY_HASH;
@@ -757,7 +775,7 @@ ReturnCode_t DataWriterImpl::enable()
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
         deadlineTimer_ = TimerManager::CreateTimer(
-			reinterpret_cast<Time_t&>(qos_.deadline.period),
+			qos_.deadline.period,
 			[this] {
 				DeadlineTimeout();
 			},
@@ -768,7 +786,7 @@ ReturnCode_t DataWriterImpl::enable()
 	/* wangyi lifespan Qos 定时器添加  */
 	if (qos_.lifespan.duration != Duration_t(TIME_INFINITE)) {
 		lifespanTimer_ = TimerManager::CreateTimer(
-			reinterpret_cast<Time_t&>(qos_.lifespan.duration),
+			qos_.lifespan.duration,
 			[this] {
 				LifespanTimeout();
 		},
@@ -848,6 +866,7 @@ void DataWriterImpl::SetRelatedWriter(std::shared_ptr<Writer> writer)
 
 bool DataWriterImpl::MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const
 {
+	static_cast<void>(forceMd5);
 	SerializedBuffer buffer;
 	buffer.buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
 	memoryPool_->getBuffer(buffer.buffer_size, buffer.origin_buffer);
@@ -885,7 +904,7 @@ bool DataWriterImpl::LifespanTimeout()
 	std::shared_ptr<CacheChange> earliestChange = writer_->GetWriterCache()->GetMinSourceTimespace();
 	while (earliestChange != nullptr) {
 		
-		Duration_t expirationTime = Conversion::TimeToDuration(earliestChange->sourceTimespace) + qos_.lifespan.duration;
+		Duration_t expirationTime = earliestChange->sourceTimespace + qos_.lifespan.duration;
 
 		/* 检查最早的报文缓存是否已过期（启动计时器的报文缓存可能已从历史记录中删除）*/
 		if (currentTime < expirationTime)
@@ -1200,7 +1219,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 {
 	if (readerId == NULL || tokens == NULL)
 	{
-		return -1;
+		return 1;
 	}
 	GUID_t guid = Conversion::ToGuid(get_instance_handle());
 	if (guid.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER)
@@ -1222,7 +1241,7 @@ uint32_t DataWriterImpl::SetRemoteReaderCryptoTokens(const GUID_t* readerId, con
 		tokens,
 		&secExce))
 	{
-		return -3;
+		return 1;
 	}
 	rdIter->second.readyForSecComm = true;
 	secReaders_.push_back(rdIter->second.cryptoHdl);

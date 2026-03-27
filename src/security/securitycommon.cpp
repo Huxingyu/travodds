@@ -14,7 +14,7 @@ const EndpointSecurityInfo ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT = { 0UL, 0U
 
 ParticipantSecurityAttributesMask ParticipantSecurityAttributesToMask(ParticipantSecurityAttributes* secAttr)
 {
-	ParticipantSecurityAttributesMask rst = PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID;
+	ParticipantSecurityAttributesMask rst = static_cast<uint32_t>(PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_VALID);
 	if (secAttr->is_rtps_protected)
 	{
 		rst |= PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_RTPS_PROTECTED;
@@ -37,7 +37,7 @@ ParticipantSecurityAttributesMask ParticipantSecurityAttributesToMask(Participan
 
 EndpointSecurityAttributesMask EndpointSecurityAttributesToMask(EndpointSecurityAttributes* secAttr)
 {
-	EndpointSecurityAttributesMask rst = ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID;
+	EndpointSecurityAttributesMask rst = static_cast<uint32_t>(ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_VALID);
 	if (secAttr->is_read_protected)
 	{
 		rst |= ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_READ_PROTECTED;

@@ -331,18 +331,6 @@ struct GUID_t {
 
 
 #ifdef DDSSECURITY
-	GUID_t& operator=(const BuiltinTopicKey_t& key) {
-		memcpy(this, &key, sizeof(GUID_t));
-		return *this;
-	}
-
-	GUID_t& operator=(const BuiltinTopicKey_t* key) {
-		if (key != nullptr) {
-			memcpy(this, key, sizeof(GUID_t));
-		}
-		return *this;
-	}
-
 	/**
 	 * @brief 判断是否是安全内置实体
 	 */
@@ -380,7 +368,10 @@ namespace Conversion {
 	 */
 	inline GUID_t ToGuid(const BuiltinTopicKey_t& key) {
 		GUID_t guid;
-		memcpy(&guid, &key, sizeof(GUID_t));
+		const octet* bytes = reinterpret_cast<const octet*>(key.value);
+		memcpy(&guid.prefix.value, bytes, sizeof(OctetArray12));
+		memcpy(&guid.entityId.entityKey, &bytes[12], sizeof(OctetArray3));
+		guid.entityId.entityKind = bytes[15];
 		return guid;
 	}
 	/**
@@ -392,7 +383,9 @@ namespace Conversion {
 	 */
 	inline GUID_t ToGuid(const InstanceHandle_t& handle) {
 		GUID_t guid;
-		memcpy(&guid, handle.keyHash.value, sizeof(GUID_t));
+		memcpy(&guid.prefix.value, &handle.keyHash.value, sizeof(OctetArray12));
+		memcpy(&guid.entityId.entityKey, &handle.keyHash.value[12], sizeof(OctetArray3));
+		guid.entityId.entityKind = handle.keyHash.value[15];
 		return guid;
 	}
 	/**
@@ -431,7 +424,7 @@ namespace Conversion {
 	 */
 	inline BuiltinTopicKey_t ToBuiltinTopicKey(const GUID_t& guid) {
 		BuiltinTopicKey_t key;
-		memcpy(&key, &guid, sizeof(GUID_t));
+		memcpy(&key.value, &guid, sizeof(GUID_t));
 		return key;
 	}
 	/**
@@ -443,7 +436,7 @@ namespace Conversion {
 	 */
 	inline BuiltinTopicKey_t ToBuiltinTopicKey(const InstanceHandle_t& handle) {
 		BuiltinTopicKey_t key;
-		memcpy(&key, handle.keyHash.value, sizeof(GUID_t));
+		memcpy(&key.value, handle.keyHash.value, sizeof(GUID_t));
 		return key;
 	}
 }

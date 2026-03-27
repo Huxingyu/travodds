@@ -78,19 +78,6 @@ struct SampleCounters
 	}
 };
 
-struct StateSet{
-	ViewStateKind viewState;
-	InstanceStateKind instanceState;
-	StateSet(SampleStateKind sample, ViewStateKind view, InstanceStateKind instance)
-		: viewState(view), instanceState(instance) {
-	}
-	StateSet()
-	: viewState(NEW_VIEW_STATE),
-	  instanceState(ALIVE_INSTANCE_STATE) {
-
-	}
-};
-
 class CacheSerializedBuffer : public SerializedBuffer {
 public:
 	std::shared_ptr<Message_t> originMessage;
@@ -116,20 +103,20 @@ public:
 	ParameterList_t inlineQos;
 	/* CacheChange的相关状态  */
 	SerializedBuffer* serializedBuffer;
-	/* 此处 view_state,instance_state 字段无效 */
+	/* 此处 view_state,instance_state ,sample_rank, generation_rank, absolute_generation_rank字段无效 */
 	SampleInfo sampleInfo;
 	Time_t sourceTimespace;
 
 	/* 分片数据 */
 	/* 每个分片大小 */
-	int32_t fraqmentSize;
+	uint32_t fraqmentSize;
 	/* 分片数据总大小 */
-	int32_t dataSize;
+	uint32_t dataSize;
 	/* 分片个数 */
-	int32_t fragmentTatolNum;
+	uint32_t fragmentTatolNum;
 	/* 所有的数据分片数据序号，收到一个分片数据，删除分片序号 */
-	std::set<int32_t> fragmentSeq;
-	std::map<int32_t, SerializedBuffer*> fragmentBufferMap;
+	std::set<uint32_t> fragmentSeq;
+	std::map<uint32_t, SerializedBuffer*> fragmentBufferMap;
 	/* 需要过滤的订阅者 */
 	std::set<GUID_t> filterReaders_;
 
@@ -176,7 +163,7 @@ public:
 	/**
 	 * @brief 构造函数。
 	 */
-	CacheChangeVector(SerializedBuffer* buffer, int32_t maxSize) : keyBuffer(buffer), maxSamples(maxSize){
+	CacheChangeVector(SerializedBuffer* buffer, int32_t maxSize) : keyBuffer(buffer), maxSamples(maxSize) {
 	}
 
 	/**
@@ -198,14 +185,20 @@ public:
 	ViewStateKind viewState = ViewStateKind::NEW_VIEW_STATE;
 	/* 实例状态，alive表示实例还存在，disposed表示实例被删除，no_writers表示实例没有写入者 */
 	InstanceStateKind instanceState = InstanceStateKind::ALIVE_INSTANCE_STATE;
-	/* us */
+
+	/* 代表实例在收到样本时实例由DataWriter显式处理后变为存活状态的次数 */
+	int32_t 					disposedGenerationCount = 0;
+	/* 代表实例因为没有写入者而被处理后重新变为存活状态的次数 */
+	int32_t 					noWritersGenerationCount = 0;
+
 	std::chrono::steady_clock::time_point nextDeadline;
 	/* guid  OwnershipStrength*/
 	std::map<GUID_t, int32_t> aliveWriter;
+	std::pair<GUID_t, int32_t> maxOwnershipStrength;
 
-	StateSet lastState;
-
-	SequenceNumber_t lastSeqNum;
+	std::chrono::steady_clock::time_point nextTimeBasedFilte;
+	/* 最新数据, cache未添加 */
+	std::shared_ptr<CacheChange> lastCache;
 
 	int32_t maxSamples;
 };
@@ -410,20 +403,10 @@ public:
 	 */
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
 
-	/**
-	 * @brief 获取实例丢失计数。
-	 *
-	 * @param [in] cache 需获取实例丢失计数的样本。
-	 *
-	 * @return 实例丢失计数。
-	 */
-	int32_t GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache);
+	bool GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextTime);
+	void SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache);
+	void RsetAllTimeBasedFilte();
 
-	/**
-	 * @brief 重新设置所有实例句柄handle对应的截止时间。
-	 *
-	 * @param [in] nextDeadline 新的下一个截止日期。
-	 */
 	void RemoveRemoteWriter(const GUID_t& guid);
 
 private:

@@ -6,25 +6,10 @@ TRAVODDS_NAMESPACE_BEGIN
 
 namespace Conversion {
 	/**
-	 * @brief 将Time_t格式时间转换为秒并返回double。
-	 */
-	inline double ToSecondsDouble(const Time_t& t)
-	{
-		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
-	}
-
-	/**
 	 * @brief 将Duration_t格式时间转换为秒并返回double。
 	 */
 	inline double ToSecondsDouble(const Duration_t& t) {
 		return (double)t.sec + (double)(t.nanosec / pow(10.0, 9));
-	}
-
-	/**
-	 * @brief 将时间转换为毫秒并返回double。
-	 */
-	inline double ToMilliSecondsDouble(const Time_t& t) {
-		return ((double)t.nanosec / 1000000.0) + (double)t.sec*pow(10.0, 3);
 	}
 
 	/**
@@ -37,23 +22,8 @@ namespace Conversion {
 	/**
 	 * @brief 将时间转换为微秒并返回double。
 	 */
-	inline double ToMicroSecondsDouble(const Time_t& t) {
-		return ((double)t.nanosec / pow(2.0, 32)*pow(10.0, 6)) + (double)t.sec*pow(10.0, 6);
-	}
-
-	/**
-	 * @brief 将时间转换为微秒并返回double。
-	 */
 	inline double ToMicroSecondsDouble(const Duration_t& t) {
 		return ((double)t.nanosec / pow(2.0, 32)*pow(10.0, 6)) + (double)t.sec*pow(10.0, 6);
-	}
-
-
-	/**
-	 * @brief 将时间转换为毫秒并返回int64。
-	 */
-	inline int64_t ToMilliSecondsInt64(const Time_t& t) {
-		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
 	}
 
 	/**
@@ -61,14 +31,6 @@ namespace Conversion {
 	 */
 	inline int64_t ToMilliSecondsInt64(const Duration_t& t) {
 		return (int64_t)(t.nanosec / pow(10.0, 6)) + t.sec*(int64_t)pow(10.0, 3);
-	}
-
-	/**
-	 * @brief 将时间转换为微秒返回int64。
-	 */
-	inline int64_t ToMicroSecondsInt64(const Time_t& t)
-	{
-		return (int64_t)(t.nanosec / 1000.0) + t.sec*(int64_t)pow(10.0, 6);
 	}
 
 	/**
@@ -120,28 +82,6 @@ namespace Conversion {
 		result += (double)abs((t2.sec - t1.sec) * 1000);
 		result += (double)std::abs((t2.nanosec - t1.nanosec) / pow(10.0, 6));
 		return result;
-	}
-
-	/**
-	 * @brief 将Duration_t类型转换为Time_t。
-	 */
-	inline Time_t DurationToTime(Duration_t duration)
-	{
-		Time_t t;
-		t.sec = duration.sec;
-		t.nanosec = duration.nanosec;
-		return t;
-	}
-
-	/**
-	 * @brief 将Time_t类型转换为Duration_t。
-	 */
-	inline Duration_t TimeToDuration(Time_t time)
-	{
-		Duration_t d;
-		d.sec = time.sec;
-		d.nanosec = time.nanosec;
-		return d;
 	}
 
 	/**

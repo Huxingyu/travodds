@@ -156,6 +156,7 @@ void ReaderProxy::SetHistoryCache(std::shared_ptr<HistoryCache> writerCache)
 }
 bool ReaderProxy::AddChange(ChangeForReader change)
 {
+	static_cast<void>(change);
 	//changesForReaders_.push_back(change);
 	return false;
 }
@@ -199,9 +200,7 @@ ReturnCode_t ReaderProxy::RecvNackFrag(const NackFragSubMessage_t& nackMsg)
 {
 	ReturnCode_t ret = RETCODE_OK;
 
-	/**/
-
-	const FragMentNumberSet_t& fragSet = nackMsg.fragmentNumberState;
+	// const FragMentNumberSet_t& fragSet = nackMsg.fragmentNumberState;
 	auto itor = nackCounts_.find(nackMsg.writerSN);
 	if (itor == nackCounts_.end()) {
 		nackCounts_[nackMsg.writerSN] = nackMsg.count;

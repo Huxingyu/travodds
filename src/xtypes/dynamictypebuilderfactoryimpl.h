@@ -26,7 +26,7 @@ TRAVODDS_NAMESPACE_BEGIN
 class DynamicTypeBuilderFactoryImpl : public DynamicTypeBuilderFactory {
   private:
     DynamicTypeBuilderFactoryImpl();
-    ~DynamicTypeBuilderFactoryImpl();
+    virtual ~DynamicTypeBuilderFactoryImpl();
 
   public:
     static DynamicTypeBuilderFactoryImpl *get_instance();

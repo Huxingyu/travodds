@@ -19,9 +19,9 @@ TEST(EntityTest, Entity_domainParticipant_get) {
     ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), par);
 
-	StatusMask status_changes = par->get_status_change();
+	StatusMask status_changes = par->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(par->get_status_change(), StatusMask(0));
+	EXPECT_EQ(par->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(par->enable(), RETCODE_OK);
 	EXPECT_NE(par->get_instance_handle(), HANDLE_NIL);
 
@@ -41,9 +41,9 @@ TEST(EntityTest, Entity_publisher_get) {
 	StatusCondition* condition = &publisher->get_statuscondition();
 	ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), publisher);
-	StatusMask status_changes = publisher->get_status_change();
+	StatusMask status_changes = publisher->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(publisher->get_status_change(), StatusMask(0));
+	EXPECT_EQ(publisher->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(publisher->enable(), RETCODE_OK);
 	EXPECT_NE(publisher->get_instance_handle(), HANDLE_NIL);
 	int data = 84;
@@ -61,9 +61,9 @@ TEST(EntityTest, Entity_subscriber_get) {
 	StatusCondition* condition = &subscriber->get_statuscondition();
 	ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), subscriber);
-	StatusMask status_changes = subscriber->get_status_change();
+	StatusMask status_changes = subscriber->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(subscriber->get_status_change(), StatusMask(0));
+	EXPECT_EQ(subscriber->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(subscriber->enable(), RETCODE_OK);
 	EXPECT_NE(subscriber->get_instance_handle(), HANDLE_NIL);
 	int data = 168;
@@ -87,9 +87,9 @@ TEST(EntityTest, Entity_datawriter_get) {
 	StatusCondition* condition = &writer->get_statuscondition();
 	ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), writer);
-	StatusMask status_changes = writer->get_status_change();
+	StatusMask status_changes = writer->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(writer->get_status_change(), StatusMask(0));
+	EXPECT_EQ(writer->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(writer->enable(), RETCODE_OK);
 	EXPECT_NE(writer->get_instance_handle(), HANDLE_NIL);
 	int data = 336;
@@ -115,9 +115,9 @@ TEST(EntityTest, Entity_datareader_get) {
 	StatusCondition* condition = &reader->get_statuscondition();
 	ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), reader);
-	StatusMask status_changes = reader->get_status_change();
+	StatusMask status_changes = reader->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(reader->get_status_change(), StatusMask(0));
+	EXPECT_EQ(reader->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(reader->enable(), RETCODE_OK);
 	EXPECT_NE(reader->get_instance_handle(), HANDLE_NIL);
 	int data = 672;
@@ -139,9 +139,9 @@ TEST(EntityTest, Entity_topic_get) {
 	StatusCondition* condition = &top->get_statuscondition();
 	ASSERT_NE(condition, nullptr);
 	EXPECT_EQ(condition->get_entity(), top);
-	StatusMask status_changes = top->get_status_change();
+	StatusMask status_changes = top->get_status_changes();
 	EXPECT_EQ(status_changes, StatusMask(0));
-	EXPECT_EQ(top->get_status_change(), StatusMask(0));
+	EXPECT_EQ(top->get_status_changes(), StatusMask(0));
 	EXPECT_EQ(top->enable(), RETCODE_OK);
 	EXPECT_NE(top->get_instance_handle(), HANDLE_NIL);
 	int data = 1344;

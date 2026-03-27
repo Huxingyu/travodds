@@ -27,7 +27,7 @@ unsigned int ParticipantMessageSecureDataTypeSupport::get_serialized_data_size(v
     // unsigned int tmpAlignment = 0;
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(char), sizeof(structData->m_kind) / sizeof(char), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(uint32_t), currentAlignment);
-    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(char), structData->m_extraData.size(), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(char), static_cast<uint32_t>(structData->m_extraData.size()), currentAlignment);
     return currentAlignment - initialAlignment;
 }
 
@@ -51,7 +51,7 @@ int ParticipantMessageSecureDataTypeSupport::serialize_data(void* data, CdrSeria
         fprintf(stderr, "Serialization length failed for field: structData->m_extraData\n");
         return -1;
     }
-    if (!cdr->serializeBaseTypeArray(structData->m_extraData.data(), structData->m_extraData.size())) {
+    if (!cdr->serializeBaseTypeArray(structData->m_extraData.data(), static_cast<uint32_t>(structData->m_extraData.size()))) {
         fprintf(stderr, "Serialization failed for field: structData->m_extraData\n");
         return -1;
     }
@@ -62,9 +62,6 @@ int ParticipantMessageSecureDataTypeSupport::deserialize_data(void* data, CdrDes
     (void)endian;
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     unsigned int tmpLength = 0;
-    // char tmpCharEnum = 0;
-    // short tmpShortEnum = 0;
-    int tmpIntEnum = 0;
     if (!cdr->deserializeBaseTypeArray((char*)structData->m_kind, sizeof(structData->m_kind) / sizeof(char))) {
         fprintf(stderr, "Deserialization failed for field: structData->m_kind\n");
         return -1;

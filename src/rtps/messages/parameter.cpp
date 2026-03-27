@@ -615,18 +615,21 @@ bool ParameterList::WriterToMessage(octet* msg, uint16_t& allowLength)
 	return true;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+
 void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 {
 	uint32_t offset = 0;
 	bool sentinel = true;
 	while (offset < length && sentinel) {
-		ParameterId pid; 
+		uint16_t pid; 
 		uint16_t len;
-		ReadUInt16(msg + offset, (uint16_t&)pid);
+		ReadUInt16(msg + offset, pid);
 		ReadUInt16(msg + offset + 2, len);
 		
 		offset += 4;
-		switch (pid) {
+		switch (static_cast<ParameterId>(pid)) {
 		case ParameterId::PID_PAD: {
 			break;
 		}
@@ -906,13 +909,13 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 		}
 		case ParameterId::PID_GROUP_GUID: {
 			GUID_t data;
-			memcpy(&data, msg + offset, 16);
+			memcpy(&data, msg + offset, 16u);
 			AddParameter(ParameterId::PID_GROUP_GUID, data);
 			break;
 		}
 		case ParameterId::PID_GROUP_ENTITY_ID: {
 			EntityId_t data;
-			memcpy(&data, msg + offset, 4);
+			memcpy(&data, msg + offset, 4u);
 			AddParameter(ParameterId::PID_GROUP_ENTITY_ID, data);
 			break;
 		}
@@ -993,7 +996,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 		}
 		case ParameterId::PID_DIRECTED_WRITE: {
 			GUID_t data;
-			memcpy(&data, msg + offset, 16);
+			memcpy(&data, msg + offset, 16u);
 			AddParameter(ParameterId::PID_DIRECTED_WRITE, data);
 			break;
 		}
@@ -1004,19 +1007,19 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 			ReadUInt32(msg + offset + 20, data.originalWriterSN.low);
 			uint32_t inLen = len - 24;
 			uint32_t inOffset = offset + 24;
-			ParameterId inId;
-			ReadUInt16(msg + inOffset, (uint16_t&)inId);
+			uint16_t inId;
+			ReadUInt16(msg + inOffset, inId);
 
-			while (inId != ParameterId::PID_SENTINEL && inOffset < inLen) {
+			while (static_cast<ParameterId>(inId) != ParameterId::PID_SENTINEL && inOffset < inLen) {
 				Parameter_t par;
-				ReadUInt16(msg + inOffset, (uint16_t&)par.parameterId);
+				ReadUInt16(msg + inOffset, par.parameterId);
 				ReadUInt16(msg + inOffset + 2, par.length);
 				par.value.resize(par.length);
 				std::copy(msg + inOffset + 4, msg + inOffset + 4 + par.length, par.value.begin());
 
 				data.originalWriterQos.push_back(std::move(par));
-				inOffset += 4 + (par.length + 3u) & ~3u;
-				ReadUInt16(msg + inOffset, (uint16_t&)inId);
+				inOffset += 4 + ((par.length + 3u) & ~3u);
+				ReadUInt16(msg + inOffset, inId);
 			}
 			AddParameter(ParameterId::PID_ORIGINAL_WRITER_INFO, data);
 			break;
@@ -1173,7 +1176,7 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
  		offset += len;
 	}
 }
-
+#pragma GCC diagnostic pop
 
 uint32_t ParameterList::GetParameterList(ParameterList_t& list)
 {
@@ -1185,7 +1188,7 @@ uint32_t ParameterList::GetParameterList(ParameterList_t& list)
 		it.second->AddToMessage(parameter.value.data(), parameter.length);
 		list.push_back(parameter);
 	}
-	return list.size();
+	return static_cast<uint32_t>(list.size());
 }
 
 uint32_t ParameterList::ReadInt16(const octet* msg, int16_t& i16)
@@ -1262,7 +1265,7 @@ uint32_t ParameterList::ReaderString(const octet* msg, std::string& str)
 			str.pop_back(); 
 		}
 	}
-	return 4u + (size + 3u) & ~3u;
+	return 4u + ((size + 3u) & ~3u);
 }
 
 uint32_t ParameterList::ReaderLocator(const octet* msg, Locator_t& loc)
@@ -1272,4 +1275,3 @@ uint32_t ParameterList::ReaderLocator(const octet* msg, Locator_t& loc)
 	memcpy(loc.address, msg + 8, 16);
 	return 24u;
 }
-

@@ -122,8 +122,10 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
     datareaderPtr->FillSecureData();
 #endif // DDSSCURITY
 	reader = datareaderPtr.get();
-	std::lock_guard<std::mutex> lock(mtxReaders_);
-	readerHandles_.insert({ datareaderPtr->get_instance_handle(), std::move(datareaderPtr) });
+    {
+        std::lock_guard<std::mutex> lock(mtxReaders_);
+        readerHandles_.insert({ datareaderPtr->get_instance_handle(), std::move(datareaderPtr) });
+    }
 
 	if (enable_ && qos_.entity_factory.autoenable_created_entities) {
 		if (RETCODE_OK != reader->enable()) {

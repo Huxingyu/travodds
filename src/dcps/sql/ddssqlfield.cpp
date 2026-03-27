@@ -328,7 +328,7 @@ bool DDSSQLFieldValue::SetValue(DynamicData* dynData, DynamicType* dynType)
     return true;
 }
 
-bool DDSSQLFieldValue::SetSeqValue(DynamicData* memberData, MemberId memberId, TypeKind type, int32_t elementIndex)
+bool DDSSQLFieldValue::SetSeqValue(DynamicData* memberData, MemberId memberId, TypeKind type, uint32_t elementIndex)
 {
     switch (type) {
     case TypeKind::TK_BOOLEAN: {
@@ -569,7 +569,7 @@ bool DDSSQLFieldValue::GetMemberValue(DynamicData* dynData, DynamicType* dynType
     DynamicType* memberType = memberDescriptor.type_;
     TypeKind memberKind = memberType->get_kind();
     //检查各个维度,并且将其转化一维index
-    int32_t elementIndex = 0;
+    uint32_t elementIndex = 0;
     // 处理数组 / 序列索引
     if (accessor.arrayIndex.size() > 0) {
         if (memberKind == TypeKind::TK_ARRAY) {
@@ -579,12 +579,12 @@ bool DDSSQLFieldValue::GetMemberValue(DynamicData* dynData, DynamicType* dynType
                 return false;
             }
 
-            for (int32_t i = 0; i < accessor.arrayIndex.size(); i++) {
-                if (memberType->descriptor_.bound_[i] < 0 || accessor.arrayIndex[i] >= memberType->descriptor_.bound_[i]) {
+            for (size_t i = 0; i < accessor.arrayIndex.size(); i++) {
+                if (accessor.arrayIndex[i] >= memberType->descriptor_.bound_[i]) {
                     return false;
                 }
-                int32_t product = 1;
-                for (int32_t j = i + 1; j < memberType->descriptor_.bound_.size(); ++j) {
+                uint32_t product = 1;
+                for (size_t j = i + 1; j < memberType->descriptor_.bound_.size(); ++j) {
                     product *= memberType->descriptor_.bound_[j];
                 }
                 elementIndex += accessor.arrayIndex[i] * product;

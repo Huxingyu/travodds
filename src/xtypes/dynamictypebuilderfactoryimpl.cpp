@@ -182,6 +182,7 @@ DynamicTypeBuilderFactoryImpl::create_type_copy(DynamicType *type) {
 
 DynamicTypeBuilder *DynamicTypeBuilderFactoryImpl::create_type_w_type_object(
     TypeObject *type_object) {
+    (void)type_object;
     // 实现create_type_w_type_object
     return nullptr;
 }
@@ -198,6 +199,9 @@ DynamicType *DynamicTypeBuilderFactoryImpl::get_primitive_type(int kind) {
 DynamicType *DynamicTypeBuilderFactoryImpl::create_type_w_uri(
     const std::string &document_url, const std::string &type_name,
     const std::vector<std::string> &include_paths) {
+    (void)document_url;
+    (void)type_name;
+    (void)include_paths;
     // 实现create_type_w_uri
     return nullptr;
 }
@@ -205,6 +209,9 @@ DynamicType *DynamicTypeBuilderFactoryImpl::create_type_w_uri(
 DynamicType *DynamicTypeBuilderFactoryImpl::create_type_w_document(
     const std::string &document, const std::string &type_name,
     const std::vector<std::string> &include_paths) {
+    (void)document;
+    (void)type_name;
+    (void)include_paths;
     // 实现create_type_w_document
     return nullptr;
 }

@@ -7,16 +7,11 @@ USING_TRAVODDS_NAMESPACE;
 using namespace TRAVODDS::InterprocessType;
 
 SharedMemSocket::SharedMemSocket()
-	: data_(nullptr)
-	, port_(0)
-	, pool_(0) {
+	: pool_(0) , port_(0), data_(nullptr) {
 }
 
 SharedMemSocket::SharedMemSocket(std::function<void(char*, const uint32_t&)> callback)
-	: data_(nullptr)
-	, port_(0)
-	, pool_(1)
-	, callback_(std::move(callback)) {
+	: callback_(std::move(callback)), pool_(1), port_(0), data_(nullptr) {
 }
 
 SharedMemSocket::~SharedMemSocket()
@@ -37,6 +32,7 @@ bool SharedMemSocket::Connect(const std::string& srcport, const std::string& des
 		asio::post(pool_, [this]() { this->ReadFromSharedMem(); });
 		return true;
 	} catch (const interprocess_exception& e) {
+		static_cast<void>(e);
 		return false;
 	}
 	return false;
@@ -99,7 +95,7 @@ bool SharedMemSocket::Connect(const std::string& destport)
 		sharedAcceptList->condition.notify_one();
 		return true;
 	} catch (const interprocess_exception& e) {
-		e.what();
+		static_cast<void>(e);
 	}
 	return false;
 
@@ -112,7 +108,6 @@ void SharedMemSocket::Write(const char* message, uint32_t len)
 		data_->refs.fetch_sub(1, std::memory_order_release);
 		throw std::invalid_argument("Invalid argument");
 	}
-	uint32_t writepos = 0;
 	scoped_lock<interprocess_mutex>lock(data_->wmutex);
 	bool waitsuc = data_->wcondition.wait_for(
 		lock, 
@@ -178,7 +173,7 @@ void SharedMemSocket::Close(bool haslock)
 			sharedAcceptList->sockets.erase(port_);
 		}
 	} catch (const std::exception& e) {
-
+		static_cast<void>(e);
 	}
 
 	CleanupResources();
@@ -201,6 +196,7 @@ void SharedMemSocket::CleanupResources()
 		ipcdetail::get_shared_dir(shared_dir);
 		std::remove((shared_dir + "/" + sharedMemoryName_).c_str());
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 	}
 }
 
@@ -208,8 +204,8 @@ void SharedMemSocket::CleanupResources()
 
 bool SharedMemSocket::IsWriteSucfully(const char* message, const uint32_t& len)
 {
-	size_t currentwritepos = data_->writepos.load(std::memory_order_acquire);
-	size_t currentreadpos = data_->readpos.load(std::memory_order_acquire);
+	uint32_t currentwritepos = data_->writepos.load(std::memory_order_acquire);
+	uint32_t currentreadpos = data_->readpos.load(std::memory_order_acquire);
 
 	if (currentwritepos >= currentreadpos) {
 		if (currentwritepos == currentreadpos) {

@@ -155,8 +155,7 @@ ReturnCode_t DataWriterStatusManager::UpdateOfferedIncompatibleQosStatus(std::se
 
 	std::lock_guard<std::mutex> lock(mtx_);
 	offeredIncompatibleQosStatus_.last_policy_id = *policyId.begin();
-	int32_t length = offeredIncompatibleQosStatus_.policies.size();
-	for (int32_t i = 0; i < length; i++) {
+	for (size_t i = 0; i < offeredIncompatibleQosStatus_.policies.size(); i++) {
 		auto it = policyId.find(offeredIncompatibleQosStatus_.policies[i].policy_id);
 		if (it != policyId.end()) {
 			offeredIncompatibleQosStatus_.policies[i].count++;
@@ -371,11 +370,6 @@ ReturnCode_t DataReaderStatusManager::UpdateLivelinessChangedStatus(const Instan
 
 ReturnCode_t DataReaderStatusManager::UpdateSampleLostStatus(int32_t ilost_count)
 {
-	/* 非用户reader 不触发回调 */
-	GUID_t guid = Conversion::ToGuid(reader_->get_instance_handle());
-	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind)
-		return  RETCODE_OK;
-
 	std::lock_guard<std::mutex> lock(mtx_);
 
 	sampleLostStatus_.total_count += ilost_count;
@@ -415,8 +409,7 @@ ReturnCode_t DataReaderStatusManager::UpdateRequestedIncompatibleQosStatus(std::
 
 	std::lock_guard<std::mutex> lock(mtx_);
 	reqIncompatibleQosStatus_.last_policy_id = *policyId.begin();
-	int32_t length = reqIncompatibleQosStatus_.policies.size();
-	for (int32_t i = 0; i < length; i++) {
+	for (size_t i = 0; i < reqIncompatibleQosStatus_.policies.size(); i++) {
 		auto it = policyId.find(reqIncompatibleQosStatus_.policies[i].policy_id);
 		if (it != policyId.end()) {
 			reqIncompatibleQosStatus_.policies[i].count++;

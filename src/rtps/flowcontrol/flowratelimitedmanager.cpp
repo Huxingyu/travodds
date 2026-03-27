@@ -31,7 +31,7 @@ FlowRateLimitedManager::~FlowRateLimitedManager()
 void FlowRateLimitedManager::ResetPeriod(const FlowParameters& parameters)
 {
     std::lock_guard<std::mutex> lock(mtx_);
-    if (parameters.periodMs <= 0 || parameters.maxBytesPerPeriod <= 0) {
+    if (parameters.periodMs == 0 || parameters.maxBytesPerPeriod <= 0) {
         periodMs_ = 0;
         maxBytesPerPeriod_ = 0;
         bytesAvailableThisPeriod_ = 0;
@@ -58,7 +58,7 @@ void FlowRateLimitedManager::ResetPeriod(const FlowParameters& parameters)
 ReturnCode_t FlowRateLimitedManager::MessageSend(std::vector<LocatorVec>& destinationList, char* message, uint32_t length, const Duration_t& timeOut)
 {
     if (timer_) {
-        uint32_t totallength = destinationList.size() * length;
+        uint32_t totallength = static_cast<uint32_t>(destinationList.size() * length);
         std::chrono::nanoseconds timeout =  std::chrono::nanoseconds(timeOut.ToNs());
         int32_t thisTicket = nextTicket_.fetch_add(1);
         std::unique_lock<std::mutex> lock(mtx_);

@@ -25,8 +25,9 @@ SharedMemWatchdog::SharedMemWatchdog()
 			sharedList_->referenceCount = 1;
 		}
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		CleanupResources();
-		throw e;
+		throw;
 	}
 
 }
@@ -59,7 +60,7 @@ SharedMemWatchdog::~SharedMemWatchdog()
 			sharedList_ = nullptr;
 		}
 	} catch (const std::exception& e) {
-		throw e;
+		static_cast<void>(e);
 	}
 }
 
@@ -75,7 +76,23 @@ ReturnCode_t SharedMemWatchdog::InsertPortProcess(const uint32_t& port) const
 		sharedList_->portprocessidmap[port] = SysInfo::GetProcessIDStatic();
 
 	} catch (const std::exception& e) {
+		static_cast<void>(e);
 		return RETCODE_ERROR;
 	}
 	return RETCODE_OK;
+}
+
+bool SharedMemWatchdog::ErasePort(const uint32_t& port) const
+{
+	try {
+		scoped_lock<robust_mutex>  lock(sharedList_->mutex);
+		auto it = sharedList_->portprocessidmap.find(port);
+		if (it != sharedList_->portprocessidmap.end()) {
+			sharedList_->portprocessidmap.erase(it);
+			return true;
+		}
+	} catch (const std::exception& e) {
+		static_cast<void>(e);
+	}
+	return false;
 }

@@ -45,7 +45,7 @@ namespace DDSSQL {
 	{
 	public:
         TypicalValue()
-            : kind(STRING), stringValue{ 0 } {
+            : stringValue{ 0 }, kind(STRING)  {
         };
         virtual ~TypicalValue() = default;
         union
@@ -115,7 +115,7 @@ namespace DDSSQL {
         // 要访问的成员索引
         int32_t memberIndex = -1;
         // 数组/序列成员的索引 
-        std::vector<int32_t> arrayIndex;
+        std::vector<uint32_t> arrayIndex;
     };
 
     class DDSSQLFieldValue : public TypicalValue
@@ -137,7 +137,7 @@ namespace DDSSQL {
 
         bool SetValue(DynamicData* dynData, DynamicType* dynType);
     protected:
-        bool SetSeqValue(DynamicData* memberData, MemberId memberId,TypeKind type, int32_t elementIndex);
+        bool SetSeqValue(DynamicData* memberData, MemberId memberId,TypeKind type, uint32_t elementIndex);
         bool SetBaseValue(DynamicData* memberData, MemberId memberId,TypeKind type);
 
         bool GetMemberValue(DynamicData* dynData, DynamicType* dynType,

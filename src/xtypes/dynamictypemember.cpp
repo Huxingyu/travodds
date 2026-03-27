@@ -20,7 +20,7 @@ DynamicTypeMember::DynamicTypeMember(const MemberDescriptor &descriptor)
 }
 
 DynamicTypeMember::DynamicTypeMember(const DynamicTypeMember &other)
-    : descriptor_(other.descriptor_), annotation_(other.annotation_) {
+    : annotation_(other.annotation_), descriptor_(other.descriptor_) {
     // Copy constructor implementation
 }
 

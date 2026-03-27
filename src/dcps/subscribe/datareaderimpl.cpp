@@ -26,13 +26,13 @@ USING_TRAVODDS_NAMESPACE;
 
 DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos, DataReaderListener* listener, StatusMask mask, SubscriberImpl* sub, TypeSupport* typeSupport)
     : DomainEntityImpl(mask), topic_(dynamic_cast<TopicDescriptionImpl*>(topic)), 
-	  qos_(qos), listener_(listener), sub_(sub), typeSupport_(typeSupport),
+	  qos_(qos), listener_(listener), sub_(sub),
       statusMgr_(new DataReaderStatusManager(this)),
 	  deadlineTimer_(nullptr),
-	  lifespanTimer_(nullptr),
 	  lastInstance_(HANDLE_NIL),
-      history_(nullptr),
-	  filter_(nullptr)
+	  filter_(nullptr),
+	  typeSupport_(typeSupport),
+	  history_(nullptr)
 {
 	topic_->Reference();
 	if(topic)
@@ -123,9 +123,9 @@ DataReaderImpl::~DataReaderImpl()
 		deadlineTimer_->Exit();
 	}
 
-	if (lifespanTimer_) {
-		lifespanTimer_->Exit();
-	}
+	//if (lifespanTimer_) {
+	//	lifespanTimer_->Exit();
+	//}
 	if (enable_) {
 		reader_->SetRelatedDataReader(nullptr);
 	}
@@ -187,15 +187,15 @@ ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
         return RETCODE_IMMUTABLE_POLICY;
     }
 	if (enable_) {
-		if (qos_.deadline.period != qosTemp.deadline.period && qos_.deadline.period != Duration_t(TIME_INFINITE)) {
+		if (qos_.deadline.period != qosTemp.deadline.period && qosTemp.deadline.period != Duration_t(TIME_INFINITE)) {
 			std::chrono::steady_clock::time_point nextTime =
-				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+				std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qosTemp.deadline.period));
 			history_->UpAllDeadline(nextTime);
 			if (deadlineTimer_) {
-				deadlineTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+				deadlineTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qosTemp.deadline.period));
 			} else {
                 deadlineTimer_ = TimerManager::CreateTimer(
-					reinterpret_cast<const Time_t&>(qosTemp.deadline.period),
+					qosTemp.deadline.period,
 					[this] {
 						DeadlineTimeout();
 					},
@@ -203,12 +203,12 @@ ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
                 );
 			}
 		}
-		else if (qos_.deadline.period == Duration_t(TIME_INFINITE)) {
+		else if (qosTemp.deadline.period == Duration_t(TIME_INFINITE)) {
 			deadlineTimer_.reset();
 		}
+		reader_->SetQos(qosTemp);
 	}
 	qos_ = qosTemp;
-
     return RETCODE_OK;
 }
 
@@ -256,9 +256,9 @@ ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_in
 		}
 		return ret;
 	}
-
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -287,9 +287,9 @@ ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_in
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
-
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -323,8 +323,9 @@ ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSe
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -354,8 +355,9 @@ ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSe
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -442,8 +444,9 @@ ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& 
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -471,8 +474,9 @@ ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& 
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -503,8 +507,9 @@ ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfo
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -531,8 +536,9 @@ ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfo
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -565,8 +571,9 @@ ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -595,8 +602,9 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 		return ret;
 	}
 
-	data_values.length(datas.size());
-	for (int32_t i = 0; i < datas.size(); i++) {
+	uint32_t dataSize = static_cast<uint32_t>(datas.size());
+	data_values.length(dataSize);
+	for (uint32_t i = 0; i < dataSize; i++) {
 		if (!sample_infos[i].valid_data) {
 			continue;
 		}
@@ -615,6 +623,8 @@ ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values
 
 ReturnCode_t DataReaderImpl::return_loan(DataSeq& data_values, SampleInfoSeq& sample_infos)
 {
+	static_cast<void>(data_values);
+	static_cast<void>(sample_infos);
     return RETCODE_OK;
 }
 
@@ -748,6 +758,7 @@ ReturnCode_t DataReaderImpl::delete_contained_entities()
 
 ReturnCode_t DataReaderImpl::wait_for_historical_data(const Duration_t &max_wait) const
 {
+	static_cast<void>(max_wait);
 	TRAVODDS_LOG(LOG_ERROR, "datareader donot support interface");
     return RETCODE_UNSUPPORTED;
 }
@@ -798,7 +809,7 @@ ReturnCode_t DataReaderImpl::enable()
 
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
         deadlineTimer_ = TimerManager::CreateTimer(
-			reinterpret_cast<Time_t&>(qos_.deadline.period),
+			qos_.deadline.period,
 			[this] {
 				DeadlineTimeout();
 			},
@@ -807,13 +818,13 @@ ReturnCode_t DataReaderImpl::enable()
 	}
 
 	/* wangyi lifespan Qos 定时器添加  */
-	lifespanTimer_ = TimerManager::CreateTimer(
-		TIME_INFINITE,
-		[this] {
-		LifespanTimeout();
-		},
-		"dr.lifespan"
-	);
+	//lifespanTimer_ = TimerManager::CreateTimer(
+	//	TIME_INFINITE,
+	//	[this] {
+	//	LifespanTimeout();
+	//	},
+	//	"dr.lifespan"
+	//);
 
     SetRelatedReader(readerPtr);
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
@@ -1140,6 +1151,7 @@ bool DataReaderImpl::GetEndianess(SerializedBuffer* buffer)
 
 bool DataReaderImpl::MakeKey(const void*  data, InstanceHandle_t& handle, bool forceMd5) const
 {
+	static_cast<void>(forceMd5);
 	SerializedBuffer buffer;
 	buffer.buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
 	MemoryPool::GetInstance()->getBuffer(buffer.buffer_size, buffer.origin_buffer);
@@ -1170,14 +1182,6 @@ void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& c
 		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
 	}
 
-}
-
-int32_t DataReaderImpl::GetInstanceLostcounts(const std::shared_ptr<CacheChange>& cache)
-{
-	GUID_t guid = reader_->GetGuid();
-	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind)
-		return  0;
-	return history_->GetInstanceLostcounts(cache);
 }
 
 void DataReaderImpl::DeadlineTimeout()
@@ -1215,7 +1219,7 @@ bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 		return true;
 	}
 
-	Duration_t expirationTime = Conversion::TimeToDuration(cache->sourceTimespace) + publicationData.lifespan.duration;
+	Duration_t expirationTime = cache->sourceTimespace + publicationData.lifespan.duration;
 	Duration_t currentTime;
 	Duration_t::now(currentTime);
 
@@ -1232,45 +1236,45 @@ bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 	//	lifespanTimer_->Stop();
 	//}
 
-	Duration_t interval = expirationTime - currentTime;
-	lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
-	lifespanTimer_->ReStart();
+	//Duration_t interval = expirationTime - currentTime;
+	//lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
+	//lifespanTimer_->ReStart();
 	return true;
 }
 
-bool DataReaderImpl::LifespanTimeout()
-{
-	Duration_t currentTime;
-	Duration_t::now(currentTime);
-	std::shared_ptr<CacheChange> earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
-	while (earliestChange != nullptr) {
-
-		PublicationBuiltinTopicData publicationData;
-		reader_->GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(earliestChange->writerGuid));
-
-		if (publicationData.lifespan.duration == Duration_t(TIME_INFINITE))
-		{
-			break;
-		}
-
-		Duration_t expirationTime = Conversion::TimeToDuration(earliestChange->sourceTimespace) + publicationData.lifespan.duration;
-
-		/* 检查最早的报文缓存是否已过期（启动计时器的报文缓存可能已从历史记录中删除）*/
-		if (currentTime < expirationTime)
-		{
-			Duration_t interval = expirationTime - currentTime;
-			lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
-			return true;
-		}
-		else {
-			// 最早的报文缓存已过期，删除该报文。
-			//reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
-			//earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
-			break;
-		}
-	}
-	return false;
-}
+//bool DataReaderImpl::LifespanTimeout()
+//{
+//	Duration_t currentTime;
+//	Duration_t::now(currentTime);
+//	std::shared_ptr<CacheChange> earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+//	while (earliestChange != nullptr) {
+//
+//		PublicationBuiltinTopicData publicationData;
+//		reader_->GetMatchedPublicationData(publicationData, Conversion::ToInstanceHandle(earliestChange->writerGuid));
+//
+//		if (publicationData.lifespan.duration == Duration_t(TIME_INFINITE))
+//		{
+//			break;
+//		}
+//
+//		Duration_t expirationTime = Conversion::TimeToDuration(earliestChange->sourceTimespace) + publicationData.lifespan.duration;
+//
+//		/* 检查最早的报文缓存是否已过期（启动计时器的报文缓存可能已从历史记录中删除）*/
+//		if (currentTime < expirationTime)
+//		{
+//			Duration_t interval = expirationTime - currentTime;
+//			lifespanTimer_->UpdatePeriod(interval.ToNs() * 1e-6);
+//			return true;
+//		}
+//		else {
+//			// 最早的报文缓存已过期，删除该报文。
+//			//reader_->GetReaderCache()->RemoveChange(earliestChange->sequenceNumber);
+//			//earliestChange = reader_->GetReaderCache()->GetMinSourceTimespace();
+//			break;
+//		}
+//	}
+//	return false;
+//}
 
 ReturnCode_t DataReaderImpl::UpdateLivelinessChangedStatus(const InstanceHandle_t & handle, const bool & alive, const bool & ensure)
 {

@@ -292,7 +292,7 @@ struct TransportQosPolicy
 {
 	octet kinds;
 	TransportQosPolicy() 
-		: kinds(1) {
+		: kinds(TransportQosPolicyKind::TRANSPORT_UDPv4_QOS | TransportQosPolicyKind::TRANSPORT_SHM_QOS) {
 	};
 	void addTransport(TransportQosPolicyKind transport_kind) {
 		kinds |= static_cast<octet>(transport_kind);

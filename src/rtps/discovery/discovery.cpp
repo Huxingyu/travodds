@@ -8,8 +8,8 @@ USING_TRAVODDS_NAMESPACE;
 
 Discovery::Discovery(DomainParticipantImpl* domainParticipant, std::shared_ptr<ThreadPool> threadPool)
 	: domainParticipant_(domainParticipant),
-	  threadPool_(threadPool),
-	  builtinEndpointSet_(0)
+ 	  builtinEndpointSet_(0),
+	  threadPool_(threadPool)
 {
 }
 
@@ -103,7 +103,7 @@ void Discovery::InitBuiltinEndpoint()
 	builtinParticipantStatelessMessageDataReader_ = std::make_shared<DataReaderImpl>(dcpsParticipantStatelessMessage_.get(), readerQos, nullptr, STATUS_MASK_NONE, builtinSubScriber_.get(), nullptr);
 	
 	builtinParticipantStatelessMessageDataWriter_->secPlugin_ = &(GetParticipant()->secPlugin_);
-	GUID_t guid = GetParticipant()->get_guid_value();
+	GUID_t guid = GetParticipant()->get_guid();
 	guid.entityId = ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER;
 	builtinParticipantStatelessMessageDataWriter_->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
 	builtinParticipantStatelessMessageDataWriter_->GetSecAttributes();

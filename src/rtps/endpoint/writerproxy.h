@@ -211,6 +211,7 @@ public:
 	bool readyForSecComm_ = false;
 #endif // DDSSECURITY
 
+	SequenceNumber_t lastMaxRecvSeq;
 private:
 	GUID_t remoteWriterGuid_;
 	GUID_t remoteGroupGuid_;

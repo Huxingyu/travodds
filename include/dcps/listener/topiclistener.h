@@ -32,7 +32,8 @@ public:
      */
     virtual void on_inconsistent_topic(Topic* topic, const InconsistentTopicStatus& status)
     {
-	    
+        static_cast<void>(topic);
+        static_cast<void>(status);
     }
 };
 
