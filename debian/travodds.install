@@ -1,2 +1,2 @@
-usr/lib/travodds/libtravodds.so.*
+usr/lib/libtravodds.so.*
 debian/travodds.conf etc/ld.so.conf.d/
