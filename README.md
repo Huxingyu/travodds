@@ -1,96 +1,174 @@
-# travodds
+﻿# TravoDDS
 
-#### 介绍
-AGIROS开源社区自研DDS，研发开源数据分发通信中间件产品，实现完整的数据订阅和发布机制，提供15种QoS策略灵活配置；封装多种语言API接口，向上对接AGIROS提供功能接口；丰富配套工具链，界面化查询和访问统计信息；实现插件化架构，动态加载和卸载不同的功能模块；支持X86\ARM\Risc-V异构多平台，支持ubuntu22.04及以上、openEuler22.03及以上、国产麒麟主流操作系统。
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://gitee.com/agiros/travodds)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-#### 软件架构
+## 目录
 
-    --cmake 编译
-    --docs  文档
-    --include
-        --common     公共头文件
-            --memory        内存、内存池
-            --threads       线程
-            --log          日志    
-            --time          时间
-        --dcps       dcps层头文件
-            --domain         域模块
-            --publish       发布模块
-            --subscribe     订阅模块
-            --topic          主题模块
-            --base      基础设施      
-                --listener       监听器模块
-                --condition      条件等待集模块
-        --rtps       rtps层头文件
-            --endpoint       RTPS实体模块
-            --discovery      发现模块
-            --transport      传输模块
-            --historycache   数据缓存模块
-            --messages       报文封装解析模块
-        --qos       qos策略头文件
-        --security  安全头文件
-        --xml       xml配置解析头文件
-        --cdr       序列化和反序列化头文件
-        --type      数据类型头文件
+- [介绍](#介绍)
+- [关键特性](#关键特性)
+- [软件架构](#软件架构)
+- [快速开始](#快速开始)
+- [API 参考](#api-参考简要)
+- [测试](#测试)
+- [发布与打包](#发布与打包)
+- [文档](#文档)
+- [FAQ](#常见问题-faq)
+- [贡献指南](#贡献指南)
+- [常见配置与日志](#常见配置与日志)
+- [Changelog](#changelog)
+- [许可证](#许可证)
 
-    --src
-        --common     公共基础模块
-            --memory        内存、内存池
-            --threads       线程
-            --log           日志模块
-            --time      时间
-        --dcps       dcps模块
-            --domain        域模块
-            --publish       发布模块
-            --subscribe     订阅模块
-            --topic         主题模块
-            --base      基础设施      
-                --listener     监听器模块
-                --condition    条件等待集模块
-        --rtps       rtps模块
-            --endpoint      RTPS实体模块
-            --discovery     发现模块
-            --transport     传输模块
-            --historycache  数据缓存模块
-            --messages      报文封装解析模块
-        --qos         qos策略
-        --security    安全
-        --xml         xml配置解析
-        --cdr         序列化和反序列化
-        --type        数据类型    
+## 介绍
 
-    --test    测试框架与测试用例
-    --example 示例
-    --tools   脚本工具
-    --thirdparty 第三方依赖
-    --LICENSE
-    --README.md
-    --README.en.md
+travodds 是 AGIROS 开源社区自研的 DDS 数据分发通信中间件，支持完整的发布/订阅机制、15 种 QoS 策略、插件化架构、X86/ARM/RISC-V 异构平台、国产系统以及跨平台运行。
 
-#### 安装教程
+## 关键特性
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- 完整 DDS 数据生命周期：发现、连接、QoS 策略、数据传输、可靠性保障
+- 支持 15 种 QoS 策略灵活配置（可靠性、历史、持久性、寿命、延迟预算）
+- 支持 C/C++ API 以及向上对接 AGIROS 平台的接口集成
+- 插件化可扩展设计：运行时动态加载/卸载模块
+- 支持多平台：x86、ARM、RISC-V；Ubuntu、openEuler、国产麒麟等
+- 支持 TCP、UDP、共享内存传输方案
+- 安全框架：认证、访问控制与安全策略
 
-#### 使用说明
+## 软件架构
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- `cmake/` 生成配置
+- `include/` 公共头文件
+- `src/` 核心实现（common、dcps、rtps、qos、security、xml、cdr、type、xtypes）
+- `test/` 测试用例与单元测试
+- `example/` 示例代码
+- `tools/` 辅助脚本
+- `thirdparty/` 依赖库
+- `rpm/`、`debian/`、`rpm-agiros-loong/`、`debian-agiros-loong/` 打包脚本
 
-#### 参与贡献
+## 快速开始
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+### 1. 环境准备
 
-#### 特技
+- Linux (Ubuntu 22.04+/openEuler22.03+/国产麒麟)
+- CMake 3.16+
+- GCC/Clang
+- make（或使用 cmake --build）
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+### 2. 克隆仓库
+
+```bash
+git clone https://gitee.com/agiros/travodds.git
+cd travodds
+```
+
+### 3. 构建
+
+```bash
+mkdir -p build && cd build
+cmake ..
+make
+sudo make install
+```
+
+### 4. 运行示例（Hello World）
+
+```bash
+cd example/cpp/hello_world
+mkdir -p build && cd build
+cmake ..
+make
+./hello_world pub
+./hello_world sub
+```
+
+## 测试
+
+```bash
+cd test/unit_inside
+mkdir -p build && cd build
+cmake ..
+make
+unit_test
+```
+
+## API 参考（简要）
+
+1. DDS工厂接口：`TheParticipantFactory`
+2. 创建 DomainParticipant、Publisher/Subscriber
+3. 创建 Topic、DataWriter/DataReader
+4. 设置 QoS：`set_qos()`
+5. 数据读写：`write()`, `read()` 或回调监听
+6. 资源释放：`delete_datawriter()`, `delete_datareader()`, `delete_contained_entities()`
+
+> 详细 API 请参见 `include/` 头文件与 `docs/`。
+
+## 常见配置与日志
+
+- 日志级别：`debug` / `info` / `warn` / `error`
+
+## 发布与打包
+
+- Debian/Ubuntu: `dpkg.sh` 或 `debian/` 下规则
+- RPM: `rpm.sh` 或 `rpm/` 下规范
+- AGIROS: `debian-agiros-loong/`、`rpm-agiros-loong/`
+- 自动化打包: shell 运行对应 `*.sh`，即可完成对应自动打包
+
+## 文档
+
+- `docs/` 业务文档
+- `README.en.md` 英文说明
+
+## 常见问题 (FAQ)
+
+Q: CMake 项目工程中如何快速加载 `TravoDDS` 库？
+A: 请参考 `example/cpp/hello_world/CMakeLists.txt`。
+
+```cmake
+find_package(TRAVODDS 1 REQUIRED)
+# include directories and library directories (if needed) from TRAVODDS package
+# target_link_libraries 可以直接使用导出的目标
+# 例如：
+# target_link_libraries(${PROJECT_NAME} PRIVATE TRAVODDS::TRAVODDS)
+
+# 若需手动设置：
+# include_directories(${TRAVODDS_INCLUDE_DIRS})
+# link_directories(${TRAVODDS_LIBRARIES_DIRS})
+```
+
+Q: `example/cpp/hello_world` 下运行失败？
+A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd build && cmake .. && make`，然后再执行 `./hello_world pub` 或 `./hello_world sub`。
+
+## 贡献指南
+
+1. Fork 本仓库
+2. 新建 `feat/<your-feature>` 分支
+3. 提交代码并推送
+4. 创建 Pull Request 并描述变更
+
+### 代码规范
+
+- 遵循项目 CMake 和 clang-format 规则
+- 提交前运行单元测试
+
+## Changelog
+
+### [1.1.0] - 2026-04-03
+
+#### 新增功能 (Added)
+- 
+
+#### 修复 (Fixed)
+- 
+
+#### 改进 (Changed)
+- 
+
+#### 移除 (Removed)
+- 
+
+#### 文档 (Documentation)
+- 添加 README.md 和 README.en.md
+
+
+## 许可证
+
+本项目采用 [Apache License 2.0](LICENSE) 许可证。
