@@ -50,7 +50,7 @@ cd build
 make install DESTDIR=%{buildroot}
 
 # 确保目标目录存在
-install -d %{buildroot}%{Installprefix}/lib/travodds
+install -d %{buildroot}%{Installprefix}/lib/
 
 # 添加ld.so.conf.d配置
 install -Dm644 /dev/null %{buildroot}/etc/ld.so.conf.d/travodds.conf
