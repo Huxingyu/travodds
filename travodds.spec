@@ -42,7 +42,7 @@ cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=%{Installprefix} \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    -DAPPEND_PROJECT_NAME_TO_INSTALL=OFF
+    #-DAPPEND_PROJECT_NAME_TO_INSTALL=OFF
 make %{?_smp_mflags}
 
 %install
