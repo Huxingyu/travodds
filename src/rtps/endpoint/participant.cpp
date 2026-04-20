@@ -947,9 +947,18 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 
 #ifdef DDSSECURITY
 	WriterSampleList* newWriter = nullptr;
-	if ((isSecure && dr->secAttributes_.is_discovery_protected) || 
-		!dr->secAttributes_.is_discovery_protected) {
-		newWriter = addReaderMatchWithSecurity(reader, pubData);
+	
+	//if ((isSecure && dr->secAttributes_.is_discovery_protected) || 
+	//	!dr->secAttributes_.is_discovery_protected) {
+	//	newWriter = addReaderMatchWithSecurity(reader, pubData);
+	//}
+	// 用户自定义实体涉及的安全相关的发现匹配流程
+	GUID_t drGuid = Conversion::ToGuid(dr->get_instance_handle());
+	if (dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity()) {
+		newWriter = addReaderMatchWithSecurity(reader, pubData, isSecure);
+		if (!newWriter) {
+			return;
+		}
 	}
 #endif // DDSSECURITY
 
@@ -1423,51 +1432,51 @@ bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const Stri
 	return false;
 }
 #ifdef DDSSECURITY
-WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData)
+WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure)
 {
-	// 安全扩展accesscontrol  check_remote_datawriter
 	DataReaderImpl* dr = reader->GetRelatedDataReader();
+	if (!isSecure && dr->secAttributes_.is_discovery_protected) {
+		return nullptr; //开启端点保护情况会过滤掉来自未开启安全的数据写者的发现报文
+	}
+
+	// 访问控制check_remote_datawriter
 	GUID_t drGuid = Conversion::ToGuid(dr->get_instance_handle());
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(dr->getParent()->get_participant());
-	if (dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
+	if (dr->secAttributes_.is_write_protected)
 	{
-		if (dr->secAttributes_.is_write_protected)
+		SecurityException secExce;
+		BuiltinTopicKey_t participant_key = pubData.ddsPublicationData.participant_key;
+		GuidPrefix_t remote_prefix = Conversion::ToGuid(participant_key).prefix;
+		PermissionsHandle remotePermissionsHandle = SEC_NIL_HANDLE;
+		std::map<GuidPrefix_t, DiscoveryDPInfo*>& discParts = dp->GetDiscovery()->GetSpdp()->discParts_;
+		auto dpInfoIter = discParts.find(remote_prefix);
+		if (dpInfoIter == discParts.end())
 		{
-			SecurityException secExce;
-			BuiltinTopicKey_t participant_key = pubData.ddsPublicationData.participant_key;
-			GuidPrefix_t remote_prefix = Conversion::ToGuid(participant_key).prefix;
-			PermissionsHandle remotePermissionsHandle = SEC_NIL_HANDLE;
-			std::map<GuidPrefix_t, DiscoveryDPInfo*>& discParts = dp->GetDiscovery()->GetSpdp()->discParts_;
-			auto dpInfoIter = discParts.find(remote_prefix);
-			if (dpInfoIter == discParts.end())
-			{
-				remotePermissionsHandle = SEC_NIL_HANDLE;
-			}
-			else if (dpInfoIter->second->enableDDSSec_)
-			{
-				remotePermissionsHandle = dpInfoIter->second->permissionsHdl_;
-			}
-			if (!dp->secPlugin_.access_control->check_remote_datawriter(
-				remotePermissionsHandle,
-				dp->GetDomainId(),
-				&pubData.ddsPublicationData,
-				&secExce))
-			{
-				TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: rejected by access control plugin."
-					"\n  Code: %d"
-					"\n  Minor code: %d"
-					"\n  Message: %s",
-					secExce.code,
-					secExce.minor_code,
-					secExce.message);
-				return nullptr;
-			}
+			remotePermissionsHandle = SEC_NIL_HANDLE;
+		}
+		else if (dpInfoIter->second->enableDDSSec_)
+		{
+			remotePermissionsHandle = dpInfoIter->second->permissionsHdl_;
+		}
+		if (!dp->secPlugin_.access_control->check_remote_datawriter(
+			remotePermissionsHandle,
+			dp->GetDomainId(),
+			&pubData.ddsPublicationData,
+			&secExce))
+		{
+			TRAVODDS_LOG(LOG_ERROR, "Match Writer failed: rejected by access control plugin."
+				"\n  Code: %d"
+				"\n  Minor code: %d"
+				"\n  Message: %s",
+				secExce.code,
+				secExce.minor_code,
+				secExce.message);
+			return nullptr;
 		}
 	}
 
-	// 匹配的远端数据写者是否和本地数据读者的域参与者安全属性是否一致
-	if (dp->enableDDSSec_ &&
-		dr->enableSec_ && !drGuid.IsSecureBuiltinEntity() && drGuid.IsUserDefinedEntity())
+	// 端点发现保护下校验掩码
+	if(isSecure && dr->secAttributes_.is_discovery_protected)
 	{
 		EndpointSecurityAttributesMask drSecAttrMask =
 			EndpointSecurityAttributesToMask(&dr->secAttributes_);
@@ -1486,6 +1495,7 @@ WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader
 		}
 	}
 
+	//端点密钥交换流程
 	WriterSampleList* newWriter = new WriterSampleList;
 	GUID_t writerId = Conversion::ToGuid(pubData.ddsPublicationData.key);
 	newWriter->writerId = writerId;

@@ -51,15 +51,16 @@ void StatefulWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 void StatefulWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure)
 {
 	DataWriterImpl* dw = datawriter_;
-	if (!isSecure && dw->statistic_.secAttributes.is_discovery_protected && guid_.IsUserDefinedEntity()) { //开启保护但收到的是普通的发现数据
+	//开启保护但收到的是普通的发现数据
+	if (!isSecure && dw->statistic_.secAttributes.is_discovery_protected && guid_.IsUserDefinedEntity()) { 
 		return;
 	}
 	GUID_t dwGuid = Conversion::ToGuid(dw->get_instance_handle());
 	GUID_t remoteDrGuid = Conversion::ToGuid(subData.ddsSubscriptionData.key);
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(dw->GetParent()->get_participant());
+	//访问控制check_remote_datareader
 	if (dp->enableDDSSec_ && dwGuid.IsUserDefinedEntity()) {
 		if (dw->statistic_.secAttributes.is_read_protected) {
-			// 检查这个匹配的远端读者的安全属性check_remote_datareader
 			SecurityException secExce;
 			PermissionsHandle remotePermissionsHandle = SEC_NIL_HANDLE;
 			DomainParticipantImpl* participant = dynamic_cast<DomainParticipantImpl*>(dw->GetParent()->get_participant());
@@ -95,7 +96,8 @@ void StatefulWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& su
 		}
 	}
 
-	if (dp->enableDDSSec_ && dwGuid.IsUserDefinedEntity())
+	// 开启端点保护才会开启掩码校验
+	if (dp->enableDDSSec_ && dwGuid.IsUserDefinedEntity() && dw->statistic_.secAttributes.is_discovery_protected)
 	{
 	    EndpointSecurityAttributesMask dwSecAttrMask =
 	        EndpointSecurityAttributesToMask(&dw->statistic_.secAttributes);
