@@ -936,10 +936,6 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		return;
 	}
 
-	if (pubData.ddsPublicationData.type_name == "HelloWorld") {
-		int a = 0;
-	}
-
 	std::set<QosPolicyId_t> qosSeq;
 	bool ret = Match(pubData.ddsPublicationData, subData, qosSeq);
 	if (!ret) {
