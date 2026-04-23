@@ -960,10 +960,10 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	uint32_t lengthGapMsgBefore = 0;
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected
-		&& guid_.IsUserDefinedEntity();
+		&& (guid_.IsUserDefinedEntity() || guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER);
 	bool encodeRtpsMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.rtpsMsgProtected
-		&& guid_.IsUserDefinedEntity();
+		&& (guid_.IsUserDefinedEntity() || guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER);
 	//encodeSubMsg = false;
 	//encodeRtpsMsg = false;
 	SerializedBuffer encodeBufffer; //加密情况发送的buffer
@@ -1241,10 +1241,10 @@ void StatefulWriter::SendGap(const SeqNumberVec& seqVec, std::shared_ptr<ReaderP
 #ifdef DDSSECURITY
 	bool encodeSubMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.secAttributes.is_submessage_protected
-		&& guid_.IsUserDefinedEntity();
+		&& (guid_.IsUserDefinedEntity() || guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER);
 	bool encodeRtpsMsg = datawriter_->statistic_.enableSec
 		&& datawriter_->statistic_.rtpsMsgProtected
-		&& guid_.IsUserDefinedEntity();
+		&& (guid_.IsUserDefinedEntity() || guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER);
 	SerializedBuffer encodeBufffer; //加密情况发送的buffer
 	SerializedBuffer tmpPlainBuffer;
 	SerializedBuffer tmpEncodeBuffer; //临时存储加密后缓冲，拷贝到encodeData后释放

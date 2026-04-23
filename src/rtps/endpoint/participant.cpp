@@ -726,8 +726,9 @@ ReturnCode_t Participant::AddLocalWriter(std::shared_ptr<Writer> writer)
 {
 	for (auto& remoteReaderData : remoteReaders_) {
 #ifdef DDSSECURITY
+		//remoteReaderData是否来自安全相关实体
 		bool isSecure = remoteReaderData.second.ddsSubscriptionData.security_info.endpoint_security_attributes &
-			PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
+			ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
 		addWriterMatch(writer, remoteReaderData.second, isSecure);
 #else
 		addWriterMatch(writer, remoteReaderData.second);
@@ -741,7 +742,7 @@ ReturnCode_t Participant::AddLocalReader(std::shared_ptr<Reader> reader)
 	for (auto& remoteWriterData : remoteWriters_) {
 #ifdef DDSSECURITY
 		bool isSecure = remoteWriterData.second.ddsPublicationData.security_info.endpoint_security_attributes & 
-			PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
+			ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED;
 		addReaderMatch(reader, remoteWriterData.second, isSecure);
 #else
 		addReaderMatch(reader, remoteWriterData.second);
@@ -933,6 +934,10 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		const_cast<TopicImpl*>(topicImpl)->update_inconsistent_topic_status();
 		TRAVODDS_LOG(LOG_ERROR, "remote dw key = %x ,but local dr key = %x", pubData.remoteWriterGuid.entityId.entityKind, reader->GetGuid().entityId.entityKind);
 		return;
+	}
+
+	if (pubData.ddsPublicationData.type_name == "HelloWorld") {
+		int a = 0;
 	}
 
 	std::set<QosPolicyId_t> qosSeq;
@@ -1434,6 +1439,7 @@ bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const Stri
 #ifdef DDSSECURITY
 WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure)
 {
+	std::cout << "addReaderMatchWithSecurity" << std::endl;
 	DataReaderImpl* dr = reader->GetRelatedDataReader();
 	if (!isSecure && dr->secAttributes_.is_discovery_protected) {
 		return nullptr; //开启端点保护情况会过滤掉来自未开启安全的数据写者的发现报文
@@ -1528,6 +1534,7 @@ WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader
 			if (drGuid.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_READER)
 			{
 				ParticipantGenericMessage cryptoTokensSample;
+				std::cout << "create_local_datareader_crypto_tokens" << std::endl;
 				if (!dr->secPlugin_->crypto_key_exchange->create_local_datareader_crypto_tokens(
 					&cryptoTokensSample.messageData,
 					dr->cryptoHdl_,
