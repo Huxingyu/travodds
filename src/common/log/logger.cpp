@@ -63,7 +63,6 @@ private:
     uint32_t consoleMask;
     uint32_t fileMask;
     static const size_t MAX_FILE_SIZE = 1024 * 1024; // 1MB
-
     std::string getProcessName() {
 #ifdef _WIN32
         // Windows平台: 使用GetModuleFileNameA获取完整路径
@@ -238,6 +237,11 @@ public:
         stop();
     }
 
+    static AsyncLogger& getInstance() {
+        static AsyncLogger s_loggerInst;
+        return s_loggerInst;
+    }
+
     void start() {
         if (!running) {
             running = true;
@@ -283,13 +287,8 @@ public:
     }
 };
 
-static std::unique_ptr<AsyncLogger> g_logger;
-
 int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
 {
-    if (g_logger) {
-        return 0;
-    }
     // 根据环境变量（TRAVODDS_LOG_MASK）值来设置日志掩码
     // 环境变量格式: TRAVODDS_LOG_MASK=console:0xF,file:0xF
     // 或者: TRAVODDS_LOG_CONSOLE_MASK=0xF 和 TRAVODDS_LOG_FILE_MASK=0xF
@@ -426,19 +425,14 @@ int32_t LogInitial(uint32_t consoleMask, uint32_t fileMask)
     }
 #endif
 
-    g_logger.reset(new AsyncLogger());
-    g_logger->setMasks(finalConsoleMask, finalFileMask);
-    g_logger->start();
+    AsyncLogger::getInstance().setMasks(finalConsoleMask, finalFileMask);
+    AsyncLogger::getInstance().start();
     return 0;
 }
 
 int32_t LogDestroy()
 {
-    if (g_logger) {
-        g_logger->stop();
-        g_logger.reset();
-    }
-    
+    AsyncLogger::getInstance().stop();
     return 0;
 }
 
@@ -446,8 +440,8 @@ void LogToConsole(LogType type, const char* file, const char* func,
     uint32_t line, const char* format, ...)
 {
     LogInitial();
-    bool toConsole = g_logger->shouldLogToConsole(type);
-    bool toFile = g_logger->shouldLogToFile(type);
+    bool toConsole = AsyncLogger::getInstance().shouldLogToConsole(type);
+    bool toFile = AsyncLogger::getInstance().shouldLogToFile(type);
     
     if (!toConsole && !toFile) {
         return;
@@ -504,7 +498,7 @@ void LogToConsole(LogType type, const char* file, const char* func,
         }
     }
 
-    g_logger->log(record);
+    AsyncLogger::getInstance().log(record);
 }
 
 TRAVODDS_NAMESPACE_END

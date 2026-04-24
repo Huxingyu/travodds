@@ -120,10 +120,8 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 	datawriter = datawriterPtr.get();
 
 #ifdef DDSSECURITY
-	//数据读者获取安全属性
-	datawriterPtr->GetSecAttributes();
-	//填充缓存的builtinSecureData_
-	datawriterPtr->FillSecureData();
+	datawriterPtr->GetSecAttributes(); //数据读者获取安全属性
+	datawriterPtr->FillSecureData(); //填充带保护的端点发现报文中的security_info
 #endif
 
 	{

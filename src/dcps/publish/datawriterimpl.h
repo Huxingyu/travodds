@@ -585,7 +585,7 @@ public:
 	std::vector<DatareaderCryptoHandle> secReaders_;
 	std::map<GuidPrefix_t, DatareaderCryptoHandle> secReadersMap_;
 	SecurityPluginInstanceImpl* dpSecPlugin_ = NULL;
-	//TODO 安全扩展，维护几个远端的guid和信息的map
+	//安全扩展，维护几个远端的guid和信息的map
 	RemoteReaderList remoteReaders_;
 #endif // DDSSECURITY
 

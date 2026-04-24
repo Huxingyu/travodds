@@ -804,10 +804,7 @@ ReturnCode_t DataWriterImpl::enable()
 	std::shared_ptr<Discovery> discovery = domainParticipant->GetDiscovery();
 #ifdef DDSSECURITY
 	if ((builtinSecureData_.security_info.endpoint_security_attributes & 
-		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
-		//DiscoveredWriterData writerData;
-		//writerData.ddsPublicationData = GetBuiltinTopicSecureData();
-		//discovery->WritePublicationData(writerData);
+		ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
 		DiscoveredWriterSecureData writerSecureData;
 		writerSecureData.ddsPublicationData = GetBuiltinTopicSecureData();
 		discovery->WritePublicationSecureData(writerSecureData);
@@ -1202,16 +1199,18 @@ ReturnCode_t DataWriterImpl::GetSecAttributes()
 
 ReturnCode_t DataWriterImpl::FillSecureData()
 {
-	if (statistic_.enableSec) {
-		builtinSecureData_.security_info.endpoint_security_attributes =
-			EndpointSecurityAttributesToMask(&statistic_.secAttributes);
-		builtinSecureData_.security_info.plugin_endpoint_security_attributes = statistic_.secAttributes.plugin_endpoint_attributes;
+	//端点保护下根据实体属性初始化builtinSecureData_的security_info 否则用的builtinData_ 不需要初始化
+	if (statistic_.secAttributes.is_discovery_protected) {
+		if (statistic_.enableSec) {
+			builtinSecureData_.security_info.endpoint_security_attributes =
+				EndpointSecurityAttributesToMask(&statistic_.secAttributes);
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = statistic_.secAttributes.plugin_endpoint_attributes;
+		}
+		else
+		{
+			builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
+		}
 	}
-	else
-	{
-		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
-	}
-	//builtinSecureData_.protected_discovery = statistic_.secAttributes.is_discovery_protected;
 	return RETCODE_OK;
 }
 
