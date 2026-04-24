@@ -1302,6 +1302,7 @@ void Sedp::ReceiveParticipantGenericMessageData(ParticipantGenericMessage& data)
 			spdp_->RemoveDiscoveryDPInfoFromDiscParts(guidPrefix);
 			return;
 		}
+		//TRAVODDS_LOG(LOG_INFO, "get_shared_secret success.");
 		// try to get and exchange crypto tokens
 		dpInfo->cryptoHdl_ = dp->secPlugin_.crypto_key_factory->register_matched_remote_participant(
 			dpInfo->identityHdl_,

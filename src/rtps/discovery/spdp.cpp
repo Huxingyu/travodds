@@ -734,7 +734,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 					RemoveDiscoveryDPInfoFromDiscParts(Conversion::ToGuid(newDPInfo->pData_.ddsParticipantData.key).prefix);
 					return;
 				}
-				TRAVODDS_LOG(LOG_INFO, "Authenticating get_shared_secret.");
 				int ret = ValidateRemoteParticipant(newDPInfo);
 				if (ret != 0)
 				{
