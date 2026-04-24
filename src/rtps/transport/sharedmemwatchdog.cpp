@@ -85,6 +85,9 @@ ReturnCode_t SharedMemWatchdog::InsertPortProcess(const uint32_t& port) const
 bool SharedMemWatchdog::ErasePort(const uint32_t& port) const
 {
 	try {
+		if (sharedList_ == nullptr) {
+			return true;
+		}
 		scoped_lock<robust_mutex>  lock(sharedList_->mutex);
 		auto it = sharedList_->portprocessidmap.find(port);
 		if (it != sharedList_->portprocessidmap.end()) {

@@ -368,7 +368,7 @@ ReturnCode_t Participant::DeleteWriter(const InstanceHandle_t& handle)
 		itor->second->GetFlowController()->UnregisterWriter(itor->second);
 		writers_.erase(itor);
 	} else {
-		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -403,7 +403,7 @@ ReturnCode_t Participant::DeleteReader(const InstanceHandle_t& handle)
 		}
 		readers_.erase(itor);
 	} else {
-		TRAVODDS_LOG(LOG_ERROR, "handle not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "handle not exist");
 		return RETCODE_ERROR;
 	}
 	{
@@ -419,7 +419,7 @@ std::shared_ptr<Writer> Participant::GetWriter(const EntityId_t & EntityID)
 	std::unique_lock<std::mutex> lock(mtxWriters_);
 	
 	if (0 == writers_.count(EntityID)) {
-		TRAVODDS_LOG(LOG_ERROR, "EntityID not exist");
+		TRAVODDS_LOG(LOG_DEBUG, "EntityID not exist");
 		return nullptr;
 	}
 		
@@ -1290,7 +1290,7 @@ ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubDat
 
 	auto itor = remoteWriters_.find(guid);
 	if (itor == remoteWriters_.end()) {
-		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_DEBUG, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	pubData = itor->second.ddsPublicationData;
@@ -1322,7 +1322,7 @@ ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subDa
 
 	auto itor = remoteReaders_.find(guid);
 	if (itor == remoteReaders_.end()) {
-		TRAVODDS_LOG(LOG_ERROR, "handle not exist")
+		TRAVODDS_LOG(LOG_DEBUG, "handle not exist")
 		return RETCODE_BAD_PARAMETER;
 	}
 	subData = itor->second.ddsSubscriptionData;
