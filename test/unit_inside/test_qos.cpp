@@ -4443,8 +4443,11 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 	//EXPECT_EQ(participant->delete_contentfilteredtopic(cft), RETCODE_OK);
 	//EXPECT_EQ(participant->delete_topic(base_topic), RETCODE_OK);
 
-	// 9. 删除域参与者
-	factory->delete_participant(participant);
+	// 9. 删除所有子实体
+	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
+
+	// 10. 删除域参与者
+	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 10. finalize_instance
 	factory->finalize();
@@ -4545,8 +4548,11 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	EXPECT_EQ(participant->delete_topic(life_topic), RETCODE_OK);
 	EXPECT_EQ(participant->delete_topic(topic_same1), RETCODE_OK);
 
+	// 9. 删除所有子实体
+	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
+
 	// 10. 删除域参与者
-	factory->delete_participant(participant);
+	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 11. finalize_instance
 	factory->finalize();

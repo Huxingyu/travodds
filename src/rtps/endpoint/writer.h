@@ -159,10 +159,12 @@ public:
 	 *  虚函数，具体功能在子类中根据需要实现。
 	 *
 	 * @param [in] subData 远端Reader配置信息。
+	 * 
+	 * @param [in] isSecure 是否来自安全实体
 	 */
 	virtual void MatchedReaderAdd(const DiscoveredReaderData &subData) = 0;
 #ifdef DDSSECURITY
-	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderSecureData& subData, bool isSecure) = 0;
+	virtual void MatchedReaderAddWithSecurity(const DiscoveredReaderData& subData, bool isSecure) = 0;
 #endif // DDSSECURITY
 
 	/**

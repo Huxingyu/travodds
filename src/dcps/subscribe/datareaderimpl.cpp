@@ -837,9 +837,8 @@ ReturnCode_t DataReaderImpl::enable()
 	readerData.ddsSubscriptionData = GetBuiltinTopicSecureData();
 	DiscoveredReaderSecureData readerSecureData;
 	readerSecureData.ddsSubscriptionData = GetBuiltinTopicSecureData();
-	//readerSecureData.remoteReaderGuid = reader_->GetGuid();
 	if ((builtinSecureData_.security_info.endpoint_security_attributes &
-		PARTICIPANT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
+		ENDPOINT_SECURITY_ATTRIBUTES_FLAG_IS_DISCOVERY_PROTECTED) != 0) {
 		discovery->WriteSubscriptionSecureData(readerSecureData);
 	}
 	else {
@@ -1121,16 +1120,17 @@ ParticipantCryptoHandle DataReaderImpl::GetRemoteParticipantCryptoHandle(Spdp* s
 
 ReturnCode_t DataReaderImpl::FillSecureData()
 {
-	if (enableSec_) {
-		builtinSecureData_.security_info.endpoint_security_attributes =
-			EndpointSecurityAttributesToMask(&secAttributes_);
-		builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
+	if (secAttributes_.is_discovery_protected) {
+		if (enableSec_) {
+			builtinSecureData_.security_info.endpoint_security_attributes =
+				EndpointSecurityAttributesToMask(&secAttributes_);
+			builtinSecureData_.security_info.plugin_endpoint_security_attributes = secAttributes_.plugin_endpoint_attributes;
+		}
+		else
+		{
+			builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
+		}
 	}
-	else
-	{
-		builtinSecureData_.security_info = ENDPOINT_SECURITY_ATTRIBUTES_INFO_DEFAULT;
-	}
-	//builtinSecureData_.protected_discovery = secAttributes_.is_discovery_protected;
 	return RETCODE_OK;
 }
 

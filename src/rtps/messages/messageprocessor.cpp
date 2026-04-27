@@ -513,7 +513,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 {
 	if (message[0] != 'R' || message[1] != 'T' ||
 		message[2] != 'P' || message[3] != 'S') {
-		TRAVODDS_LOG(LOG_ERROR, "Msg received with no RTPS in header, ignoring...");
+		TRAVODDS_LOG(LOG_DEBUG, "Msg received with no RTPS in header, ignoring...");
 		return RETCODE_ERROR;
 	}
 
@@ -545,7 +545,7 @@ ReturnCode_t MessageProcessor::InterpretSubmessage(std::shared_ptr<Message_t> me
 
  	ret = InterpretMessageHeader(message->buffer, messageReceiver);
 	if (ret != RETCODE_OK) {
-		TRAVODDS_LOG(LOG_ERROR, "InterpretMessageHeader Err ret = %d", ret);
+		TRAVODDS_LOG(LOG_DEBUG, "InterpretMessageHeader Err ret = %d", ret);
 		return ret;
 	}
 	message->length -= sizeof(MessageHeader_t);

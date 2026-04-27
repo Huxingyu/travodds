@@ -84,7 +84,7 @@ void StatelessWriter::MatchedReaderAddWithSecurity(const DiscoveredReaderData& s
 		}
 	}
 
-	if (dp->enableDDSSec_ && dwGuid.IsUserDefinedEntity())
+	if (dp->enableDDSSec_ && dwGuid.IsUserDefinedEntity() && dw->statistic_.secAttributes.is_discovery_protected)
 	{
 		EndpointSecurityAttributesMask dwSecAttrMask =
 			EndpointSecurityAttributesToMask(&dw->statistic_.secAttributes);
