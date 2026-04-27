@@ -446,8 +446,14 @@ public:
 	bool RemoteEntityIsMatched(const EntityId_t& entity, const InstanceHandle_t& remotehandle) const;
 
 #ifdef DDSSECURITY
-	// addReaderMatch中涉及安全部分的工作
-	WriterSampleList* addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData);
+	/**
+	 * @brief 匹配远端写者中涉及安全部分的工作。
+	 *
+	 * isSecure 是否来源安全内置实体
+	 * 
+	 * @return 线程池指针。
+	 */
+	WriterSampleList* addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure);
 
 	std::map<EntityId_t, std::shared_ptr<Writer>>* GetWriterMap()
 	{

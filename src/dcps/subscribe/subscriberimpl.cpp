@@ -117,7 +117,7 @@ DataReader *SubscriberImpl::create_datareader(TopicDescription* a_topic, const D
 	//InstanceHandle_t handle = DomainParticipantImpl::GenerateInstanceHandle(readrPtr->GetGuid());
     datareaderPtr->SetInstanceHandle(Conversion::ToInstanceHandle(guid));
 #ifdef DDSSECURITY
-//数据读者获取安全属性并填充掩码
+    //数据读者获取安全属性并填充掩码
     datareaderPtr->GetSecAttributes();
     datareaderPtr->FillSecureData();
 #endif // DDSSCURITY
