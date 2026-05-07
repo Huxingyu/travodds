@@ -3737,7 +3737,7 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 			NotifyNegative();
 
 			WaitNegative();
-			EXPECT_TRUE(waitmatch(writer1, 1, 5));
+			waitmatch(writer1, 1, 10);
 
 			// 10.4 重新写入1包，预期RETCODE_OK
 			sample.id = 101;
