@@ -1824,7 +1824,7 @@ bool DDSXMLRepo::parseTransportQosPolicy(XMLElement* element, TransportQosPolicy
     if (!element) {
         return true;
     }
-    qos.removeTransport(TRANSPORT_UDPv4_QOS);
+    qos.kinds = 0;
     for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "kinds") == 0) {
