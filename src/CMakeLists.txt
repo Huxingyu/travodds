@@ -62,7 +62,7 @@ set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     )
 
 #添加安全宏
-if(ENABLE_DDS_SECURITY)
+if(SECURITY)
     message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
     target_compile_definitions(${LIB_TARGET_NAME}
     PRIVATE
