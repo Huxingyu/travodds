@@ -2041,7 +2041,7 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 
 			// 17. 等待被动端检查完成
 			NotifyNegative();
-			WaitNegative();
+			WaitNegative(20);
 
 			// 18. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
@@ -3600,7 +3600,70 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 	th_2.join();
 }
 
-TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
+TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_writer) {
+	// 1. 获取工厂单例
+	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
+	ASSERT_NE(factory, nullptr);
+
+	// 2. 创建DomainParticipant
+	DomainParticipant* participant = factory->create_participant(
+		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+	ASSERT_NE(participant, nullptr);
+
+	// 3. 注册TestModule::BasicData类型，并创建reliability_topic_name主题
+	TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
+	ASSERT_NE(type_support, nullptr);
+	EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
+
+	Topic* topic = participant->create_topic(
+		"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+	ASSERT_NE(topic, nullptr);
+
+	// 4. 创建Publisher
+	Publisher* publisher = participant->create_publisher(
+		PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+	ASSERT_NE(publisher, nullptr);
+
+	// 5. 创建自定义DataWriterQos对象1
+	DataWriterQos dw_qos1 = DATAWRITER_QOS_DEFAULT;
+	dw_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
+	dw_qos1.reliability.max_blocking_time.sec = 2;
+	dw_qos1.reliability.max_blocking_time.nanosec = 0;
+	dw_qos1.history.kind = KEEP_ALL_HISTORY_QOS;
+	dw_qos1.history.depth = 1; // depth ignored for KEEP_ALL
+	dw_qos1.resource_limits.max_samples = 10;
+	dw_qos1.resource_limits.max_samples_per_instance = 10;
+	dw_qos1.resource_limits.max_instances = 1;
+
+
+	// 7. 创建DataWriter1
+	DataWriter* writer1 = publisher->create_datawriter(
+		topic, dw_qos1, nullptr, STATUS_MASK_NONE);
+	ASSERT_NE(writer1, nullptr);
+
+	// 10.1 DataWriter1写入10包数据，预期成功
+	for (int i = 0; i < 10; ++i) {
+		TestModule::BasicData sample;
+		sample.id = i;
+		EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+	// 10.2继续写入1包，预期RETCODE_TIMEOUT
+	TestModule::BasicData sample;
+	sample.id = 100;
+	EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_TIMEOUT);
+
+	// 13. 删除所有子实体
+	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
+
+	// 14. 删除域参与者
+	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
+
+	// 15. finalize_instance
+	factory->finalize();
+}
+
+TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 	std::thread th_1(
 		[&]() {
 			// 2. 获取工厂单例
@@ -3634,41 +3697,26 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 			dr_qos1.resource_limits.max_samples_per_instance = 10;
 			dr_qos1.resource_limits.max_instances = 1;
 
-			// 7. 创建Listener1
-			BaseDataReaderListener listener1;
-			// 10. 等待主动端DataWriter写入完成
-			WaitPositive();
+
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
-				topic, dr_qos1, &listener1, STATUS_MASK_ALL);
+				topic, dr_qos1, nullptr, SAMPLE_REJECTED_STATUS);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. 等待DataReader1匹配完成
-			EXPECT_TRUE(waitmatch(reader1, 1, 5));
-
-			NotifyPositive();
-			WaitPositive();
-			EXPECT_EQ(listener1.wait_data_available(10000), 0);
-			// 11. DataReader1 take，预期10个样本
-			TestModule::BasicData data;
-			SampleInfo info;
-			EXPECT_EQ(reader1->read_next_sample(&data, info), RETCODE_OK);
-
-			NotifyPositive();
-
-			// 12. 等待DataWriter2写入完成
-			WaitPositive();
-
-			// 13. 等待sample_reject回调
-			EXPECT_EQ(listener1.wait_sample_rejected(10000), 0); // 成功
+			StatusCondition& sc = reader1->get_statuscondition();
+			WaitSet ws;
+			ws.attach_condition(sc), RETCODE_OK;
+			ConditionSeq active_conditions;
+			EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
 
 			NotifyPositive();
 
 			// 14. 检查SampleRejectStatus
 			SampleRejectedStatus reject_status;
 			EXPECT_EQ(reader1->get_sample_rejected_status(reject_status), RETCODE_OK);
-			EXPECT_GT(reject_status.total_count, 0);
-			EXPECT_EQ(reject_status.total_count_change, 0);    //on_sample_rejected回调已先一步读取并重置了该值
+			EXPECT_EQ(reject_status.total_count, 1);
+			EXPECT_EQ(reject_status.total_count_change, 1);
+			EXPECT_EQ(reject_status.last_reason, REJECTED_BY_SAMPLES_PER_INSTANCE_LIMIT);
 
 			// 15. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
@@ -3716,44 +3764,25 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy) {
 			dw_qos1.resource_limits.max_instances = 1;
 
 
-			// 7. 创建DataWriter1
+			// 6. 创建DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
-				topic, dw_qos1, nullptr, STATUS_MASK_NONE);
+				topic, dw_qos1, nullptr, PUBLICATION_MATCHED_STATUS);
 			ASSERT_NE(writer1, nullptr);
 
-			// 10.1 DataWriter1写入10包数据，预期成功
-			for (int i = 0; i < 10; ++i) {
-				TestModule::BasicData sample;
-				sample.id = i;
-				EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			}
-			// 10.2继续写入1包，预期RETCODE_TIMEOUT
-			TestModule::BasicData sample;
-			sample.id = 100;
-			EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_TIMEOUT);
-			
-			// 10.3 发送DataWriter写入完成信号
-			NotifyNegative();
 
-			WaitNegative();
-			waitmatch(writer1, 1, 10);
+			StatusCondition& sc = writer1->get_statuscondition();
+			WaitSet ws;
+			ws.attach_condition(sc), RETCODE_OK;
+			ConditionSeq active_conditions;
+			EXPECT_EQ(ws.wait(active_conditions,{10,0}), RETCODE_OK);
 
-			// 10.4 重新写入1包，预期RETCODE_OK
-			sample.id = 101;
-			EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
-			NotifyNegative();
-			WaitNegative();
+			// 预期RETCODE_OK
 			for (int i = 0; i < 11; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;
 				EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
-
-
-			// 12. 发送DataWriter2写入完成信号
-			NotifyNegative();
 
 			WaitNegative();
 
