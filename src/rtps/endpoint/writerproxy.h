@@ -85,13 +85,6 @@ public:
 	void MissingChangesUpdate(SequenceNumber_t lastAvailableSeqNum);
 
 	/**
-	 * @brief 更新序号为seqNum的发送请求为已接收。
-	 *
-	 * @param [in] seqNum 已接收请求序列号。
-	 */
-	void ReceivedChangeSet(SequenceNumber_t seqNum);
-
-	/**
 	 * @brief 获取GUID。
 	 *
 	 * @return GUID_t。
@@ -229,6 +222,8 @@ private:
 	SequenceNumber_t  insertSeq_;
 
 	std::map<SequenceNumber_t, ChangeFromWriter> changesFromWriters_;
+
+	std::mutex changesmtx_;
 	
 	std::shared_ptr<CacheChange> changes_from_writer;
 
