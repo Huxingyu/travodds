@@ -1,6 +1,7 @@
 #include "rtps/basictypertps.h"
 #include "security/datatypesupport.h"
 #include "security/participantgenericmessage.h"
+#include "common/log/logger.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 #ifdef DDSSECURITY
@@ -45,7 +46,7 @@ int BuiltinTopicKey_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
     //uint32_t tmpLength = 0;
     if (!cdr->serializeBaseTypeArray((int*)structData->value, sizeof(structData->value) / sizeof(int))) {
-        fprintf(stderr, "Serialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -55,7 +56,7 @@ int BuiltinTopicKey_tTypeSupport::deserialize_data(void* data, CdrDeserializer* 
     (void)endian;
     BuiltinTopicKey_t* structData = static_cast<BuiltinTopicKey_t*>(data);
     if (!cdr->deserializeBaseTypeArray((int*)structData->value, sizeof(structData->value) / sizeof(int))) {
-        fprintf(stderr, "Deserialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -92,11 +93,11 @@ ReturnCode_t BuiltinTopicKey_tTypeSupport::get_instancehandle(void* data, CdrSer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -154,11 +155,11 @@ int SequenceNumber_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
     (void)endian;
     SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
     if (!cdr->serializeBaseType(structData->low)) {
-        fprintf(stderr, "Serialization failed for field: structData->low\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->low\n");
         return -1;
     }
     if (!cdr->serializeBaseType(structData->high)) {
-        fprintf(stderr, "Serialization failed for field: structData->high\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->high\n");
         return -1;
     }
     return 0;
@@ -168,11 +169,11 @@ int SequenceNumber_tTypeSupport::deserialize_data(void* data, CdrDeserializer* c
     (void)endian;
     SequenceNumber_t* structData = static_cast<SequenceNumber_t*>(data);
     if (!cdr->deserializeBaseType(structData->low)) {
-        fprintf(stderr, "Deserialization failed for field: structData->low\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->low\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(structData->high)) {
-        fprintf(stderr, "Deserialization failed for field: structData->high\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->high\n");
         return -1;
     }
     return 0;
@@ -209,11 +210,11 @@ ReturnCode_t SequenceNumber_tTypeSupport::get_instancehandle(void* data, CdrSeri
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -269,11 +270,11 @@ int MessageIdentityTypeSupport::serialize_data(void* data, CdrSerializer* cdr, i
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
     //uint32_t tmpLength = 0;
     if (BuiltinTopicKey_tTypeSupport::get_instance()->serialize_data((void*)&structData->sourceGuid, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->sourceGuid\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->sourceGuid\n");
         return -1;
     }
     if (SequenceNumber_tTypeSupport::get_instance()->serialize_data((void*)&structData->sequenceNumber, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->sequenceNumber\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->sequenceNumber\n");
         return -1;
     }
     return 0;
@@ -282,11 +283,11 @@ int MessageIdentityTypeSupport::serialize_data(void* data, CdrSerializer* cdr, i
 int MessageIdentityTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     MessageIdentity* structData = static_cast<MessageIdentity*>(data);
     if (BuiltinTopicKey_tTypeSupport::get_instance()->deserialize_data(&structData->sourceGuid, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->sourceGuid\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->sourceGuid\n");
         return -1;
     }
     if (SequenceNumber_tTypeSupport::get_instance()->deserialize_data(&structData->sequenceNumber, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->sequenceNumber\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->sequenceNumber\n");
         return -1;
     }
     return 0;
@@ -323,11 +324,11 @@ ReturnCode_t MessageIdentityTypeSupport::get_instancehandle(void* data, CdrSeria
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -380,11 +381,11 @@ int Property_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int en
     (void)endian;
     Property_t* structData = static_cast<Property_t*>(data);
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     if (!cdr->serializeString(structData->value)) {
-        fprintf(stderr, "Serialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -394,11 +395,11 @@ int Property_tTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, in
     (void)endian;
     Property_t* structData = static_cast<Property_t*>(data);
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->value)) {
-        fprintf(stderr, "Deserialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -435,11 +436,11 @@ ReturnCode_t Property_tTypeSupport::get_instancehandle(void* data, CdrSerializer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -494,16 +495,16 @@ int BinaryProperty_tTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
     BinaryProperty_t* structData = static_cast<BinaryProperty_t*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     tmpLength = static_cast<uint32_t>(structData->value.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->value\n");
         return -1;
     }
     if (!cdr->serializeBaseTypeArray(structData->value.data(), static_cast<uint32_t>(structData->value.size()))) {
-        fprintf(stderr, "Serialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -517,16 +518,16 @@ int BinaryProperty_tTypeSupport::deserialize_data(void* data, CdrDeserializer* c
     //short tmpShortEnum = 0;
     //int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->value\n");
         return -1;
     }
     structData->value.resize(tmpLength);
     if (!cdr->deserializeBaseTypeArray(structData->value.data(), tmpLength)) {
-        fprintf(stderr, "Deserialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -563,11 +564,11 @@ ReturnCode_t BinaryProperty_tTypeSupport::get_instancehandle(void* data, CdrSeri
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;

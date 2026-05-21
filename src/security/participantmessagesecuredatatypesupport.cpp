@@ -1,4 +1,6 @@
 #include "participantmessagesecuredatatypesupport.h"
+#include "common/log/logger.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 
 ParticipantMessageSecureDataTypeSupport* ParticipantMessageSecureDataTypeSupport::get_instance() {
@@ -43,16 +45,16 @@ int ParticipantMessageSecureDataTypeSupport::serialize_data(void* data, CdrSeria
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeBaseTypeArray((char*)structData->m_kind, sizeof(structData->m_kind) / sizeof(char))) {
-        fprintf(stderr, "Serialization failed for field: structData->m_kind\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->m_kind\n");
         return -1;
     }
     tmpLength = static_cast<uint32_t>(structData->m_extraData.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->m_extraData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->m_extraData\n");
         return -1;
     }
     if (!cdr->serializeBaseTypeArray(structData->m_extraData.data(), static_cast<uint32_t>(structData->m_extraData.size()))) {
-        fprintf(stderr, "Serialization failed for field: structData->m_extraData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->m_extraData\n");
         return -1;
     }
     return 0;
@@ -63,16 +65,16 @@ int ParticipantMessageSecureDataTypeSupport::deserialize_data(void* data, CdrDes
     ParticipantMessageSecureData* structData = static_cast<ParticipantMessageSecureData*>(data);
     unsigned int tmpLength = 0;
     if (!cdr->deserializeBaseTypeArray((char*)structData->m_kind, sizeof(structData->m_kind) / sizeof(char))) {
-        fprintf(stderr, "Deserialization failed for field: structData->m_kind\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->m_kind\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->m_extraData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->m_extraData\n");
         return -1;
     }
     structData->m_extraData.resize(tmpLength);
     if (!cdr->deserializeBaseTypeArray(structData->m_extraData.data(), tmpLength)) {
-        fprintf(stderr, "Deserialization failed for field: structData->m_extraData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->m_extraData\n");
         return -1;
     }
     return 0;
@@ -109,11 +111,11 @@ ReturnCode_t ParticipantMessageSecureDataTypeSupport::get_instancehandle(void* d
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
