@@ -11,8 +11,9 @@
 //See the Mulan PSL v2 for more details.
 #ifndef CRYPTO_KEY_EXCHANGE_H
 #define CRYPTO_KEY_EXCHANGE_H
-#ifdef DDSSECURITY
+
 #include "security/crycommonsource.h"
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 class CryptoKeyExchange

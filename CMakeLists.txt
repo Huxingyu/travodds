@@ -103,12 +103,22 @@ option(BUILD_SHARED_LIBS "Create shared libraries by default" ON)
 ###############################################################################
 # 默认DDS 安全配置选项启用
 ###############################################################################
-option(SECURITY "Enable DDS Security features" OFF)
+option(SECURITY "Enable DDS Security features"  ON)
+set(DDSSECURITY ${SECURITY})
 
 ###############################################################################
 # 加载外部项目
 ###############################################################################
 #find_package(tinyxml2 REQUIRED)
+
+###############################################################################
+# 配置头文件 生成 travoDDS_dll.h 文件
+###############################################################################
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/travodds_dll.h.in
+    ${PROJECT_SOURCE_DIR}/include/travodds_dll.h
+    @ONLY
+)
 
 ###############################################################################
 # 编译库

@@ -12,12 +12,13 @@
 #ifndef ACCESS_CONTROL_H
 #define ACCESS_CONTROL_H
 
-#ifdef DDSSECURITY
+
 #include "security/securitycommon.h"
 #include "security/authenticationlistener.h"
 #include "type/basictype.h"
 #include "type/builtintopicdata.h"
 #include "qos/qos.h"
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 typedef DDSSecHandle PermissionsHandle;
