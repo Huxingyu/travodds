@@ -1,10 +1,11 @@
 #ifndef PARTICIPANT_GENERIC_MESSAGE_H
 #define PARTICIPANT_GENERIC_MESSAGE_H
 
-#ifdef DDSSECURITY
 #include "security/securitycommon.h"
 #include "rtps/basictypertps.h"
 #include <string>
+
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 typedef struct MessageIdentity

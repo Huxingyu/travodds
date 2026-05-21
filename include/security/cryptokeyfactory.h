@@ -12,9 +12,10 @@
 #ifndef CRYPTO_KEY_FACTORY_H
 #define CRYPTO_KEY_FACTORY_H
 
-#ifdef DDSSECURITY
+
 #include "security/crycommonsource.h"
 #include "security/propertyqospolicy.h"
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 class CryptoKeyFactory
