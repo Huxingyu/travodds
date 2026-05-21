@@ -53,6 +53,23 @@ else()
     set(LIB_TARGET_NAME ${PROJECT_NAME}static)
 endif()
 
+#添加安全宏
+if(SECURITY)
+    message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
+    set(DDSSECURITY ${SECURITY})
+else
+    message(STATUS "DDS Security disabled")
+endif()
+
+###############################################################################
+# 配置头文件 生成 travoDDS_dll.h 文件
+###############################################################################
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/travodds_dll.h.in
+    ${PROJECT_SOURCE_DIR}/include/travodds_dll.h
+    @ONLY
+)
+
 #创建库
 add_library(${LIB_TARGET_NAME} ${${PROJECT_NAME}_source_files})
 
