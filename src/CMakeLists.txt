@@ -53,6 +53,23 @@ else()
     set(LIB_TARGET_NAME ${PROJECT_NAME}static)
 endif()
 
+#添加安全宏
+if(SECURITY)
+    message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
+    set(DDSSECURITY ${SECURITY})
+else()
+    message(STATUS "DDS Security disabled")
+endif()
+
+###############################################################################
+# 配置头文件 生成 travoDDS_dll.h 文件
+###############################################################################
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/travodds_dll.h.in
+    ${PROJECT_SOURCE_DIR}/include/travodds_dll.h
+    @ONLY
+)
+
 #创建库
 add_library(${LIB_TARGET_NAME} ${${PROJECT_NAME}_source_files})
 
@@ -60,17 +77,6 @@ set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} 
     )
-
-#添加安全宏
-if(SECURITY)
-    message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
-    target_compile_definitions(${LIB_TARGET_NAME}
-    PRIVATE
-    DDSSECURITY
-    )
-else()
-    message(STATUS "DDS Security disabled")
-endif()
 
 option(INTERNAL_DEBUG "Activate developer debug messages" OFF)
 if(BUILD_SHARED_LIBS)

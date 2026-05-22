@@ -150,6 +150,9 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 - 提交前运行单元测试
 
 ## Changelog
+### [1.1.0] - 2026-05-21
+#### Changed
+- travodds_dll.h.in 设置成模板文件，需要添加的宏均模板加入
 ### [1.1.0] - 2026-05-18
 #### Fixed
 - 添加 WriterProxy 资源异步保护
