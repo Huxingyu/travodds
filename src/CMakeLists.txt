@@ -57,7 +57,7 @@ endif()
 if(SECURITY)
     message(STATUS "DDS Security enabled - DDSSECURITY macro will be defined")
     set(DDSSECURITY ${SECURITY})
-else
+else()
     message(STATUS "DDS Security disabled")
 endif()
 
