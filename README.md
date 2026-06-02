@@ -150,6 +150,11 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 - 提交前运行单元测试
 
 ## Changelog
+### [1.1.0] - 2026-06-02
+#### Fixed
+- 修复 ACK 和 HB 报文应答问题
+- 修复 SHM 新连接并行建立连接问题
+- 修复 SHM 旧连接释放问题
 ### [1.1.0] - 2026-05-21
 #### Changed
 - travodds_dll.h.in 设置成模板文件，需要添加的宏均模板加入

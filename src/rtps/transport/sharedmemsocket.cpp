@@ -60,14 +60,20 @@ bool SharedMemSocket::Connect(const std::string& destport)
 
 			int32_t pocessId = SysInfo::GetProcessIDStatic();
 
+			uint32_t expected = 0x10000;
+
 			if (sharedAcceptList->sockets.empty()) {
-				sharedAcceptList->sockets[sharedAcceptList->srcPort] = pocessId;
-				sharedAcceptList->srcPort = sharedAcceptList->srcPort;
+				sharedAcceptList->sockets[expected] = pocessId;
 			}
 			else {
-				uint32_t expected = 0x10000;
 				while(expected >= 0x10000)
 				{
+					auto srcit = sharedAcceptList->srcPorts.find(expected);
+					if (srcit != sharedAcceptList->srcPorts.end())
+					{
+						expected++;
+						continue;
+					}
 					auto it = sharedAcceptList->sockets.find(expected);
 					if (it == sharedAcceptList->sockets.end()) {
 						sharedAcceptList->sockets[expected] = pocessId;
@@ -78,20 +84,19 @@ bool SharedMemSocket::Connect(const std::string& destport)
 					}
 					expected++;
 				}
-			
-				sharedAcceptList->srcPort = expected;
+
 			}
-			port_ = sharedAcceptList->srcPort;
+			port_ = expected;
 			acceptPort_ = destport;
-			srcport = std::to_string(sharedAcceptList->srcPort);
+			srcport = std::to_string(expected);
 			sharedMemoryName_ = "TravoddsTransportMemory" + srcport + "-" + destport;
 			CleanupResources();
 			segment_ = std::make_unique<managed_shared_memory>(
 				create_only, sharedMemoryName_.data(), sharedMemSize_);
 
 			data_ = segment_->construct<Data>(objectName_)();
+			sharedAcceptList->srcPorts.insert(expected);
 		}
-		sharedAcceptList->connecting = true;
 		sharedAcceptList->condition.notify_one();
 		return true;
 	} catch (const interprocess_exception& e) {
@@ -255,7 +260,7 @@ void SharedMemSocket::ReadFromSharedMem() {
 		uint32_t currentreadpos = data_->readpos.load(std::memory_order_acquire);
 		uint32_t startpos = currentreadpos;
 		char* temp = data_->msg + startpos;
-		while (data_->usedBytes.load(std::memory_order_acquire) > 0) {
+		while (!shutdown_ && data_->usedBytes.load(std::memory_order_acquire) != 0) {
 			Message_t& msg = *reinterpret_cast<Message_t*>(temp);
 			if (msg.dataSize == uint32_t(~0)) {
 				startpos = 0;
@@ -272,4 +277,15 @@ void SharedMemSocket::ReadFromSharedMem() {
 		}
 	}
 	data_->refs.fetch_sub(1, std::memory_order_release);
+}
+
+void SharedMemSocket::SetNull()
+{
+	shutdown_ = true;
+	isClosed_ = true;
+	port_ = 0;
+	acceptPort_.clear();
+	sharedMemoryName_.clear();
+	segment_.reset();
+	data_ = nullptr;
 }
