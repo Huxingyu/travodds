@@ -18,6 +18,7 @@
 
 #include "boost/interprocess/allocators/allocator.hpp"
 #include "boost/interprocess/containers/map.hpp"
+#include "boost/interprocess/containers/set.hpp"
 #include "boost/interprocess/managed_shared_memory.hpp"
 #include "boost/interprocess/sync/named_mutex.hpp"
 #include "boost/interprocess/sync/named_condition.hpp"
@@ -86,17 +87,23 @@ namespace InterprocessType {
 
     // 共享map类型定义
     using SegmentManager = boost::interprocess::managed_shared_memory::segment_manager;
-    using ShmemAllocator = boost::interprocess::allocator<
+    using ShmMapAllocator = boost::interprocess::allocator<
         std::pair<const uint32_t, uint32_t>, SegmentManager>;
     using PortProcessMap = boost::interprocess::map<
-        uint32_t, uint32_t, std::less<uint32_t>, ShmemAllocator>;
+        uint32_t, uint32_t, std::less<uint32_t>, ShmMapAllocator>;
+    
+    using ShmSetAllocator = boost::interprocess::allocator<
+        uint32_t, SegmentManager>;
+    using PortSet = boost::interprocess::set<
+        uint32_t, std::less<uint32_t>,
+        ShmSetAllocator>;
 
     // 监听端口记录
     struct SharedList {
         robust_mutex mutex;
         uint32_t referenceCount;
         PortProcessMap portprocessidmap;
-        SharedList(const ShmemAllocator& alloc)
+        SharedList(const ShmMapAllocator& alloc)
             : referenceCount(0), portprocessidmap(alloc) {
         }
     };
@@ -105,11 +112,10 @@ namespace InterprocessType {
         robust_mutex mutex;
         interprocess_condition_any condition;
         PortProcessMap sockets;
-        uint32_t srcPort;
-        bool connecting;
+        PortSet srcPorts;
         bool shutdown;
-        SharedAcceptList(const ShmemAllocator& alloc)
-            : sockets(alloc), srcPort(0x10000), connecting(false), shutdown(false){
+        SharedAcceptList(const ShmMapAllocator& alloc, const ShmSetAllocator& setalloc)
+            : sockets(alloc), srcPorts(setalloc), shutdown(false) {
         }
     };
 }
