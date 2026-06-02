@@ -377,7 +377,7 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 		flowController_->ReSendData(this,proxy);
 	}
 	/* 需要强制回复一个HB报文 */
-	if (ackMsg.header.flags & ~SubMessageFlag::FINAL_FLAG) {
+	if ((ackMsg.header.flags & SubMessageFlag::FINAL_FLAG) == 0) {
 		//TODO 
 		WriteHeartbeat(proxy, true);
 	}

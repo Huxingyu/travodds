@@ -17,7 +17,7 @@ SharedMemAccept::SharedMemAccept(const std::string& port)
 		CleanupResources();
 		segment_ = std::make_unique<managed_shared_memory>(
 			create_only, sharedMemoryName_.data(), sharedMemSize_);	
-		sharedAcceptList_ = segment_->construct<SharedAcceptList>(objectName_)(ShmemAllocator(segment_->get_segment_manager()));
+		sharedAcceptList_ = segment_->construct<SharedAcceptList>(objectName_)(ShmMapAllocator(segment_->get_segment_manager()), ShmSetAllocator(segment_->get_segment_manager()));
 
 	} catch (const interprocess_exception& e) {
 		static_cast<void>(e);
@@ -39,16 +39,24 @@ void SharedMemAccept::Accept(std::shared_ptr<SharedMemSocket> socket)
 		scoped_lock<robust_mutex> lock(sharedAcceptList_->mutex);
 		sharedAcceptList_->condition.wait(lock,
 			[this](){
-				return IsShutdown() || sharedAcceptList_->connecting;
+				return IsShutdown() || !sharedAcceptList_->srcPorts.empty();
 			}
 		);
 		if (IsShutdown()) {
 			throw std::runtime_error("Accept is shutdown.");
 		}
 
-		sharedAcceptList_->connecting = false;
-		sockets_[sharedAcceptList_->srcPort] = socket;
-		std::string srcport = std::to_string(sharedAcceptList_->srcPort);
+		auto srcPort = sharedAcceptList_->srcPorts.begin();
+
+		auto socketit = sockets_.find(*srcPort);
+		if (socketit != sockets_.end())
+		{
+			socketit->second->SetNull();
+		}
+		sockets_[*srcPort] = socket;
+		std::string srcport = std::to_string(*srcPort);
+		sharedAcceptList_->srcPorts.erase(srcPort);
+
 		if (!socket->Connect(srcport, port_)) {
 			throw std::runtime_error("Accept connect failed.");
 		}

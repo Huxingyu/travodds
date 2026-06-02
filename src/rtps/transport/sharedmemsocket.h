@@ -55,6 +55,9 @@ private:
 
     void ReadFromSharedMem();
 
+    /* scoket 置NULL 共享资源置NULL */
+    void SetNull();
+
 private:
     std::function<void(char*, const uint32_t&)> callback_;
     asio::thread_pool pool_;
