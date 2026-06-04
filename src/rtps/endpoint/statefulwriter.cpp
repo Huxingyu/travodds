@@ -916,7 +916,7 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(bool liveliness)
 	HeartBeatSubMessage_t hbMsg;
 
 	for (auto& writerProxy : matchedReaders_) {
-		WriteHeartbeat(writerProxy.second, true,liveliness);
+		WriteHeartbeat(writerProxy.second, false,liveliness);
 	}
 	return RETCODE_OK;
 }
@@ -939,11 +939,6 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	SequenceNumber_t minSeq = writerCache_->GetSeqNumMin();
 	SequenceNumber_t maxSeq = writerCache_->GetSeqNumMax();
 	SequenceNumber_t relateSeq = readerProxy->GetRelatedSequenceNumber();
-
-	/* 在非强制回复HB的情况下，如果所有数据被确认，没有数据需要被确认不发送心跳  */
-	if (!force && (SEQUENCENUMBER_ZERO >= maxSeq || !readerProxy->UnackedChanges())) {
-		return RETCODE_OK;
-	}
 
 	LocatorSeq unicastList = readerProxy->GetUnicastLocatorList();
 	LocatorSeq multicastList = readerProxy->GetMulticastLocatorList();
@@ -976,6 +971,11 @@ ReturnCode_t StatefulWriter::WriteHeartbeat(std::shared_ptr<ReaderProxy> readerP
 	flag.groupInfoFlag = 1;
 	flag.groupInfoFlag = 1; */
 	hbMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG);
+	/* 在非强制回复HB的情况下，如果所有数据被确认，没有数据需要被确认不发送心跳  */
+	if (!force && (SEQUENCENUMBER_ZERO >= maxSeq || !readerProxy->UnackedChanges())) {
+		hbMsg.header.flags |= SubMessageFlag::FINAL_FLAG;
+	}
+
 	/* wangyi liveliness  */
 	if (liveliness) {
 		hbMsg.header.flags |= SubMessageFlag::LIVELINESS_FLAG;

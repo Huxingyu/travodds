@@ -295,7 +295,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	std::vector<NackFragSubMessage_t> nackFragVec;
 	proxy->GetNackSequenceSet(nackFragVec);
 	/*  发送Nack的报文  */
-	if (set.bitmap.size != 0 || flags.finalFlag) {
+	if (set.bitmap.size != 0 || !flags.finalFlag) {
 		//TODO 存在丢包，或者强制回复Ack报文。创建Ack报文进行回复 
 		/* 1. 先给分片数据发送NackFrag  */
 		for (size_t i = 0; i < nackFragVec.size(); i++) {
