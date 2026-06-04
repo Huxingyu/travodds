@@ -150,6 +150,9 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 - 提交前运行单元测试
 
 ## Changelog
+### [1.1.0] - 2026-06-04
+#### Fixed
+- 修复 ACK（丢包情况） 和 HB 报文应答问题
 ### [1.1.0] - 2026-06-02
 #### Fixed
 - 修复 ACK 和 HB 报文应答问题
