@@ -580,7 +580,12 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	uint32_t lengthInfoMsg = 0;
 #endif // DDSSECURITY
 
-	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG) | SubMessageFlag::FINAL_FLAG;
+	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG);
+
+	if (ackMsg.readerSNState.bitmap.size == 0)
+	{
+		ackMsg.header.flags |= SubMessageFlag::FINAL_FLAG;
+	}
 
 	// 序列化AckNack, bufffer指向AckNack头部位置
 	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg); // 出参shift为AckNack消息长度

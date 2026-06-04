@@ -376,10 +376,10 @@ ReturnCode_t StatefulWriter::ReceiveAckNackMessage(const Receive_t& headerMsg, c
 		// TODO 为RETCODE_REPEAT_REQUEXT，需要重传数据
 		flowController_->ReSendData(this,proxy);
 	}
-	/* 需要强制回复一个HB报文 */
-	if (ackMsg.header.flags & ~SubMessageFlag::FINAL_FLAG) {
+	 /* 需要强制回复一个HB报文 */
+	else if ((ackMsg.header.flags & SubMessageFlag::FINAL_FLAG) == 0) {
 		//TODO 
-		WriteHeartbeat(proxy, true);
+		WriteHeartbeat(proxy, false);
 	}
 
 	return RETCODE_OK;
@@ -1182,7 +1182,7 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 
 	SendGap(gapVec, readerProxy);
 
-	WriteHeartbeat(readerProxy, false);
+	WriteHeartbeat(readerProxy, true);
 
 	return RETCODE_OK;
 }
