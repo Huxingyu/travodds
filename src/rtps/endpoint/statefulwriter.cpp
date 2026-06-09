@@ -304,16 +304,16 @@ ReturnCode_t StatefulWriter::DeliveryData(std::shared_ptr<CacheChange> change, c
 #endif // DDSSECURITY
 	}
 
+	ReturnCode_t ret = RETCODE_OK;
 #ifdef DDSSECURITY
 	if (guid_.entityId != ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
-		return DeliveryDataToReader(change, readerProxys, timeOut);
+		ret = DeliveryDataToReader(change, readerProxys, timeOut);
 	}
 #else
-	return DeliveryDataToReader(change, readerProxys, timeOut);
+	ret = DeliveryDataToReader(change, readerProxys, timeOut);
 #endif // DDSSECURITY
-	
 
-	return RETCODE_OK;
+	return ret;
 }
 
 ChangeForReader StatefulWriter::CreateChangeForReader(std::shared_ptr<CacheChange> change)
@@ -439,7 +439,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 	std::vector<LocatorVec> dstLocators;
 	std::set<GuidPrefix_t> prefixs;
-	for (auto& reader : readerProxys) {
+	for (const auto& reader : readerProxys) {
 		if (!change->filterReaders_.empty() && change->filterReaders_.find(reader->GetGuid()) != change->filterReaders_.end()) {
 			SendGap({ change->sequenceNumber }, reader);
 			continue;
@@ -448,6 +448,10 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	}
 
 	transportGroup_.GetLocator(prefixs, dstLocators);
+
+	if (dstLocators.empty()) {
+		return RETCODE_ERROR;
+	}
 
 	if (buffer->next) {
 		/* 分片数据处理 */
@@ -774,7 +778,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			return ret;
 		}
 #else
-		participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
+		ret = participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, timeOut);
 		if (ret != RETCODE_OK) {
 			TRAVODDS_LOG(LOG_ERROR, "write data error.");
 			return ret;
@@ -805,6 +809,10 @@ ReturnCode_t StatefulWriter::DeliveryDataToReaderForVolatile(std::shared_ptr<Cac
 	prefixs.insert(readerProxy->GetGuid().prefix);
 
 	transportGroup_.GetLocator(prefixs, dstLocators);
+
+	if (dstLocators.empty()) {
+		return RETCODE_ERROR;
+	}
 
 	if (0 != change->serializedBuffer->buffer_size) {
 		dataSubMessage.header.flags |= SubMessageFlag::DATA_FLAG;
@@ -1148,6 +1156,7 @@ ReturnCode_t StatefulWriter::WriteHeartFragbeat(std::shared_ptr<ReaderProxy> rea
 
 ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy)
 {
+	ReturnCode_t ret = RETCODE_OK;
 	SeqNumberVec gapVec;
 	SequenceNumber_t lastGapseq;
 	SeqNumberVec seqVec = readerProxy->RequestedChanges();
@@ -1169,22 +1178,26 @@ ReturnCode_t StatefulWriter::ReSendData(std::shared_ptr<ReaderProxy> readerProxy
 #ifdef DDSSECURITY
 		if (guid_.entityId == ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_MESSAGE_SECURE_WRITER) {
 			for (auto& singleReaderProxy : readerProxys) {
-				DeliveryDataToReaderForVolatile(change, singleReaderProxy, TIME_INFINITE);
+				ret = DeliveryDataToReaderForVolatile(change, singleReaderProxy, TIME_INFINITE);
 			}
 		}
 		else {
-			DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
+			ret = DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
 		}
 #else
-		DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
+		ret = DeliveryDataToReader(change, readerProxys, TIME_INFINITE);
 #endif //DDSSECURITY
+
+		if (ret != RETCODE_OK) {
+			return ret;
+		}
 	}
 
 	SendGap(gapVec, readerProxy);
 
-	WriteHeartbeat(readerProxy, true);
+	ret = WriteHeartbeat(readerProxy, true);
 
-	return RETCODE_OK;
+	return ret;
 }
 
 void StatefulWriter::RemoveAllAckedData()

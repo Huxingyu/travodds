@@ -31,18 +31,15 @@ struct Message_t {
 	char* buffer;
 	uint32_t length;
 	char* originBuffer;
-	bool onlyCopy;  /* 仅允许拷贝，不允许共享控制权 */
-	Message_t(char* buffer, uint32_t length, bool copy = false)
+	Message_t(char* buffer, uint32_t length)
 	  : buffer(buffer),
 	    length(length),
-	    originBuffer(buffer),
-		onlyCopy(copy) {
+	    originBuffer(buffer){
 	}
 	Message_t(const Message_t& other)
 	  : buffer(other.buffer),
 		length(other.length),
-		originBuffer(other.originBuffer),
-		onlyCopy(other.onlyCopy) {
+		originBuffer(other.originBuffer){
 	}
 };
 

@@ -371,16 +371,8 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const Seriali
 		CacheSerializedBuffer* buffer = new CacheSerializedBuffer();
 		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy) {
-			/* 只允许拷贝，不允许获得所有权 */
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		}
-		else {
-			buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 		cache->fragmentBufferMap.insert({ startNum, buffer });
 	} else {
 		//TODO  

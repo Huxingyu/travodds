@@ -137,15 +137,8 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	if (!dataFlags.nonStandardPayloadFlag && nullptr != data.data) {
 		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy) {
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		} else {
-			buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
-
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 	}
 
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
