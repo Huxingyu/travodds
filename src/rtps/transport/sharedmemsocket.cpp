@@ -171,6 +171,7 @@ void SharedMemSocket::Shutdown()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	}
+	pool_.join();
 }
 
 bool SharedMemSocket::IsShutdown() const
@@ -266,8 +267,7 @@ void SharedMemSocket::ReadFromSharedMem() {
 	while (!shutdown_) {
 		scoped_lock<interprocess_mutex>lock(data_->rmutex);
 		data_->rcondition.wait(lock, [this]() {
-			return (data_->usedBytes.load(std::memory_order_acquire) != 0) ||
-				data_->shutdown;
+			return (data_->shutdown ||data_->usedBytes.load(std::memory_order_acquire) != 0);
 			}
 		);
 
