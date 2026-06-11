@@ -113,7 +113,7 @@ bool ReaderProxy::UnackedChanges()
 	return (highestAvailableSeqNum > highestAckedSeqNum);
 }
 
-GUID_t ReaderProxy::GetGuid()
+GUID_t ReaderProxy::GetGuid() const
 {
 	return remoteReaderGuid_;
 }
