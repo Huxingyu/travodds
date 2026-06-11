@@ -32,6 +32,11 @@ public:
         uint32_t dataSize = 0;
         char data[1];
     };
+    union Identity
+    {
+        char c[5];
+        uint32_t ui;
+    };
 public:
     SharedMemSocket();
     SharedMemSocket(std::function<void(char*, const uint32_t&)> callback);
