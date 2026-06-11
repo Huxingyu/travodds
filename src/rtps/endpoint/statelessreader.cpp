@@ -60,15 +60,8 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
  		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy){
-		    /* 只允许拷贝，不允许获得所有权 */
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		} else {
-		    buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 
 	}
 
@@ -239,15 +232,8 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		CacheSerializedBuffer* buffer = new CacheSerializedBuffer();
 		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy) {
-			/* 只允许拷贝，不允许获得所有权 */
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		} else {
-			buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 		itor->second->fragmentBufferMap.insert({dataMsg.dataFrag.fragmentStartingNum, buffer});
 	} else {
 		//TODO  
