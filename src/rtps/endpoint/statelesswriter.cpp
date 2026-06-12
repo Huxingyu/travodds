@@ -286,7 +286,15 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		prefixs.insert(readerlocator.first.prefix);
 	}
 
+	if (prefixs.empty()) {
+		return RETCODE_OK;
+	}
+
 	transportGroup_.GetLocator(prefixs, dstLocators);
+
+	if (dstLocators.empty()) {
+		return RETCODE_ERROR;
+	}
 
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;
