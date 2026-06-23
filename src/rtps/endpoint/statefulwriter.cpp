@@ -449,7 +449,9 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 
 	transportGroup_.GetLocator(prefixs, dstLocators);
 
-	if (dstLocators.empty()) {
+	if (prefixs.empty() && dstLocators.empty()) {
+		return RETCODE_OK;
+	} else if (dstLocators.empty()) {
 		return RETCODE_ERROR;
 	}
 
