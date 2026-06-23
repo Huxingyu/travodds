@@ -150,6 +150,9 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 - 提交前运行单元测试
 
 ## Changelog
+### [1.1.0] - 2026-06-18
+#### Added
+- 添加 test/performance_test 性能测试用例
 ### [1.1.0] - 2026-06-09
 #### Fixed
 - 修复 ACK（丢包情况） 数据重传失败问题
