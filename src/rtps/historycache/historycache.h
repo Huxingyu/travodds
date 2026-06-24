@@ -120,6 +120,9 @@ public:
 	/* 需要过滤的订阅者 */
 	std::set<GUID_t> filterReaders_;
 
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
+
 	/**
 	 * @brief 构造函数。
 	 */

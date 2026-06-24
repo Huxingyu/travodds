@@ -184,6 +184,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheC
 			}
 			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
 			sampleInfo.source_timestamp = (*cache)->sourceTimespace;
+			sampleInfo.related_sample_identity = (*cache)->related_sample_identity;
 			dataValues.push_back(*cache);
 			sampleInfos.push_back(sampleInfo);
 

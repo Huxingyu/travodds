@@ -144,6 +144,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 	cache->sequenceNumber = dataMsg.writerSN;
 	cache->inlineQos = dataMsg.inlineQos;
+	cache->related_sample_identity = dataMsg.related_sample_identity;
 
 	ReturnCode_t ret = RETCODE_OK;
 
@@ -208,6 +209,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, nullptr, dataHandle, pubHandle, headerMsg.timestamp);
 
 		dataFragCache->sequenceNumber = dataMsg.writerSN;
+		dataFragCache->related_sample_identity = dataMsg.related_sample_identity;
 		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
 		dataFragCache->fraqmentSize = dataMsg.dataFrag.fragmentSize;
 		dataFragCache->fragmentTatolNum = dataMsg.dataFrag.sampleSize / dataMsg.dataFrag.fragmentSize;
