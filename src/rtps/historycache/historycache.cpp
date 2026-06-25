@@ -114,6 +114,7 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 std::shared_ptr<CacheChange> HistoryCache::GetMinSourceTimespace()
 {
 	std::shared_ptr<CacheChange> MinSourceTimespaceCache = nullptr;
+	std::lock_guard<std::mutex> lock(changeMutex_);
 
 	for (auto itor = instanceChanges_.begin(); itor != instanceChanges_.end();itor++) {
 		if (itor->second.cacheChanges.empty()) continue;

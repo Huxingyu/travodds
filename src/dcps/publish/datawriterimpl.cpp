@@ -337,23 +337,24 @@ ReturnCode_t DataWriterImpl::write(const void* const instance_data, const Instan
 {
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
-
-    return write_w_timestamp_related_sample_identity(instance_data, handle, time);
+	SampleIdentity sample_identity;
+    return write_w_timestamp_related_sample_identity(instance_data, handle, time, sample_identity);
 }
 
-ReturnCode_t DataWriterImpl::write_w_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const SampleIdentity& related_sample_identity)
+ReturnCode_t DataWriterImpl::write_w_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity)
 {
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
-	return write_w_timestamp_related_sample_identity(instance_data, handle, time, related_sample_identity);
+	return write_w_timestamp_related_sample_identity(instance_data, handle, time, sample_identity, related_sample_identity);
 }
 
 ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
-    return write_w_timestamp_related_sample_identity(instance_data, handle, source_timestamp);
+	SampleIdentity sample_identity;
+    return write_w_timestamp_related_sample_identity(instance_data, handle, source_timestamp, sample_identity);
 }
 
-ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp, const SampleIdentity& related_sample_identity)
+ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity)
 {
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
@@ -366,7 +367,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 
 	if (related_sample_identity.writer_handle != HANDLE_NIL) {
 		Parameter_t param;
-		param.parameterId = ParameterId::PID_RELATED_SAMPLE_IDENTITY;
+		param.parameterId = ParameterId::PID_CUSTOM_RELATED_SAMPLE_IDENTITY;
 		param.length = 24u;
 		param.value.resize(24u);
 		memcpy(param.value.data(), related_sample_identity.writer_handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
@@ -546,7 +547,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
 	}
 #else
-	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
+	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp, sample_identity);
 #endif // DDSSECURITY
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "cacheChange ret= %d", ret);

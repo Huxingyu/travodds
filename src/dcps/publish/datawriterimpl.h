@@ -262,7 +262,11 @@ public:
      * @param related_sample_identity  关联的原始请求样本身份
      * @return ReturnCode_t  发送结果状态码
      */
-	ReturnCode_t write_w_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const SampleIdentity& related_sample_identity);
+	ReturnCode_t write_w_related_sample_identity(
+	                 const void* const instance_data, 
+	                 const InstanceHandle_t& handle, 
+		             SampleIdentity& sample_identity,
+					 const SampleIdentity& related_sample_identity);
 
 	/**
 	 * @brief 此函数执行与写入相同的功能，只是它还提供了源时间戳source_timestamp的值，
@@ -293,7 +297,12 @@ public:
      * @param related_sample_identity     关联的原始请求样本身份
      * @return ReturnCode_t              发送结果状态码
      */
-    ReturnCode_t write_w_timestamp_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp, const SampleIdentity& related_sample_identity = {});
+    ReturnCode_t write_w_timestamp_related_sample_identity(
+	                 const void* const instance_data, 
+	                 const InstanceHandle_t& handle, 
+					 const Time_t& source_timestamp,
+		             SampleIdentity& sample_identity,
+					 const SampleIdentity& related_sample_identity = {});
 
 	/**
 	 * @brief 该函数请求中间件删除数据（实际删除被推迟，直到该数据在整个系统中不再使用）。

@@ -135,7 +135,6 @@ public:
 		fragmentTatolNum(0),
         memoryPool(MemoryPool::GetInstance())
 	{
-		serializedBuffer = nullptr;
 	}
 
 	/**
