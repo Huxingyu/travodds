@@ -51,6 +51,7 @@ public:
 	 * @return 创建的新缓存。
 	 */
 	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace);
+	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace, SampleIdentity& sample_identity);
 
 	/**
 	 * @brief 添加新的报文缓存空间到HistoryCache管理容器中。

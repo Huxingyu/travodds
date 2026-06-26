@@ -246,6 +246,8 @@ struct DataSubMessage_t {
 	EntityId_t writerId;
 	SequenceNumber_t writerSN;
 	ParameterList_t inlineQos; 
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
 	SerializedPayload serializedPayload;
 };
 
@@ -356,6 +358,8 @@ struct DataFragSubMessage_t {
 
 	//TODO
 	ParameterList_t inlineQos;
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
 	DataFrag_t dataFrag;
 	SerializedPayload serializedPayload;
 };

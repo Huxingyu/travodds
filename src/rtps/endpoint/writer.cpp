@@ -21,7 +21,7 @@ Writer::~Writer()
 }
 
 
-std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,const Time_t& timespace)
+std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace)
 {
 	lastChangeSequenceNumber_++;
 
@@ -32,6 +32,23 @@ std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuff
 	cacheChange->sequenceNumber = lastChangeSequenceNumber_;
 	cacheChange->writerGuid = guid_;
 	cacheChange->sourceTimespace = timespace;
+	return cacheChange;
+}
+
+std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,const Time_t& timespace, SampleIdentity& sample_identity)
+{
+	lastChangeSequenceNumber_++;
+
+	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
+	cacheChange->kind = kind;
+	cacheChange->serializedBuffer = data;
+	cacheChange->instanceHandle = handle;
+	cacheChange->sequenceNumber = lastChangeSequenceNumber_;
+	cacheChange->writerGuid = guid_;
+	cacheChange->sourceTimespace = timespace;
+
+	sample_identity.writer_handle = Conversion::ToInstanceHandle(guid_);
+	sample_identity.sequence_number = lastChangeSequenceNumber_;
 
 	return cacheChange;
 

@@ -83,6 +83,14 @@ enum ParameterId : uint16_t {
 	PID_KEY_HASH                            = 0x0070,
 	PID_STATUS_INFO                         = 0x0071,
 
+
+	// Remote Procedure Call over DDS v1.0
+	PID_RELATED_SAMPLE_IDENTITY = 0x0083,
+
+	/* 适配 Fast DDS extensions ，同 PID_RELATED_SAMPLE_IDENTITY */
+	PID_CUSTOM_RELATED_SAMPLE_IDENTITY = 0x800f,
+
+
 #ifdef DDSSECURITY
 	PID_IDENTITY_TOKEN                      = 0x1001, 
 	PID_PERMISSIONS_TOKEN                   = 0x1002, 

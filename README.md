@@ -150,6 +150,9 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 - 提交前运行单元测试
 
 ## Changelog
+### [1.1.0] - 2026-06-25
+#### Added
+- 添加 Sample Identity (Extension for RPC)
 ### [1.1.0] - 2026-06-18
 #### Added
 - 添加 test/performance_test 性能测试用例

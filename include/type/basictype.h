@@ -430,6 +430,186 @@ typedef BinaryProperty_t BinaryProperty;
 
 using BinaryPropertySeq = Sequence<BinaryProperty_t>;
 
+struct SequenceNumber_t {
+	int32_t high = 0;
+	uint32_t low = 0;
+
+	/**
+	 * @brief 重载运算符 <
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator < (const SequenceNumber_t& right) const {
+
+		if (high == right.high && low < right.low) {
+			return true;
+		}
+		else if (high < right.high) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @brief 重载运算符 <=
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator <= (const SequenceNumber_t& right) const {
+
+		if (high == right.high && low <= right.low) {
+			return true;
+		}
+		else if (high < right.high) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @brief 重载运算符 ==
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator == (const SequenceNumber_t& right) const {
+		if (low == right.low && high == right.high) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @brief 重载运算符 >=
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator >= (const SequenceNumber_t& right) const {
+		if (high == right.high && low >= right.low) {
+			return true;
+		}
+		else if (high > right.high) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @brief 重载运算符 >
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator > (const SequenceNumber_t& right) const {
+		if (high == right.high && low > right.low) {
+			return true;
+		}
+		else if (high > right.high) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @brief 重载运算符 !=
+	 *
+	 * @param right SequenceNumber_t。
+	 */
+	bool operator != (const SequenceNumber_t& right) const {
+		if ((this->high == right.high) && (this->low == right.low)) {
+			return false;
+		}
+		else {
+			return true;
+		}
+	}
+
+	/**
+	 * @brief 重载运算符 ++
+	 *
+	 * @param int32_t。
+	 */
+	SequenceNumber_t operator ++ (int32_t) {
+		this->low++;
+		if (0 == this->low) {
+			this->high++;
+		}
+		return *this;
+	}
+
+	/**
+	 * @brief 重载运算符 +
+	 *
+	 * @param Add int32_t 加数。
+	 */
+	SequenceNumber_t operator + (const uint32_t Add) const {
+		SequenceNumber_t seq = *this;
+		if (seq.low > (uint32_t)-1 - Add) {
+			++seq.high;
+		}
+		seq.low += Add;
+
+		return seq;
+	}
+
+	/**
+	 * @brief 重载运算符 -
+	 *
+	 * @param sub int32_t 减数。
+	 */
+	SequenceNumber_t operator - (const uint32_t sub) const {
+		SequenceNumber_t seq = *this;
+		if (this->low < sub) {
+			seq.high--;
+			seq.low = this->low + (0xffffffff - sub);
+		}
+		else {
+			seq.low = seq.low - sub;
+		}
+		return seq;
+	}
+
+	/**
+	 * @brief 重载运算符 -
+	 *
+	 * @param sub SequenceNumber_t 减数。
+	 */
+	int32_t operator - (const SequenceNumber_t& sub) const {
+		SequenceNumber_t seq = *this;
+		if (this->low < sub.low) {
+			seq.high--;
+			seq.low = this->low + (0xffffffff - sub.low);
+		}
+		else {
+			seq.low = this->low - sub.low;
+		}
+		seq.high = seq.high - sub.high;
+
+		return seq.low;
+	}
+};
+// using ChangeCount_t = SequenceNumber_t;
+
+// 未知序列号
+const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
+const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
+const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
+const SequenceNumber_t SEQUENCENUMBER_FIRST = { 0, 1 };
+
+using SeqNumberVec = std::vector<SequenceNumber_t>;
+
+/* 用于唯一标识一个数据样本（Sample）的结构体，
+ * 在DDS请求-回复模式中扮演“请求身份证”的角色 
+ */
+struct SampleIdentity {
+	InstanceHandle_t writer_handle;
+	SequenceNumber_t sequence_number;
+	SampleIdentity() : 
+	    writer_handle(HANDLE_NIL),
+		sequence_number(SEQUENCENUMBER_UNKNOWN){
+	};
+};
+
 struct SampleInfo {
 	/*  （READ或NOT_READ）-代表是否已读取过相应的数据样本  */
 	SampleStateKind 		sample_state;
@@ -461,6 +641,9 @@ struct SampleInfo {
 
 	//TODO jdxcz 20250610 
 	int32_t write_sequence_number;
+
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
 
 	SampleInfo()
 		: sample_state(NOT_READ_SAMPLE_STATE),
