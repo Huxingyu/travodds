@@ -337,26 +337,49 @@ ReturnCode_t DataWriterImpl::write(const void* const instance_data, const Instan
 {
 	Time_t time;
 	DomainParticipantImpl::get_current_time(time);
+	SampleIdentity sample_identity;
+    return write_w_timestamp_related_sample_identity(instance_data, handle, time, sample_identity);
+}
 
-    return write_w_timestamp(instance_data, handle, time);
+ReturnCode_t DataWriterImpl::write_w_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity)
+{
+	Time_t time;
+	DomainParticipantImpl::get_current_time(time);
+	return write_w_timestamp_related_sample_identity(instance_data, handle, time, sample_identity, related_sample_identity);
 }
 
 ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp)
 {
+	SampleIdentity sample_identity;
+    return write_w_timestamp_related_sample_identity(instance_data, handle, source_timestamp, sample_identity);
+}
+
+ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity)
+{
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
 		return RETCODE_NOT_ENABLED;
-    }
+	}
 	ReturnCode_t ret = RETCODE_ERROR;
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 
 	ParameterList_t lineQos;
 
-	if(typeSupport_->has_key())
+	if (related_sample_identity.writer_handle != HANDLE_NIL) {
+		Parameter_t param;
+		param.parameterId = ParameterId::PID_CUSTOM_RELATED_SAMPLE_IDENTITY;
+		param.length = 24u;
+		param.value.resize(24u);
+		memcpy(param.value.data(), related_sample_identity.writer_handle.keyHash.value, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+		memcpy(param.value.data() + MIG_RTPS_KEY_HASH_MAX_LENGTH, &related_sample_identity.sequence_number, sizeof(SequenceNumber_t));
+		lineQos.push_back(param);
+	}
+
+	if (typeSupport_->has_key())
 	{
 		MakeKey(instance_data, instanceHandle, true);
 
-		if (HANDLE_NIL != handle && !history_->IsKeyRegistered(handle)){
+		if (HANDLE_NIL != handle && !history_->IsKeyRegistered(handle)) {
 			TRAVODDS_LOG(LOG_ERROR, "handle invalid");
 			return RETCODE_BAD_PARAMETER;
 		}
@@ -367,7 +390,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		}
 
 		if (HANDLE_NIL == handle) {
-	
+
 			instanceHandle = register_instance_w_timestamp(instance_data, source_timestamp);
 
 			if (HANDLE_NIL == instanceHandle) {
@@ -397,7 +420,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
 	std::set<GUID_t> filterReaders;
 	if (!readerFilters_.empty()) {
-		
+
 		// 使用DynamicDataFactory创建数据容器
 		DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*typeSupport_->get_dynamictype());
 		DynamicDataTypeSupport typeSupport(typeSupport_->get_dynamictype());
@@ -408,7 +431,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 				filterReaders.insert(it.first);
 			}
 		}
-		DynamicDataFactory::get_instance().delete_data(*dyn_data);	
+		DynamicDataFactory::get_instance().delete_data(*dyn_data);
 	}
 
 	bufferHeader->buffer -= CDR_ENDIANNESS_LEN;
@@ -524,7 +547,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
 	}
 #else
-	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
+	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp, sample_identity);
 #endif // DDSSECURITY
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "cacheChange ret= %d", ret);
@@ -565,7 +588,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 		lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
 		lifespanTimer_->ReStart();
 	}
-    return ret;
+	return ret;
 }
 
 ReturnCode_t DataWriterImpl::dispose(const void* const instance_data, const InstanceHandle_t& handle)

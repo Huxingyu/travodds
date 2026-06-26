@@ -11,14 +11,12 @@ SharedMemAccept::SharedMemAccept(const std::string& port)
 	: pool_(1)
 	, port_(port)
 	, sharedMemoryName_("TravoddsAcceptSharedMemory" + port)
-	, objectName_("TravoddsAcceptsharedAcceptList")
-	, refs_(0) {
+	, objectName_("TravoddsAcceptsharedAcceptList") {
 	try {
 		CleanupResources();
 		segment_ = std::make_unique<managed_shared_memory>(
 			create_only, sharedMemoryName_.data(), sharedMemSize_);	
-		sharedAcceptList_ = segment_->construct<SharedAcceptList>(objectName_)(ShmemAllocator(segment_->get_segment_manager()));
-
+		sharedAcceptList_ = segment_->construct<SharedAcceptList>(objectName_)(ShmMapAllocator(segment_->get_segment_manager()));
 	} catch (const interprocess_exception& e) {
 		static_cast<void>(e);
 		throw;
@@ -34,30 +32,37 @@ SharedMemAccept::~SharedMemAccept()
 
 void SharedMemAccept::Accept(std::shared_ptr<SharedMemSocket> socket)
 {
-	refs_.fetch_add(1, std::memory_order_release);
 	try {
 		scoped_lock<robust_mutex> lock(sharedAcceptList_->mutex);
 		sharedAcceptList_->condition.wait(lock,
 			[this](){
-				return IsShutdown() || sharedAcceptList_->connecting;
+				return IsShutdown() || !sharedAcceptList_->srcPorts.empty();
 			}
 		);
 		if (IsShutdown()) {
 			throw std::runtime_error("Accept is shutdown.");
 		}
 
-		sharedAcceptList_->connecting = false;
-		sockets_[sharedAcceptList_->srcPort] = socket;
-		std::string srcport = std::to_string(sharedAcceptList_->srcPort);
-		if (!socket->Connect(srcport, port_)) {
+		auto srcPort = sharedAcceptList_->srcPorts.begin();
+
+		auto socketit = sockets_.find(srcPort->first);
+		if (socketit != sockets_.end())
+		{
+			socketit->second->SetNull();
+		}
+		sockets_[srcPort->first] = socket;
+		SharedMemSocket::Identity identity = {0};
+		identity.ui = srcPort->second;
+		std::string srcport = std::to_string(srcPort->first) + std::string(identity.c);
+		sharedAcceptList_->srcPorts.erase(srcPort);
+
+		if (!socket->Connect(srcport, port_ )) {
 			throw std::runtime_error("Accept connect failed.");
 		}
 	} catch (const std::exception& e) {
 		static_cast<void>(e);
-		refs_.fetch_sub(1, std::memory_order_release);
 		throw;
 	}
-	refs_.fetch_sub(1, std::memory_order_release);
 }
 
 void SharedMemAccept::AsyncAccept(std::shared_ptr<SharedMemSocket> socket, std::function<void(const std::exception*)> callback)
@@ -102,10 +107,7 @@ void SharedMemAccept::Shutdown()
 		sharedAcceptList_->shutdown = true;
 		sharedAcceptList_->condition.notify_one();
 	}
-	uint32_t trycount = 0;
-	while (refs_.load(std::memory_order_acquire) != 0 && trycount++ < 20) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
+	pool_.join();
 }
 
 bool SharedMemAccept::IsShutdown() const

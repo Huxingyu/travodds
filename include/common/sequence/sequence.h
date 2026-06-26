@@ -15,7 +15,7 @@
 #include "common/sequence/sequencebase.h"
 #include <stdexcept>
 #include <vector>
-
+#include <stdexcept>
 /**
  * @brief SequenceData模板类,Sequence序列具体功能实现类。
  */

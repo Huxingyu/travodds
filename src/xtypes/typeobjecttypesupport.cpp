@@ -1,4 +1,5 @@
 #include "xtypes/typeobjecttypesupport.h"
+#include "common/log/logger.h"
 
 USING_TRAVODDS_NAMESPACE
 
@@ -82,7 +83,7 @@ int TRAVODDS::_TypeIdTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
     (void)endian;
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
     if (!cdr->serializeBaseType(structData->u_)) {
-        fprintf(stderr, "Serialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
@@ -100,13 +101,13 @@ int TRAVODDS::_TypeIdTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
     case TRAVODDS::CHAR_8_TYPE:
     case TRAVODDS::CHAR_32_TYPE:
         if (!cdr->serializeBaseType(structData->primitive_type_id)) {
-            fprintf(stderr, "Serialization failed for field: structData->primitive_type_id\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->primitive_type_id\n");
             return -1;
         }
         break;
     default:
         if (!cdr->serializeBaseType(structData->constructed_type_id)) {
-            fprintf(stderr, "Serialization failed for field: structData->constructed_type_id\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->constructed_type_id\n");
             return -1;
         }
         break;
@@ -118,7 +119,7 @@ int TRAVODDS::_TypeIdTypeSupport::deserialize_data(void* data, CdrDeserializer* 
     (void)endian;
     TRAVODDS::_TypeId* structData = static_cast<TRAVODDS::_TypeId*>(data);
     if (!cdr->deserializeBaseType(structData->u_)) {
-        fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
@@ -136,13 +137,13 @@ int TRAVODDS::_TypeIdTypeSupport::deserialize_data(void* data, CdrDeserializer* 
     case TRAVODDS::CHAR_8_TYPE:
     case TRAVODDS::CHAR_32_TYPE:
         if (!cdr->deserializeBaseType(structData->primitive_type_id)) {
-            fprintf(stderr, "Deserialization failed for field: structData->primitive_type_id\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->primitive_type_id\n");
             return -1;
         }
         break;
     default:
         if (!cdr->deserializeBaseType(structData->constructed_type_id)) {
-            fprintf(stderr, "Deserialization failed for field: structData->constructed_type_id\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->constructed_type_id\n");
             return -1;
         }
         break;
@@ -179,11 +180,11 @@ ReturnCode_t TRAVODDS::_TypeIdTypeSupport::get_instancehandle(void* data, CdrSer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -280,97 +281,97 @@ int TRAVODDS::AnnotationMemberValueTypeSupport::serialize_data(void* data, CdrSe
     (void)endian;
     TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
     if (!cdr->serializeBaseType(structData->u_)) {
-        fprintf(stderr, "Serialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
     case TRAVODDS::BOOLEAN_TYPE:
         if (!cdr->serializeBaseType(structData->boolean_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->boolean_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->boolean_value\n");
             return -1;
         }
         break;
     case TRAVODDS::BYTE_TYPE:
         if (!cdr->serializeBaseType(structData->byte_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->byte_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->byte_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_16_TYPE:
         if (!cdr->serializeBaseType(structData->int_16_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->int_16_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->int_16_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_16_TYPE:
         if (!cdr->serializeBaseType(structData->uint_16_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->uint_16_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->uint_16_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_32_TYPE:
         if (!cdr->serializeBaseType(structData->int_32_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->int_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->int_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_32_TYPE:
         if (!cdr->serializeBaseType(structData->uint_32_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->uint_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->uint_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_64_TYPE:
         if (!cdr->serializeBaseType(structData->int_64_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->int_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->int_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_64_TYPE:
         if (!cdr->serializeBaseType(structData->uint_64_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->uint_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->uint_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_32_TYPE:
         if (!cdr->serializeBaseType(structData->float_32_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->float_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->float_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_64_TYPE:
         if (!cdr->serializeBaseType(structData->float_64_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->float_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->float_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_128_TYPE:
         if (!cdr->serializeLongDouble(*(LongDouble*)&structData->float_128_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->float_128_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->float_128_value\n");
             return -1;
         }
         break;
     case TRAVODDS::CHAR_8_TYPE:
         if (!cdr->serializeBaseType(structData->character_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->character_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->character_value\n");
             return -1;
         }
         break;
     case TRAVODDS::CHAR_32_TYPE:
         if (!cdr->serializeBaseType(structData->wide_character_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->wide_character_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->wide_character_value\n");
             return -1;
         }
         break;
     case TRAVODDS::ENUMERATION_TYPE:
         if (!cdr->serializeBaseType(structData->enumeration_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->enumeration_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->enumeration_value\n");
             return -1;
         }
         break;
     case TRAVODDS::STRING_TYPE:
         if (!cdr->serializeString(structData->string_value)) {
-            fprintf(stderr, "Serialization failed for field: structData->string_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->string_value\n");
             return -1;
         }
         break;
@@ -382,97 +383,97 @@ int TRAVODDS::AnnotationMemberValueTypeSupport::deserialize_data(void* data, Cdr
     (void)endian;
     TRAVODDS::AnnotationMemberValue* structData = static_cast<TRAVODDS::AnnotationMemberValue*>(data);
     if (!cdr->deserializeBaseType(structData->u_)) {
-        fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
         return -1;
     }
     switch(structData->u_) {
     case TRAVODDS::BOOLEAN_TYPE:
         if (!cdr->deserializeBaseType(structData->boolean_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->boolean_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->boolean_value\n");
             return -1;
         }
         break;
     case TRAVODDS::BYTE_TYPE:
         if (!cdr->deserializeBaseType(structData->byte_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->byte_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->byte_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_16_TYPE:
         if (!cdr->deserializeBaseType(structData->int_16_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->int_16_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->int_16_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_16_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_16_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->uint_16_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->uint_16_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->int_32_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->int_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->int_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_32_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->uint_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->uint_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::INT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->int_64_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->int_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->int_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::UINT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->uint_64_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->uint_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->uint_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_32_TYPE:
         if (!cdr->deserializeBaseType(structData->float_32_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->float_32_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->float_32_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_64_TYPE:
         if (!cdr->deserializeBaseType(structData->float_64_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->float_64_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->float_64_value\n");
             return -1;
         }
         break;
     case TRAVODDS::FLOAT_128_TYPE:
         if (!cdr->deserializeLongDouble(*(LongDouble*)&structData->float_128_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->float_128_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->float_128_value\n");
             return -1;
         }
         break;
     case TRAVODDS::CHAR_8_TYPE:
         if (!cdr->deserializeBaseType(structData->character_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->character_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->character_value\n");
             return -1;
         }
         break;
     case TRAVODDS::CHAR_32_TYPE:
         if (!cdr->deserializeBaseType(structData->wide_character_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->wide_character_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->wide_character_value\n");
             return -1;
         }
         break;
     case TRAVODDS::ENUMERATION_TYPE:
         if (!cdr->deserializeBaseType(structData->enumeration_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->enumeration_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->enumeration_value\n");
             return -1;
         }
         break;
     case TRAVODDS::STRING_TYPE:
         if (!cdr->deserializeString(structData->string_value)) {
-            fprintf(stderr, "Deserialization failed for field: structData->string_value\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->string_value\n");
             return -1;
         }
         break;
@@ -509,11 +510,11 @@ ReturnCode_t TRAVODDS::AnnotationMemberValueTypeSupport::get_instancehandle(void
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -566,11 +567,11 @@ unsigned int TRAVODDS::AnnotationUsageMemberTypeSupport::get_max_serialized_data
 int TRAVODDS::AnnotationUsageMemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
     if (!cdr->serializeBaseType(structData->member_id)) {
-        fprintf(stderr, "Serialization failed for field: structData->member_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member_id\n");
         return -1;
     }
     if (TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->value, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -579,11 +580,11 @@ int TRAVODDS::AnnotationUsageMemberTypeSupport::serialize_data(void* data, CdrSe
 int TRAVODDS::AnnotationUsageMemberTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::AnnotationUsageMember* structData = static_cast<TRAVODDS::AnnotationUsageMember*>(data);
     if (!cdr->deserializeBaseType(structData->member_id)) {
-        fprintf(stderr, "Deserialization failed for field: structData->member_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member_id\n");
         return -1;
     }
     if (TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->value, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     return 0;
@@ -618,11 +619,11 @@ ReturnCode_t TRAVODDS::AnnotationUsageMemberTypeSupport::get_instancehandle(void
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -677,17 +678,17 @@ int TRAVODDS::AnnotationUsageTypeSupport::serialize_data(void* data, CdrSerializ
     TRAVODDS::AnnotationUsage* structData = static_cast<TRAVODDS::AnnotationUsage*>(data);
     uint32_t tmpLength = 0;
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
     tmpLength = static_cast<uint32_t>(structData->member.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->member\n");
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
         if (TRAVODDS::AnnotationUsageMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
     }
@@ -698,17 +699,17 @@ int TRAVODDS::AnnotationUsageTypeSupport::deserialize_data(void* data, CdrDeseri
     TRAVODDS::AnnotationUsage* structData = static_cast<TRAVODDS::AnnotationUsage*>(data);
     unsigned int tmpLength = 0;
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->member\n");
         return -1;
     }
     structData->member.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
         if (TRAVODDS::AnnotationUsageMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
-            fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
             return -1;
         }
     }
@@ -744,11 +745,11 @@ ReturnCode_t TRAVODDS::AnnotationUsageTypeSupport::get_instancehandle(void* data
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -805,33 +806,33 @@ int TRAVODDS::TypePropertyTypeSupport::serialize_data(void* data, CdrSerializer*
     switch(16 / 8) {
     case 1:
         if (!cdr->serializeBaseType(static_cast<char>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     case 2:
         if (!cdr->serializeBaseType(static_cast<short>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     case 4:
         if (!cdr->serializeBaseType(static_cast<int>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     default:
-        fprintf(stderr, "Serialization failed for field: structData->flag\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
         return -1;
         break;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -845,36 +846,36 @@ int TRAVODDS::TypePropertyTypeSupport::deserialize_data(void* data, CdrDeseriali
     switch(16 / 8) {
     case 1:
         if (!cdr->deserializeBaseType(tmpCharEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::TypeFlag>(tmpCharEnum);
         break;
     case 2:
         if (!cdr->deserializeBaseType(tmpShortEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::TypeFlag>(tmpShortEnum);
         break;
     case 4:
         if (!cdr->deserializeBaseType(tmpIntEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::TypeFlag>(tmpIntEnum);
         break;
     default:
-        fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
         return -1;
         break;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -909,11 +910,11 @@ ReturnCode_t TRAVODDS::TypePropertyTypeSupport::get_instancehandle(void* data, C
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -986,12 +987,12 @@ int TRAVODDS::TypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, in
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::PROPERTY_TYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->property\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->property\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::TypePropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->property\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->property\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -999,18 +1000,18 @@ int TRAVODDS::TypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, in
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::ANNOTATION_TYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->annotation\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->annotation.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->annotation\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->annotation\n");
         return -1;
     }
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
         if (TRAVODDS::AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation[i]\n");
             return -1;
         }
     }
@@ -1029,26 +1030,26 @@ int TRAVODDS::TypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::Type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::Type\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::PROPERTY_TYPE_MEMBER_ID:
             if (TRAVODDS::TypePropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->property\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->property\n");
                 return -1;
             }
             break;
         case TRAVODDS::ANNOTATION_TYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->annotation\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->annotation\n");
                 return -1;
             }
             structData->annotation.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->annotation[i]\n");
                     return -1;
                 }
             }
@@ -1057,13 +1058,13 @@ int TRAVODDS::TypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::Type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::Type\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -1099,11 +1100,11 @@ ReturnCode_t TRAVODDS::TypeTypeSupport::get_instancehandle(void* data, CdrSerial
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -1162,37 +1163,37 @@ int TRAVODDS::MemberPropertyTypeSupport::serialize_data(void* data, CdrSerialize
     switch(16 / 8) {
     case 1:
         if (!cdr->serializeBaseType(static_cast<char>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     case 2:
         if (!cdr->serializeBaseType(static_cast<short>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     case 4:
         if (!cdr->serializeBaseType(static_cast<int>(structData->flag))) {
-            fprintf(stderr, "Serialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
             return -1;
         }
         break;
     default:
-        fprintf(stderr, "Serialization failed for field: structData->flag\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->flag\n");
         return -1;
         break;
     }
     if (!cdr->serializeBaseType(structData->member_id)) {
-        fprintf(stderr, "Serialization failed for field: structData->member_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member_id\n");
         return -1;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->type_id\n");
         return -1;
     }
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -1206,40 +1207,40 @@ int TRAVODDS::MemberPropertyTypeSupport::deserialize_data(void* data, CdrDeseria
     switch(16 / 8) {
     case 1:
         if (!cdr->deserializeBaseType(tmpCharEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::MemberFlag>(tmpCharEnum);
         break;
     case 2:
         if (!cdr->deserializeBaseType(tmpShortEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::MemberFlag>(tmpShortEnum);
         break;
     case 4:
         if (!cdr->deserializeBaseType(tmpIntEnum)) {
-            fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
             return -1;
         }
         structData->flag = static_cast<TRAVODDS::MemberFlag>(tmpIntEnum);
         break;
     default:
-        fprintf(stderr, "Deserialization failed for field: structData->flag\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->flag\n");
         return -1;
         break;
     }
     if (!cdr->deserializeBaseType(structData->member_id)) {
-        fprintf(stderr, "Deserialization failed for field: structData->member_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member_id\n");
         return -1;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->type_id, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->type_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->type_id\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -1274,11 +1275,11 @@ ReturnCode_t TRAVODDS::MemberPropertyTypeSupport::get_instancehandle(void* data,
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -1351,12 +1352,12 @@ int TRAVODDS::MemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::PROPERTY_MEMBER_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->property\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->property\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::MemberPropertyTypeSupport::get_instance()->serialize_data((void*)&structData->property, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->property\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->property\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -1364,18 +1365,18 @@ int TRAVODDS::MemberTypeSupport::serialize_data(void* data, CdrSerializer* cdr, 
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::ANNOTATION_MEMBER_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->annotation\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->annotation.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->annotation\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->annotation\n");
         return -1;
     }
     for (size_t i = 0; i < structData->annotation.size(); ++i) {
         if (TRAVODDS::AnnotationUsageTypeSupport::get_instance()->serialize_data((void*)&structData->annotation[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation[i]\n");
             return -1;
         }
     }
@@ -1394,26 +1395,26 @@ int TRAVODDS::MemberTypeSupport::deserialize_data(void* data, CdrDeserializer* c
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::Member\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::Member\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::PROPERTY_MEMBER_MEMBER_ID:
             if (TRAVODDS::MemberPropertyTypeSupport::get_instance()->deserialize_data(&structData->property, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->property\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->property\n");
                 return -1;
             }
             break;
         case TRAVODDS::ANNOTATION_MEMBER_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->annotation\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->annotation\n");
                 return -1;
             }
             structData->annotation.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::AnnotationUsageTypeSupport::get_instance()->deserialize_data(&structData->annotation[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->annotation[i]\n");
                     return -1;
                 }
             }
@@ -1422,13 +1423,13 @@ int TRAVODDS::MemberTypeSupport::deserialize_data(void* data, CdrDeserializer* c
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::Member\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::Member\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -1464,11 +1465,11 @@ ReturnCode_t TRAVODDS::MemberTypeSupport::get_instancehandle(void* data, CdrSeri
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -1540,18 +1541,18 @@ int TRAVODDS::StructureTypeTypeSupport::serialize_data(void* data, CdrSerializer
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->annotation[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation[i]\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -1559,18 +1560,18 @@ int TRAVODDS::StructureTypeTypeSupport::serialize_data(void* data, CdrSerializer
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::MEMBER_STRUCTURETYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->member.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->member\n");
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
         if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
     }
@@ -1588,31 +1589,31 @@ int TRAVODDS::StructureTypeTypeSupport::deserialize_data(void* data, CdrDeserial
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->annotation[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->annotation[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::StructureType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::StructureType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BASE_TYPE_STRUCTURETYPE_MEMBER_ID:
             if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
             break;
         case TRAVODDS::MEMBER_STRUCTURETYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->member\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::MemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
             }
@@ -1621,13 +1622,13 @@ int TRAVODDS::StructureTypeTypeSupport::deserialize_data(void* data, CdrDeserial
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::StructureType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::StructureType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -1641,7 +1642,7 @@ TypeObject* TRAVODDS::StructureTypeTypeSupport::get_typeobject() {
 int TRAVODDS::StructureTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::StructureType* structData = static_cast<TRAVODDS::StructureType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -1665,11 +1666,11 @@ ReturnCode_t TRAVODDS::StructureTypeTypeSupport::get_instancehandle(void* data, 
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -1733,23 +1734,23 @@ int TRAVODDS::UnionMemberTypeSupport::serialize_data(void* data, CdrSerializer* 
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::LABEL_UNIONMEMBER_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->label\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->label\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->label.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->label\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->label\n");
         return -1;
     }
     if (!cdr->serializeBaseTypeArray(structData->label.data(), static_cast<uint32_t>(structData->label.size()))) {
-        fprintf(stderr, "Serialization failed for field: structData->label\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->label\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -1766,24 +1767,24 @@ int TRAVODDS::UnionMemberTypeSupport::deserialize_data(void* data, CdrDeserializ
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::UnionMember\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::UnionMember\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::LABEL_UNIONMEMBER_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->label\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->label\n");
                 return -1;
             }
             structData->label.resize(tmpLength);
             if (!cdr->deserializeBaseTypeArray(structData->label.data(), tmpLength)) {
-                fprintf(stderr, "Deserialization failed for field: structData->label\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->label\n");
                 return -1;
             }
             break;
@@ -1791,13 +1792,13 @@ int TRAVODDS::UnionMemberTypeSupport::deserialize_data(void* data, CdrDeserializ
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::UnionMember\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::UnionMember\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -1811,7 +1812,7 @@ TypeObject* TRAVODDS::UnionMemberTypeSupport::get_typeobject() {
 int TRAVODDS::UnionMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::UnionMember* structData = static_cast<TRAVODDS::UnionMember*>(data);
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -1835,11 +1836,11 @@ ReturnCode_t TRAVODDS::UnionMemberTypeSupport::get_instancehandle(void* data, Cd
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -1905,24 +1906,24 @@ int TRAVODDS::UnionTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->label\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->label\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::MEMBER_UNIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->member.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->member\n");
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
         if (TRAVODDS::UnionMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
     }
@@ -1940,25 +1941,25 @@ int TRAVODDS::UnionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->label\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->label\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::UnionType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::UnionType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::MEMBER_UNIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->member\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::UnionMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
             }
@@ -1967,13 +1968,13 @@ int TRAVODDS::UnionTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::UnionType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::UnionType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -1987,7 +1988,7 @@ TypeObject* TRAVODDS::UnionTypeTypeSupport::get_typeobject() {
 int TRAVODDS::UnionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::UnionType* structData = static_cast<TRAVODDS::UnionType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2011,11 +2012,11 @@ ReturnCode_t TRAVODDS::UnionTypeTypeSupport::get_instancehandle(void* data, CdrS
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2085,18 +2086,18 @@ int TRAVODDS::AnnotationMemberTypeSupport::serialize_data(void* data, CdrSeriali
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->default_value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->serialize_data((void*)&structData->default_value, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->default_value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -2112,19 +2113,19 @@ int TRAVODDS::AnnotationMemberTypeSupport::deserialize_data(void* data, CdrDeser
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::MemberTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::AnnotationMember\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AnnotationMember\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::DEFAULT_VALUE_ANNOTATIONMEMBER_MEMBER_ID:
             if (TRAVODDS::AnnotationMemberValueTypeSupport::get_instance()->deserialize_data(&structData->default_value, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->default_value\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->default_value\n");
                 return -1;
             }
             break;
@@ -2132,13 +2133,13 @@ int TRAVODDS::AnnotationMemberTypeSupport::deserialize_data(void* data, CdrDeser
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::AnnotationMember\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AnnotationMember\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -2152,7 +2153,7 @@ TypeObject* TRAVODDS::AnnotationMemberTypeSupport::get_typeobject() {
 int TRAVODDS::AnnotationMemberTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationMember* structData = static_cast<TRAVODDS::AnnotationMember*>(data);
     if (TRAVODDS::MemberTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Member*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2176,11 +2177,11 @@ ReturnCode_t TRAVODDS::AnnotationMemberTypeSupport::get_instancehandle(void* dat
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2252,18 +2253,18 @@ int TRAVODDS::AnnotationTypeTypeSupport::serialize_data(void* data, CdrSerialize
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->default_value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->default_value\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -2271,18 +2272,18 @@ int TRAVODDS::AnnotationTypeTypeSupport::serialize_data(void* data, CdrSerialize
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::MEMBER_ANNOTATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->member.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->member\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->member\n");
         return -1;
     }
     for (size_t i = 0; i < structData->member.size(); ++i) {
         if (TRAVODDS::AnnotationMemberTypeSupport::get_instance()->serialize_data((void*)&structData->member[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
             return -1;
         }
     }
@@ -2300,31 +2301,31 @@ int TRAVODDS::AnnotationTypeTypeSupport::deserialize_data(void* data, CdrDeseria
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->default_value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->default_value\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::AnnotationType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AnnotationType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BASE_TYPE_ANNOTATIONTYPE_MEMBER_ID:
             if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
             break;
         case TRAVODDS::MEMBER_ANNOTATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->member\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->member\n");
                 return -1;
             }
             structData->member.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::AnnotationMemberTypeSupport::get_instance()->deserialize_data(&structData->member[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
                     return -1;
                 }
             }
@@ -2333,13 +2334,13 @@ int TRAVODDS::AnnotationTypeTypeSupport::deserialize_data(void* data, CdrDeseria
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::AnnotationType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AnnotationType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -2353,7 +2354,7 @@ TypeObject* TRAVODDS::AnnotationTypeTypeSupport::get_typeobject() {
 int TRAVODDS::AnnotationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AnnotationType* structData = static_cast<TRAVODDS::AnnotationType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2377,11 +2378,11 @@ ReturnCode_t TRAVODDS::AnnotationTypeTypeSupport::get_instancehandle(void* data,
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2451,18 +2452,18 @@ int TRAVODDS::AliasTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->member[i]\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BASE_TYPE_ALIASTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->base_type, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -2478,19 +2479,19 @@ int TRAVODDS::AliasTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->member[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->member[i]\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::AliasType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AliasType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BASE_TYPE_ALIASTYPE_MEMBER_ID:
             if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->base_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->base_type\n");
                 return -1;
             }
             break;
@@ -2498,13 +2499,13 @@ int TRAVODDS::AliasTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::AliasType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::AliasType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -2518,7 +2519,7 @@ TypeObject* TRAVODDS::AliasTypeTypeSupport::get_typeobject() {
 int TRAVODDS::AliasTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::AliasType* structData = static_cast<TRAVODDS::AliasType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2542,11 +2543,11 @@ ReturnCode_t TRAVODDS::AliasTypeTypeSupport::get_instancehandle(void* data, CdrS
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2628,18 +2629,18 @@ int TRAVODDS::CollectionTypeTypeSupport::serialize_data(void* data, CdrSerialize
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->base_type\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->element_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->element_type, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->element_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element_type\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -2647,12 +2648,12 @@ int TRAVODDS::CollectionTypeTypeSupport::serialize_data(void* data, CdrSerialize
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->element_shared\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element_shared\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (!cdr->serializeBaseType(structData->element_shared)) {
-        fprintf(stderr, "Serialization failed for field: structData->element_shared\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element_shared\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -2668,25 +2669,25 @@ int TRAVODDS::CollectionTypeTypeSupport::deserialize_data(void* data, CdrDeseria
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->base_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->base_type\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::CollectionType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::CollectionType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::ELEMENT_TYPE_COLLECTIONTYPE_MEMBER_ID:
             if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->element_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->element_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->element_type\n");
                 return -1;
             }
             break;
         case TRAVODDS::ELEMENT_SHARED_COLLECTIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->element_shared)) {
-                fprintf(stderr, "Deserialization failed for field: structData->element_shared\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->element_shared\n");
                 return -1;
             }
             break;
@@ -2694,13 +2695,13 @@ int TRAVODDS::CollectionTypeTypeSupport::deserialize_data(void* data, CdrDeseria
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::CollectionType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::CollectionType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -2714,7 +2715,7 @@ TypeObject* TRAVODDS::CollectionTypeTypeSupport::get_typeobject() {
 int TRAVODDS::CollectionTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::CollectionType* structData = static_cast<TRAVODDS::CollectionType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2738,11 +2739,11 @@ ReturnCode_t TRAVODDS::CollectionTypeTypeSupport::get_instancehandle(void* data,
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2808,24 +2809,24 @@ int TRAVODDS::ArrayTypeTypeSupport::serialize_data(void* data, CdrSerializer* cd
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->element_shared\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element_shared\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BOUND_ARRAYTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->bound.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->bound\n");
         return -1;
     }
     for (size_t i = 0; i < structData->bound.size(); ++i) {
         if (!cdr->serializeBaseType(structData->bound[i])) {
-            fprintf(stderr, "Serialization failed for field: structData->bound[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound[i]\n");
             return -1;
         }
     }
@@ -2843,25 +2844,25 @@ int TRAVODDS::ArrayTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->element_shared\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->element_shared\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::ArrayType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::ArrayType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BOUND_ARRAYTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->bound\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->bound\n");
                 return -1;
             }
             structData->bound.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (!cdr->deserializeBaseType(structData->bound[i])) {
-                    fprintf(stderr, "Deserialization failed for field: structData->bound[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound[i]\n");
                     return -1;
                 }
             }
@@ -2870,13 +2871,13 @@ int TRAVODDS::ArrayTypeTypeSupport::deserialize_data(void* data, CdrDeserializer
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::ArrayType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::ArrayType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -2890,7 +2891,7 @@ TypeObject* TRAVODDS::ArrayTypeTypeSupport::get_typeobject() {
 int TRAVODDS::ArrayTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::ArrayType* structData = static_cast<TRAVODDS::ArrayType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -2914,11 +2915,11 @@ ReturnCode_t TRAVODDS::ArrayTypeTypeSupport::get_instancehandle(void* data, CdrS
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -2972,15 +2973,15 @@ unsigned int TRAVODDS::MapTypeTypeSupport::get_max_serialized_data_size(void* da
 int TRAVODDS::MapTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->bound[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound[i]\n");
         return -1;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->key_element_type, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->key_element_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->key_element_type\n");
         return -1;
     }
     if (!cdr->serializeBaseType(structData->bound)) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -2989,15 +2990,15 @@ int TRAVODDS::MapTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
 int TRAVODDS::MapTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound[i]\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound[i]\n");
         return -1;
     }
     if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->key_element_type, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->key_element_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->key_element_type\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(structData->bound)) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -3010,7 +3011,7 @@ TypeObject* TRAVODDS::MapTypeTypeSupport::get_typeobject() {
 int TRAVODDS::MapTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::MapType* structData = static_cast<TRAVODDS::MapType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -3034,11 +3035,11 @@ ReturnCode_t TRAVODDS::MapTypeTypeSupport::get_instancehandle(void* data, CdrSer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3093,11 +3094,11 @@ unsigned int TRAVODDS::SequenceTypeTypeSupport::get_max_serialized_data_size(voi
 int TRAVODDS::SequenceTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     if (!cdr->serializeBaseType(structData->bound)) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -3106,11 +3107,11 @@ int TRAVODDS::SequenceTypeTypeSupport::serialize_data(void* data, CdrSerializer*
 int TRAVODDS::SequenceTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(structData->bound)) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -3123,7 +3124,7 @@ TypeObject* TRAVODDS::SequenceTypeTypeSupport::get_typeobject() {
 int TRAVODDS::SequenceTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::SequenceType* structData = static_cast<TRAVODDS::SequenceType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -3147,11 +3148,11 @@ ReturnCode_t TRAVODDS::SequenceTypeTypeSupport::get_instancehandle(void* data, C
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3204,11 +3205,11 @@ unsigned int TRAVODDS::StringTypeTypeSupport::get_max_serialized_data_size(void*
 int TRAVODDS::StringTypeTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     if (!cdr->serializeBaseType(structData->bound)) {
-        fprintf(stderr, "Serialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -3217,11 +3218,11 @@ int TRAVODDS::StringTypeTypeSupport::serialize_data(void* data, CdrSerializer* c
 int TRAVODDS::StringTypeTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, int endian) {
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(structData->bound)) {
-        fprintf(stderr, "Deserialization failed for field: structData->bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bound\n");
         return -1;
     }
     return 0;
@@ -3235,7 +3236,7 @@ int TRAVODDS::StringTypeTypeSupport::serialize_key(void* data, CdrSerializer* cd
     TRAVODDS::StringType* structData = static_cast<TRAVODDS::StringType*>(data);
     //bool memberHasKey = false;
     if (TRAVODDS::CollectionTypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::CollectionType*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -3259,11 +3260,11 @@ ReturnCode_t TRAVODDS::StringTypeTypeSupport::get_instancehandle(void* data, Cdr
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3320,11 +3321,11 @@ int TRAVODDS::BitTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int
     (void)endian;
     TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
     if (!cdr->serializeBaseType(structData->index)) {
-        fprintf(stderr, "Serialization failed for field: structData->index\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->index\n");
         return -1;
     }
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -3334,11 +3335,11 @@ int TRAVODDS::BitTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr,
     (void)endian;
     TRAVODDS::Bit* structData = static_cast<TRAVODDS::Bit*>(data);
     if (!cdr->deserializeBaseType(structData->index)) {
-        fprintf(stderr, "Deserialization failed for field: structData->index\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->index\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -3375,11 +3376,11 @@ ReturnCode_t TRAVODDS::BitTypeSupport::get_instancehandle(void* data, CdrSeriali
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3451,18 +3452,18 @@ int TRAVODDS::BitSetTypeTypeSupport::serialize_data(void* data, CdrSerializer* c
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BIT_BOUND_BITSETTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit_bound\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (!cdr->serializeBaseType(structData->bit_bound)) {
-        fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit_bound\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -3470,18 +3471,18 @@ int TRAVODDS::BitSetTypeTypeSupport::serialize_data(void* data, CdrSerializer* c
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BIT_BITSETTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->bit\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->bit.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->bit\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->bit\n");
         return -1;
     }
     for (size_t i = 0; i < structData->bit.size(); ++i) {
         if (TRAVODDS::BitTypeSupport::get_instance()->serialize_data((void*)&structData->bit[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->bit[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit[i]\n");
             return -1;
         }
     }
@@ -3499,31 +3500,31 @@ int TRAVODDS::BitSetTypeTypeSupport::deserialize_data(void* data, CdrDeserialize
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::BitSetType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::BitSetType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BIT_BOUND_BITSETTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->bit_bound)) {
-                fprintf(stderr, "Deserialization failed for field: structData->bit_bound\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bit_bound\n");
                 return -1;
             }
             break;
         case TRAVODDS::BIT_BITSETTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->bit\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->bit\n");
                 return -1;
             }
             structData->bit.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::BitTypeSupport::get_instance()->deserialize_data(&structData->bit[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->bit[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bit[i]\n");
                     return -1;
                 }
             }
@@ -3532,13 +3533,13 @@ int TRAVODDS::BitSetTypeTypeSupport::deserialize_data(void* data, CdrDeserialize
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::BitSetType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::BitSetType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -3552,7 +3553,7 @@ TypeObject* TRAVODDS::BitSetTypeTypeSupport::get_typeobject() {
 int TRAVODDS::BitSetTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::BitSetType* structData = static_cast<TRAVODDS::BitSetType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -3576,11 +3577,11 @@ ReturnCode_t TRAVODDS::BitSetTypeTypeSupport::get_instancehandle(void* data, Cdr
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3637,11 +3638,11 @@ int TRAVODDS::EnumeratedConstantTypeSupport::serialize_data(void* data, CdrSeria
     TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
     //uint32_t tmpLength = 0;
     if (!cdr->serializeBaseType(structData->value)) {
-        fprintf(stderr, "Serialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->value\n");
         return -1;
     }
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -3651,11 +3652,11 @@ int TRAVODDS::EnumeratedConstantTypeSupport::deserialize_data(void* data, CdrDes
     (void)endian;
     TRAVODDS::EnumeratedConstant* structData = static_cast<TRAVODDS::EnumeratedConstant*>(data);
     if (!cdr->deserializeBaseType(structData->value)) {
-        fprintf(stderr, "Deserialization failed for field: structData->value\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->value\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -3692,11 +3693,11 @@ ReturnCode_t TRAVODDS::EnumeratedConstantTypeSupport::get_instancehandle(void* d
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3768,18 +3769,18 @@ int TRAVODDS::EnumerationTypeTypeSupport::serialize_data(void* data, CdrSerializ
     unsigned int beforeLen = 0;
     unsigned int afterLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit_bound\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (!cdr->serializeBaseType(structData->bit_bound)) {
-        fprintf(stderr, "Serialization failed for field: structData->bit_bound\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bit_bound\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -3787,18 +3788,18 @@ int TRAVODDS::EnumerationTypeTypeSupport::serialize_data(void* data, CdrSerializ
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, TRAVODDS::CONSTANT_ENUMERATIONTYPE_MEMBER_ID);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->constant\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->constant\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->constant.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->constant\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->constant\n");
         return -1;
     }
     for (size_t i = 0; i < structData->constant.size(); ++i) {
         if (TRAVODDS::EnumeratedConstantTypeSupport::get_instance()->serialize_data((void*)&structData->constant[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->constant[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->constant[i]\n");
             return -1;
         }
     }
@@ -3816,31 +3817,31 @@ int TRAVODDS::EnumerationTypeTypeSupport::deserialize_data(void* data, CdrDeseri
     bool mustUnderstand = false;
     unsigned int readLen = 0;
     if (TRAVODDS::TypeTypeSupport::get_instance()->deserialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::EnumerationType\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::EnumerationType\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case TRAVODDS::BIT_BOUND_ENUMERATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(structData->bit_bound)) {
-                fprintf(stderr, "Deserialization failed for field: structData->bit_bound\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bit_bound\n");
                 return -1;
             }
             break;
         case TRAVODDS::CONSTANT_ENUMERATIONTYPE_MEMBER_ID:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->constant\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->constant\n");
                 return -1;
             }
             structData->constant.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::EnumeratedConstantTypeSupport::get_instance()->deserialize_data(&structData->constant[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->constant[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->constant[i]\n");
                     return -1;
                 }
             }
@@ -3849,13 +3850,13 @@ int TRAVODDS::EnumerationTypeTypeSupport::deserialize_data(void* data, CdrDeseri
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::EnumerationType\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::EnumerationType\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -3869,7 +3870,7 @@ TypeObject* TRAVODDS::EnumerationTypeTypeSupport::get_typeobject() {
 int TRAVODDS::EnumerationTypeTypeSupport::serialize_key(void* data, CdrSerializer* cdr, int endian) {
     TRAVODDS::EnumerationType* structData = static_cast<TRAVODDS::EnumerationType*>(data);
     if (TRAVODDS::TypeTypeSupport::get_instance()->serialize_data((void*)dynamic_cast<TRAVODDS::Type*>(structData), cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: \n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: \n");
         return -1;
     }
     return 0;
@@ -3893,11 +3894,11 @@ ReturnCode_t TRAVODDS::EnumerationTypeTypeSupport::get_instancehandle(void* data
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -3953,7 +3954,7 @@ int TRAVODDS::_ModuleTypeSupport::serialize_data(void* data, CdrSerializer* cdr,
     TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
     //uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->name)) {
-        fprintf(stderr, "Serialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -3963,7 +3964,7 @@ int TRAVODDS::_ModuleTypeSupport::deserialize_data(void* data, CdrDeserializer* 
     (void)endian;
     TRAVODDS::_Module* structData = static_cast<TRAVODDS::_Module*>(data);
     if (!cdr->deserializeString(structData->name)) {
-        fprintf(stderr, "Deserialization failed for field: structData->name\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->name\n");
         return -1;
     }
     return 0;
@@ -4000,11 +4001,11 @@ ReturnCode_t TRAVODDS::_ModuleTypeSupport::get_instancehandle(void* data, CdrSer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -4256,31 +4257,31 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, 0);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     switch(16 / 8) {
     case 1:
         if (!cdr->serializeBaseType(static_cast<char>(structData->u_))) {
-            fprintf(stderr, "Serialization failed for field: structData->u_\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
             return -1;
         }
         break;
     case 2:
         if (!cdr->serializeBaseType(static_cast<short>(structData->u_))) {
-            fprintf(stderr, "Serialization failed for field: structData->u_\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
             return -1;
         }
         break;
     case 4:
         if (!cdr->serializeBaseType(static_cast<int>(structData->u_))) {
-            fprintf(stderr, "Serialization failed for field: structData->u_\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
             return -1;
         }
         break;
     default:
-        fprintf(stderr, "Serialization failed for field: structData->u_\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->u_\n");
         return -1;
         break;
     }
@@ -4291,12 +4292,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 1);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->alias_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->alias_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::AliasTypeTypeSupport::get_instance()->serialize_data((void*)&structData->alias_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->alias_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->alias_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4306,12 +4307,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 2);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->annotation_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::AnnotationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->annotation_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->annotation_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->annotation_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4321,12 +4322,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 3);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->array_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->array_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::ArrayTypeTypeSupport::get_instance()->serialize_data((void*)&structData->array_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->array_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->array_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4336,12 +4337,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 4);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->bitset_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bitset_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::BitSetTypeTypeSupport::get_instance()->serialize_data((void*)&structData->bitset_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->bitset_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->bitset_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4351,12 +4352,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 5);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->enumeration_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->enumeration_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::EnumerationTypeTypeSupport::get_instance()->serialize_data((void*)&structData->enumeration_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->enumeration_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->enumeration_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4366,12 +4367,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 6);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->map_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->map_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::MapTypeTypeSupport::get_instance()->serialize_data((void*)&structData->map_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->map_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->map_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4381,12 +4382,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 7);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->sequence_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->sequence_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::SequenceTypeTypeSupport::get_instance()->serialize_data((void*)&structData->sequence_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->sequence_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->sequence_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4396,12 +4397,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 8);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->string_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->string_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::StringTypeTypeSupport::get_instance()->serialize_data((void*)&structData->string_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->string_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->string_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4411,12 +4412,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 9);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->structure_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->structure_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::StructureTypeTypeSupport::get_instance()->serialize_data((void*)&structData->structure_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->structure_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->structure_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4426,12 +4427,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 10);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->union_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->union_type\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::UnionTypeTypeSupport::get_instance()->serialize_data((void*)&structData->union_type, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->union_type\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->union_type\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4441,12 +4442,12 @@ int TRAVODDS::TypeLibraryElementTypeSupport::serialize_data(void* data, CdrSeria
         useExtend = true;
         lenAddr = cdr->serializeParameterHeader(useExtend, true, 11);
         if (!lenAddr) {
-            fprintf(stderr, "Serialization failed for field: structData->mod\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->mod\n");
             return -1;
         }
         beforeLen = cdr->getRemainingSpace();
         if (TRAVODDS::_ModuleTypeSupport::get_instance()->serialize_data((void*)&structData->mod, cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->mod\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->mod\n");
             return -1;
         }
         afterLen = cdr->getRemainingSpace();
@@ -4468,7 +4469,7 @@ int TRAVODDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, CdrDes
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::TypeLibraryElement\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::TypeLibraryElement\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
@@ -4477,94 +4478,94 @@ int TRAVODDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, CdrDes
             switch(16 / 8) {
             case 1:
                 if (!cdr->deserializeBaseType(tmpCharEnum)) {
-                    fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
                 structData->u_ = static_cast<TRAVODDS::TypeLibraryElementKind>(tmpCharEnum);
                 break;
             case 2:
                 if (!cdr->deserializeBaseType(tmpShortEnum)) {
-                    fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
                 structData->u_ = static_cast<TRAVODDS::TypeLibraryElementKind>(tmpShortEnum);
                 break;
             case 4:
                 if (!cdr->deserializeBaseType(tmpIntEnum)) {
-                    fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
                     return -1;
                 }
                 structData->u_ = static_cast<TRAVODDS::TypeLibraryElementKind>(tmpIntEnum);
                 break;
             default:
-                fprintf(stderr, "Deserialization failed for field: structData->u_\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->u_\n");
                 return -1;
                 break;
             }
             break;
         case 1:
             if (TRAVODDS::AliasTypeTypeSupport::get_instance()->deserialize_data(&structData->alias_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->alias_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->alias_type\n");
                 return -1;
             }
             break;
         case 2:
             if (TRAVODDS::AnnotationTypeTypeSupport::get_instance()->deserialize_data(&structData->annotation_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->annotation_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->annotation_type\n");
                 return -1;
             }
             break;
         case 3:
             if (TRAVODDS::ArrayTypeTypeSupport::get_instance()->deserialize_data(&structData->array_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->array_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->array_type\n");
                 return -1;
             }
             break;
         case 4:
             if (TRAVODDS::BitSetTypeTypeSupport::get_instance()->deserialize_data(&structData->bitset_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->bitset_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->bitset_type\n");
                 return -1;
             }
             break;
         case 5:
             if (TRAVODDS::EnumerationTypeTypeSupport::get_instance()->deserialize_data(&structData->enumeration_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->enumeration_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->enumeration_type\n");
                 return -1;
             }
             break;
         case 6:
             if (TRAVODDS::MapTypeTypeSupport::get_instance()->deserialize_data(&structData->map_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->map_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->map_type\n");
                 return -1;
             }
             break;
         case 7:
             if (TRAVODDS::SequenceTypeTypeSupport::get_instance()->deserialize_data(&structData->sequence_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->sequence_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->sequence_type\n");
                 return -1;
             }
             break;
         case 8:
             if (TRAVODDS::StringTypeTypeSupport::get_instance()->deserialize_data(&structData->string_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->string_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->string_type\n");
                 return -1;
             }
             break;
         case 9:
             if (TRAVODDS::StructureTypeTypeSupport::get_instance()->deserialize_data(&structData->structure_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->structure_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->structure_type\n");
                 return -1;
             }
             break;
         case 10:
             if (TRAVODDS::UnionTypeTypeSupport::get_instance()->deserialize_data(&structData->union_type, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->union_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->union_type\n");
                 return -1;
             }
             break;
         case 11:
             if (TRAVODDS::_ModuleTypeSupport::get_instance()->deserialize_data(&structData->mod, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->mod\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->mod\n");
                 return -1;
             }
             break;
@@ -4572,13 +4573,13 @@ int TRAVODDS::TypeLibraryElementTypeSupport::deserialize_data(void* data, CdrDes
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::TypeLibraryElement\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::TypeLibraryElement\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -4619,11 +4620,11 @@ ReturnCode_t TRAVODDS::TypeLibraryElementTypeSupport::get_instancehandle(void* d
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -4679,12 +4680,12 @@ int TRAVODDS::TypeLibraryTypeSupport::serialize_data(void* data, CdrSerializer* 
     uint32_t tmpLength = 0;
     tmpLength = static_cast<uint32_t>(structData->element.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->element\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->element\n");
         return -1;
     }
     for (size_t i = 0; i < structData->element.size(); ++i) {
         if (TRAVODDS::TypeLibraryElementTypeSupport::get_instance()->serialize_data((void*)&structData->element[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->element[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->element[i]\n");
             return -1;
         }
     }
@@ -4695,13 +4696,13 @@ int TRAVODDS::TypeLibraryTypeSupport::deserialize_data(void* data, CdrDeserializ
     TRAVODDS::TypeLibrary* structData = static_cast<TRAVODDS::TypeLibrary*>(data);
     unsigned int tmpLength = 0;
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->element\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->element\n");
         return -1;
     }
     structData->element.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
         if (TRAVODDS::TypeLibraryElementTypeSupport::get_instance()->deserialize_data(&structData->element[i], cdr, endian) != 0) {
-            fprintf(stderr, "Deserialization failed for field: structData->element[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->element[i]\n");
             return -1;
         }
     }
@@ -4739,11 +4740,11 @@ ReturnCode_t TRAVODDS::TypeLibraryTypeSupport::get_instancehandle(void* data, Cd
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -4816,12 +4817,12 @@ int TRAVODDS::TypeObjectTypeSupport::serialize_data(void* data, CdrSerializer* c
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, 0);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->library\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->library\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     if (TRAVODDS::TypeLibraryTypeSupport::get_instance()->serialize_data((void*)&structData->library, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->library\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->library\n");
         return -1;
     }
     afterLen = cdr->getRemainingSpace();
@@ -4829,18 +4830,18 @@ int TRAVODDS::TypeObjectTypeSupport::serialize_data(void* data, CdrSerializer* c
     useExtend = true;
     lenAddr = cdr->serializeParameterHeader(useExtend, true, 1);
     if (!lenAddr) {
-        fprintf(stderr, "Serialization failed for field: structData->the_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->the_type\n");
         return -1;
     }
     beforeLen = cdr->getRemainingSpace();
     tmpLength = static_cast<uint32_t>(structData->the_type.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->the_type\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->the_type\n");
         return -1;
     }
     for (size_t i = 0; i < structData->the_type.size(); ++i) {
         if (TRAVODDS::_TypeIdTypeSupport::get_instance()->serialize_data((void*)&structData->the_type[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->the_type[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->the_type[i]\n");
             return -1;
         }
     }
@@ -4859,26 +4860,26 @@ int TRAVODDS::TypeObjectTypeSupport::deserialize_data(void* data, CdrDeserialize
     unsigned int readLen = 0;
     while(memberId != PID_LIST_END) {
         if (!cdr->deserializeParameterHeader(memberId, length, useExtend, mustUnderstand)) {
-            fprintf(stderr, "Deserialization failed for field: TRAVODDS::TypeObject\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::TypeObject\n");
             return -1;
         }
         readLen = cdr->getBufferLength();
         switch(memberId) {
         case 0:
             if (TRAVODDS::TypeLibraryTypeSupport::get_instance()->deserialize_data(&structData->library, cdr, endian) != 0) {
-                fprintf(stderr, "Deserialization failed for field: structData->library\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->library\n");
                 return -1;
             }
             break;
         case 1:
             if (!cdr->deserializeBaseType(tmpLength)) {
-                fprintf(stderr, "Deserialization length failed for field: structData->the_type\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->the_type\n");
                 return -1;
             }
             structData->the_type.resize(tmpLength);
             for (size_t i = 0; i < tmpLength; ++i) {
                 if (TRAVODDS::_TypeIdTypeSupport::get_instance()->deserialize_data(&structData->the_type[i], cdr, endian) != 0) {
-                    fprintf(stderr, "Deserialization failed for field: structData->the_type[i]\n");
+                    TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->the_type[i]\n");
                     return -1;
                 }
             }
@@ -4887,13 +4888,13 @@ int TRAVODDS::TypeObjectTypeSupport::deserialize_data(void* data, CdrDeserialize
             break;
         default:
             if (mustUnderstand) {
-                fprintf(stderr, "Deserialization failed for field: TRAVODDS::TypeObject\n");
+                TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: TRAVODDS::TypeObject\n");
                 return -1;
             }
             break;
         }
         if (!cdr->aheadReaderPosition(readLen, length)) {
-            fprintf(stderr, "move to next head(%d %d) failed.", readLen, length);
+            TRAVODDS_LOG(LOG_ERROR, "move to next head(%d %d) failed.", readLen, length);
             return -1;
         }
     }
@@ -4930,11 +4931,11 @@ ReturnCode_t TRAVODDS::TypeObjectTypeSupport::get_instancehandle(void* data, Cdr
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;

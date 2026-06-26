@@ -163,6 +163,20 @@ public:
     virtual ReturnCode_t write(const void* const data, const InstanceHandle_t& handle) = 0;
 
     /**
+     * @brief 发送数据并携带关联请求的样本身份。
+     *
+     * 用于请求-回复模式中，服务端发送回复时携带原始请求的 SampleIdentity。
+     * 该信息通过 RTPS 的 PID_RELATED_SAMPLE_IDENTITY 参数传输，
+     * 使客户端能将回复与原始请求精确匹配。
+     *
+     * @param data           待发送数据
+     * @param handle         实例句柄（HANDLE_NIL 表示自动推断）
+     * @param related_sample_identity  关联的原始请求样本身份
+     * @return ReturnCode_t  发送结果状态码
+     */
+    virtual ReturnCode_t write_w_related_sample_identity(const void* const data, const InstanceHandle_t& handle, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity) = 0;
+
+    /**
      * @brief 此函数执行与写入相同的功能，只是它还提供了源时间戳source_timestamp的值，
      * 该值通过SampleInfo内的source_timestapp属性source_timestamp可用于DataReader对象。
      * handle 参数值的约束和相应的错误行为对于write 函数是相同的。
@@ -176,6 +190,22 @@ public:
      * @return 任何标准返回代码。
      */
     virtual ReturnCode_t write_w_timestamp(const void* const data, const InstanceHandle_t& handle, const Time_t& timestamp) = 0;
+
+    /**
+     * @brief 发送数据，同时携带源时间戳和关联请求的样本身份。
+     *
+     * 结合了 write_w_timestamp() 和 write_w_related_sample_identity() 的功能，
+     * 用于服务端在发送回复时，同时记录回复产生的时间戳和关联的原始请求身份。
+     * 时间戳通过 SampleInfo.source_timestamp 供 DataReader 使用，
+     * 关联样本身份通过 RTPS 的 PID_RELATED_SAMPLE_IDENTITY 参数传输。
+     *
+     * @param data                        待发送数据
+     * @param handle                      实例句柄（HANDLE_NIL 表示自动推断）
+     * @param timestamp                   源时间戳（数据产生时间）
+     * @param related_sample_identity     关联的原始请求样本身份
+     * @return ReturnCode_t              发送结果状态码
+     */
+    virtual ReturnCode_t write_w_timestamp_related_sample_identity(const void* const data, const InstanceHandle_t& handle, const Time_t& timestamp, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity) = 0;
 
     /**
      * @brief 该函数请求中间件删除数据（实际删除被推迟，直到该数据在整个系统中不再使用）。
