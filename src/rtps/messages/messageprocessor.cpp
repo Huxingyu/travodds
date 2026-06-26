@@ -888,7 +888,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> m
 
 	/*  判断是否存在inlineQos */
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message->buffer, messageShift, dataSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataSubMessage.inlineQos,dataSubMessage.related_sample_identity, endiannessFlag);
 	}
 
 	/* 判断是否有Serialized Data数据 */
@@ -1148,7 +1148,7 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 
 	/* 判断是否存在inlineQos*/
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, dataFragSubMessage.related_sample_identity,endiannessFlag);
 	}
 
 	if (!keyFlag) {
@@ -1230,6 +1230,7 @@ ReturnCode_t MessageProcessor::InterpretINFODSTMessage(char* message,
 ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 	uint32_t& messageShift,
 	ParameterList_t& inlineQos,
+	SampleIdentity& related_sample_identity,
 	bool endiannessFlag)
 {
 	Parameter_t parameter;
@@ -1244,10 +1245,23 @@ ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 			parameter.length = ntohs(parameter.length);
 		}
 
-		parameter.value.assign(message + messageShift, message + messageShift + parameter.length);
-		messageShift += parameter.length;
+		if (parameter.parameterId == PID_RELATED_SAMPLE_IDENTITY ||
+			parameter.parameterId == PID_CUSTOM_RELATED_SAMPLE_IDENTITY) {
+			memcpy(related_sample_identity.writer_handle.keyHash.value, message + messageShift, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+			related_sample_identity.writer_handle.isValid = true;
+			messageShift += MIG_RTPS_KEY_HASH_MAX_LENGTH;
+			memcpy(&related_sample_identity.sequence_number, message + messageShift, sizeof(SequenceNumber_t));
+			if (IS_LITTLE_ENDIAN != endiannessFlag) {
+				related_sample_identity.sequence_number.high = ntohs(related_sample_identity.sequence_number.high);
+				related_sample_identity.sequence_number.low = ntohs(related_sample_identity.sequence_number.low);
+			}
+			messageShift += sizeof(SequenceNumber_t);
+		} else {
+			parameter.value.assign(message + messageShift, message + messageShift + parameter.length);
+			messageShift += parameter.length;
 
-		inlineQos.push_back(parameter);
+			inlineQos.push_back(parameter);
+		}
 
 		memcpy(&parameter, message + messageShift, sizeof(parameter.parameterId) + sizeof(parameter.length));
 		messageShift += sizeof(parameter.parameterId) + sizeof(parameter.length);
