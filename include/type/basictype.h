@@ -434,6 +434,10 @@ struct SequenceNumber_t {
 	int32_t high = 0;
 	uint32_t low = 0;
 
+	SequenceNumber_t() = default;
+
+	SequenceNumber_t(int32_t h, uint32_t l) : high(h), low(l) {}
+
 	/**
 	 * @brief 重载运算符 <
 	 *
@@ -591,10 +595,10 @@ struct SequenceNumber_t {
 // using ChangeCount_t = SequenceNumber_t;
 
 // 未知序列号
-const SequenceNumber_t SEQUENCENUMBER_UNKNOWN = { -1, 0 };
-const SequenceNumber_t SEQUENCENUMBER_INVALID = { -2, 0 };
-const SequenceNumber_t SEQUENCENUMBER_ZERO = { 0, 0 };
-const SequenceNumber_t SEQUENCENUMBER_FIRST = { 0, 1 };
+const SequenceNumber_t SEQUENCENUMBER_UNKNOWN { -1, 0 };
+const SequenceNumber_t SEQUENCENUMBER_INVALID { -2, 0 };
+const SequenceNumber_t SEQUENCENUMBER_ZERO { 0, 0 };
+const SequenceNumber_t SEQUENCENUMBER_FIRST { 0, 1 };
 
 using SeqNumberVec = std::vector<SequenceNumber_t>;
 
