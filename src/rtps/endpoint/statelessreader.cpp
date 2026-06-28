@@ -115,7 +115,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 #else
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 #endif // DDSSECURITY
-
+	cache->related_sample_identity = dataMsg.related_sample_identity;
 	cache->sequenceNumber = dataMsg.writerSN;
 
 	//QOS处理
@@ -209,7 +209,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		///* 申请空间 */
 
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, nullptr, dataHandle, pubHandle, headerMsg.timestamp);
-
+		dataFragCache->related_sample_identity = dataMsg.related_sample_identity;
 		dataFragCache->sequenceNumber = dataMsg.writerSN;
 		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
 		dataFragCache->fraqmentSize = dataMsg.dataFrag.fragmentSize;

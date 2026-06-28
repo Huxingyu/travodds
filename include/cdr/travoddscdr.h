@@ -15,6 +15,7 @@
 
 #include <string>
 #include <cstring>
+#include <cstdint>
 #include "travodds_dll.h"
 
 #define PID_LIST_END 0xFFFFFFFF
