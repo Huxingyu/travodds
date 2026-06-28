@@ -21,7 +21,7 @@ SharedMemWatchdog::SharedMemWatchdog()
 			sharedList_ = ret.first;
 			sharedList_->referenceCount++;
 		} else {
-			sharedList_ = segment_->construct<SharedList>(objectName_)(ShmemAllocator(segment_->get_segment_manager()));
+			sharedList_ = segment_->construct<SharedList>(objectName_)(ShmMapAllocator(segment_->get_segment_manager()));
 			sharedList_->referenceCount = 1;
 		}
 	} catch (const std::exception& e) {

@@ -11,8 +11,10 @@
 //See the Mulan PSL v2 for more details.
 #ifndef CRYCOMMON_SOURCE_H
 #define CRYCOMMON_SOURCE_H
-#ifdef DDSSECURITY
+
 #include "security/securitycommon.h"
+
+#ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 
 typedef DDSSecHandle DatawriterCryptoHandle;

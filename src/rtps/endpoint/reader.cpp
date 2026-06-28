@@ -100,24 +100,6 @@ ReturnCode_t Reader::FindNextInstance(const InstanceHandle_t& preHander, Instanc
 std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuffer* data, const InstanceHandle_t& handle, const InstanceHandle_t& pubHandle, const Time_t& sourceTimespace)
 {
 	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
-
-	auto itor = instanceHandles_.begin();
-	for (; itor != instanceHandles_.end(); itor++) {
-		if (handle < *itor) {
-			instanceHandles_.insert(itor, handle);
-			readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
-			break;
-		}
-		if (handle == *itor) {
-			break;
-		}
-	}
-
-	if (itor == instanceHandles_.end()) {
-		readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
-		instanceHandles_.insert(itor, handle);
-	}
-
 	cacheChange->kind = kind;
 	cacheChange->writerGuid = Conversion::ToGuid(pubHandle);
 	cacheChange->instanceHandle = handle;
@@ -128,6 +110,25 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	cacheChange->sampleInfo.publication_handle = pubHandle;
 	cacheChange->sampleInfo.source_timestamp = sourceTimespace;
 	cacheChange->sampleInfo.sample_state = NOT_READ_SAMPLE_STATE;
+
+	auto itor = instanceHandles_.begin();
+	for (; itor != instanceHandles_.end(); itor++) {
+		if (handle < *itor) {
+			instanceHandles_.insert(itor, handle);
+			std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
+			readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
+			break;
+		}
+		if (handle == *itor) {
+			break;
+		}
+	}
+
+	if (itor == instanceHandles_.end()) {
+		instanceHandles_.insert(itor, handle);
+		std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
+		readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
+	}
 
 	return cacheChange;
 }

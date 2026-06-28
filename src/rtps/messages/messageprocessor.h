@@ -367,6 +367,7 @@ public:
 	  * @param [in] message 报文内容。
 	  * @param [in,out] messageShift 报文指针偏移量。
 	  * @param [out] inlineQos inlineQos解决结果。
+	  * @param [out] related_sample_identity	// Related Sample Identity (Extension for RPC)
 	  * @param [in] endiannessFlag 报文大小端标志。
 	  *
 	  * @return 解析成功返回RETCODE_OK，否则返回RETCODE_ERROR。
@@ -374,6 +375,7 @@ public:
 	 ReturnCode_t InterpretInlineQosMessage(char* &message,
 		uint32_t& messageShift,
 		ParameterList_t & inlineQos,
+		SampleIdentity& related_sample_identity,
 		bool endiannessFlag);
 
 	 /**

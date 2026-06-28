@@ -44,7 +44,7 @@ struct ChangeForReader
 // private:
 	ChangeForReaderStatusKind status = ChangeForReaderStatusKind::UNSENT;
 	bool isRelevant;
-	SequenceNumber_t sequenceNumber = {0};
+	SequenceNumber_t sequenceNumber;
 
 	/**
 	 * @brief 构造函数。

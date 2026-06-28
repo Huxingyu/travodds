@@ -288,6 +288,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
 	transportGroup_.GetLocator(prefixs, dstLocators);
 
+	if (prefixs.empty() && dstLocators.empty()) {
+		return RETCODE_OK;
+	} else if (dstLocators.empty()) {
+		return RETCODE_ERROR;
+	}
+
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;
 

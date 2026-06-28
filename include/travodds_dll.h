@@ -40,4 +40,6 @@
 
  #define _XML_INTERFACE_CPP  1
 
+/* #undef DDSSECURITY */
+
 #endif

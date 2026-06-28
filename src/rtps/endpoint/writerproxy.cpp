@@ -55,6 +55,7 @@ void WriterProxy::NonAvailableChangeSet(SeqNumberVec seqNumSeq, ChangeCount_t fi
 	}
 	SequenceNumber_t seq = seqNumSeq[seqNumSeq.size() - 1];
 
+	std::lock_guard<std::mutex> lock(changesmtx_);
 	if (insertSeq_ < seq) {
 		for (insertSeq_ = seqNumSeq[0]; insertSeq_ <= seq; insertSeq_++) {
 			ChangeFromWriter changeInfo;
@@ -121,16 +122,6 @@ void WriterProxy::MissingChangesUpdate(SequenceNumber_t lastAvailableSeqNum)
 	}
 }
 
-void WriterProxy::ReceivedChangeSet(SequenceNumber_t seqNum)
-{
-	for (auto &change : changesFromWriters_)	{
-		if (change.second.sequenceNumber == seqNum) {
-			change.second.status = RECEIVED;
-		}	
-	}
-}
-
-
 ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int32_t &lostCount, SequenceNumberSet_t& set)
 {
 	//初始化一下变量
@@ -165,6 +156,7 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 		insertSeq_ = insertSeq_ - 1;
 	}
 
+	std::lock_guard<std::mutex> lock(changesmtx_);
 	if (hbMsg.firstSN > submitSeq_ + 1) {
 
 		if (submitSeq_ != SEQUENCENUMBER_ZERO) {
@@ -197,16 +189,21 @@ ReturnCode_t WriterProxy::RecvHeartbeatFrag(const HeartBeatFragSubMessage_t& hbF
 
 	std::shared_ptr<CacheChange> cache = nullptr;
 	ReturnCode_t ret = RETCODE_OK;
-	auto changeInfo = changesFromWriters_.find(hbFragMsg.writerSN);
-	if (changesFromWriters_.end() == changeInfo) {
-		return ret;
+
+	std::map<SequenceNumber_t, ChangeFromWriter>::iterator changeInfo;
+
+	{
+		std::lock_guard<std::mutex> lock(changesmtx_);
+		changeInfo = changesFromWriters_.find(hbFragMsg.writerSN);
+		if (changesFromWriters_.end() == changeInfo) {
+			return ret;
+		}
+		cache = changeInfo->second.cache;
+		if (!cache) {
+			return ret;
+		}
 	}
 
-	cache = changeInfo->second.cache;
-	if (!cache) {
-		return ret;
-	}
-	
 	SerializedBuffer* buffer = cache->serializedBuffer;
 	set.bitmapBase = 0;
 	/* 找到起始丢失序号 */
@@ -254,6 +251,7 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 	/* TODO wangyi 接收Liveliness 状态报文时存在changesFromWriters_为空，导致报文被丢弃，数据超时 */
 	/* 如果之前添加的数据，修改之前数据的状态  */
 	if (cache->sequenceNumber <= insertSeq_) {
+		std::lock_guard<std::mutex> lock(changesmtx_);
 		auto changeInfo = changesFromWriters_.find(cache->sequenceNumber);
 		if (changesFromWriters_.end() != changeInfo) {
 			/* 存在数据，先删除在添加 (未提交数据) */
@@ -272,6 +270,8 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 		changeInfo.status = UNKNOWN;
 		changeInfo.is_relevant = true;
 		changeInfo.cache = nullptr;
+		
+		std::lock_guard<std::mutex> lock(changesmtx_);
 		if (durabilityKind == VOLATILE_DURABILITY_QOS && insertSeq_ == SEQUENCENUMBER_ZERO) {
 			insertSeq_ = cache->sequenceNumber;
 			changeInfo.sequenceNumber = insertSeq_;
@@ -300,6 +300,8 @@ ReturnCode_t WriterProxy::AddReliableDataCache(std::shared_ptr<CacheChange> cach
 std::shared_ptr<CacheChange> WriterProxy::GetSubmitCache()
 {
 	std::shared_ptr<CacheChange> cache = nullptr;
+
+	std::lock_guard<std::mutex> lock(changesmtx_);
 	SequenceNumber_t seq = AvailableChangesMax();
 
 	while (seq != SEQUENCENUMBER_ZERO && seq == submitSeq_ + 1) {
@@ -331,6 +333,7 @@ std::shared_ptr<CacheChange> WriterProxy::GetSubmitCache()
 bool WriterProxy::ExistCache(const SequenceNumber_t& seq)
 {
 	bool ret = false;
+	std::lock_guard<std::mutex> lock(changesmtx_);
 	auto change = changesFromWriters_.find(seq);
 	if (changesFromWriters_.end() != change ) {
 		if (change->second.cache) {
@@ -345,17 +348,22 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const Seriali
 {
 	std::shared_ptr<CacheChange> cache = nullptr;
 	ReturnCode_t ret = RETCODE_ERROR;
-	auto changeInfo = changesFromWriters_.find(seq);
-	if (changesFromWriters_.end() == changeInfo) {
-		//TODO 
-		//AGILOG(AGILOG_ERROR, "seqdata not exist %d",seq.low);
-		return ret;
-	}
+	
+	std::map <SequenceNumber_t, ChangeFromWriter>::iterator changeInfo;
+	{
+		std::lock_guard<std::mutex> lock(changesmtx_);
+		changeInfo = changesFromWriters_.find(seq);
+		if (changesFromWriters_.end() == changeInfo) {
+			//TODO 
+			//AGILOG(AGILOG_ERROR, "seqdata not exist %d",seq.low);
+			return ret;
+		}
 
-	cache = changeInfo->second.cache;
-	if (!cache) {
-		TRAVODDS_LOG(LOG_ERROR, "cache is nullptr", seq.low);
-		return ret;
+		cache = changeInfo->second.cache;
+		if (!cache) {
+			TRAVODDS_LOG(LOG_ERROR, "cache is nullptr", seq.low);
+			return ret;
+		}
 	}
 
 	/* 判断当前分片数据是否收到，没有收到进行封装  */
@@ -363,16 +371,8 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const Seriali
 		CacheSerializedBuffer* buffer = new CacheSerializedBuffer();
 		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy) {
-			/* 只允许拷贝，不允许获得所有权 */
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		}
-		else {
-			buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 		cache->fragmentBufferMap.insert({ startNum, buffer });
 	} else {
 		//TODO  
@@ -391,6 +391,13 @@ ReturnCode_t WriterProxy::AddFragData(const SequenceNumber_t& seq, const Seriali
 		}
 		cache->serializedBuffer = cache->fragmentBufferMap.begin()->second;
 		cache->fragmentBufferMap.clear();
+		std::lock_guard<std::mutex> lock(changesmtx_);
+		changeInfo = changesFromWriters_.find(seq);
+		if (changesFromWriters_.end() == changeInfo) {
+			//TODO 
+			//AGILOG(AGILOG_ERROR, "seqdata not exist %d",seq.low);
+			return ret;
+		}
 		changeInfo->second.status = RECEIVED;
 	}
 
@@ -441,6 +448,7 @@ SeqNumberVec WriterProxy::LostChanges()
 
 void WriterProxy::GetNackSequenceSet(std::vector<NackFragSubMessage_t>& set)
 {
+	std::lock_guard<std::mutex> lock(changesmtx_);
 	for (auto& change : changesFromWriters_) {
 
 		if (MISSING == change.second.status) {

@@ -23,15 +23,15 @@ MessageTransmitterSHM::~MessageTransmitterSHM()
 	}
 	sendSockets_.clear();
 
+	for (auto& it : recvSockets_) {
+		it->Close();
+	}
+	recvSockets_.clear();
+
 	if (acceptor_) {
 		acceptor_->Close();
 		acceptor_.reset();
 	}
-
-	for (auto& it : recvSockets_) {
-		it->Close();
-	}
-	sendSockets_.clear();
 }
 
 
@@ -158,7 +158,10 @@ void MessageTransmitterSHM::SetStop()
 
 ReturnCode_t MessageTransmitterSHM::InterpretMessage(char* message, uint32_t len)
 {
-	return messageProcessor_->InterpretSubmessage(std::make_shared<Message_t>(message, len, true));
+    char* buffer = nullptr;
+	receivePool_->getBuffer(len, buffer);
+	std::memcpy(buffer, message, len);
+	return MessageTransmitter::InterpretMessage(buffer, len);
 }
 
 bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)

@@ -1,6 +1,8 @@
 #include "security/participantgenericmessagetypesupport.h"
 #include "security/participantgenericmessage.h"
 #include "security/datatypesupport.h"
+#include "common/log/logger.h"
+
 TRAVODDS_NAMESPACE_BEGIN
 #ifdef DDSSECURITY
 DataHolderTypeSupport* DataHolderTypeSupport::get_instance() {
@@ -49,28 +51,28 @@ int DataHolderTypeSupport::serialize_data(void* data, CdrSerializer* cdr, int en
     DataHolder* structData = static_cast<DataHolder*>(data);
     uint32_t tmpLength = 0;
     if (!cdr->serializeString(structData->class_id)) {
-        fprintf(stderr, "Serialization failed for field: structData->class_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->class_id\n");
         return -1;
     }
     tmpLength = static_cast<uint32_t>(structData->properties.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->properties\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->properties\n");
         return -1;
     }
     for (size_t i = 0; i < structData->properties.size(); ++i) {
         if (Property_tTypeSupport::get_instance()->serialize_data((void*)&structData->properties[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->properties[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->properties[i]\n");
             return -1;
         }
     }
     tmpLength = static_cast<uint32_t>(structData->binary_properties.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->binary_properties\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->binary_properties\n");
         return -1;
     }
     for (size_t i = 0; i < structData->binary_properties.size(); ++i) {
         if (BinaryProperty_tTypeSupport::get_instance()->serialize_data((void*)&structData->binary_properties[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->binary_properties[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->binary_properties[i]\n");
             return -1;
         }
     }
@@ -84,28 +86,28 @@ int DataHolderTypeSupport::deserialize_data(void* data, CdrDeserializer* cdr, in
     //short tmpShortEnum = 0;
     //int tmpIntEnum = 0;
     if (!cdr->deserializeString(structData->class_id)) {
-        fprintf(stderr, "Deserialization failed for field: structData->class_id\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->class_id\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->properties\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->properties\n");
         return -1;
     }
     structData->properties.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
         if (Property_tTypeSupport::get_instance()->deserialize_data(&structData->properties[i], cdr, endian) != 0) {
-            fprintf(stderr, "Deserialization failed for field: structData->properties[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->properties[i]\n");
             return -1;
         }
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->binary_properties\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->binary_properties\n");
         return -1;
     }
     structData->binary_properties.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
         if (BinaryProperty_tTypeSupport::get_instance()->deserialize_data(&structData->binary_properties[i], cdr, endian) != 0) {
-            fprintf(stderr, "Deserialization failed for field: structData->binary_properties[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->binary_properties[i]\n");
             return -1;
         }
     }
@@ -143,11 +145,11 @@ ReturnCode_t DataHolderTypeSupport::get_instancehandle(void* data, CdrSerializer
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
@@ -212,49 +214,49 @@ int ParticipantGenericMessageTypeSupport::serialize_data(void* data, CdrSerializ
     //PND
     uint16_t dig = 0;
     if (!cdr->serializeBaseType((uint8_t)0)) {
-        fprintf(stderr, "Serialization failed for field: cdr_le\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: cdr_le\n");
         return -1;
     }
     if (!cdr->serializeBaseType((uint8_t)1)) { // DEFAULT_ENCAPSULATION
-        fprintf(stderr, "Serialization failed for field: cdr_le\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: cdr_le\n");
         return -1;
     }
     if (!cdr->serializeBaseType(dig)) {
-        fprintf(stderr, "Serialization failed for field: dig\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: dig\n");
         return -1;
     }
     if (MessageIdentityTypeSupport::get_instance()->serialize_data((void*)&structData->messageIdentity, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->messageIdentity\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->messageIdentity\n");
         return -1;
     }
     if (MessageIdentityTypeSupport::get_instance()->serialize_data((void*)&structData->relatedMessageIdentity, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->relatedMessageIdentity\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->relatedMessageIdentity\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->serialize_data((void*)&structData->destinationParticipantKey, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->destinationParticipantKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->destinationParticipantKey\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->serialize_data((void*)&structData->destinationEndpointKey, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->destinationEndpointKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->destinationEndpointKey\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->serialize_data((void*)&structData->sourceEndpointKey, cdr, endian) != 0) {
-        fprintf(stderr, "Serialization failed for field: structData->sourceEndpointKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->sourceEndpointKey\n");
         return -1;
     }
     if (!cdr->serializeString(structData->messageClassId)) {
-        fprintf(stderr, "Serialization failed for field: structData->messageClassId\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->messageClassId\n");
         return -1;
     }
     tmpLength = static_cast<uint32_t>(structData->messageData.size());
     if (!cdr->serializeBaseType(tmpLength)) {
-        fprintf(stderr, "Serialization length failed for field: structData->messageData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Serialization length failed for field: structData->messageData\n");
         return -1;
     }
     for (size_t i = 0; i < structData->messageData.size(); ++i) {
         if (DataHolderTypeSupport::get_instance()->serialize_data((void*)&structData->messageData[i], cdr, endian) != 0) {
-            fprintf(stderr, "Serialization failed for field: structData->messageData[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Serialization failed for field: structData->messageData[i]\n");
             return -1;
         }
     }
@@ -271,50 +273,50 @@ int ParticipantGenericMessageTypeSupport::deserialize_data(void* data, CdrDeseri
     uint8_t cdr_le;
     uint16_t dig = 0;
     if (!cdr->deserializeBaseType(cdr_le)) {
-        fprintf(stderr, "Deserialization length failed for field: cdr_le\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: cdr_le\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(cdr_le)) {
-        fprintf(stderr, "Deserialization length failed for field: cdr_le\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: cdr_le\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(dig)) {
-        fprintf(stderr, "Deserialization length failed for field: dig\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: dig\n");
         return -1;
     }
 
     if (MessageIdentityTypeSupport::get_instance()->deserialize_data(&structData->messageIdentity, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->messageIdentity\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->messageIdentity\n");
         return -1;
     }
     if (MessageIdentityTypeSupport::get_instance()->deserialize_data(&structData->relatedMessageIdentity, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->relatedMessageIdentity\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->relatedMessageIdentity\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->deserialize_data(&structData->destinationParticipantKey, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->destinationParticipantKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->destinationParticipantKey\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->deserialize_data(&structData->destinationEndpointKey, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->destinationEndpointKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->destinationEndpointKey\n");
         return -1;
     }
     if (BuiltinTopicKey_tTypeSupport::get_instance()->deserialize_data(&structData->sourceEndpointKey, cdr, endian) != 0) {
-        fprintf(stderr, "Deserialization failed for field: structData->sourceEndpointKey\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->sourceEndpointKey\n");
         return -1;
     }
     if (!cdr->deserializeString(structData->messageClassId)) {
-        fprintf(stderr, "Deserialization failed for field: structData->messageClassId\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->messageClassId\n");
         return -1;
     }
     if (!cdr->deserializeBaseType(tmpLength)) {
-        fprintf(stderr, "Deserialization length failed for field: structData->messageData\n");
+        TRAVODDS_LOG(LOG_ERROR, "Deserialization length failed for field: structData->messageData\n");
         return -1;
     }
     structData->messageData.resize(tmpLength);
     for (size_t i = 0; i < tmpLength; ++i) {
         if (DataHolderTypeSupport::get_instance()->deserialize_data(&structData->messageData[i], cdr, endian) != 0) {
-            fprintf(stderr, "Deserialization failed for field: structData->messageData[i]\n");
+            TRAVODDS_LOG(LOG_ERROR, "Deserialization failed for field: structData->messageData[i]\n");
             return -1;
         }
     }
@@ -352,11 +354,11 @@ ReturnCode_t ParticipantGenericMessageTypeSupport::get_instancehandle(void* data
     }
     int ret = serialize_key(data, cdr, forceMd5);
     if (ret != 0) {
-        fprintf(stderr, "Failed to serialize key.\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to serialize key.\n");
         return RETCODE_ERROR;
     }
     if (!cdr->getKeyHash((char*)&iHandle, forceMd5)) {
-        fprintf(stderr, "Failed to get key hash\n");
+        TRAVODDS_LOG(LOG_ERROR, "Failed to get key hash\n");
         return RETCODE_ERROR;
     }
     return RETCODE_OK;
