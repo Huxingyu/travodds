@@ -9,28 +9,29 @@
 using namespace TRAVODDS;
 
 // 内嵌的 XML 配置内容
+// 注意：autoenable_created_entities 设置为 false，避免网络初始化导致测试卡住
 static const char* kTestXmlContent = R"(<?xml version="1.0" encoding="UTF-8" ?>
 <dds_qos>
     <qos_library name="test_lib">
         <qos_profile name="test_profile">
             <domain_participant_factory_qos>
                 <entity_factory>
-                    <autoenable_created_entities>true</autoenable_created_entities>
+                    <autoenable_created_entities>false</autoenable_created_entities>
                 </entity_factory>
             </domain_participant_factory_qos>
             <domain_participant_qos>
                 <entity_factory>
-                    <autoenable_created_entities>true</autoenable_created_entities>
+                    <autoenable_created_entities>false</autoenable_created_entities>
                 </entity_factory>
             </domain_participant_qos>
             <publisher_qos>
                 <entity_factory>
-                    <autoenable_created_entities>true</autoenable_created_entities>
+                    <autoenable_created_entities>false</autoenable_created_entities>
                 </entity_factory>
             </publisher_qos>
             <subscriber_qos>
                 <entity_factory>
-                    <autoenable_created_entities>true</autoenable_created_entities>
+                    <autoenable_created_entities>false</autoenable_created_entities>
                 </entity_factory>
             </subscriber_qos>
             <topic_qos>

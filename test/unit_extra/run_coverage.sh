@@ -97,8 +97,9 @@ echo -e "${GREEN}测试执行完成${NC}"
 echo -e "\n${YELLOW}[5/5] 生成覆盖率报告...${NC}"
 rm -rf "${COVERAGE_DIR}" && mkdir -p "${COVERAGE_DIR}"
 
+# 只从动态库目录收集覆盖率数据，排除测试代码，避免 inconsistent 错误
 lcov --capture \
-    --directory "${BUILD_DIR}" \
+    --directory "${LIB_DIR}" \
     --base-directory "${TRAVODDS_DIR}" \
     --output-file "${COVERAGE_DIR}/coverage_total.info" 2>/dev/null || true
 
