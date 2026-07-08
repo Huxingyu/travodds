@@ -49,7 +49,7 @@ public:
      * 
      * 创建一个空的AnnotationDescriptor实例。
      */
-    AnnotationDescriptor() = default;
+    AnnotationDescriptor() : type_(nullptr) {}
 
     /**
      * @brief 拷贝构造函数
