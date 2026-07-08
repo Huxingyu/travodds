@@ -100,6 +100,7 @@ rm -rf "${COVERAGE_DIR}" && mkdir -p "${COVERAGE_DIR}"
 lcov --capture \
     --directory "${BUILD_DIR}" \
     --base-directory "${TRAVODDS_DIR}" \
+    --ignore-errors inconsistent \
     --output-file "${COVERAGE_DIR}/coverage_total.info" 2>/dev/null || true
 
 # 只提取关注的五个模块

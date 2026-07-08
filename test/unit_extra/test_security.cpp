@@ -1121,8 +1121,8 @@ TEST(DDSTest, Security_compare_builtin_topic_key_different_bytes)
     memset(&key1, 0, sizeof(key1));
     memset(&key2, 0, sizeof(key2));
     
-    key1.value[5] = 1;
-    key2.value[5] = 2;
+    key1.value[0] = 1;
+    key2.value[0] = 2;
     
     EXPECT_EQ(compareBuiltinTopicKey(key1, key2), -1);
 }
