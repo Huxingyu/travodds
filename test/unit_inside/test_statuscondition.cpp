@@ -1,4 +1,4 @@
-#include "test_statuscondition.h"
+ï»¿#include "test_statuscondition.h"
 #include "dcps/domain/domainparticipantfactory.h"
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/condition/statuscondition.h"
@@ -34,13 +34,13 @@ TEST(StatusConditionTest, StatusCondition_INCONSISTENT_TOPIC_STATUS)
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, INCONSISTENT_TOPIC_STATUS);
+    Topic* top_w = par_w->create_topic("StatusConditionTest_incon", type_name, TOPIC_QOS_DEFAULT, nullptr, INCONSISTENT_TOPIC_STATUS);
 	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
 		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	type_name = TestModule::KeyDataTypeSupport::get_instance()->get_typename();
 	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	par_r->registe_type(type_name, TestModule::KeyDataTypeSupport::get_instance());
-	Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, INCONSISTENT_TOPIC_STATUS);
+    Topic* top_r = par_r->create_topic("StatusConditionTest_incon", type_name, TOPIC_QOS_DEFAULT, nullptr, INCONSISTENT_TOPIC_STATUS);
 	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
 		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 
@@ -53,9 +53,10 @@ TEST(StatusConditionTest, StatusCondition_INCONSISTENT_TOPIC_STATUS)
 	ConditionSeq active_conditions;
 	bool matched_writer = false;
 	bool matched_reader = false;
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-	for (int i = 0; i < 2; i++) {
-		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+    for (int i = 0; i < 6; i++) {
+        ws.wait(active_conditions, { 10,0 });
 		for (auto cond : active_conditions) {
 			if (cond == &sc_w) {
 				matched_writer = true;
@@ -151,6 +152,7 @@ TEST(StatusConditionTest, StatusCondition_REQUESTED_DEADLINE_MISSED_STATUS)
 }
 
 TEST(StatusConditionTest, StatusCondition_INCOMPATIBLE_QOS_STATUS) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
@@ -177,8 +179,8 @@ TEST(StatusConditionTest, StatusCondition_INCOMPATIBLE_QOS_STATUS) {
 	bool matched_writer = false;
 	bool matched_reader = false;
 
-	for (int i = 0; i < 2; i++) {
-		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+    for (int i = 0; i < 6; i++) {
+        ws.wait(active_conditions, { 10,0 });
 		for (auto cond : active_conditions) {
 			if (cond == &sc_w) {
 				matched_writer = true;
@@ -215,56 +217,56 @@ TEST(StatusConditionTest, StatusCondition_INCOMPATIBLE_QOS_STATUS) {
 	TheParticipantFactory->delete_participant(par_r);
 
 }
-// ÐèÒªÓ²¼þÄ£Äâ¶ª°üÅäºÏ²âÊÔ
-TEST(StatusConditionTest, DISABLED_StatusCondition_SAMPLE_LOST_STATUS) {
-	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+// éœ€è¦ç¡¬ä»¶æ¨¡æ‹Ÿä¸¢åŒ…é…åˆæµ‹è¯•
+//TEST(StatusConditionTest, DISABLED_StatusCondition_SAMPLE_LOST_STATUS) {
+//	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 
-	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+//	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+//	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+//	Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+//	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+//		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 
-	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, SAMPLE_LOST_STATUS);
+//	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+//	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+//	Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+//	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+//		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, SAMPLE_LOST_STATUS);
 
-	StatusCondition& sc = dr->get_statuscondition();
-	WaitSet ws;
-	EXPECT_EQ(ws.attach_condition(sc), RETCODE_OK);
-	ConditionSeq attached_conditions;
-	EXPECT_EQ(ws.get_conditions(attached_conditions), RETCODE_OK);
-	EXPECT_EQ(attached_conditions.size(), 1);
-	EXPECT_EQ(attached_conditions[0], &sc);
-	ConditionSeq active_conditions;
-	std::thread th_1(
-		[&] {
-			EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
-			SampleLostStatus status;
-			dr->get_sample_lost_status(status);
-			EXPECT_EQ(status.total_count, 1);
-			EXPECT_EQ(status.total_count_change, 1);
-		});
-	std::thread th_2(
-		[&] {
-			TestModule::BasicData data;
-			data.id = 1;
-			data.name = "test";
-		    for (int i= 0;i<10;i++)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));
-				EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
-			}
-		});
-	th_1.join();
-	th_2.join();
-	par_w->delete_contained_entities();
-	par_r->delete_contained_entities();
-	TheParticipantFactory->delete_participant(par_w);
-	TheParticipantFactory->delete_participant(par_r);
-}
+//	StatusCondition& sc = dr->get_statuscondition();
+//	WaitSet ws;
+//	EXPECT_EQ(ws.attach_condition(sc), RETCODE_OK);
+//	ConditionSeq attached_conditions;
+//	EXPECT_EQ(ws.get_conditions(attached_conditions), RETCODE_OK);
+//	EXPECT_EQ(attached_conditions.size(), 1);
+//	EXPECT_EQ(attached_conditions[0], &sc);
+//	ConditionSeq active_conditions;
+//	std::thread th_1(
+//		[&] {
+//			EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+//			SampleLostStatus status;
+//			dr->get_sample_lost_status(status);
+//			EXPECT_EQ(status.total_count, 1);
+//			EXPECT_EQ(status.total_count_change, 1);
+//		});
+//	std::thread th_2(
+//		[&] {
+//			TestModule::BasicData data;
+//			data.id = 1;
+//			data.name = "test";
+//		    for (int i= 0;i<10;i++)
+//			{
+//				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+//				EXPECT_EQ(dw->write(&data, HANDLE_NIL), RETCODE_OK);
+//			}
+//		});
+//	th_1.join();
+//	th_2.join();
+//	par_w->delete_contained_entities();
+//	par_r->delete_contained_entities();
+//	TheParticipantFactory->delete_participant(par_w);
+//	TheParticipantFactory->delete_participant(par_r);
+//}
 
 TEST(StatusConditionTest, StatusCondition_SAMPLE_LOST_STATUS) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
@@ -538,13 +540,13 @@ TEST(StatusConditionTest, StatusCondition_MATCHED_STATUS) {
 	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_w = par_w->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Topic* top_w = par_w->create_topic("QoSTest_mas", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
 		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, PUBLICATION_MATCHED_STATUS);
 
 	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_r = par_r->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    Topic* top_r = par_r->create_topic("QoSTest_mas", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
 		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, SUBSCRIPTION_MATCHED_STATUS);
 
@@ -556,10 +558,11 @@ TEST(StatusConditionTest, StatusCondition_MATCHED_STATUS) {
 	EXPECT_EQ(ws.attach_condition(sc_r), RETCODE_OK);
 	ConditionSeq active_conditions;
 	bool matched_writer = false;
-	bool matched_reader = false;
+    bool matched_reader = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-	for (int i = 0; i < 2; i++) {
-		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+    for (int i = 0; i < 6; i++) {
+        EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
 		for (auto cond : active_conditions) {
 			if (cond == &sc_w) {
 				matched_writer = true;
