@@ -306,7 +306,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 		/* wangyi fastdds 适配测试默认16 */
-		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN + 12;
 		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
