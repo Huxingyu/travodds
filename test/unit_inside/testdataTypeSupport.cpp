@@ -110,7 +110,7 @@ ReturnCode_t TestModule::BasicDataTypeSupport::get_instancehandle(void* data, Cd
 }
 
 DynamicType* TestModule::BasicDataTypeSupport::get_dynamictype() {
-    return const_cast<DynamicType*>(_DynamicType::TestModule::BasicData);
+    return const_cast<DynamicType*>(_DynamicType::TestModule::BasicData());
 }
 
 bool TestModule::BasicDataTypeSupport::has_key() {
@@ -228,7 +228,7 @@ ReturnCode_t TestModule::KeyDataTypeSupport::get_instancehandle(void* data, CdrS
 }
 
 DynamicType* TestModule::KeyDataTypeSupport::get_dynamictype() {
-    return const_cast<DynamicType*>(_DynamicType::TestModule::KeyData);
+    return const_cast<DynamicType*>(_DynamicType::TestModule::KeyData());
 }
 
 bool TestModule::KeyDataTypeSupport::has_key() {
@@ -344,7 +344,7 @@ ReturnCode_t TestModule::SequenceDataTypeSupport::get_instancehandle(void* data,
 }
 
 DynamicType* TestModule::SequenceDataTypeSupport::get_dynamictype() {
-    return const_cast<DynamicType*>(_DynamicType::TestModule::SequenceData);
+    return const_cast<DynamicType*>(_DynamicType::TestModule::SequenceData());
 }
 
 bool TestModule::SequenceDataTypeSupport::has_key() {
@@ -485,7 +485,7 @@ ReturnCode_t TestModule::NestedStructTypeSupport::get_instancehandle(void* data,
 }
 
 DynamicType* TestModule::NestedStructTypeSupport::get_dynamictype() {
-    return const_cast<DynamicType*>(_DynamicType::TestModule::NestedStruct);
+    return const_cast<DynamicType*>(_DynamicType::TestModule::NestedStruct());
 }
 
 bool TestModule::NestedStructTypeSupport::has_key() {
@@ -528,6 +528,7 @@ unsigned int TestModule::FilterableDataTypeSupport::get_serialized_data_size(voi
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned long long), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(float), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(double), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(LongDouble), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(char), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeSize(sizeof(unsigned char), currentAlignment);
@@ -541,6 +542,13 @@ unsigned int TestModule::FilterableDataTypeSupport::get_serialized_data_size(voi
     for (size_t i = 0; i < sizeof(structData->stringArray) / sizeof(structData->stringArray[0]); ++i) {
         currentAlignment += CdrSerializer::getStringSize(structData->stringArray[i].size() + 1, currentAlignment);
     }
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned char), sizeof(structData->byteArray) / sizeof(unsigned char), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(short), sizeof(structData->shortArray) / sizeof(short), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned short), sizeof(structData->usArray) / sizeof(unsigned short), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(long long), sizeof(structData->llArray) / sizeof(long long), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned long long), sizeof(structData->ullArray) / sizeof(unsigned long long), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(LongDouble), sizeof(structData->ldArray) / sizeof(LongDouble), currentAlignment);
+    currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(unsigned int), sizeof(structData->ulArray) / sizeof(unsigned int), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), sizeof(structData->matrix2x3) / sizeof(int), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(float), sizeof(structData->floatMatrix) / sizeof(float), currentAlignment);
     currentAlignment += CdrSerializer::getBaseTypeArraySize(sizeof(int), sizeof(structData->matrix4x4) / sizeof(int), currentAlignment);
@@ -598,6 +606,10 @@ int TestModule::FilterableDataTypeSupport::serialize_data(void* data, CdrSeriali
     }
     if (!cdr->serializeBaseType(structData->doubleField)) {
         fprintf(stderr, "Serialization failed for field: structData->doubleField\n");
+        return -1;
+    }
+    if (!cdr->serializeLongDouble(*(LongDouble*)&structData->long_doubleField)) {
+        fprintf(stderr, "Serialization failed for field: structData->long_doubleField\n");
         return -1;
     }
     if (!cdr->serializeBaseType(structData->boolField)) {
@@ -665,6 +677,34 @@ int TestModule::FilterableDataTypeSupport::serialize_data(void* data, CdrSeriali
             fprintf(stderr, "Serialization failed for field: structData->stringArray\n");
             return -1;
         }
+    }
+    if (!cdr->serializeBaseTypeArray((unsigned char*)structData->byteArray, sizeof(structData->byteArray) / sizeof(unsigned char))) {
+        fprintf(stderr, "Serialization failed for field: structData->byteArray\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseTypeArray((short*)structData->shortArray, sizeof(structData->shortArray) / sizeof(short))) {
+        fprintf(stderr, "Serialization failed for field: structData->shortArray\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseTypeArray((unsigned short*)structData->usArray, sizeof(structData->usArray) / sizeof(unsigned short))) {
+        fprintf(stderr, "Serialization failed for field: structData->usArray\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseTypeArray((long long*)structData->llArray, sizeof(structData->llArray) / sizeof(long long))) {
+        fprintf(stderr, "Serialization failed for field: structData->llArray\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseTypeArray((unsigned long long*)structData->ullArray, sizeof(structData->ullArray) / sizeof(unsigned long long))) {
+        fprintf(stderr, "Serialization failed for field: structData->ullArray\n");
+        return -1;
+    }
+    if (!cdr->serializeLongDoubleArray((LongDouble*)structData->ldArray, sizeof(structData->ldArray) / sizeof(LongDouble))) {
+        fprintf(stderr, "Serialization failed for field: structData->ldArray\n");
+        return -1;
+    }
+    if (!cdr->serializeBaseTypeArray((unsigned int*)structData->ulArray, sizeof(structData->ulArray) / sizeof(unsigned int))) {
+        fprintf(stderr, "Serialization failed for field: structData->ulArray\n");
+        return -1;
     }
     if (!cdr->serializeBaseTypeArray((int*)structData->matrix2x3, sizeof(structData->matrix2x3) / sizeof(int))) {
         fprintf(stderr, "Serialization failed for field: structData->matrix2x3\n");
@@ -787,6 +827,10 @@ int TestModule::FilterableDataTypeSupport::deserialize_data(void* data, CdrDeser
         fprintf(stderr, "Deserialization failed for field: structData->doubleField\n");
         return -1;
     }
+    if (!cdr->deserializeLongDouble(*(LongDouble*)&structData->long_doubleField)) {
+        fprintf(stderr, "Deserialization failed for field: structData->long_doubleField\n");
+        return -1;
+    }
     if (!cdr->deserializeBaseType(structData->boolField)) {
         fprintf(stderr, "Deserialization failed for field: structData->boolField\n");
         return -1;
@@ -855,6 +899,34 @@ int TestModule::FilterableDataTypeSupport::deserialize_data(void* data, CdrDeser
             fprintf(stderr, "Deserialization failed for field: structData->stringArray\n");
             return -1;
         }
+    }
+    if (!cdr->deserializeBaseTypeArray((unsigned char*)structData->byteArray, sizeof(structData->byteArray) / sizeof(unsigned char))) {
+        fprintf(stderr, "Deserialization failed for field: structData->byteArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseTypeArray((short*)structData->shortArray, sizeof(structData->shortArray) / sizeof(short))) {
+        fprintf(stderr, "Deserialization failed for field: structData->shortArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseTypeArray((unsigned short*)structData->usArray, sizeof(structData->usArray) / sizeof(unsigned short))) {
+        fprintf(stderr, "Deserialization failed for field: structData->usArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseTypeArray((long long*)structData->llArray, sizeof(structData->llArray) / sizeof(long long))) {
+        fprintf(stderr, "Deserialization failed for field: structData->llArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseTypeArray((unsigned long long*)structData->ullArray, sizeof(structData->ullArray) / sizeof(unsigned long long))) {
+        fprintf(stderr, "Deserialization failed for field: structData->ullArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeLongDoubleArray((LongDouble*)structData->ldArray, sizeof(structData->ldArray) / sizeof(LongDouble))) {
+        fprintf(stderr, "Deserialization failed for field: structData->ldArray\n");
+        return -1;
+    }
+    if (!cdr->deserializeBaseTypeArray((unsigned int*)structData->ulArray, sizeof(structData->ulArray) / sizeof(unsigned int))) {
+        fprintf(stderr, "Deserialization failed for field: structData->ulArray\n");
+        return -1;
     }
     if (!cdr->deserializeBaseTypeArray((int*)structData->matrix2x3, sizeof(structData->matrix2x3) / sizeof(int))) {
         fprintf(stderr, "Deserialization failed for field: structData->matrix2x3\n");
@@ -981,7 +1053,7 @@ ReturnCode_t TestModule::FilterableDataTypeSupport::get_instancehandle(void* dat
 }
 
 DynamicType* TestModule::FilterableDataTypeSupport::get_dynamictype() {
-    return const_cast<DynamicType*>(_DynamicType::TestModule::FilterableData);
+    return const_cast<DynamicType*>(_DynamicType::TestModule::FilterableData());
 }
 
 bool TestModule::FilterableDataTypeSupport::has_key() {

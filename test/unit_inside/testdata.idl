@@ -53,6 +53,7 @@ struct FilterableData {
     unsigned long long ulonglongField;
     float floatField;
     double doubleField;
+	long double long_doubleField;
 
     // === 布尔和字符类型 ===
     boolean boolField;
@@ -74,6 +75,13 @@ struct FilterableData {
     double doubleArray[5];        // 定长double数组
     boolean boolArray[3];         // 定长boolean数组
     string stringArray[4];        // 定长字符串数组
+	octet byteArray[10];           // 定长long数组
+    short shortArray[5];        // 
+	unsigned short usArray[5];        //
+    long long llArray[3];         // 
+	unsigned long long ullArray[3];
+	long double ldArray[10];
+	unsigned long ulArray[2];
 
     // === 多维定长数组 ===
     long matrix2x3[2][3];         // 2x3矩阵
