@@ -287,6 +287,7 @@ enum ChangeKind_t {
 const uint32_t DATAMESSAGE_LIMIT = 62 * 1024;
 const uint32_t BUFF_SHIFT = 1024;
 const uint16_t OCTETS_TO_INLINEQOS_LEN = 16;
+const uint16_t DATA_FRAG_OCTETS_TO_INLINEQOS_LEN = 28;
 
 //PSM
 struct LocatorUDPv4_t
