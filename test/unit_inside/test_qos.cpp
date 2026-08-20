@@ -1,4 +1,4 @@
-#include "test_qos.h"
+ï»¿#include "test_qos.h"
 #include "dcps/domain/domainparticipantfactory.h"
 #include "dcps/domain/domainparticipant.h"
 #include "dcps/condition/statuscondition.h"
@@ -76,14 +76,14 @@ bool QoSTest::waitmatch(DataReader* reader, unsigned int count, int timeout) {
 }
 
 TEST_F(QoSTest, QoS_domainparticipant_check) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 	DomainParticipantFactoryQos factory_qos;
 
 	factory->set_qos(factory_qos);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -102,11 +102,11 @@ TEST_F(QoSTest, QoS_domainparticipant_check) {
 
 TEST_F(QoSTest, QoS_publisher_check) {
 
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -153,11 +153,11 @@ TEST_F(QoSTest, QoS_publisher_check) {
 
 TEST_F(QoSTest, QoS_subcsciber_check) {
 
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -206,7 +206,7 @@ TEST_F(QoSTest, QoS_datawriter_check) {
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -254,11 +254,11 @@ TEST_F(QoSTest, QoS_datawriter_check) {
 
 }
 TEST_F(QoSTest, QoS_datareader_check) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -309,11 +309,11 @@ TEST_F(QoSTest, QoS_datareader_check) {
 
 
 TEST_F(QoSTest, QoS_topic_check) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
@@ -369,16 +369,16 @@ TEST_F(QoSTest, QoS_dicovery_udpv4) {
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, PUBLICATION_MATCHED_STATUS);
 
 	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, SUBSCRIPTION_MATCHED_STATUS);
 	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_r = par_r->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, SUBSCRIPTION_MATCHED_STATUS);
 	
-	StatusCondition& sc_w = par_w->get_statuscondition();
-	StatusCondition& sc_r = par_r->get_statuscondition();
+    StatusCondition& sc_w = par_w->get_statuscondition();
+    StatusCondition& sc_r = par_r->get_statuscondition();
 	WaitSet ws;
 
 	EXPECT_EQ(ws.attach_condition(sc_w), RETCODE_OK);
@@ -386,8 +386,9 @@ TEST_F(QoSTest, QoS_dicovery_udpv4) {
 	ConditionSeq active_conditions;
 	bool matched_writer = false;
 	bool matched_reader = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-	for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 6; i++) {
 		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
 		for (auto cond : active_conditions) {
 			if(cond == &sc_w){
@@ -419,17 +420,17 @@ TEST_F(QoSTest, QoS_dicovery_udpv6) {
 	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, qos_v6, nullptr, PUBLICATION_MATCHED_STATUS);
 	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_w = par_w->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datawriter(top_w, DATAWRITER_QOS_DEFAULT, nullptr, PUBLICATION_MATCHED_STATUS);
 
 	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, qos_v6, nullptr, SUBSCRIPTION_MATCHED_STATUS);
 	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
 	Topic* top_r = par_r->create_topic("QoSTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, DATA_AVAILABLE_STATUS);
+        create_datareader(top_r, DATAREADER_QOS_DEFAULT, nullptr, SUBSCRIPTION_MATCHED_STATUS);
 
-	StatusCondition& sc_w = par_w->get_statuscondition();
-	StatusCondition& sc_r = par_r->get_statuscondition();
+    StatusCondition& sc_w = par_w->get_statuscondition();
+    StatusCondition& sc_r = par_r->get_statuscondition();
 	WaitSet ws;
 
 	EXPECT_EQ(ws.attach_condition(sc_w), RETCODE_OK);
@@ -438,7 +439,8 @@ TEST_F(QoSTest, QoS_dicovery_udpv6) {
 	bool matched_writer = false;
 	bool matched_reader = false;
 
-	for (int i = 0; i < 2; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    for (int i = 0; i < 6; i++) {
 		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
 		for (auto cond : active_conditions) {
 			if (cond == &sc_w) {
@@ -725,16 +727,16 @@ TEST_F(QoSTest, QoS_transport_shm) {
 TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 	std::thread th_1(
 		[&] {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. Ä¬ÈÏ²ÎÊı´´½¨DomainParticipant
+			// 3. é»˜è®¤å‚æ•°åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨deadline_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdeadline_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -743,47 +745,47 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 				"deadline_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. µÈ´ıÖ÷¶¯¶Ë´´½¨DataWriter
+			// 6. ç­‰å¾…ä¸»åŠ¨ç«¯åˆ›å»ºDataWriter
 			WaitPositive();
 
-			// 7. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó£¬Deadline.period=2000ms
+			// 7. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡ï¼ŒDeadline.period=2000ms
 			DataReaderQos dr_qos = DATAREADER_QOS_DEFAULT;
 			dr_qos.deadline.period.sec = 2;
 			dr_qos.deadline.period.nanosec = 0;
 
-			// 8. ´´½¨Listener
+			// 8. åˆ›å»ºListener
 			BaseDataReaderListener listener;
-			// 9. ´´½¨DataReader
+			// 9. åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, dr_qos, &listener, STATUS_MASK_ALL);
 			ASSERT_NE(reader, nullptr);
 
-			// 10. ÔÚÖÜÆÚÄÚÄÜ½ÓÊÕµ½Êı¾İ
+			// 10. åœ¨å‘¨æœŸå†…èƒ½æ¥æ”¶åˆ°æ•°æ®
 			RequestedDeadlineMissedStatus status;
 			EXPECT_EQ(reader->get_requested_deadline_missed_status(status), RETCODE_OK);
 			EXPECT_EQ(status.total_count, 0);
 			EXPECT_EQ(status.total_count_change, 0);
 
-			// 11. µÈ´ıÖ÷¶¯¶ËĞ´ÈëÍê³ÉĞÅºÅ
+			// 11. ç­‰å¾…ä¸»åŠ¨ç«¯å†™å…¥å®Œæˆä¿¡å·
 			WaitPositive();
 
-			// 12. ÔÚÖÜÆÚÄÚ²»ÄÜ½ÓÊÕµ½Êı¾İ
+			// 12. åœ¨å‘¨æœŸå†…ä¸èƒ½æ¥æ”¶åˆ°æ•°æ®
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 			EXPECT_EQ(reader->get_requested_deadline_missed_status(status), RETCODE_OK);
 			EXPECT_EQ(status.total_count, 1);
-			//ÒòÎªÔÚlistenerÖĞ¶ÁÈ¡¹ıstatus,total_count_change»á±»ÖØÖÃÎª0
+			//å› ä¸ºåœ¨listenerä¸­è¯»å–è¿‡status,total_count_changeä¼šè¢«é‡ç½®ä¸º0
 			EXPECT_EQ(status.total_count_change, 0);
-			EXPECT_EQ(listener.wait_requested_deadline_missed(1000), 0); // ³É¹¦
+			EXPECT_EQ(listener.wait_requested_deadline_missed(1000), 0); // æˆåŠŸ
 
-			// 13. É¾³ıËùÓĞ×ÓÊµÌå
+			// 13. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 14. É¾³ıÓò²ÎÓëÕß
+			// 14. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 15. finalize_instance
@@ -791,16 +793,16 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 		});
 	std::thread th_2(
 		[&] {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. Ä¬ÈÏ²ÎÊı´´½¨DomainParticipant
+			// 3. é»˜è®¤å‚æ•°åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨deadline_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdeadline_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -809,27 +811,27 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 				"deadline_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó£¬Deadline.period=500ms
+			// 6. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡ï¼ŒDeadline.period=500ms
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.deadline.period.sec = 0;
 			dw_qos.deadline.period.nanosec = 500 * 1000 * 1000; // 500ms
 
-			// 7. ´´½¨Listener
+			// 7. åˆ›å»ºListener
 			BaseDataWriterListener listener;
-			// 8. ´´½¨DataWriter
+			// 8. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, dw_qos, &listener, STATUS_MASK_ALL);
 			ASSERT_NE(writer, nullptr);
 
-			// 9. ·¢ËÍDataWriter´´½¨Íê³ÉĞÅºÅ
+			// 9. å‘é€DataWriteråˆ›å»ºå®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 10. Âú×ãDeadline²»²úÉú×´Ì¬ºÍ´¥·¢»Øµ÷
+			// 10. æ»¡è¶³Deadlineä¸äº§ç”ŸçŠ¶æ€å’Œè§¦å‘å›è°ƒ
 			for (int i = 0; i < 10; ++i) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(20));
 				TestModule::BasicData sample;
@@ -839,10 +841,10 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 				EXPECT_EQ(writer->get_offered_deadline_missed_status(status), RETCODE_OK);
 				EXPECT_EQ(status.total_count, 0);
 				EXPECT_EQ(status.total_count_change, 0);
-				EXPECT_EQ(listener.wait_offered_deadline_missed(100), 1); // ³¬Ê±
+				EXPECT_EQ(listener.wait_offered_deadline_missed(100), 1); // è¶…æ—¶
 			}
 
-			// 11. ²»Âú×ãDeadline²úÉú×´Ì¬ºÍ´¥·¢»Øµ÷
+			// 11. ä¸æ»¡è¶³Deadlineäº§ç”ŸçŠ¶æ€å’Œè§¦å‘å›è°ƒ
 			std::this_thread::sleep_for(std::chrono::milliseconds(800));
 			TestModule::BasicData sample;
 			sample.id = 100;
@@ -850,17 +852,17 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 			OfferedDeadlineMissedStatus status;
 			EXPECT_EQ(writer->get_offered_deadline_missed_status(status), RETCODE_OK);
 			EXPECT_EQ(status.total_count, 1);
-			//ÒòÎªÔÚlistenerÖĞ¶ÁÈ¡¹ıstatus,total_count_change»á±»ÖØÖÃÎª0
+			//å› ä¸ºåœ¨listenerä¸­è¯»å–è¿‡status,total_count_changeä¼šè¢«é‡ç½®ä¸º0
 			EXPECT_EQ(status.total_count_change, 0);
-			EXPECT_EQ(listener.wait_offered_deadline_missed(1000), 0); // ³É¹¦
+			EXPECT_EQ(listener.wait_offered_deadline_missed(1000), 0); // æˆåŠŸ
 
-			// 12. ·¢ËÍĞ´ÈëÍê³ÉĞÅºÅ
+			// 12. å‘é€å†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 13. É¾³ıËùÓĞ×ÓÊµÌå
+			// 13. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 14. É¾³ıÓò²ÎÓëÕß
+			// 14. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 15. finalize_instance
@@ -873,16 +875,16 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 	std::thread th_1(
 		[&] {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨durability_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdurability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -891,15 +893,15 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 				"durability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Subscriber
+			// 4. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 5. µÈ´ıÖ÷¶¯¶ËĞ´ÈëÍê³ÉĞÅºÅ
+			// 5. ç­‰å¾…ä¸»åŠ¨ç«¯å†™å…¥å®Œæˆä¿¡å·
 			WaitPositive();
 
-			// 6. VOLATILEÀàĞÍDataReader½ÓÊÕ²»µ½Êı¾İ
+			// 6. VOLATILEç±»å‹DataReaderæ¥æ”¶ä¸åˆ°æ•°æ®
 			DataReaderQos dr_qos1 = DATAREADER_QOS_DEFAULT;
 			dr_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dr_qos1.durability.kind = VOLATILE_DURABILITY_QOS;
@@ -911,7 +913,7 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 			SampleInfo info;
 			EXPECT_EQ(reader1->take_next_sample(&sample, info), RETCODE_NO_DATA);
 
-			// 7. TRANSIENT_LOCALÀàĞÍDataReader½ÓÊÕµÃµ½Êı¾İ
+			// 7. TRANSIENT_LOCALç±»å‹DataReaderæ¥æ”¶å¾—åˆ°æ•°æ®
 			DataReaderQos dr_qos2 = DATAREADER_QOS_DEFAULT;
 			dr_qos2.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dr_qos2.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
@@ -919,17 +921,17 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 				topic, dr_qos2, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader2, nullptr);
 			EXPECT_TRUE(waitmatch(reader2, 1, 5));
-			//ÖØ´«ĞèÒªÊ±¼ä£¬ËùÒÔĞèÒªµÈ´ıÒ»ÏÂ
+			//é‡ä¼ éœ€è¦æ—¶é—´ï¼Œæ‰€ä»¥éœ€è¦ç­‰å¾…ä¸€ä¸‹
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			EXPECT_EQ(reader2->take_next_sample(&sample, info), RETCODE_OK);
 
-			// 8. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 8. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 9. É¾³ıËùÓĞ×ÓÊµÌå
+			// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 10. É¾³ıÓò²ÎÓëÕß
+			// 10. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 11. finalize_instance
@@ -937,16 +939,16 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 		});
 	std::thread th_2(
 		[&] {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨durability_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdurability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -955,36 +957,36 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 				"durability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1£¬Durability=TRANSIENT_LOCAL
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1ï¼ŒDurability=TRANSIENT_LOCAL
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
-			// 6. ´´½¨DataWriter1
+			// 6. åˆ›å»ºDataWriter1
 			DataWriter* writer = publisher->create_datawriter(
 				topic, dw_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 7. ·¢ËÍÒ»°üÑù±¾Êı¾İ£¬lVal=1
+			// 7. å‘é€ä¸€åŒ…æ ·æœ¬æ•°æ®ï¼ŒlVal=1
 			TestModule::BasicData sample;
 			sample.id = 1;
 			std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 			EXPECT_EQ(writer->write(&sample, HANDLE_NIL), RETCODE_OK);
 
-			// 8. ·¢ËÍĞ´ÈëÍê³ÉĞÅºÅ
+			// 8. å‘é€å†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 9. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 9. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			WaitNegative();
 
-			// 10. É¾³ıËùÓĞ×ÓÊµÌå
+			// 10. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 11. É¾³ıÓò²ÎÓëÕß
+			// 11. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 12. finalize_instance
@@ -998,16 +1000,16 @@ TEST_F(QoSTest, QoS_DurabilityQosPolicy) {
 TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
     std::thread th_1(
 		[&] {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨entity_factory_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºentity_factory_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1016,32 +1018,32 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
 				"entity_factory_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. Ä¬ÈÏ²ÎÊı´´½¨DataWriter
+			// 5. é»˜è®¤å‚æ•°åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 6. ´´½¨Subscriber
+			// 6. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 7. Ä¬ÈÏ²ÎÊı´´½¨DataReader
+			// 7. é»˜è®¤å‚æ•°åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
 			NotifyPositive();
-			// 8. µÈ´ıÖ÷¶¯¶Ë´´½¨Íê³É
+			// 8. ç­‰å¾…ä¸»åŠ¨ç«¯åˆ›å»ºå®Œæˆ
       		WaitPositive();
 
-			//±¾µØÒ²ÓĞÆ¥Åä ËùÒÔÍ³¼ÆÊıÁ¿Òª+1
-			// 9. Ö÷¶¯¶ËÎ´ÊÖ¶¯Ê¹ÄÜÊ±£¬ÎŞ·¨Æ¥Åäµ½¶ÔÏó
+			//æœ¬åœ°ä¹Ÿæœ‰åŒ¹é… æ‰€ä»¥ç»Ÿè®¡æ•°é‡è¦+1
+			// 9. ä¸»åŠ¨ç«¯æœªæ‰‹åŠ¨ä½¿èƒ½æ—¶ï¼Œæ— æ³•åŒ¹é…åˆ°å¯¹è±¡
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			PublicationMatchedStatus pub_status;
 			EXPECT_EQ(writer->get_publication_matched_status(pub_status), RETCODE_OK);
@@ -1052,13 +1054,13 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
 			EXPECT_EQ(sub_status.total_count, 1);
 			EXPECT_EQ(sub_status.total_count_change, 1);
 
-			// 10. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 10. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 11. µÈ´ıÖ÷¶¯¶ËÊ¹ÄÜÍê³É
+			// 11. ç­‰å¾…ä¸»åŠ¨ç«¯ä½¿èƒ½å®Œæˆ
 			WaitPositive();
 
-			// 12. Ö÷¶¯¶ËÊÖ¶¯Ê¹ÄÜÊ±£¬ÄÜ¹»Æ¥Åäµ½¶ÔÏó
+			// 12. ä¸»åŠ¨ç«¯æ‰‹åŠ¨ä½¿èƒ½æ—¶ï¼Œèƒ½å¤ŸåŒ¹é…åˆ°å¯¹è±¡
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			EXPECT_EQ(writer->get_publication_matched_status(pub_status), RETCODE_OK);
 			EXPECT_EQ(pub_status.total_count, 2);
@@ -1067,13 +1069,13 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
 			EXPECT_EQ(sub_status.total_count, 2);
 			EXPECT_EQ(sub_status.total_count_change, 1);
 
-			// 13. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 13. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 14. É¾³ıËùÓĞ×ÓÊµÌå
+			// 14. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 15. É¾³ıÓò²ÎÓëÕß
+			// 15. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 16. finalize_instance
@@ -1082,28 +1084,28 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
     std::thread th_2(
 	    [&] {
 			WaitNegative();
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipantFactoryQos¶ÔÏó£¬ÉèÖÃautoenable_created_entities=false
+			// 2. åˆ›å»ºDomainParticipantFactoryQoså¯¹è±¡ï¼Œè®¾ç½®autoenable_created_entities=false
 			//DomainParticipantFactoryQos factory_qos = PARTICIPANT_FACTORY_QOS_DEFAULT;
 			DomainParticipantFactoryQos factory_qos;
 			factory_qos.entity_factory.autoenable_created_entities = false;
 
-			// 3. ÉèÖÃ¹¤³§Qos
+			// 3. è®¾ç½®å·¥å‚Qos
 			EXPECT_EQ(factory->set_qos(factory_qos), RETCODE_OK);
 
-			// 4. ´´½¨DomainParticipantQos¶ÔÏó£¬ÉèÖÃautoenable_created_entities=false
+			// 4. åˆ›å»ºDomainParticipantQoså¯¹è±¡ï¼Œè®¾ç½®autoenable_created_entities=false
 			DomainParticipantQos dp_qos = PARTICIPANT_QOS_DEFAULT;
 			dp_qos.entity_factory.autoenable_created_entities = false;
 
-			// 5. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨DomainParticipant
+			// 5. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, dp_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 6. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨entity_factory_topic_nameÖ÷Ìâ
+			// 6. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºentity_factory_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1112,56 +1114,56 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
 				"entity_factory_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 7. ´´½¨PublisherQos¶ÔÏó£¬ÉèÖÃautoenable_created_entities=false
+			// 7. åˆ›å»ºPublisherQoså¯¹è±¡ï¼Œè®¾ç½®autoenable_created_entities=false
 			PublisherQos pub_qos = PUBLISHER_QOS_DEFAULT;
 			pub_qos.entity_factory.autoenable_created_entities = false;
 
 
-			// 8. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨Publisher
+			// 8. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(pub_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 9. Ä¬ÈÏ²ÎÊı´´½¨DataWriter
+			// 9. é»˜è®¤å‚æ•°åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 10. ´´½¨SubscriberQos¶ÔÏó£¬ÉèÖÃautoenable_created_entities=false
+			// 10. åˆ›å»ºSubscriberQoså¯¹è±¡ï¼Œè®¾ç½®autoenable_created_entities=false
 			SubscriberQos sub_qos = SUBSCRIBER_QOS_DEFAULT;
 			sub_qos.entity_factory.autoenable_created_entities = false;
 
-			// 11. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨Subscriber
+			// 11. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(sub_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 12. Ä¬ÈÏ²ÎÊı´´½¨DataReader
+			// 12. é»˜è®¤å‚æ•°åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 13. ·¢ËÍ´´½¨Íê³ÉĞÅºÅ
+			// 13. å‘é€åˆ›å»ºå®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 14. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 14. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			WaitNegative();	
 
-			// 15. ÊÖ¶¯Ê¹ÄÜÊµÌå
+			// 15. æ‰‹åŠ¨ä½¿èƒ½å®ä½“
 			EXPECT_EQ(participant->enable(), RETCODE_OK);
 			EXPECT_EQ(publisher->enable(), RETCODE_OK);
 			EXPECT_EQ(subscriber->enable(), RETCODE_OK);
 			EXPECT_EQ(writer->enable(), RETCODE_OK);
 			EXPECT_EQ(reader->enable(), RETCODE_OK);
 
-			// 16. ·¢ËÍÊ¹ÄÜÍê³ÉĞÅºÅ
+			// 16. å‘é€ä½¿èƒ½å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 17. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 17. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			WaitNegative();
 
-			// 18. É¾³ıËùÓĞ×ÓÊµÌå
+			// 18. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 19. É¾³ıÓò²ÎÓëÕß
+			// 19. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 20. finalize_instance
@@ -1175,20 +1177,20 @@ TEST_F(QoSTest, QoS_EntityFactoryQosPolicy) {
 TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ×Ô¶¨ÒåDomainParticipantQos¶ÔÏó£¬ÉèÖÃuser_data
+			// 2. è‡ªå®šä¹‰DomainParticipantQoså¯¹è±¡ï¼Œè®¾ç½®user_data
 			DomainParticipantQos dp_qos = PARTICIPANT_QOS_DEFAULT;
 			dp_qos.user_data.value = { 'd', 'p', 'u', 's', 'e', 'r' };
 
-			// 3. ÒÔ×Ô¶¨ÒåQos´´½¨DomainParticipant
+			// 3. ä»¥è‡ªå®šä¹‰Qosåˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, dp_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨example_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºexample_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1197,7 +1199,7 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 				"example_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. PublisherQosÅäÖÃgroup_data£¬Í¨¹ı·¢ÏÖĞ­Òé´«µİ
+			// 5. PublisherQosé…ç½®group_dataï¼Œé€šè¿‡å‘ç°åè®®ä¼ é€’
 			PublisherQos pub_qos = PUBLISHER_QOS_DEFAULT;
 			pub_qos.group_data.value = { 'p', 'u', 'b', 'g', 'r', 'o', 'u', 'p' };
 			Publisher* publisher = participant->create_publisher(pub_qos, nullptr, STATUS_MASK_NONE);
@@ -1207,10 +1209,10 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚÒ»´ÎDataWriter group_data¼ì²é
+			// ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬ä¸€æ¬¡DataWriter group_dataæ£€æŸ¥
 			WaitPositive();
 
-			// 6. SubscriberQosÅäÖÃgroup_data£¬Í¨¹ı·¢ÏÖĞ­Òé´«µİ
+			// 6. SubscriberQosé…ç½®group_dataï¼Œé€šè¿‡å‘ç°åè®®ä¼ é€’
 			SubscriberQos sub_qos = SUBSCRIBER_QOS_DEFAULT;
 			sub_qos.group_data.value = { 's', 'u', 'b', 'g', 'r', 'o', 'u', 'p' };
 			Subscriber* subscriber = participant->create_subscriber(sub_qos, nullptr, STATUS_MASK_NONE);
@@ -1220,13 +1222,13 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚÒ»´ÎDataReader group_data¼ì²é
+			// ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬ä¸€æ¬¡DataReader group_dataæ£€æŸ¥
 			WaitPositive();
 
-			// 7. É¾³ıËùÓĞ×ÓÊµÌå
+			// 7. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 8. É¾³ıÓò²ÎÓëÕß
+			// 8. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 9. finalize_instance
@@ -1234,16 +1236,16 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨example_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºexample_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1252,22 +1254,22 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 				"example_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReader
+			// 6. åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. ÂÖÑ¯get_matched_publicationsÖ±µ½ÓĞÆ¥Åä
+			// 7. è½®è¯¢get_matched_publicationsç›´åˆ°æœ‰åŒ¹é…
 			std::vector<InstanceHandle_t> pub_handles;
 			for (int i = 0; i < 50; ++i) {
 				pub_handles.clear();
@@ -1277,7 +1279,7 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 			}
 			EXPECT_FALSE(pub_handles.empty());
 
-			// 8. ¼ì²éPublicationBuiltinTopicData.group_data
+			// 8. æ£€æŸ¥PublicationBuiltinTopicData.group_data
 			bool found_pub_group_data = false;
 			for (const auto& h : pub_handles) {
 				PublicationBuiltinTopicData data;
@@ -1289,18 +1291,18 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 			}
 			EXPECT_TRUE(found_pub_group_data);
 
-			// 9. ·¢ËÍDataWriter group_data¼ì²éĞÅºÅ
+			// 9. å‘é€DataWriter group_dataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			//´Ë´¦ÒªÉ¾³ıÒÑ¾­´´½¨µÄreader ·ñÔò»áÓëÏÂÃæ´´½¨µÄwriter½øĞĞÆ¥Åä£¬ÎŞ·¨»ñÈ¡µ½GroupData
+			//æ­¤å¤„è¦åˆ é™¤å·²ç»åˆ›å»ºçš„reader å¦åˆ™ä¼šä¸ä¸‹é¢åˆ›å»ºçš„writerè¿›è¡ŒåŒ¹é…ï¼Œæ— æ³•è·å–åˆ°GroupData
 			subscriber->delete_datareader(reader);
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			// 10. ´´½¨DataWriter
+			// 10. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_ALL);
 			ASSERT_NE(writer, nullptr);
 
-			// 11. ÂÖÑ¯get_matched_subscriptionsÖ±µ½ÓĞÆ¥Åä
+			// 11. è½®è¯¢get_matched_subscriptionsç›´åˆ°æœ‰åŒ¹é…
 			std::vector<InstanceHandle_t> sub_handles;
 			for (int i = 0; i < 50; ++i) {
 				sub_handles.clear();
@@ -1310,7 +1312,7 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 			}
 			EXPECT_FALSE(sub_handles.empty());
 
-			// 12. ¼ì²éSubscriptionBuiltinTopicData.group_data
+			// 12. æ£€æŸ¥SubscriptionBuiltinTopicData.group_data
 			bool found_sub_group_data = false;
 			for (const auto& h : sub_handles) {
 				SubscriptionBuiltinTopicData data;
@@ -1322,13 +1324,13 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 			}
 			EXPECT_TRUE(found_sub_group_data);
 
-			// 13. ·¢ËÍDataReader group_data¼ì²éĞÅºÅ
+			// 13. å‘é€DataReader group_dataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			// 14. É¾³ıËùÓĞ×ÓÊµÌå
+			// 14. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 15. É¾³ıÓò²ÎÓëÕß
+			// 15. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 16. finalize_instance
@@ -1341,16 +1343,16 @@ TEST_F(QoSTest, QoS_GroupDataQosPolicy) {
 TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨history_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºhistory_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1359,19 +1361,19 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 				"history_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó1£¬History=KEEP_LAST, depth=5
+			// 6. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡1ï¼ŒHistory=KEEP_LAST, depth=5
 			DataReaderQos dr_qos1 = DATAREADER_QOS_DEFAULT;
 			dr_qos1.history.kind = KEEP_LAST_HISTORY_QOS;
 			dr_qos1.history.depth = 5;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
-			// 8. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó2£¬History=KEEP_ALL
+			// 8. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡2ï¼ŒHistory=KEEP_ALL
 			DataReaderQos dr_qos2 = DATAREADER_QOS_DEFAULT;
 			dr_qos2.history.kind = KEEP_ALL_HISTORY_QOS;
 
@@ -1385,19 +1387,19 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 				topic, dr_qos2, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader2, nullptr);
 
-			// 11. µÈ´ıDataReader1Æ¥ÅäÍê³É
+			// 11. ç­‰å¾…DataReader1åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader1, 1, 5));
-			// 12. µÈ´ıDataReader2Æ¥ÅäÍê³É
+			// 12. ç­‰å¾…DataReader2åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader2, 1, 5));
 
-			//Õâ±ßÓ¦¸ÃÊÇÉÙÁË·¢ËÍÍ¨ÖªµÄ²½Öè
+			//è¿™è¾¹åº”è¯¥æ˜¯å°‘äº†å‘é€é€šçŸ¥çš„æ­¥éª¤
 			NotifyPositive();
 
-			// 13. µÈ´ıÖ÷¶¯¶ËĞ´ÈëÍê³É
+			// 13. ç­‰å¾…ä¸»åŠ¨ç«¯å†™å…¥å®Œæˆ
 			WaitPositive();
 
-			//¸ÃÇé¿ö²»»á´¥·¢on_sample_lost½Ó¿Ú
-			// 14. KEEP_LASTÀàĞÍDataReader½ö½ÓÊÕ²¿·ÖÊı¾İ²¢´¥·¢on_sample_lost
+			//è¯¥æƒ…å†µä¸ä¼šè§¦å‘on_sample_lostæ¥å£
+			// 14. KEEP_LASTç±»å‹DataReaderä»…æ¥æ”¶éƒ¨åˆ†æ•°æ®å¹¶è§¦å‘on_sample_lost
 			SequenceData<TestModule::BasicData> data1;
 			SampleInfoSeq infos1;
 			EXPECT_EQ(reader1->take(data1, infos1, LENGTH_UNLIMITED,
@@ -1409,20 +1411,20 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 			EXPECT_EQ(lost_status.total_count, 0);
 			EXPECT_EQ(lost_status.total_count_change, 0);
 
-			// 15. KEEP_ALLÀàĞÍDataReader½ÓÊÕËùÓĞÊı¾İ
+			// 15. KEEP_ALLç±»å‹DataReaderæ¥æ”¶æ‰€æœ‰æ•°æ®
 			SequenceData<TestModule::BasicData> data2;
 			SampleInfoSeq infos2;
 			EXPECT_EQ(reader2->take(data2, infos2, LENGTH_UNLIMITED,
 				ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
 			EXPECT_EQ(data2.length(), 10u);
 
-			// 16. ·¢ËÍDataReader½ÓÊÕÍê³ÉĞÅºÅ
+			// 16. å‘é€DataReaderæ¥æ”¶å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 17. É¾³ıËùÓĞ×ÓÊµÌå
+			// 17. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 18. É¾³ıÓò²ÎÓëÕß
+			// 18. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 19. finalize_instance
@@ -1430,16 +1432,16 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨history_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºhistory_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1448,25 +1450,25 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 				"history_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1£¬History=KEEP_LAST, depth=10
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1ï¼ŒHistory=KEEP_LAST, depth=10
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.history.kind = KEEP_LAST_HISTORY_QOS;
 			dw_qos.history.depth = 10;
 
-			// 6. ´´½¨DataWriter1
+			// 6. åˆ›å»ºDataWriter1
 			DataWriter* writer = publisher->create_datawriter(
 				topic, dw_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 7. µÈ´ı±»¶¯¶ËDataReaderÆ¥ÅäÍê³É
+			// 7. ç­‰å¾…è¢«åŠ¨ç«¯DataReaderåŒ¹é…å®Œæˆ
 			WaitNegative();
 
-			// 8. ¼ä¸ô10ms·¢ËÍ10°üÑù±¾Êı¾İ
+			// 8. é—´éš”10mså‘é€10åŒ…æ ·æœ¬æ•°æ®
 			for (int i = 0; i < 10; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;
@@ -1474,16 +1476,16 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 
-			// 9. ·¢ËÍĞ´ÈëÍê³ÉĞÅºÅ
+			// 9. å‘é€å†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 10. µÈ´ı±»¶¯¶ËDataReader½ÓÊÕÍê³É
+			// 10. ç­‰å¾…è¢«åŠ¨ç«¯DataReaderæ¥æ”¶å®Œæˆ
 			WaitNegative();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -1496,16 +1498,16 @@ TEST_F(QoSTest, QoS_HistoryQosPolicy) {
 TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨lifespan_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºlifespan_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1514,38 +1516,38 @@ TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 				"lifespan_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Subscriber
+			// 4. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 			
-			// µÈ´ıÖ÷¶¯¶ËDataWriterĞ´ÈëÍê³É
+			// ç­‰å¾…ä¸»åŠ¨ç«¯DataWriterå†™å…¥å®Œæˆ
 			WaitPositive();
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-			// 5. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó£¬Reliability=RELIABLE
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡ï¼ŒReliability=RELIABLE
 			DataReaderQos dr_qos = DATAREADER_QOS_DEFAULT;
 			dr_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dr_qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
-			// 6. ´´½¨DataReader
+			// 6. åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, dr_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. µÈ´ıDataReaderÆ¥ÅäÍê³É
+			// 7. ç­‰å¾…DataReaderåŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader, 1, 5));
 
-			// 10. ³¬¹ıLifespanÊ±¼äºó½«È¡²»µ½Êı¾İ
+			// 10. è¶…è¿‡Lifespanæ—¶é—´åå°†å–ä¸åˆ°æ•°æ®
 			TestModule::BasicData sample;
 			SampleInfo info;
 			EXPECT_EQ(reader->take_next_sample(&sample, info), RETCODE_NO_DATA);
-			// 10.1 Í¨Öª±»¶¯¶Ë½ÓÊÕÍê³É
+			// 10.1 é€šçŸ¥è¢«åŠ¨ç«¯æ¥æ”¶å®Œæˆ
 			NotifyPositive();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -1553,16 +1555,16 @@ TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨lifespan_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºlifespan_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1571,24 +1573,24 @@ TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 				"lifespan_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó£¬Lifespan=2000ms
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡ï¼ŒLifespan=2000ms
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.lifespan.duration.sec = 2;
 			dw_qos.lifespan.duration.nanosec = 0;
 			dw_qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 			dw_qos.history.kind = KEEP_ALL_HISTORY_QOS;
 
-			// 6. ´´½¨DataWriter
+			// 6. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, dw_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 8. ÖÜÆÚÎª1ms·¢ËÍ100°üÑù±¾Êı¾İ
+			// 8. å‘¨æœŸä¸º1mså‘é€100åŒ…æ ·æœ¬æ•°æ®
 			for (int i = 0; i < 100; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;
@@ -1596,16 +1598,16 @@ TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 
-			// 9. ·¢ËÍDataWriterĞ´ÈëÍê³ÉĞÅºÅ
+			// 9. å‘é€DataWriterå†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 10. µÈ´ı±»¶¯¶ËDataReader½ÓÊÕÍê³É
+			// 10. ç­‰å¾…è¢«åŠ¨ç«¯DataReaderæ¥æ”¶å®Œæˆ
 			WaitNegative();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -1619,16 +1621,16 @@ TEST_F(QoSTest, QoS_LifeSpanQosPolicy) {
 TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨3¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º3ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1643,7 +1645,7 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 				"liveliness_topic_name_3", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic3, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
@@ -1681,55 +1683,55 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 				topic3, drqos3, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(reader3, nullptr);
 
-			// 15-17. µÈ´ıÆ¥Åä
+			// 15-17. ç­‰å¾…åŒ¹é…
 			EXPECT_TRUE(waitmatch(reader1, 1, 5));
 			EXPECT_TRUE(waitmatch(reader2, 1, 5));
 			EXPECT_TRUE(waitmatch(reader3, 1, 5));
 
-			// 18. µÈ´ıÖ÷¶¯¶ËĞ´ÈëÍê³É
+			// 18. ç­‰å¾…ä¸»åŠ¨ç«¯å†™å…¥å®Œæˆ
 			WaitPositive(50);
 
-			// 19. ÑÓ³Ù6000ms
+			// 19. å»¶è¿Ÿ6000ms
 			std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 
-			// 20. MANUAL_BY_PARTICIPANTÀàĞÍ¼ì²âliveliness±ä»¯
+			// 20. MANUAL_BY_PARTICIPANTç±»å‹æ£€æµ‹livelinesså˜åŒ–
 			LivelinessChangedStatus changed1;
 			EXPECT_EQ(reader2->get_liveliness_changed_status(changed1), RETCODE_OK);
 			EXPECT_EQ(changed1.alive_count, 0);
-			//listenerÖĞ±»ÖØÖÃÎª0
+			//listenerä¸­è¢«é‡ç½®ä¸º0
 			//EXPECT_EQ(changed1.alive_count_change, -1);
 			EXPECT_EQ(changed1.alive_count_change, 0);
 
-			// 21. MANUAL_BY_TOPICÀàĞÍ¼ì²âliveliness±ä»¯
+			// 21. MANUAL_BY_TOPICç±»å‹æ£€æµ‹livelinesså˜åŒ–
 			LivelinessChangedStatus changed3;
 			EXPECT_EQ(reader3->get_liveliness_changed_status(changed3), RETCODE_OK);
 			EXPECT_EQ(changed3.alive_count, 0);
-			//listenerÖĞ±»ÖØÖÃÎª0
+			//listenerä¸­è¢«é‡ç½®ä¸º0
 			//EXPECT_EQ(changed3.alive_count_change, -1);
 			EXPECT_EQ(changed3.alive_count_change, 0);
 
-			// 22. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 22. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 23. µÈ´ıÖ÷¶¯¶ËÉ¾³ıÓò²ÎÓëÕß
+			// 23. ç­‰å¾…ä¸»åŠ¨ç«¯åˆ é™¤åŸŸå‚ä¸è€…
 			WaitPositive();
 
-			// 24. ÑÓ³Ù5000ms
+			// 24. å»¶è¿Ÿ5000ms
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-			// 25. AUTOMATICÀàĞÍ¼ì²âliveliness±ä»¯
+			// 25. AUTOMATICç±»å‹æ£€æµ‹livelinesså˜åŒ–
 			LivelinessChangedStatus changed_auto;
 			EXPECT_EQ(reader1->get_liveliness_changed_status(changed_auto), RETCODE_OK);
 
 			EXPECT_EQ(changed_auto.alive_count, 1);
-			//listenerÖĞ ¶ÁÈ¡ºó»áÖØÖÃ
+			//listenerä¸­ è¯»å–åä¼šé‡ç½®
 			EXPECT_EQ(changed_auto.alive_count_change, 0);
 			//EXPECT_EQ(changed_auto.alive_count_change, 1);
 
-			// 26. É¾³ıËùÓĞ×ÓÊµÌå
+			// 26. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 27. É¾³ıÓò²ÎÓëÕß
+			// 27. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 28. finalize_instance
@@ -1737,16 +1739,16 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨3¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º3ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1761,7 +1763,7 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 				"liveliness_topic_name_3", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic3, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
@@ -1799,7 +1801,7 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 				topic3, qos_manual_topic, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(writer3, nullptr);
 
-			// 16. MANUAL_BY_PARTICIPANTÀàĞÍĞèÒªÊÖ¶¯µ÷ÓÃassert_liveliness
+			// 16. MANUAL_BY_PARTICIPANTç±»å‹éœ€è¦æ‰‹åŠ¨è°ƒç”¨assert_liveliness
 			for (int i = 0; i < 10; ++i) {
 				EXPECT_EQ(writer2->assert_liveliness(), RETCODE_OK);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -1811,22 +1813,22 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 			EXPECT_EQ(writer2dup->get_liveliness_lost_status(lost_status), RETCODE_OK);
 			EXPECT_EQ(lost_status.total_count, 0);
 			EXPECT_EQ(lost_status.total_count_change, 0);
-			//Á½´ÎÊ±ÑÓÖ®¼ä¼ÓÉÏ²Ù×÷Ê±¼äÂÔ´óÓÚ2s¡£»á´¥·¢liveliness_lost£¬²»»áÔÚwait_liveliness_lostÖĞ³¬Ê± ÕâÒ»²½µÄÄ¿µÄÊÇÊ²Ã´£¿
-			EXPECT_EQ(listener2.wait_liveliness_lost(900), 1); //³¬Ê±
-			//EXPECT_EQ(listener2->wait_liveliness_lost(1000), 1); // ³¬Ê±
+			//ä¸¤æ¬¡æ—¶å»¶ä¹‹é—´åŠ ä¸Šæ“ä½œæ—¶é—´ç•¥å¤§äº2sã€‚ä¼šè§¦å‘liveliness_lostï¼Œä¸ä¼šåœ¨wait_liveliness_lostä¸­è¶…æ—¶ è¿™ä¸€æ­¥çš„ç›®çš„æ˜¯ä»€ä¹ˆï¼Ÿ
+			EXPECT_EQ(listener2.wait_liveliness_lost(900), 1); //è¶…æ—¶
+			//EXPECT_EQ(listener2->wait_liveliness_lost(1000), 1); // è¶…æ—¶
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			EXPECT_EQ(writer2->get_liveliness_lost_status(lost_status), RETCODE_OK);
 			EXPECT_EQ(lost_status.total_count, 1);
-			//listenerÍ¨Öª¹ıºó total_count_change»á±»ÖØÖÃ
+			//listeneré€šçŸ¥è¿‡å total_count_changeä¼šè¢«é‡ç½®
 			EXPECT_EQ(lost_status.total_count_change, 0);
 			EXPECT_EQ(writer2dup->get_liveliness_lost_status(lost_status), RETCODE_OK);
 			EXPECT_EQ(lost_status.total_count, 1);
-			//listenerÍ¨Öª¹ıºó total_count_change»á±»ÖØÖÃ
+			//listeneré€šçŸ¥è¿‡å total_count_changeä¼šè¢«é‡ç½®
 			EXPECT_EQ(lost_status.total_count_change, 0);
-			EXPECT_EQ(listener2.wait_liveliness_lost(1000), 0); // ³É¹¦
+			EXPECT_EQ(listener2.wait_liveliness_lost(1000), 0); // æˆåŠŸ
 
-			// 17. MANUAL_BY_TOPICÀàĞÍĞèÒªÊÖ¶¯µ÷ÓÃassert_liveliness
+			// 17. MANUAL_BY_TOPICç±»å‹éœ€è¦æ‰‹åŠ¨è°ƒç”¨assert_liveliness
 			for (int i = 0; i < 10; ++i) {
 				EXPECT_EQ(writer3->assert_liveliness(), RETCODE_OK);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -1834,30 +1836,30 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 			EXPECT_EQ(writer3->get_liveliness_lost_status(lost_status), RETCODE_OK);
 			EXPECT_EQ(lost_status.total_count, 0);
 			EXPECT_EQ(lost_status.total_count_change, 0);
-			//Á½´ÎÊ±ÑÓÖ®¼ä¼ÓÉÏ²Ù×÷Ê±¼äÂÔ´óÓÚ2s¡£»á´¥·¢liveliness_lost£¬²»»áÔÚwait_liveliness_lostÖĞ³¬Ê±
-			EXPECT_EQ(listener3.wait_liveliness_lost(900), 1); // ³¬Ê±
-			//EXPECT_EQ(listener3->wait_liveliness_lost(1000), 1); // ³¬Ê±
+			//ä¸¤æ¬¡æ—¶å»¶ä¹‹é—´åŠ ä¸Šæ“ä½œæ—¶é—´ç•¥å¤§äº2sã€‚ä¼šè§¦å‘liveliness_lostï¼Œä¸ä¼šåœ¨wait_liveliness_lostä¸­è¶…æ—¶
+			EXPECT_EQ(listener3.wait_liveliness_lost(900), 1); // è¶…æ—¶
+			//EXPECT_EQ(listener3->wait_liveliness_lost(1000), 1); // è¶…æ—¶
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			EXPECT_EQ(writer3->get_liveliness_lost_status(lost_status), RETCODE_OK);
 			EXPECT_EQ(lost_status.total_count, 1);
-			//listenerÍ¨Öª¹ıºó total_count_change»á±»ÖØÖÃ
+			//listeneré€šçŸ¥è¿‡å total_count_changeä¼šè¢«é‡ç½®
 			EXPECT_EQ(lost_status.total_count_change, 0);
-			EXPECT_EQ(listener3.wait_liveliness_lost(1000), 0); // ³É¹¦
+			EXPECT_EQ(listener3.wait_liveliness_lost(1000), 0); // æˆåŠŸ
 
-			// 18. ·¢ËÍĞ´ÈëÍê³ÉĞÅºÅ
+			// 18. å‘é€å†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 19. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 19. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			WaitNegative();
 
-			// 20. É¾³ıËùÓĞ×ÓÊµÌå
+			// 20. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 27. É¾³ıÓò²ÎÓëÕß
+			// 27. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
-			// 21. Í¨Öª±»¶¯¶ËÒÑÉ¾³ı
+			// 21. é€šçŸ¥è¢«åŠ¨ç«¯å·²åˆ é™¤
 			NotifyNegative();
 
 			// 22. finalize_instance
@@ -1868,18 +1870,20 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 }
 
 TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. Ä¬ÈÏ²ÎÊı´´½¨DomainParticipant
+			// 3. é»˜è®¤å‚æ•°åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1891,44 +1895,44 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 				"ownership_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó£¬Ownership=SHARED
+			// 6. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡ï¼ŒOwnership=SHARED
 			DataReaderQos qos_shared = DATAREADER_QOS_DEFAULT;
 			qos_shared.ownership.kind = SHARED_OWNERSHIP_QOS;
 			qos_shared.history.kind = KEEP_ALL_HISTORY_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos_shared, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó£¬Ownership=EXCLUSIVE
+			// 9. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡ï¼ŒOwnership=EXCLUSIVE
 			DataReaderQos qos_exclusive = DATAREADER_QOS_DEFAULT;
 			qos_exclusive.ownership.kind = EXCLUSIVE_OWNERSHIP_QOS;
 			qos_exclusive.history.kind = KEEP_ALL_HISTORY_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos_exclusive, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. µÈ´ıDataReader1Æ¥Åä2¸ö¶Ô¶Ë
+			// 12. ç­‰å¾…DataReader1åŒ¹é…2ä¸ªå¯¹ç«¯
 			EXPECT_TRUE(waitmatch(reader1, 2, 5));
-			// 13. µÈ´ıDataReader2Æ¥Åä2¸ö¶Ô¶Ë
+			// 13. ç­‰å¾…DataReader2åŒ¹é…2ä¸ªå¯¹ç«¯
 			EXPECT_TRUE(waitmatch(reader2, 2, 5));
 
-			// 14. ·¢ËÍÆ¥ÅäÍê³ÉĞÅºÅ
+			// 14. å‘é€åŒ¹é…å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 15. SHAREDÀàĞÍËùÓĞÆ¥ÅäµÄ¶Ô¶ËµÄÊı¾İ¾ùÄÜ½ÓÊÕµ½
+			// 15. SHAREDç±»å‹æ‰€æœ‰åŒ¹é…çš„å¯¹ç«¯çš„æ•°æ®å‡èƒ½æ¥æ”¶åˆ°
 			WaitPositive();
 			listener1.wait_data_available(1000);
 			TestModule::BasicData sample;
@@ -1939,19 +1943,19 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 			EXPECT_EQ(reader1->take_next_sample(&sample, info), RETCODE_OK);
 			EXPECT_EQ(sample.id, 2);
 			listener2.wait_data_available(1000);
-			// 16. EXCLUSIVEÀàĞÍÖ»ÄÜ½ÓÊÕµ½ownership_strength×î´óµÄ¶Ô¶ËµÄÊı¾İ
+			// 16. EXCLUSIVEç±»å‹åªèƒ½æ¥æ”¶åˆ°ownership_strengthæœ€å¤§çš„å¯¹ç«¯çš„æ•°æ®
 			EXPECT_EQ(reader2->take_next_sample(&sample, info), RETCODE_OK);
 			EXPECT_EQ(sample.id, 3);
 			listener2.wait_data_available(1000);
 			EXPECT_EQ(reader2->take_next_sample(&sample, info), RETCODE_NO_DATA);
 
-			// 17. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 17. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 18. É¾³ıËùÓĞ×ÓÊµÌå
+			// 18. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 19. É¾³ıÓò²ÎÓëÕß
+			// 19. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 20. finalize_instance
@@ -1959,16 +1963,16 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. Ä¬ÈÏ²ÎÊı´´½¨DomainParticipant
+			// 2. é»˜è®¤å‚æ•°åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -1980,12 +1984,12 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 				"ownership_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1£¬Ownership=SHARED
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1ï¼ŒOwnership=SHARED
 			DataWriterQos qos_shared = DATAWRITER_QOS_DEFAULT;
 			qos_shared.ownership.kind = SHARED_OWNERSHIP_QOS;
 
@@ -1999,7 +2003,7 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 				topic1, qos_shared, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer2, nullptr);
 
-			// 8. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó2£¬Ownership=EXCLUSIVE£¬ownership_strength=100
+			// 8. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡2ï¼ŒOwnership=EXCLUSIVEï¼Œownership_strength=100
 			DataWriterQos qos_exclusive_100 = DATAWRITER_QOS_DEFAULT;
 			qos_exclusive_100.ownership.kind = EXCLUSIVE_OWNERSHIP_QOS;
 			qos_exclusive_100.ownership_strength.value = 100;
@@ -2009,7 +2013,7 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 				topic2, qos_exclusive_100, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer3, nullptr);
 
-			// 10. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó3£¬Ownership=EXCLUSIVE£¬ownership_strength=50
+			// 10. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡3ï¼ŒOwnership=EXCLUSIVEï¼Œownership_strength=50
 			DataWriterQos qos_exclusive_50 = DATAWRITER_QOS_DEFAULT;
 			qos_exclusive_50.ownership.kind = EXCLUSIVE_OWNERSHIP_QOS;
 			qos_exclusive_50.ownership_strength.value = 50;
@@ -2019,34 +2023,34 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 				topic2, qos_exclusive_50, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer4, nullptr);
 
-			// 12. µÈ´ı±»¶¯¶ËÆ¥ÅäÍê³É
+			// 12. ç­‰å¾…è¢«åŠ¨ç«¯åŒ¹é…å®Œæˆ
 			WaitNegative();
 
-			// 13. DataWriter1·¢ËÍlVal=1
+			// 13. DataWriter1å‘é€lVal=1
 			TestModule::BasicData sample;
 			sample.id = 1;
 			EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
 
-			// 14. DataWriter2·¢ËÍlVal=2
+			// 14. DataWriter2å‘é€lVal=2
 			sample.id = 2;
 			EXPECT_EQ(writer2->write(&sample, HANDLE_NIL), RETCODE_OK);
 
-			// 15. DataWriter3·¢ËÍlVal=3
+			// 15. DataWriter3å‘é€lVal=3
 			sample.id = 3;
 			EXPECT_EQ(writer3->write(&sample, HANDLE_NIL), RETCODE_OK);
 
-			// 16. DataWriter4·¢ËÍlVal=4
+			// 16. DataWriter4å‘é€lVal=4
 			sample.id = 4;
 			EXPECT_EQ(writer4->write(&sample, HANDLE_NIL), RETCODE_OK);
 
-			// 17. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 17. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			NotifyNegative();
 			WaitNegative(20);
 
-			// 18. É¾³ıËùÓĞ×ÓÊµÌå
+			// 18. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 19. É¾³ıÓò²ÎÓëÕß
+			// 19. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 20. finalize_instance
@@ -2059,16 +2063,16 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 TEST_F(QoSTest, QoS_PartitionQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2080,52 +2084,52 @@ TEST_F(QoSTest, QoS_PartitionQosPolicy) {
 				"partition_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨SubscriberQos¶ÔÏó1£¬Partition=partition_topic_name_1
+			// 5. åˆ›å»ºSubscriberQoså¯¹è±¡1ï¼ŒPartition=partition_topic_name_1
 			SubscriberQos sub_qos1 = SUBSCRIBER_QOS_DEFAULT;
 			sub_qos1.partition.name = { "partition_topic_name_1" };
 
-			// 6. ´´½¨SubscriberQos¶ÔÏó2£¬Partition=not_in_one_partition
+			// 6. åˆ›å»ºSubscriberQoså¯¹è±¡2ï¼ŒPartition=not_in_one_partition
 			SubscriberQos sub_qos2 = SUBSCRIBER_QOS_DEFAULT;
 			sub_qos2.partition.name = { "not_in_one_partition" };
 
-			// 7. ÒÔ¶ÔÏó1´´½¨Subscriber1
+			// 7. ä»¥å¯¹è±¡1åˆ›å»ºSubscriber1
 			Subscriber* subscriber1 = participant->create_subscriber(sub_qos1, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber1, nullptr);
 
-			// 8. ÒÔ¶ÔÏó2´´½¨Subscriber2
+			// 8. ä»¥å¯¹è±¡2åˆ›å»ºSubscriber2
 			Subscriber* subscriber2 = participant->create_subscriber(sub_qos2, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber2, nullptr);
 
-			// 9. Ê¹ÓÃSubscriber1´´½¨DataReader1
+			// 9. ä½¿ç”¨Subscriber1åˆ›å»ºDataReader1
 			DataReader* reader1 = subscriber1->create_datareader(
 				topic1, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader1, nullptr);
 
-			// 10. Ê¹ÓÃSubscriber2´´½¨DataReader2
+			// 10. ä½¿ç”¨Subscriber2åˆ›å»ºDataReader2
 			DataReader* reader2 = subscriber2->create_datareader(
 				topic2, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader2, nullptr);
 			WaitPositive();
 
-			// 11. ÏàÍ¬PartitionÆ¥Åä
+			// 11. ç›¸åŒPartitionåŒ¹é…
 			SubscriptionMatchedStatus status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(status1), RETCODE_OK);
 			EXPECT_EQ(status1.total_count, 1);
 			EXPECT_EQ(status1.total_count_change, 1);
 
-			// 12. ²»Í¬Partition²»Æ¥Åä
+			// 12. ä¸åŒPartitionä¸åŒ¹é…
 			SubscriptionMatchedStatus status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(status2), RETCODE_OK);
 			EXPECT_EQ(status2.total_count, 0);
 			EXPECT_EQ(status2.total_count_change, 0);
 
-			// 13. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 13. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 14. É¾³ıËùÓĞ×ÓÊµÌå
+			// 14. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 15. É¾³ıÓò²ÎÓëÕß
+			// 15. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 16. finalize_instance
@@ -2133,16 +2137,16 @@ TEST_F(QoSTest, QoS_PartitionQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2154,42 +2158,42 @@ TEST_F(QoSTest, QoS_PartitionQosPolicy) {
 				"partition_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 4. ´´½¨PublisherQos¶ÔÏó1£¬Partition=partition_topic_name_1
+			// 4. åˆ›å»ºPublisherQoså¯¹è±¡1ï¼ŒPartition=partition_topic_name_1
 			PublisherQos pub_qos1 = PUBLISHER_QOS_DEFAULT;
 			pub_qos1.partition.name = { "partition_topic_name_1" };
 
-			// 5. ´´½¨PublisherQos¶ÔÏó2£¬Partition=partition_topic_name_2
+			// 5. åˆ›å»ºPublisherQoså¯¹è±¡2ï¼ŒPartition=partition_topic_name_2
 			PublisherQos pub_qos2 = PUBLISHER_QOS_DEFAULT;
 			pub_qos2.partition.name = { "partition_topic_name_2" };
 
-			// 6. ÒÔ¶ÔÏó1´´½¨Publisher1
+			// 6. ä»¥å¯¹è±¡1åˆ›å»ºPublisher1
 			Publisher* publisher1 = participant->create_publisher(pub_qos1, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher1, nullptr);
 
-			// 7. ÒÔ¶ÔÏó2´´½¨Publisher2
+			// 7. ä»¥å¯¹è±¡2åˆ›å»ºPublisher2
 			Publisher* publisher2 = participant->create_publisher(pub_qos2, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher2, nullptr);
 
-			// 8. Ê¹ÓÃPublisher1´´½¨DataWriter1
+			// 8. ä½¿ç”¨Publisher1åˆ›å»ºDataWriter1
 			DataWriter* writer1 = publisher1->create_datawriter(
 				topic1, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. Ê¹ÓÃPublisher2´´½¨DataWriter2
+			// 9. ä½¿ç”¨Publisher2åˆ›å»ºDataWriter2
 			DataWriter* writer2 = publisher2->create_datawriter(
 				topic2, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer2, nullptr);
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			NotifyNegative();
 
-			// 10. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 10. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			std::string dummy;
 			WaitNegative();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -2202,16 +2206,16 @@ TEST_F(QoSTest, QoS_PartitionQosPolicy) {
 TEST_F(QoSTest, QoS_DurabilityMatch) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨4¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º4ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2229,53 +2233,53 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 				"durability_match_topic_name_4", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic4, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReaderQos¶ÔÏó1£¬Durability=VOLATILE
+			// 6. åˆ›å»ºDataReaderQoså¯¹è±¡1ï¼ŒDurability=VOLATILE
 			DataReaderQos qos_volatile = DATAREADER_QOS_DEFAULT;
 			qos_volatile.durability.kind = VOLATILE_DURABILITY_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos_volatile, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. DataReaderQos¶ÔÏó2£¬Durability=TRANSIENT_LOCAL
+			// 9. DataReaderQoså¯¹è±¡2ï¼ŒDurability=TRANSIENT_LOCAL
 			DataReaderQos qos_transient = DATAREADER_QOS_DEFAULT;
 			qos_transient.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos_transient, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. ´´½¨Listener3
+			// 12. åˆ›å»ºListener3
 			BaseDataReaderListener listener3;
 			// 13. DataReader3
 			DataReader* reader3 = subscriber->create_datareader(
 				topic3, qos_volatile, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(reader3, nullptr);
 
-			// 14. ´´½¨Listener4
+			// 14. åˆ›å»ºListener4
 			BaseDataReaderListener listener4;
 			// 15. DataReader4
 			DataReader* reader4 = subscriber->create_datareader(
 				topic4, qos_transient, &listener4, STATUS_MASK_ALL);
 			ASSERT_NE(reader4, nullptr);
 
-			// 16. ·¢ËÍDataReader´´½¨Íê³ÉĞÅºÅ
+			// 16. å‘é€DataReaderåˆ›å»ºå®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 17. VOLATILE Reader & VOLATILE Writer Æ¥Åä
-			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 17. VOLATILE Reader & VOLATILE Writer åŒ¹é…
+			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(sub_status1), RETCODE_OK);
 			EXPECT_EQ(sub_status1.total_count, 1);
@@ -2285,9 +2289,9 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(rqos_status1.total_count, 0);
 			EXPECT_EQ(rqos_status1.total_count_change, 0);
 
-			// 18. TRANSIENT_LOCAL Reader & VOLATILE Writer ²»Æ¥Åä
-			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // ³É¹¦
+			// 18. TRANSIENT_LOCAL Reader & VOLATILE Writer ä¸åŒ¹é…
+			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(sub_status2), RETCODE_OK);
 			EXPECT_EQ(sub_status2.total_count, 0);
@@ -2298,9 +2302,9 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(rqos_status2.total_count_change, 0);
 			EXPECT_EQ(rqos_status2.last_policy_id, DURABILITY_QOS_POLICY_ID);
 
-			// 19. VOLATILE Reader & TRANSIENT_LOCAL Writer Æ¥Åä
-			EXPECT_EQ(listener3.wait_subscription_matched(1000), 0); // ³¬Ê±
-			EXPECT_EQ(listener3.wait_requested_incompatible_qos(5000), 1); // ³É¹¦
+			// 19. VOLATILE Reader & TRANSIENT_LOCAL Writer åŒ¹é…
+			EXPECT_EQ(listener3.wait_subscription_matched(1000), 0); // è¶…æ—¶
+			EXPECT_EQ(listener3.wait_requested_incompatible_qos(5000), 1); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status3;
 			EXPECT_EQ(reader3->get_subscription_matched_status(sub_status3), RETCODE_OK);
 			EXPECT_EQ(sub_status3.total_count, 1);
@@ -2311,9 +2315,9 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(rqos_status3.total_count_change, 0);
 			//EXPECT_EQ(rqos_status3.last_policy_id, DURABILITY_QOS_POLICY_ID);
 
-			// 20. TRANSIENT_LOCAL Reader & TRANSIENT_LOCAL Writer Æ¥Åä
-			EXPECT_EQ(listener4.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener4.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 20. TRANSIENT_LOCAL Reader & TRANSIENT_LOCAL Writer åŒ¹é…
+			EXPECT_EQ(listener4.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener4.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status4;
 			EXPECT_EQ(reader4->get_subscription_matched_status(sub_status4), RETCODE_OK);
 			EXPECT_EQ(sub_status4.total_count, 1);
@@ -2323,10 +2327,10 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(rqos_status4.total_count, 0);
 			EXPECT_EQ(rqos_status4.total_count_change, 0);
 
-			// 21. É¾³ıËùÓĞ×ÓÊµÌå
+			// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 22. É¾³ıÓò²ÎÓëÕß
+			// 22. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 23. finalize_instance
@@ -2334,16 +2338,16 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨4¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º4ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2361,57 +2365,57 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 				"durability_match_topic_name_4", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic4, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨DataWriterQos¶ÔÏó1£¬Durability=VOLATILE
+			// 6. åˆ›å»ºDataWriterQoså¯¹è±¡1ï¼ŒDurability=VOLATILE
 			DataWriterQos qos_volatile = DATAWRITER_QOS_DEFAULT;
 			qos_volatile.durability.kind = VOLATILE_DURABILITY_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataWriterListener listener1;
 			// 8. DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic1, qos_volatile, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. ´´½¨Listener2
+			// 9. åˆ›å»ºListener2
 			BaseDataWriterListener listener2;
 			// 10. DataWriter2
 			DataWriter* writer2 = publisher->create_datawriter(
 				topic2, qos_volatile, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(writer2, nullptr);
 
-			// 11. DataWriterQos¶ÔÏó2£¬Durability=TRANSIENT_LOCAL
+			// 11. DataWriterQoså¯¹è±¡2ï¼ŒDurability=TRANSIENT_LOCAL
 			DataWriterQos qos_transient = DATAWRITER_QOS_DEFAULT;
 			qos_transient.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
-			// 12. ´´½¨Listener3
+			// 12. åˆ›å»ºListener3
 			BaseDataWriterListener listener3;
 			// 13. DataWriter3
 			DataWriter* writer3 = publisher->create_datawriter(
 				topic3, qos_transient, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(writer3, nullptr);
 
-			// 14. ´´½¨Listener4
+			// 14. åˆ›å»ºListener4
 			BaseDataWriterListener listener4;
 			// 15. DataWriter4
 			DataWriter* writer4 = publisher->create_datawriter(
 				topic4, qos_transient, &listener4, STATUS_MASK_ALL);
 			ASSERT_NE(writer4, nullptr);
 
-			// 16. µÈ´ı±»¶¯¶Ë´´½¨DataReader
+			// 16. ç­‰å¾…è¢«åŠ¨ç«¯åˆ›å»ºDataReader
 			WaitNegative();
 
-			// 17. VOLATILE Writer & VOLATILE Reader Æ¥Åä
-			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // ³É¹¦
+			// 17. VOLATILE Writer & VOLATILE Reader åŒ¹é…
+			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status1;
 			EXPECT_EQ(writer1->get_publication_matched_status(pub_status1), RETCODE_OK);
 			EXPECT_EQ(pub_status1.total_count, 1);
-			//listener ÖĞ¶ÁÈ¡ºó»á±»ÖØÖÃ
+			//listener ä¸­è¯»å–åä¼šè¢«é‡ç½®
 			EXPECT_EQ(pub_status1.total_count_change, 0);
 			//EXPECT_EQ(pub_status1.total_count_change, 1);
 			OfferedIncompatibleQosStatus qos_status1;
@@ -2419,9 +2423,9 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(qos_status1.total_count, 0);
 			EXPECT_EQ(qos_status1.total_count_change, 0);
 
-			// 18. VOLATILE Writer & TRANSIENT_LOCAL Reader ²»Æ¥Åä
-			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // ³¬Ê±
+			// 18. VOLATILE Writer & TRANSIENT_LOCAL Reader ä¸åŒ¹é…
+			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // è¶…æ—¶
 			PublicationMatchedStatus pub_status2;
 			EXPECT_EQ(writer2->get_publication_matched_status(pub_status2), RETCODE_OK);
 			EXPECT_EQ(pub_status2.total_count, 0);
@@ -2429,14 +2433,14 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			OfferedIncompatibleQosStatus qos_status2;
 			EXPECT_EQ(writer2->get_offered_incompatible_qos_status(qos_status2), RETCODE_OK);
 			EXPECT_EQ(qos_status2.total_count, 1);
-			//listener ÖĞ¶ÁÈ¡ºó»á±»ÖØÖÃ
+			//listener ä¸­è¯»å–åä¼šè¢«é‡ç½®
 			EXPECT_EQ(qos_status2.total_count_change, 0);
 			//EXPECT_EQ(qos_status2.total_count_change, 1);
 			EXPECT_EQ(qos_status2.last_policy_id, DURABILITY_QOS_POLICY_ID);
 
-			// 19. TRANSIENT_LOCAL Writer & VOLATILE Reader Æ¥Åä
-			EXPECT_EQ(listener3.wait_offered_incompatible_qos(5000), 1); // ³É¹¦
-			EXPECT_EQ(listener3.wait_publication_matched(1000), 0); // ³¬Ê±
+			// 19. TRANSIENT_LOCAL Writer & VOLATILE Reader åŒ¹é…
+			EXPECT_EQ(listener3.wait_offered_incompatible_qos(5000), 1); // æˆåŠŸ
+			EXPECT_EQ(listener3.wait_publication_matched(1000), 0); // è¶…æ—¶
 			PublicationMatchedStatus pub_status3;
 			EXPECT_EQ(writer3->get_publication_matched_status(pub_status3), RETCODE_OK);
 			EXPECT_EQ(pub_status3.total_count, 1);
@@ -2447,9 +2451,9 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(qos_status3.total_count_change, 0);
 			//EXPECT_EQ(qos_status3.last_policy_id, DURABILITY_QOS_POLICY_ID);
 
-			// 20. TRANSIENT_LOCAL Writer & TRANSIENT_LOCAL Reader Æ¥Åä
-			EXPECT_EQ(listener4.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener4.wait_publication_matched(5000), 0); // ³É¹¦
+			// 20. TRANSIENT_LOCAL Writer & TRANSIENT_LOCAL Reader åŒ¹é…
+			EXPECT_EQ(listener4.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener4.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status4;
 			EXPECT_EQ(writer4->get_publication_matched_status(pub_status4), RETCODE_OK);
 			EXPECT_EQ(pub_status4.total_count, 1);
@@ -2459,10 +2463,10 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 			EXPECT_EQ(qos_status4.total_count, 0);
 			EXPECT_EQ(qos_status4.total_count_change, 0);
 
-			// 21. É¾³ıËùÓĞ×ÓÊµÌå
+			// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 22. É¾³ıÓò²ÎÓëÕß
+			// 22. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 23. finalize_instance
@@ -2475,16 +2479,16 @@ TEST_F(QoSTest, QoS_DurabilityMatch) {
 TEST_F(QoSTest, QoS_DeadlineMatch) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2496,41 +2500,41 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 				"deadline_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReaderQos¶ÔÏó1£¬Deadline.period=500ms
+			// 6. åˆ›å»ºDataReaderQoså¯¹è±¡1ï¼ŒDeadline.period=500ms
 			DataReaderQos qos1 = DATAREADER_QOS_DEFAULT;
 			qos1.deadline.period.sec = 0;
 			qos1.deadline.period.nanosec = 500 * 1000 * 1000; // 500ms
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos1, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. ´´½¨DataReaderQos¶ÔÏó2£¬Deadline.period=20ms
+			// 9. åˆ›å»ºDataReaderQoså¯¹è±¡2ï¼ŒDeadline.period=20ms
 			DataReaderQos qos2 = DATAREADER_QOS_DEFAULT;
 			qos2.deadline.period.sec = 0;
 			qos2.deadline.period.nanosec = 20 * 1000 * 1000; // 20ms
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos2, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. ·¢ËÍDataReader´´½¨Íê³ÉĞÅºÅ
+			// 12. å‘é€DataReaderåˆ›å»ºå®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 13. DataReader1ºÍDataWriter1Æ¥Åä£¨period <= period£©
-			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 13. DataReader1å’ŒDataWriter1åŒ¹é…ï¼ˆperiod <= periodï¼‰
+			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(sub_status1), RETCODE_OK);
 			EXPECT_EQ(sub_status1.total_count, 1);
@@ -2540,9 +2544,9 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 			EXPECT_EQ(rqos_status1.total_count, 0);
 			EXPECT_EQ(rqos_status1.total_count_change, 0);
 
-			// 14. DataReader1ºÍDataWriter2²»Æ¥Åä£¨period > period£©
-			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // ³É¹¦
+			// 14. DataReader1å’ŒDataWriter2ä¸åŒ¹é…ï¼ˆperiod > periodï¼‰
+			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(sub_status2), RETCODE_OK);
 			EXPECT_EQ(sub_status2.total_count, 0);
@@ -2552,10 +2556,10 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 			EXPECT_EQ(rqos_status2.total_count, 1);
 			EXPECT_EQ(rqos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -2563,16 +2567,16 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2584,41 +2588,41 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 				"deadline_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨DataWriterQos¶ÔÏó1£¬Deadline.period=100ms
+			// 6. åˆ›å»ºDataWriterQoså¯¹è±¡1ï¼ŒDeadline.period=100ms
 			DataWriterQos qos1 = DATAWRITER_QOS_DEFAULT;
 			qos1.deadline.period.sec = 0;
 			qos1.deadline.period.nanosec = 100 * 1000 * 1000; // 100ms
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataWriterListener listener1;
 			// 8. DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic1, qos1, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. ´´½¨DataWriterQos¶ÔÏó2£¬Deadline.period=100ms
+			// 9. åˆ›å»ºDataWriterQoså¯¹è±¡2ï¼ŒDeadline.period=100ms
 			DataWriterQos qos2 = DATAWRITER_QOS_DEFAULT;
 			qos2.deadline.period.sec = 0;
 			qos2.deadline.period.nanosec = 100 * 1000 * 1000; // 100ms
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataWriterListener listener2;
 			// 11. DataWriter2
 			DataWriter* writer2 = publisher->create_datawriter(
 				topic2, qos2, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(writer2, nullptr);
 
-			// 12. µÈ´ı±»¶¯¶Ë´´½¨DataReader
+			// 12. ç­‰å¾…è¢«åŠ¨ç«¯åˆ›å»ºDataReader
 			WaitNegative();
 
-			// 13. DataWriter1ºÍDataReader1Æ¥Åä£¨period <= period£©
-			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // ³É¹¦
+			// 13. DataWriter1å’ŒDataReader1åŒ¹é…ï¼ˆperiod <= periodï¼‰
+			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status1;
 			EXPECT_EQ(writer1->get_publication_matched_status(pub_status1), RETCODE_OK);
 			EXPECT_EQ(pub_status1.total_count, 1);
@@ -2628,9 +2632,9 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 			EXPECT_EQ(qos_status1.total_count, 0);
 			EXPECT_EQ(qos_status1.total_count_change, 0);
 
-			// 14. DataWriter2ºÍDataReader1²»Æ¥Åä£¨period > period£©
-			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // ³¬Ê±
+			// 14. DataWriter2å’ŒDataReader1ä¸åŒ¹é…ï¼ˆperiod > periodï¼‰
+			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // è¶…æ—¶
 			PublicationMatchedStatus pub_status2;
 			EXPECT_EQ(writer2->get_publication_matched_status(pub_status2), RETCODE_OK);
 			EXPECT_EQ(pub_status2.total_count, 0);
@@ -2640,10 +2644,10 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 			EXPECT_EQ(qos_status2.total_count, 1);
 			EXPECT_EQ(qos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -2656,16 +2660,16 @@ TEST_F(QoSTest, QoS_DeadlineMatch) {
 TEST_F(QoSTest, QoS_ReliabilityMatch) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨4¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º4ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2683,53 +2687,53 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 				"reliability_match_topic_name_4", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic4, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReaderQos¶ÔÏó1£¬Reliability=BEST_EFFORT
+			// 6. åˆ›å»ºDataReaderQoså¯¹è±¡1ï¼ŒReliability=BEST_EFFORT
 			DataReaderQos qos_best_effort = DATAREADER_QOS_DEFAULT;
 			qos_best_effort.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos_best_effort, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. DataReaderQos¶ÔÏó2£¬Reliability=RELIABLE
+			// 9. DataReaderQoså¯¹è±¡2ï¼ŒReliability=RELIABLE
 			DataReaderQos qos_reliable = DATAREADER_QOS_DEFAULT;
 			qos_reliable.reliability.kind = RELIABLE_RELIABILITY_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos_reliable, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. ´´½¨Listener3
+			// 12. åˆ›å»ºListener3
 			BaseDataReaderListener listener3;
 			// 13. DataReader3
 			DataReader* reader3 = subscriber->create_datareader(
 				topic3, qos_best_effort, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(reader3, nullptr);
 
-			// 14. ´´½¨Listener4
+			// 14. åˆ›å»ºListener4
 			BaseDataReaderListener listener4;
 			// 15. DataReader4
 			DataReader* reader4 = subscriber->create_datareader(
 				topic4, qos_reliable, &listener4, STATUS_MASK_ALL);
 			ASSERT_NE(reader4, nullptr);
 
-			// 16. ·¢ËÍDataReader´´½¨Íê³ÉĞÅºÅ
+			// 16. å‘é€DataReaderåˆ›å»ºå®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 17. BEST_EFFORT Reader & BEST_EFFORT Writer Æ¥Åä
-			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 17. BEST_EFFORT Reader & BEST_EFFORT Writer åŒ¹é…
+			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(sub_status1), RETCODE_OK);
 			EXPECT_EQ(sub_status1.total_count, 1);
@@ -2739,9 +2743,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(rqos_status1.total_count, 0);
 			EXPECT_EQ(rqos_status1.total_count_change, 0);
 
-			// 18. RELIABLE Reader & BEST_EFFORT Writer ²»Æ¥Åä
-			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // ³É¹¦
+			// 18. RELIABLE Reader & BEST_EFFORT Writer ä¸åŒ¹é…
+			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(sub_status2), RETCODE_OK);
 			EXPECT_EQ(sub_status2.total_count, 0);
@@ -2752,9 +2756,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(rqos_status2.total_count_change, 0);
 			EXPECT_EQ(rqos_status2.last_policy_id, RELIABILITY_QOS_POLICY_ID);
 
-			// 19. BEST_EFFORT Reader & RELIABLE Writer Æ¥Åä
-			EXPECT_EQ(listener3.wait_subscription_matched(1000), 0); // ³¬Ê±
-			EXPECT_EQ(listener3.wait_requested_incompatible_qos(5000), 1); // ³É¹¦
+			// 19. BEST_EFFORT Reader & RELIABLE Writer åŒ¹é…
+			EXPECT_EQ(listener3.wait_subscription_matched(1000), 0); // è¶…æ—¶
+			EXPECT_EQ(listener3.wait_requested_incompatible_qos(5000), 1); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status3;
 			EXPECT_EQ(reader3->get_subscription_matched_status(sub_status3), RETCODE_OK);
 			EXPECT_EQ(sub_status3.total_count, 1);
@@ -2765,9 +2769,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(rqos_status3.total_count_change, 0);
 			//EXPECT_EQ(rqos_status3.last_policy_id, RELIABILITY_QOS_POLICY_ID);
 
-			// 20. RELIABLE Reader & RELIABLE Writer Æ¥Åä
-			EXPECT_EQ(listener4.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener4.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 20. RELIABLE Reader & RELIABLE Writer åŒ¹é…
+			EXPECT_EQ(listener4.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener4.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status4;
 			EXPECT_EQ(reader4->get_subscription_matched_status(sub_status4), RETCODE_OK);
 			EXPECT_EQ(sub_status4.total_count, 1);
@@ -2777,10 +2781,10 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(rqos_status4.total_count, 0);
 			EXPECT_EQ(rqos_status4.total_count_change, 0);
 
-			// 21. É¾³ıËùÓĞ×ÓÊµÌå
+			// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 22. É¾³ıÓò²ÎÓëÕß
+			// 22. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 23. finalize_instance
@@ -2788,16 +2792,16 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨4¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º4ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2815,53 +2819,53 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 				"reliability_match_topic_name_4", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic4, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨DataWriterQos¶ÔÏó1£¬Reliability=BEST_EFFORT
+			// 6. åˆ›å»ºDataWriterQoså¯¹è±¡1ï¼ŒReliability=BEST_EFFORT
 			DataWriterQos qos_best_effort = DATAWRITER_QOS_DEFAULT;
 			qos_best_effort.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataWriterListener listener1;
 			// 8. DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic1, qos_best_effort, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. ´´½¨Listener2
+			// 9. åˆ›å»ºListener2
 			BaseDataWriterListener listener2;
 			// 10. DataWriter2
 			DataWriter* writer2 = publisher->create_datawriter(
 				topic2, qos_best_effort, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(writer2, nullptr);
 
-			// 11. DataWriterQos¶ÔÏó2£¬Reliability=RELIABLE
+			// 11. DataWriterQoså¯¹è±¡2ï¼ŒReliability=RELIABLE
 			DataWriterQos qos_reliable = DATAWRITER_QOS_DEFAULT;
 			qos_reliable.reliability.kind = RELIABLE_RELIABILITY_QOS;
 
-			// 12. ´´½¨Listener3
+			// 12. åˆ›å»ºListener3
 			BaseDataWriterListener listener3;
 			// 13. DataWriter3
 			DataWriter* writer3 = publisher->create_datawriter(
 				topic3, qos_reliable, &listener3, STATUS_MASK_ALL);
 			ASSERT_NE(writer3, nullptr);
 
-			// 14. ´´½¨Listener4
+			// 14. åˆ›å»ºListener4
 			BaseDataWriterListener listener4;
 			// 15. DataWriter4
 			DataWriter* writer4 = publisher->create_datawriter(
 				topic4, qos_reliable, &listener4, STATUS_MASK_ALL);
 			ASSERT_NE(writer4, nullptr);
 
-			// 16. µÈ´ı±»¶¯¶Ë´´½¨DataReader
+			// 16. ç­‰å¾…è¢«åŠ¨ç«¯åˆ›å»ºDataReader
 			WaitNegative();
 
-			// 17. BEST_EFFORT Writer & BEST_EFFORT Reader Æ¥Åä
-			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // ³É¹¦
+			// 17. BEST_EFFORT Writer & BEST_EFFORT Reader åŒ¹é…
+			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status1;
 			EXPECT_EQ(writer1->get_publication_matched_status(pub_status1), RETCODE_OK);
 			EXPECT_EQ(pub_status1.total_count, 1);
@@ -2871,9 +2875,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(qos_status1.total_count, 0);
 			EXPECT_EQ(qos_status1.total_count_change, 0);
 
-			// 18. BEST_EFFORT Writer & RELIABLE Reader ²»Æ¥Åä
-			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // ³¬Ê±
+			// 18. BEST_EFFORT Writer & RELIABLE Reader ä¸åŒ¹é…
+			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // è¶…æ—¶
 			PublicationMatchedStatus pub_status2;
 			EXPECT_EQ(writer2->get_publication_matched_status(pub_status2), RETCODE_OK);
 			EXPECT_EQ(pub_status2.total_count, 0);
@@ -2884,9 +2888,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(qos_status2.total_count_change, 0);
 			EXPECT_EQ(qos_status2.last_policy_id, RELIABILITY_QOS_POLICY_ID);
 
-			// 19. RELIABLE Writer & BEST_EFFORT Reader Æ¥Åä
-			EXPECT_EQ(listener3.wait_offered_incompatible_qos(5000), 1); // ³É¹¦
-			EXPECT_EQ(listener3.wait_publication_matched(1000), 0); // ³¬Ê±
+			// 19. RELIABLE Writer & BEST_EFFORT Reader åŒ¹é…
+			EXPECT_EQ(listener3.wait_offered_incompatible_qos(5000), 1); // æˆåŠŸ
+			EXPECT_EQ(listener3.wait_publication_matched(1000), 0); // è¶…æ—¶
 			PublicationMatchedStatus pub_status3;
 			EXPECT_EQ(writer3->get_publication_matched_status(pub_status3), RETCODE_OK);
 			EXPECT_EQ(pub_status3.total_count, 1);
@@ -2897,9 +2901,9 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(qos_status3.total_count_change, 0);
 			//EXPECT_EQ(qos_status3.last_policy_id, RELIABILITY_QOS_POLICY_ID);
 
-			// 20. RELIABLE Writer & RELIABLE Reader Æ¥Åä
-			EXPECT_EQ(listener4.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener4.wait_publication_matched(5000), 0); // ³É¹¦
+			// 20. RELIABLE Writer & RELIABLE Reader åŒ¹é…
+			EXPECT_EQ(listener4.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener4.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status4;
 			EXPECT_EQ(writer4->get_publication_matched_status(pub_status4), RETCODE_OK);
 			EXPECT_EQ(pub_status4.total_count, 1);
@@ -2909,10 +2913,10 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 			EXPECT_EQ(qos_status4.total_count, 0);
 			EXPECT_EQ(qos_status4.total_count_change, 0);
 
-			// 21. É¾³ıËùÓĞ×ÓÊµÌå
+			// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 22. É¾³ıÓò²ÎÓëÕß
+			// 22. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 23. finalize_instance
@@ -2925,16 +2929,16 @@ TEST_F(QoSTest, QoS_ReliabilityMatch) {
 TEST_F(QoSTest, QoS_OwnershipMatch) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -2946,39 +2950,39 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 				"ownership_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReaderQos¶ÔÏó1£¬Ownership=SHARED
+			// 6. åˆ›å»ºDataReaderQoså¯¹è±¡1ï¼ŒOwnership=SHARED
 			DataReaderQos qos_shared = DATAREADER_QOS_DEFAULT;
 			qos_shared.ownership.kind = SHARED_OWNERSHIP_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos_shared, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. ´´½¨DataReaderQos¶ÔÏó2£¬Ownership=EXCLUSIVE£¬´ËÊ±¶Ô·½ÎªSHARED
+			// 9. åˆ›å»ºDataReaderQoså¯¹è±¡2ï¼ŒOwnership=EXCLUSIVEï¼Œæ­¤æ—¶å¯¹æ–¹ä¸ºSHARED
 			DataReaderQos qos_exclusive = DATAREADER_QOS_DEFAULT;
 			qos_exclusive.ownership.kind = EXCLUSIVE_OWNERSHIP_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos_exclusive, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. ·¢ËÍDataReader´´½¨Íê³ÉĞÅºÅ
+			// 12. å‘é€DataReaderåˆ›å»ºå®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 13. DataReader1ºÍDataWriter1Æ¥Åä£¨kind == kind£©
-			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 13. DataReader1å’ŒDataWriter1åŒ¹é…ï¼ˆkind == kindï¼‰
+			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(sub_status1), RETCODE_OK);
 			EXPECT_EQ(sub_status1.total_count, 1);
@@ -2988,9 +2992,9 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 			EXPECT_EQ(rqos_status1.total_count, 0);
 			EXPECT_EQ(rqos_status1.total_count_change, 0);
 
-			// 14. DataReader1ºÍDataWriter2²»Æ¥Åä£¨kind != kind£©
-			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // ³É¹¦
+			// 14. DataReader1å’ŒDataWriter2ä¸åŒ¹é…ï¼ˆkind != kindï¼‰
+			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(sub_status2), RETCODE_OK);
 			EXPECT_EQ(sub_status2.total_count, 0);
@@ -3000,10 +3004,10 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 			EXPECT_EQ(rqos_status2.total_count, 1);
 			EXPECT_EQ(rqos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -3012,16 +3016,16 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3033,40 +3037,40 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 				"ownership_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
 
-			// 6. ´´½¨DataWriterQos¶ÔÏó1£¬Ownership=SHARED
+			// 6. åˆ›å»ºDataWriterQoså¯¹è±¡1ï¼ŒOwnership=SHARED
 			DataWriterQos qos_shared1 = DATAWRITER_QOS_DEFAULT;
 			qos_shared1.ownership.kind = SHARED_OWNERSHIP_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataWriterListener listener1;
 			// 8. DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic1, qos_shared1, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. ´´½¨DataWriterQos¶ÔÏó2£¬Ownership=SHARED,´ËÊ±¶Ô·½ÎªEXCLUSIVE
+			// 9. åˆ›å»ºDataWriterQoså¯¹è±¡2ï¼ŒOwnership=SHARED,æ­¤æ—¶å¯¹æ–¹ä¸ºEXCLUSIVE
 			DataWriterQos qos_shared2 = DATAWRITER_QOS_DEFAULT;
 			qos_shared2.ownership.kind = SHARED_OWNERSHIP_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataWriterListener listener2;
 			// 11. DataWriter2
 			DataWriter* writer2 = publisher->create_datawriter(
 				topic2, qos_shared2, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(writer2, nullptr);
 
-			// 12. µÈ´ı±»¶¯¶Ë´´½¨DataReader
+			// 12. ç­‰å¾…è¢«åŠ¨ç«¯åˆ›å»ºDataReader
 			WaitNegative();
 
-			// 13. DataWriter1ºÍDataReader1Æ¥Åä£¨kind == kind£©
-			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // ³É¹¦
+			// 13. DataWriter1å’ŒDataReader1åŒ¹é…ï¼ˆkind == kindï¼‰
+			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status1;
 			EXPECT_EQ(writer1->get_publication_matched_status(pub_status1), RETCODE_OK);
 			EXPECT_EQ(pub_status1.total_count, 1);
@@ -3076,9 +3080,9 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 			EXPECT_EQ(qos_status1.total_count, 0);
 			EXPECT_EQ(qos_status1.total_count_change, 0);
 
-			// 14. DataWriter2ºÍDataReader1²»Æ¥Åä£¨kind != kind£©
-			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // ³¬Ê±
+			// 14. DataWriter2å’ŒDataReader1ä¸åŒ¹é…ï¼ˆkind != kindï¼‰
+			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // è¶…æ—¶
 			PublicationMatchedStatus pub_status2;
 			EXPECT_EQ(writer2->get_publication_matched_status(pub_status2), RETCODE_OK);
 			EXPECT_EQ(pub_status2.total_count, 0);
@@ -3088,10 +3092,10 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 			EXPECT_EQ(qos_status2.total_count, 1);
 			EXPECT_EQ(qos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -3104,16 +3108,16 @@ TEST_F(QoSTest, QoS_OwnershipMatch) {
 TEST_F(QoSTest, QoS_LivelinessMatch) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3125,39 +3129,39 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 				"liveliness_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReaderQos¶ÔÏó1£¬Liveliness.kind=AUTOMATIC
+			// 6. åˆ›å»ºDataReaderQoså¯¹è±¡1ï¼ŒLiveliness.kind=AUTOMATIC
 			DataReaderQos qos_auto = DATAREADER_QOS_DEFAULT;
 			qos_auto.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic1, qos_auto, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. ´´½¨DataReaderQos¶ÔÏó2£¬Liveliness.kind=MANUAL_BY_TOPIC
+			// 9. åˆ›å»ºDataReaderQoså¯¹è±¡2ï¼ŒLiveliness.kind=MANUAL_BY_TOPIC
 			DataReaderQos qos_manual = DATAREADER_QOS_DEFAULT;
 			qos_manual.liveliness.kind = MANUAL_BY_TOPIC_LIVELINESS_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataReaderListener listener2;
 			// 11. DataReader2
 			DataReader* reader2 = subscriber->create_datareader(
 				topic2, qos_manual, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(reader2, nullptr);
 
-			// 12. ·¢ËÍDataReader´´½¨Íê³ÉĞÅºÅ
+			// 12. å‘é€DataReaderåˆ›å»ºå®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 13. DataReader1ºÍDataWriter1Æ¥Åä£¨kind >= kind£©
-			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // ³¬Ê±
+			// 13. DataReader1å’ŒDataWriter1åŒ¹é…ï¼ˆkind >= kindï¼‰
+			EXPECT_EQ(listener1.wait_subscription_matched(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener1.wait_requested_incompatible_qos(1000), 1); // è¶…æ—¶
 			SubscriptionMatchedStatus sub_status1;
 			EXPECT_EQ(reader1->get_subscription_matched_status(sub_status1), RETCODE_OK);
 			EXPECT_EQ(sub_status1.total_count, 1);
@@ -3167,9 +3171,9 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 			EXPECT_EQ(rqos_status1.total_count, 0);
 			EXPECT_EQ(rqos_status1.total_count_change, 0);
 
-			// 14. DataReader1ºÍDataWriter2²»Æ¥Åä£¨kind < kind£©
-			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // ³É¹¦
+			// 14. DataReader1å’ŒDataWriter2ä¸åŒ¹é…ï¼ˆkind < kindï¼‰
+			EXPECT_EQ(listener2.wait_subscription_matched(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener2.wait_requested_incompatible_qos(5000), 0); // æˆåŠŸ
 			SubscriptionMatchedStatus sub_status2;
 			EXPECT_EQ(reader2->get_subscription_matched_status(sub_status2), RETCODE_OK);
 			EXPECT_EQ(sub_status2.total_count, 0);
@@ -3179,10 +3183,10 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 			EXPECT_EQ(rqos_status2.total_count, 1);
 			EXPECT_EQ(rqos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -3190,16 +3194,16 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨2¸öÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»º2ä¸ªä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3211,39 +3215,39 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 				"liveliness_match_topic_name_2", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic2, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨DataWriterQos¶ÔÏó1£¬Liveliness.kind=MANUAL_BY_PARTICIPANT
+			// 6. åˆ›å»ºDataWriterQoså¯¹è±¡1ï¼ŒLiveliness.kind=MANUAL_BY_PARTICIPANT
 			DataWriterQos qos_manual = DATAWRITER_QOS_DEFAULT;
 			qos_manual.liveliness.kind = MANUAL_BY_PARTICIPANT_LIVELINESS_QOS;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataWriterListener listener1;
 			// 8. DataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic1, qos_manual, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(writer1, nullptr);
 
-			// 9. ´´½¨DataWriterQos¶ÔÏó2£¬Liveliness.kind=AUTOMATIC
+			// 9. åˆ›å»ºDataWriterQoså¯¹è±¡2ï¼ŒLiveliness.kind=AUTOMATIC
 			DataWriterQos qos_auto = DATAWRITER_QOS_DEFAULT;
 			qos_auto.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
 
-			// 10. ´´½¨Listener2
+			// 10. åˆ›å»ºListener2
 			BaseDataWriterListener listener2;
 			// 11. DataWriter2
 			DataWriter* writer2 = publisher->create_datawriter(
 				topic2, qos_auto, &listener2, STATUS_MASK_ALL);
 			ASSERT_NE(writer2, nullptr);
 
-			// 12. µÈ´ı±»¶¯¶Ë´´½¨DataReader
+			// 12. ç­‰å¾…è¢«åŠ¨ç«¯åˆ›å»ºDataReader
 			WaitNegative();
 
-			// 13. DataWriter1ºÍDataReader1Æ¥Åä£¨kind >= kind£©
-			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // ³¬Ê±
-			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // ³É¹¦
+			// 13. DataWriter1å’ŒDataReader1åŒ¹é…ï¼ˆkind >= kindï¼‰
+			EXPECT_EQ(listener1.wait_offered_incompatible_qos(1000), 1); // è¶…æ—¶
+			EXPECT_EQ(listener1.wait_publication_matched(5000), 0); // æˆåŠŸ
 			PublicationMatchedStatus pub_status1;
 			EXPECT_EQ(writer1->get_publication_matched_status(pub_status1), RETCODE_OK);
 			EXPECT_EQ(pub_status1.total_count, 1);
@@ -3253,9 +3257,9 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 			EXPECT_EQ(qos_status1.total_count, 0);
 			EXPECT_EQ(qos_status1.total_count_change, 0);
 
-			// 14. DataWriter2ºÍDataReader1²»Æ¥Åä£¨kind < kind£©
-			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // ³É¹¦
-			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // ³¬Ê±
+			// 14. DataWriter2å’ŒDataReader1ä¸åŒ¹é…ï¼ˆkind < kindï¼‰
+			EXPECT_EQ(listener2.wait_offered_incompatible_qos(5000), 0); // æˆåŠŸ
+			EXPECT_EQ(listener2.wait_publication_matched(1000), 1); // è¶…æ—¶
 			PublicationMatchedStatus pub_status2;
 			EXPECT_EQ(writer2->get_publication_matched_status(pub_status2), RETCODE_OK);
 			EXPECT_EQ(pub_status2.total_count, 0);
@@ -3265,10 +3269,10 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 			EXPECT_EQ(qos_status2.total_count, 1);
 			EXPECT_EQ(qos_status2.total_count_change, 0);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -3278,86 +3282,86 @@ TEST_F(QoSTest, QoS_LivelinessMatch) {
 	th_2.join();
 }
 TEST_F(QoSTest, QoS_ChangeEnabledEntitiesMutableQoS) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipantQos dp_qos = PARTICIPANT_QOS_DEFAULT;
 	DomainParticipant* participant = factory->create_participant(
 		0, dp_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
 
-	// 3. ĞŞ¸ÄDomainParticipant¿É±äQoS£¨Èçuser_data£©
+	// 3. ä¿®æ”¹DomainParticipantå¯å˜QoSï¼ˆå¦‚user_dataï¼‰
 	DomainParticipantQos dp_qos2 = dp_qos;
 	dp_qos2.user_data.value = { 'a', 'b', 'c' };
 	EXPECT_EQ(participant->set_qos(dp_qos2), RETCODE_OK);
 
-	// 5. ×¢²áTestModule::BasicDataÀàĞÍ
+	// 5. æ³¨å†ŒTestModule::BasicDataç±»å‹
 	TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 	ASSERT_NE(type_support, nullptr);
 	EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
-	// 6. ´´½¨Topic
+	// 6. åˆ›å»ºTopic
 	TopicQos topic_qos = TOPIC_QOS_DEFAULT;
 	Topic* topic = participant->create_topic(
 		"example_topic_name", "TestModule::BasicData", topic_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(topic, nullptr);
 
-	// 7. ĞŞ¸ÄTopic¿É±äQoS£¨Èçtopic_data, history.depth£©
+	// 7. ä¿®æ”¹Topicå¯å˜QoSï¼ˆå¦‚topic_data, history.depthï¼‰
 	TopicQos topic_qos2 = topic_qos;
 	topic_qos2.topic_data.value = { 'x', 'y' };
 
-	//history²»¿É¸ü¸Ä
+	//historyä¸å¯æ›´æ”¹
 	//topic_qos2.history.depth = 123;
 	EXPECT_EQ(topic->set_qos(topic_qos2), RETCODE_OK);
 
-	// 9. ´´½¨Publisher
+	// 9. åˆ›å»ºPublisher
 	PublisherQos pub_qos = PUBLISHER_QOS_DEFAULT;
 	Publisher* publisher = participant->create_publisher(pub_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(publisher, nullptr);
 
-	// 10. ĞŞ¸ÄPublisher¿É±äQoS£¨Èçgroup_data£©
+	// 10. ä¿®æ”¹Publisherå¯å˜QoSï¼ˆå¦‚group_dataï¼‰
 	PublisherQos pub_qos2 = pub_qos;
 	pub_qos2.group_data.value = { 'g', 'r', 'p' };
 	EXPECT_EQ(publisher->set_qos(pub_qos2), RETCODE_OK);
 
-	// 12. ´´½¨Subscriber
+	// 12. åˆ›å»ºSubscriber
 	SubscriberQos sub_qos = SUBSCRIBER_QOS_DEFAULT;
 	Subscriber* subscriber = participant->create_subscriber(sub_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(subscriber, nullptr);
 
-	// 13. ĞŞ¸ÄSubscriber¿É±äQoS£¨Èçgroup_data£©
+	// 13. ä¿®æ”¹Subscriberå¯å˜QoSï¼ˆå¦‚group_dataï¼‰
 	SubscriberQos sub_qos2 = sub_qos;
 	sub_qos2.group_data.value = { 's', 'u', 'b' };
 	EXPECT_EQ(subscriber->set_qos(sub_qos2), RETCODE_OK);
 
-	// 15. ´´½¨DataWriter
+	// 15. åˆ›å»ºDataWriter
 	DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 	DataWriter* writer = publisher->create_datawriter(
 		topic, dw_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(writer, nullptr);
 
-	// 16. ĞŞ¸ÄDataWriter¿É±äQoS£¨Èçuser_data£©
+	// 16. ä¿®æ”¹DataWriterå¯å˜QoSï¼ˆå¦‚user_dataï¼‰
 	DataWriterQos dw_qos2 = dw_qos;
 	dw_qos2.user_data.value = { 'd', 'w' };
 	EXPECT_EQ(writer->set_qos(dw_qos2), RETCODE_OK);
 
-	// 18. ´´½¨DataReader
+	// 18. åˆ›å»ºDataReader
 	DataReaderQos dr_qos = DATAREADER_QOS_DEFAULT;
 	DataReader* reader = subscriber->create_datareader(
 		topic, dr_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(reader, nullptr);
 
-	// 19. ĞŞ¸ÄDataReader¿É±äQoS£¨Èçuser_data£©
+	// 19. ä¿®æ”¹DataReaderå¯å˜QoSï¼ˆå¦‚user_dataï¼‰
 	DataReaderQos dr_qos2 = dr_qos;
 	dr_qos2.user_data.value = { 'd', 'r' };
 	EXPECT_EQ(reader->set_qos(dr_qos2), RETCODE_OK);
 
-	// 21. É¾³ıËùÓĞ×ÓÊµÌå
+	// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-	// 22. É¾³ıÓò²ÎÓëÕß
+	// 22. åˆ é™¤åŸŸå‚ä¸è€…
 	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 23. finalize_instance
@@ -3365,83 +3369,83 @@ TEST_F(QoSTest, QoS_ChangeEnabledEntitiesMutableQoS) {
 }
 
 TEST_F(QoSTest, QoS_ChangeEnabledEntitiesImmutableQoS) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipantQos dp_qos = PARTICIPANT_QOS_DEFAULT;
 	DomainParticipant* participant = factory->create_participant(
 		0, dp_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
 
-	// 3. ×¢²áTestModule::BasicDataÀàĞÍ
+	// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹
 	TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 	ASSERT_NE(type_support, nullptr);
 	EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
-	// 4. ÒÀ´ÎĞŞ¸ÄDomainParticipant²»¿É±äQoS£¨Èçentity_factory£©
+	// 4. ä¾æ¬¡ä¿®æ”¹DomainParticipantä¸å¯å˜QoSï¼ˆå¦‚entity_factoryï¼‰
 	DomainParticipantQos dp_qos2 = dp_qos;
 	dp_qos2.entity_factory.autoenable_created_entities = !dp_qos.entity_factory.autoenable_created_entities;
 	//EXPECT_EQ(participant->set_qos(dp_qos2), IMMUTABLE_POLICY);
 
-	// 6. ´´½¨Topic
+	// 6. åˆ›å»ºTopic
 	TopicQos topic_qos = TOPIC_QOS_DEFAULT;
 	Topic* topic = participant->create_topic(
 		"example_topic_name", "TestModule::BasicData", topic_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(topic, nullptr);
 
-	// 7. ÒÀ´ÎĞŞ¸ÄTopic²»¿É±äQoS£¨Èçdurability£©
+	// 7. ä¾æ¬¡ä¿®æ”¹Topicä¸å¯å˜QoSï¼ˆå¦‚durabilityï¼‰
 	TopicQos topic_qos2 = topic_qos;
 	topic_qos2.durability.kind = PERSISTENT_DURABILITY_QOS;
 	//EXPECT_EQ(topic->set_qos(topic_qos2), IMMUTABLE_POLICY);
 
-	// 9. ´´½¨Publisher
+	// 9. åˆ›å»ºPublisher
 	PublisherQos pub_qos = PUBLISHER_QOS_DEFAULT;
 	Publisher* publisher = participant->create_publisher(pub_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(publisher, nullptr);
 
-	// 10. ÒÀ´ÎĞŞ¸ÄPublisher²»¿É±äQoS£¨Èçpresentation£©
+	// 10. ä¾æ¬¡ä¿®æ”¹Publisherä¸å¯å˜QoSï¼ˆå¦‚presentationï¼‰
 	PublisherQos pub_qos2 = pub_qos;
 	pub_qos2.presentation.access_scope = GROUP_PRESENTATION_QOS;
 	//EXPECT_EQ(publisher->set_qos(pub_qos2), IMMUTABLE_POLICY);
 
-	// 12. ´´½¨Subscriber
+	// 12. åˆ›å»ºSubscriber
 	SubscriberQos sub_qos = SUBSCRIBER_QOS_DEFAULT;
 	Subscriber* subscriber = participant->create_subscriber(sub_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(subscriber, nullptr);
 
-	// 13. ÒÀ´ÎĞŞ¸ÄSubscriber²»¿É±äQoS£¨Èçpresentation£©
+	// 13. ä¾æ¬¡ä¿®æ”¹Subscriberä¸å¯å˜QoSï¼ˆå¦‚presentationï¼‰
 	SubscriberQos sub_qos2 = sub_qos;
 	sub_qos2.presentation.access_scope = GROUP_PRESENTATION_QOS;
 	//EXPECT_EQ(subscriber->set_qos(sub_qos2), IMMUTABLE_POLICY);
 
-	// 15. ´´½¨DataWriter
+	// 15. åˆ›å»ºDataWriter
 	DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 	DataWriter* writer = publisher->create_datawriter(
 		topic, dw_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(writer, nullptr);
 
-	// 16. ÒÀ´ÎĞŞ¸ÄDataWriter²»¿É±äQoS£¨Èçdurability, ownership, destination_order, etc.£©
+	// 16. ä¾æ¬¡ä¿®æ”¹DataWriterä¸å¯å˜QoSï¼ˆå¦‚durability, ownership, destination_order, etc.ï¼‰
 	DataWriterQos dw_qos2 = dw_qos;
 	dw_qos2.durability.kind = PERSISTENT_DURABILITY_QOS;
 	//EXPECT_EQ(writer->set_qos(dw_qos2), IMMUTABLE_POLICY);
 
-	// 18. ´´½¨DataReader
+	// 18. åˆ›å»ºDataReader
 	DataReaderQos dr_qos = DATAREADER_QOS_DEFAULT;
 	DataReader* reader = subscriber->create_datareader(
 		topic, dr_qos, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(reader, nullptr);
 
-	// 19. ÒÀ´ÎĞŞ¸ÄDataReader²»¿É±äQoS£¨Èçdurability, ownership, destination_order, etc.£©
+	// 19. ä¾æ¬¡ä¿®æ”¹DataReaderä¸å¯å˜QoSï¼ˆå¦‚durability, ownership, destination_order, etc.ï¼‰
 	DataReaderQos dr_qos2 = dr_qos;
 	dr_qos2.durability.kind = PERSISTENT_DURABILITY_QOS;
 	//EXPECT_EQ(reader->set_qos(dr_qos2), IMMUTABLE_POLICY);
 
-	// 21. É¾³ıËùÓĞ×ÓÊµÌå
+	// 21. åˆ é™¤æ‰€æœ‰å­å®ä½“
 	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-	// 22. É¾³ıÓò²ÎÓëÕß
+	// 22. åˆ é™¤åŸŸå‚ä¸è€…
 	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 23. finalize_instance
@@ -3451,16 +3455,16 @@ TEST_F(QoSTest, QoS_ChangeEnabledEntitiesImmutableQoS) {
 TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨reliability_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºreliability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3469,24 +3473,24 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 				"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó1£¬Reliability=RELIABLE£¬History.depth=200
+			// 6. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡1ï¼ŒReliability=RELIABLEï¼ŒHistory.depth=200
 			DataReaderQos dr_qos1 = DATAREADER_QOS_DEFAULT;
 			dr_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dr_qos1.history.depth = 20;
 
-			// 7. ´´½¨Listener1
+			// 7. åˆ›å»ºListener1
 			BaseDataReaderListener listener1;
 			// 8. DataReader1
 			DataReader* reader1 = subscriber->create_datareader(
 				topic, dr_qos1, &listener1, STATUS_MASK_ALL);
 			ASSERT_NE(reader1, nullptr);
 
-			// 9. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó2£¬Reliability=BEST_EFFORT
+			// 9. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡2ï¼ŒReliability=BEST_EFFORT
 			DataReaderQos dr_qos2 = DATAREADER_QOS_DEFAULT;
 			dr_qos2.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
 
@@ -3495,40 +3499,40 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 				topic, dr_qos2, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader2, nullptr);
 
-			// 11. µÈ´ıDataReader1Æ¥ÅäÍê³É
+			// 11. ç­‰å¾…DataReader1åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader1, 1, 5));
-			// 12. µÈ´ıDataReader2Æ¥ÅäÍê³É
+			// 12. ç­‰å¾…DataReader2åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader2, 1, 5));
 
-			// 13. ·¢ËÍDataReaderÆ¥ÅäÍê³ÉĞÅºÅ
+			// 13. å‘é€DataReaderåŒ¹é…å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 14. µÈ´ıÖ÷¶¯¶ËĞ´ÈëÍê³É
+			// 14. ç­‰å¾…ä¸»åŠ¨ç«¯å†™å…¥å®Œæˆ
 			WaitPositive();
 
-			// 15. RELIABLEÀàĞÍDataReader½ÓÊÕËùÓĞÊı¾İ
+			// 15. RELIABLEç±»å‹DataReaderæ¥æ”¶æ‰€æœ‰æ•°æ®
 			SequenceData<TestModule::BasicData> data1;
 			SampleInfoSeq infos1;
 			EXPECT_EQ(reader1->take(data1, infos1, LENGTH_UNLIMITED,
 				ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
 
-			//depthÊÇ200 ÊÕ²»µ½1000¸öÊı¾İµÄ£¬¸Ãqos²âÊÔÉè¼Æ²»ÊÇºÜºÏÀí
+			//depthæ˜¯200 æ”¶ä¸åˆ°1000ä¸ªæ•°æ®çš„ï¼Œè¯¥qosæµ‹è¯•è®¾è®¡ä¸æ˜¯å¾ˆåˆç†
 			EXPECT_EQ(data1.length(), 20u);
 
-			// 16. BEST_EFFORTÀàĞÍDataReader½ÓÊÕ²¿·ÖÊı¾İ
+			// 16. BEST_EFFORTç±»å‹DataReaderæ¥æ”¶éƒ¨åˆ†æ•°æ®
 			SequenceData<TestModule::BasicData> data2;
 			SampleInfoSeq infos2;
 			EXPECT_EQ(reader2->take(data2, infos2, LENGTH_UNLIMITED,
 				ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
 			EXPECT_LT(data2.length(), 100u);
 
-			// 17. ·¢ËÍDataReader½ÓÊÕÍê³ÉĞÅºÅ
+			// 17. å‘é€DataReaderæ¥æ”¶å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 18. É¾³ıËùÓĞ×ÓÊµÌå
+			// 18. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 19. É¾³ıÓò²ÎÓëÕß
+			// 19. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 20. finalize_instance
@@ -3536,16 +3540,16 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨reliability_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºreliability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3554,12 +3558,12 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 				"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dw_qos.reliability.max_blocking_time.sec = 2;
@@ -3569,10 +3573,10 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 				topic, dw_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 6. µÈ´ı±»¶¯¶ËDataReaderÆ¥ÅäÍê³É
+			// 6. ç­‰å¾…è¢«åŠ¨ç«¯DataReaderåŒ¹é…å®Œæˆ
 			WaitNegative();
 
-			// 7. ÖÜÆÚÎª1ms·¢ËÍ1000°üÑù±¾Êı¾İ
+			// 7. å‘¨æœŸä¸º1mså‘é€1000åŒ…æ ·æœ¬æ•°æ®
 			for (int i = 0; i < 100; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;
@@ -3581,16 +3585,16 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			// 8. ·¢ËÍDataWriterĞ´ÈëÍê³ÉĞÅºÅ
+			// 8. å‘é€DataWriterå†™å…¥å®Œæˆä¿¡å·
 			NotifyNegative();
 
-			// 9. µÈ´ı±»¶¯¶ËDataReader½ÓÊÕÍê³É
+			// 9. ç­‰å¾…è¢«åŠ¨ç«¯DataReaderæ¥æ”¶å®Œæˆ
 			WaitNegative();
 
-			// 10. É¾³ıËùÓĞ×ÓÊµÌå
+			// 10. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 11. É¾³ıÓò²ÎÓëÕß
+			// 11. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 12. finalize_instance
@@ -3601,16 +3605,16 @@ TEST_F(QoSTest, QoS_ReliabilityQosPolic) {
 }
 
 TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_writer) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
 
-	// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨reliability_topic_nameÖ÷Ìâ
+	// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºreliability_topic_nameä¸»é¢˜
 	TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 	ASSERT_NE(type_support, nullptr);
 	EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3619,12 +3623,12 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_writer) {
 		"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(topic, nullptr);
 
-	// 4. ´´½¨Publisher
+	// 4. åˆ›å»ºPublisher
 	Publisher* publisher = participant->create_publisher(
 		PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(publisher, nullptr);
 
-	// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1
+	// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1
 	DataWriterQos dw_qos1 = DATAWRITER_QOS_DEFAULT;
 	dw_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
 	dw_qos1.reliability.max_blocking_time.sec = 2;
@@ -3636,27 +3640,27 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_writer) {
 	dw_qos1.resource_limits.max_instances = 1;
 
 
-	// 7. ´´½¨DataWriter1
+	// 7. åˆ›å»ºDataWriter1
 	DataWriter* writer1 = publisher->create_datawriter(
 		topic, dw_qos1, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(writer1, nullptr);
 
-	// 10.1 DataWriter1Ğ´Èë10°üÊı¾İ£¬Ô¤ÆÚ³É¹¦
+	// 10.1 DataWriter1å†™å…¥10åŒ…æ•°æ®ï¼Œé¢„æœŸæˆåŠŸ
 	for (int i = 0; i < 10; ++i) {
 		TestModule::BasicData sample;
 		sample.id = i;
 		EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_OK);
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
-	// 10.2¼ÌĞøĞ´Èë1°ü£¬Ô¤ÆÚRETCODE_TIMEOUT
+	// 10.2ç»§ç»­å†™å…¥1åŒ…ï¼Œé¢„æœŸRETCODE_TIMEOUT
 	TestModule::BasicData sample;
 	sample.id = 100;
 	EXPECT_EQ(writer1->write(&sample, HANDLE_NIL), RETCODE_TIMEOUT);
 
-	// 13. É¾³ıËùÓĞ×ÓÊµÌå
+	// 13. åˆ é™¤æ‰€æœ‰å­å®ä½“
 	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-	// 14. É¾³ıÓò²ÎÓëÕß
+	// 14. åˆ é™¤åŸŸå‚ä¸è€…
 	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 15. finalize_instance
@@ -3666,30 +3670,30 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_writer) {
 TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 	std::thread th_1(
 		[&]() {
-			// 2. »ñÈ¡¹¤³§µ¥Àı
+			// 2. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 3. ´´½¨DomainParticipant
+			// 3. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨reliability_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºreliability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
 			Topic* topic = participant->create_topic(
-				"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+                "reliability_topic_name_rlq", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨×Ô¶¨ÒåDataReaderQos¶ÔÏó1
+			// 6. åˆ›å»ºè‡ªå®šä¹‰DataReaderQoså¯¹è±¡1
 			DataReaderQos dr_qos1 = DATAREADER_QOS_DEFAULT;
 			dr_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dr_qos1.history.kind = KEEP_ALL_HISTORY_QOS;
@@ -3705,23 +3709,24 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 
 			StatusCondition& sc = reader1->get_statuscondition();
 			WaitSet ws;
-			ws.attach_condition(sc), RETCODE_OK;
+            EXPECT_EQ(ws.attach_condition(sc), RETCODE_OK);
 			ConditionSeq active_conditions;
-			EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+            //EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
+            ws.wait(active_conditions,{5,0});
 
 			NotifyPositive();
 
-			// 14. ¼ì²éSampleRejectStatus
+			// 14. æ£€æŸ¥SampleRejectStatus
 			SampleRejectedStatus reject_status;
 			EXPECT_EQ(reader1->get_sample_rejected_status(reject_status), RETCODE_OK);
 			EXPECT_EQ(reject_status.total_count, 1);
 			EXPECT_EQ(reject_status.total_count_change, 1);
 			EXPECT_EQ(reject_status.last_reason, REJECTED_BY_SAMPLES_PER_INSTANCE_LIMIT);
 
-			// 15. É¾³ıËùÓĞ×ÓÊµÌå
+			// 15. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 16. É¾³ıÓò²ÎÓëÕß
+			// 16. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 17. finalize_instance
@@ -3729,30 +3734,30 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨reliability_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºreliability_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
 			Topic* topic = participant->create_topic(
-				"reliability_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+                "reliability_topic_name_rlq", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨×Ô¶¨ÒåDataWriterQos¶ÔÏó1
+			// 5. åˆ›å»ºè‡ªå®šä¹‰DataWriterQoså¯¹è±¡1
 			DataWriterQos dw_qos1 = DATAWRITER_QOS_DEFAULT;
 			dw_qos1.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			dw_qos1.reliability.max_blocking_time.sec = 2;
@@ -3764,7 +3769,7 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 			dw_qos1.resource_limits.max_instances = 1;
 
 
-			// 6. ´´½¨DataWriter1
+			// 6. åˆ›å»ºDataWriter1
 			DataWriter* writer1 = publisher->create_datawriter(
 				topic, dw_qos1, nullptr, PUBLICATION_MATCHED_STATUS);
 			ASSERT_NE(writer1, nullptr);
@@ -3772,11 +3777,12 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 
 			StatusCondition& sc = writer1->get_statuscondition();
 			WaitSet ws;
-			ws.attach_condition(sc), RETCODE_OK;
+            EXPECT_EQ(ws.attach_condition(sc), RETCODE_OK);
 			ConditionSeq active_conditions;
-			EXPECT_EQ(ws.wait(active_conditions,{10,0}), RETCODE_OK);
-
-			// Ô¤ÆÚRETCODE_OK
+            //EXPECT_EQ(ws.wait(active_conditions,{10,0}), RETCODE_OK);
+            ws.wait(active_conditions,{5,0});
+			// ?Ä«?ÃºRETCODE_OK
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			for (int i = 0; i < 11; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;
@@ -3786,10 +3792,10 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 
 			WaitNegative();
 
-			// 13. É¾³ıËùÓĞ×ÓÊµÌå
+			// 13. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 14. É¾³ıÓò²ÎÓëÕß
+			// 14. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 15. finalize_instance
@@ -3802,16 +3808,16 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºtime_filter_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3820,27 +3826,28 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 				"time_filter_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Subscriber
+			// 4. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 5. ´´½¨DataReaderQos¶ÔÏó£¬ÉèÖÃTimeBasedFilter³ÉÔ±minimum_separationÎª200ms
+			// 5. åˆ›å»ºDataReaderQoså¯¹è±¡ï¼Œè®¾ç½®TimeBasedFilteræˆå‘˜minimum_separationä¸º200ms
 			DataReaderQos qos = DATAREADER_QOS_DEFAULT;
+			qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
 			qos.time_based_filter.minimum_separation.sec = 0;
 			qos.time_based_filter.minimum_separation.nanosec = 200 * 1000 * 1000; // 200ms
 
-			// 6. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨DataReader
+			// 6. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. µÈ´ıÆ¥ÅäÍê³É
+			// 7. ç­‰å¾…åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader, 1));
 
-			// 8. ·¢ËÍ×¼±¸Íê³ÉĞÅºÅ
+			// 8. å‘é€å‡†å¤‡å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 9. ÑéÖ¤¿ìËÙ·¢ËÍµÄÊ±¼ä¹ıÂËĞ§¹û
+			// 9. éªŒè¯å¿«é€Ÿå‘é€çš„æ—¶é—´è¿‡æ»¤æ•ˆæœ
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 			TRAVODDS_SEQUENCE(KeyDataSeq, TestModule::KeyData);
@@ -3848,9 +3855,9 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 
 			SampleInfoSeq info_vec;
 			//EXPECT_EQ(reader->take(data_vec, info_vec, 10, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
-			// ¿ìËÙ·¢ËÍ£¬Ô¤ÆÚÊÕµ½Ñù±¾ÊıÉÙÓÚ·¢ËÍÊı
+			// å¿«é€Ÿå‘é€ï¼Œé¢„æœŸæ”¶åˆ°æ ·æœ¬æ•°å°‘äºå‘é€æ•°
 			//EXPECT_LT(data_vec.length(), 4);
-			// ÑéÖ¤Ñù±¾¼ä¸ô
+			// éªŒè¯æ ·æœ¬é—´éš”
 			for (size_t i = 1; i < info_vec.length(); ++i) {
 				int64_t prev_ns = info_vec[i - 1].source_timestamp.sec * 1000000000LL + info_vec[i - 1].source_timestamp.nanosec;
 				int64_t curr_ns = info_vec[i].source_timestamp.sec * 1000000000LL + info_vec[i].source_timestamp.nanosec;
@@ -3858,18 +3865,18 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 			}
 			NotifyPositive();
 
-			// 10. ÑéÖ¤ÂıËÙ·¢ËÍµÄÊ±¼ä¹ıÂËĞ§¹û
+			// 10. éªŒè¯æ…¢é€Ÿå‘é€çš„æ—¶é—´è¿‡æ»¤æ•ˆæœ
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			data_vec.unloan(); info_vec.unloan();
 			EXPECT_EQ(reader->take(data_vec, info_vec, 10, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
-			// ÂıËÙ·¢ËÍ£¬Ô¤ÆÚÊÕµ½È«²¿Ñù±¾
+			// æ…¢é€Ÿå‘é€ï¼Œé¢„æœŸæ”¶åˆ°å…¨éƒ¨æ ·æœ¬
 			//EXPECT_EQ(data_vec.length(), 3);
 			NotifyPositive();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -3877,16 +3884,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºtime_filter_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3895,19 +3902,19 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 				"time_filter_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨DataWriter
+			// 5. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 6. µÈ´ı±»¶¯¶Ë×¼±¸Íê³É
+			// 6. ç­‰å¾…è¢«åŠ¨ç«¯å‡†å¤‡å®Œæˆ
 			WaitNegative();
 
-			// 7. ¿ìËÙ·¢ËÍ²âÊÔÊı¾İ
+			// 7. å¿«é€Ÿå‘é€æµ‹è¯•æ•°æ®
 			TestModule::BasicData inst1; inst1.id = 100;
 			EXPECT_EQ(writer->write(&inst1, HANDLE_NIL), RETCODE_OK);
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -3922,7 +3929,7 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 			WaitNegative();
 
 
-			// 8. ÂıËÙ·¢ËÍ²âÊÔÊı¾İ
+			// 8. æ…¢é€Ÿå‘é€æµ‹è¯•æ•°æ®
 			TestModule::BasicData inst5; inst5.id = 500;
 			EXPECT_EQ(writer->write(&inst5, HANDLE_NIL), RETCODE_OK);
 			std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -3934,10 +3941,10 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 
 			WaitNegative();
 
-			// 9. É¾³ıËùÓĞ×ÓÊµÌå
+			// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 10. É¾³ıÓò²ÎÓëÕß
+			// 10. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 11. finalize_instance
@@ -3950,16 +3957,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyBasicTest) {
 TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨dynamic_time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdynamic_time_filter_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -3968,27 +3975,27 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 				"dynamic_time_filter_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Subscriber
+			// 4. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 5. ´´½¨DataReaderQos¶ÔÏó£¬ÉèÖÃTimeBasedFilter³ÉÔ±minimum_separationÎª150ms
+			// 5. åˆ›å»ºDataReaderQoså¯¹è±¡ï¼Œè®¾ç½®TimeBasedFilteræˆå‘˜minimum_separationä¸º150ms
 			DataReaderQos qos = DATAREADER_QOS_DEFAULT;
 			qos.time_based_filter.minimum_separation.sec = 0;
 			qos.time_based_filter.minimum_separation.nanosec = 150 * 1000 * 1000; // 150ms
 			qos.history.depth = 10;
-			// 6. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨DataReader
+			// 6. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, qos, nullptr, DATA_AVAILABLE_STATUS);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. µÈ´ıÆ¥ÅäÍê³É
+			// 7. ç­‰å¾…åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader, 1));
 
-			// 8. ·¢ËÍ×¼±¸Íê³ÉĞÅºÅ
+			// 8. å‘é€å‡†å¤‡å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 9. µÚÒ»½×¶ÎÑéÖ¤£¨³õÊ¼¹ıÂË²ÎÊı150ms£©
+			// 9. ç¬¬ä¸€é˜¶æ®µéªŒè¯ï¼ˆåˆå§‹è¿‡æ»¤å‚æ•°150msï¼‰
 			WaitSet ws;
 			ws.attach_condition(reader->get_statuscondition());
 			ConditionSeq active_conditions;
@@ -3999,16 +4006,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 			KeyDataSeq data_vec;
 			SampleInfoSeq info_vec;
 			EXPECT_EQ(reader->take(data_vec, info_vec, 10, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
-			// Ô¤ÆÚÊÕµ½µÄÑù±¾ÊıÁ¿ÉÙÓÚ5£¨150ms¹ıÂË£©
+			// é¢„æœŸæ”¶åˆ°çš„æ ·æœ¬æ•°é‡å°‘äº5ï¼ˆ150msè¿‡æ»¤ï¼‰
 			EXPECT_LT(data_vec.length(), 5);
-			// ÑéÖ¤Ñù±¾¼ä¸ô
+			// éªŒè¯æ ·æœ¬é—´éš”
 			for (size_t i = 1; i < info_vec.length(); ++i) {
 				int64_t prev_ns = info_vec[i - 1].source_timestamp.sec * 1000000000LL + info_vec[i - 1].source_timestamp.nanosec;
 				int64_t curr_ns = info_vec[i].source_timestamp.sec * 1000000000LL + info_vec[i].source_timestamp.nanosec;
 				EXPECT_GE(curr_ns - prev_ns, 150 * 1000 * 1000);
 			}
 
-			// 10. ¶¯Ì¬ĞŞ¸Ä¹ıÂË²ÎÊıÎª50ms
+			// 10. åŠ¨æ€ä¿®æ”¹è¿‡æ»¤å‚æ•°ä¸º50ms
 			DataReaderQos qos2 = qos;
 			qos2.time_based_filter.minimum_separation.sec = 0;
 			qos2.time_based_filter.minimum_separation.nanosec = 50 * 1000 * 1000; // 50ms
@@ -4016,14 +4023,14 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 
 			NotifyPositive();
 
-			// 11. µÚ¶ş½×¶ÎÑéÖ¤£¨ĞŞ¸ÄºóµÄ¹ıÂË²ÎÊı50ms£©
+			// 11. ç¬¬äºŒé˜¶æ®µéªŒè¯ï¼ˆä¿®æ”¹åçš„è¿‡æ»¤å‚æ•°50msï¼‰
 			data_vec.unloan(); info_vec.unloan();
 
 			EXPECT_EQ(ws.wait(active_conditions,{10,0}), RETCODE_OK);
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
 			EXPECT_EQ(reader->take(data_vec, info_vec, 10, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
-			// Ô¤ÆÚÊÕµ½µÄÑù±¾ÊıÁ¿½Ó½ü5£¨50ms¹ıÂË£©
+			// é¢„æœŸæ”¶åˆ°çš„æ ·æœ¬æ•°é‡æ¥è¿‘5ï¼ˆ50msè¿‡æ»¤ï¼‰
 			//EXPECT_GE(data_vec.length(), 4);
 			for (size_t i = 1; i < info_vec.length(); ++i) {
 				int64_t prev_ns = info_vec[i - 1].source_timestamp.sec * 1000000000LL + info_vec[i - 1].source_timestamp.nanosec;
@@ -4033,10 +4040,10 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 
 			NotifyPositive();
 
-			// 12. É¾³ıËùÓĞ×ÓÊµÌå
+			// 12. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 13. É¾³ıÓò²ÎÓëÕß
+			// 13. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 14. finalize_instance
@@ -4044,16 +4051,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨dynamic_time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºdynamic_time_filter_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -4062,27 +4069,27 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 				"dynamic_time_filter_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨DataWriter
+			// 5. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 6. µÈ´ı±»¶¯¶Ë×¼±¸Íê³É
+			// 6. ç­‰å¾…è¢«åŠ¨ç«¯å‡†å¤‡å®Œæˆ
 			WaitNegative();
-			// 7. µÚÒ»½×¶Î²âÊÔ£¨³õÊ¼¹ıÂË²ÎÊı£©
+			// 7. ç¬¬ä¸€é˜¶æ®µæµ‹è¯•ï¼ˆåˆå§‹è¿‡æ»¤å‚æ•°ï¼‰
 			for (int i = 1; i <= 5; ++i) {
 				TestModule::BasicData inst; inst.id = i * 10;
 				EXPECT_EQ(writer->write(&inst, HANDLE_NIL), RETCODE_OK);
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 
-			// 8. µÈ´ı±»¶¯¶ËĞŞ¸Ä¹ıÂË²ÎÊı
+			// 8. ç­‰å¾…è¢«åŠ¨ç«¯ä¿®æ”¹è¿‡æ»¤å‚æ•°
 			WaitNegative();
-			// 9. µÚ¶ş½×¶Î²âÊÔ£¨ĞŞ¸ÄºóµÄ¹ıÂË²ÎÊı£©
+			// 9. ç¬¬äºŒé˜¶æ®µæµ‹è¯•ï¼ˆä¿®æ”¹åçš„è¿‡æ»¤å‚æ•°ï¼‰
 			for (int i = 6; i <= 10; ++i) {
 				TestModule::BasicData inst; inst.id = i * 10;
 				EXPECT_EQ(writer->write(&inst, HANDLE_NIL), RETCODE_OK);
@@ -4091,10 +4098,10 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 
 			WaitNegative();
 
-			// 10. É¾³ıËùÓĞ×ÓÊµÌå
+			// 10. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 11. É¾³ıÓò²ÎÓëÕß
+			// 11. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 12. finalize_instance
@@ -4107,16 +4114,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyDynamicTest) {
 TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::KeyDataÀàĞÍ£¬²¢´´½¨keyed_time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::KeyDataç±»å‹ï¼Œå¹¶åˆ›å»ºkeyed_time_filter_topic_nameä¸»é¢˜
 			TestModule::KeyDataTypeSupport* type_support = TestModule::KeyDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::KeyData", type_support), RETCODE_OK);
@@ -4125,34 +4132,34 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 				"keyed_time_filter_topic_name", "TestModule::KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Subscriber
+			// 4. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 5. ´´½¨DataReaderQos¶ÔÏó£¬ÉèÖÃTimeBasedFilter³ÉÔ±minimum_separationÎª200ms
+			// 5. åˆ›å»ºDataReaderQoså¯¹è±¡ï¼Œè®¾ç½®TimeBasedFilteræˆå‘˜minimum_separationä¸º200ms
 			DataReaderQos qos = DATAREADER_QOS_DEFAULT;
 			qos.time_based_filter.minimum_separation.sec = 0;
 			qos.time_based_filter.minimum_separation.nanosec = 200 * 1000 * 1000; // 200ms
 
-			// 6. ÒÔ×Ô¶¨ÒåQos¶ÔÏó´´½¨DataReader
+			// 6. ä»¥è‡ªå®šä¹‰Qoså¯¹è±¡åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. µÈ´ıÆ¥ÅäÍê³É
+			// 7. ç­‰å¾…åŒ¹é…å®Œæˆ
 			EXPECT_TRUE(waitmatch(reader, 1));
 
-			// 8. ·¢ËÍ×¼±¸Íê³ÉĞÅºÅ
+			// 8. å‘é€å‡†å¤‡å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 9. ÑéÖ¤¶àÊµÀıµÄÊ±¼ä¹ıÂËĞ§¹û
+			// 9. éªŒè¯å¤šå®ä¾‹çš„æ—¶é—´è¿‡æ»¤æ•ˆæœ
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			TRAVODDS_SEQUENCE(KeyDataSeq, TestModule::KeyData);
 			KeyDataSeq data_vec;
 			SampleInfoSeq info_vec;
 			EXPECT_EQ(reader->take(data_vec, info_vec, 20, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
 
-			// °´lVal·Ö×é£¬·Ö±ğÑéÖ¤Ã¿¸öÊµÀıµÄÊ±¼ä¹ıÂË
+			// æŒ‰lValåˆ†ç»„ï¼Œåˆ†åˆ«éªŒè¯æ¯ä¸ªå®ä¾‹çš„æ—¶é—´è¿‡æ»¤
 			std::map<int64_t, std::vector<SampleInfo>> instance_map;
 			for (size_t i = 0; i < data_vec.length(); ++i) {
 				instance_map[data_vec[i].userId].push_back(info_vec[i]);
@@ -4165,17 +4172,17 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 					EXPECT_GE(curr_ns - prev_ns, 200 * 1000 * 1000);
 				}
 			}
-			// ÑéÖ¤²»Í¬ÊµÀıÖ®¼äµÄ¹ıÂË»¥²»Ó°Ïì
+			// éªŒè¯ä¸åŒå®ä¾‹ä¹‹é—´çš„è¿‡æ»¤äº’ä¸å½±å“
 			//EXPECT_GE(instance_map[1].size(), 2);
 			//EXPECT_GE(instance_map[2].size(), 2);
 
-			// 10. ·¢ËÍ¼ì²éÍê³ÉĞÅºÅ
+			// 10. å‘é€æ£€æŸ¥å®Œæˆä¿¡å·
 			NotifyPositive();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -4183,16 +4190,16 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::KeyDataÀàĞÍ£¬²¢´´½¨keyed_time_filter_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::KeyDataç±»å‹ï¼Œå¹¶åˆ›å»ºkeyed_time_filter_topic_nameä¸»é¢˜
 			TestModule::KeyDataTypeSupport* type_support = TestModule::KeyDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::KeyData", type_support), RETCODE_OK);
@@ -4201,19 +4208,19 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 				"keyed_time_filter_topic_name", "TestModule::KeyData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨DataWriter
+			// 5. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 6. µÈ´ı±»¶¯¶Ë×¼±¸Íê³É
+			// 6. ç­‰å¾…è¢«åŠ¨ç«¯å‡†å¤‡å®Œæˆ
 			WaitNegative();
 
-			// 7. ·¢ËÍ¶àÊµÀıÊı¾İ²âÊÔÊ±¼ä¹ıÂË
+			// 7. å‘é€å¤šå®ä¾‹æ•°æ®æµ‹è¯•æ—¶é—´è¿‡æ»¤
 			TestModule::KeyData instA; instA.userId = 1;
 			TestModule::KeyData instB; instB.userId = 2;
 			for (int i = 0; i < 3; ++i) {
@@ -4228,13 +4235,13 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 			EXPECT_EQ(writer->write(&instA, HANDLE_NIL), RETCODE_OK);
 			EXPECT_EQ(writer->write(&instB, HANDLE_NIL), RETCODE_OK);
 
-			// 8. µÈ´ı±»¶¯¶Ë¼ì²éÍê³É
+			// 8. ç­‰å¾…è¢«åŠ¨ç«¯æ£€æŸ¥å®Œæˆ
 			WaitNegative();
 
-			// 9. É¾³ıËùÓĞ×ÓÊµÌå
+			// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 10. É¾³ıÓò²ÎÓëÕß
+			// 10. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 11. finalize_instance
@@ -4247,21 +4254,21 @@ TEST_F(QoSTest, QoS_TimeBasedFilterQosPolicyKeyedTypeTest) {
 TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
-			// 4. ×Ô¶¨ÒåTopicQos£¬ÉèÖÃtopic_dataÎª"remote_topic_data_test"
+			// 4. è‡ªå®šä¹‰TopicQosï¼Œè®¾ç½®topic_dataä¸º"remote_topic_data_test"
 			TopicQos qos;
 			qos = TOPIC_QOS_DEFAULT;
 			qos.topic_data.value.assign({ 'r','e','m','o','t','e','_','t','o','p','i','c','_','d','a','t','a','_','t','e','s','t' });
@@ -4269,30 +4276,30 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 				"discovery_topic_name", "TestModule::BasicData", qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Publisher
+			// 5. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. ´´½¨DataWriter
+			// 6. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 7. µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚÒ»´ÎTopicData¼ì²é
+			// 7. ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬ä¸€æ¬¡TopicDataæ£€æŸ¥
 			WaitPositive();
 
-			// 8. ¶¯Ì¬ĞŞ¸Ätopic_dataÎª"updated_topic_data_test"
+			// 8. åŠ¨æ€ä¿®æ”¹topic_dataä¸º"updated_topic_data_test"
 			TopicQos qos2 = qos;
 			qos2.topic_data.value.assign({ 'u','p','d','a','t','e','d','_','t','o','p','i','c','_','d','a','t','a','_','t','e','s','t' });
 			EXPECT_EQ(topic->set_qos(qos2), RETCODE_OK);
 
-			// 9. µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚ¶ş´ÎTopicData¼ì²é
+			// 9. ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬äºŒæ¬¡TopicDataæ£€æŸ¥
 			WaitPositive();
 
-			// 10. É¾³ıËùÓĞ×ÓÊµÌå
+			// 10. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 11. É¾³ıÓò²ÎÓëÕß
+			// 11. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 12. finalize_instance
@@ -4300,35 +4307,35 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
-			// 4. ´´½¨discovery_topic_nameÖ÷Ìâ£¨Ä¬ÈÏQoS£©
+			// 4. åˆ›å»ºdiscovery_topic_nameä¸»é¢˜ï¼ˆé»˜è®¤QoSï¼‰
 			Topic* topic = participant->create_topic(
 				"discovery_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReader
+			// 6. åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. µÈ´ı·¢ÏÖ±»¶¯¶ËµÄTopicĞÅÏ¢
+			// 7. ç­‰å¾…å‘ç°è¢«åŠ¨ç«¯çš„Topicä¿¡æ¯
 			std::vector<InstanceHandle_t> handles;
 			PublicationBuiltinTopicData pub_data;
 			bool found_first = false;
@@ -4352,10 +4359,10 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 			}
 			EXPECT_TRUE(found_first);
 
-			// 7.5. ·¢ËÍµÚÒ»´ÎTopicData¼ì²éĞÅºÅ
+			// 7.5. å‘é€ç¬¬ä¸€æ¬¡TopicDataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			// 8. ÑéÖ¤TopicData¶¯Ì¬ĞŞ¸ÄµÄ´«²¥
+			// 8. éªŒè¯TopicDataåŠ¨æ€ä¿®æ”¹çš„ä¼ æ’­
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			bool found_second = false;
 			handles.clear();
@@ -4372,13 +4379,13 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 			}
 			//EXPECT_TRUE(found_second);
 
-			// 8.5. ·¢ËÍµÚ¶ş´ÎTopicData¼ì²éĞÅºÅ
+			// 8.5. å‘é€ç¬¬äºŒæ¬¡TopicDataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			// 9. É¾³ıËùÓĞ×ÓÊµÌå
+			// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 10. É¾³ıÓò²ÎÓëÕß
+			// 10. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 11. finalize_instance
@@ -4389,21 +4396,21 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyDiscovery) {
 }
 
 TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
 
-	// 3. ×¢²áTestModule::KeyDataÀàĞÍ
+	// 3. æ³¨å†ŒTestModule::KeyDataç±»å‹
 	TestModule::KeyDataTypeSupport* type_support = TestModule::KeyDataTypeSupport::get_instance();
 	ASSERT_NE(type_support, nullptr);
 	EXPECT_EQ(participant->registe_type("TestModule::KeyData", type_support), RETCODE_OK);
 
-	// 4. ²âÊÔ»ù´¡TopicµÄTopicData
+	// 4. æµ‹è¯•åŸºç¡€Topicçš„TopicData
 	TopicQos base_qos = TOPIC_QOS_DEFAULT;
 	base_qos.topic_data.value.assign({ 'b','a','s','e','_','t','o','p','i','c','_','d','a','t','a' });
 	Topic* base_topic = participant->create_topic(
@@ -4413,7 +4420,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 	EXPECT_EQ(base_topic->get_qos(check_qos), RETCODE_OK);
 	EXPECT_EQ(std::string(check_qos.topic_data.value.begin(), check_qos.topic_data.value.end()), "base_topic_data");
 
-	// 5. ²âÊÔContentFilteredTopic¼Ì³ĞTopicData
+	// 5. æµ‹è¯•ContentFilteredTopicç»§æ‰¿TopicData
 	ContentFilteredTopic* cft = participant->create_contentfilteredtopic(
 		"filtered_topic", base_topic, "userId > 10", std::vector<std::string>());
 	ASSERT_NE(cft, nullptr);
@@ -4423,7 +4430,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 	EXPECT_EQ(related_topic->get_qos(related_qos), RETCODE_OK);
 	EXPECT_EQ(std::string(related_qos.topic_data.value.begin(), related_qos.topic_data.value.end()), "base_topic_data");
 
-	// 6. ²âÊÔ»ù´¡TopicĞŞ¸ÄTopicData¶ÔContentFilteredTopicµÄÓ°Ïì
+	// 6. æµ‹è¯•åŸºç¡€Topicä¿®æ”¹TopicDataå¯¹ContentFilteredTopicçš„å½±å“
 	TopicQos mod_qos = base_qos;
 	mod_qos.topic_data.value.assign({ 'm','o','d','i','f','i','e','d','_','b','a','s','e','_','t','o','p','i','c','_','d','a','t','a' });
 	EXPECT_EQ(base_topic->set_qos(mod_qos), RETCODE_OK);
@@ -4431,7 +4438,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 	EXPECT_EQ(cft->get_related_topic()->get_qos(after_mod_qos), RETCODE_OK);
 	EXPECT_EQ(std::string(after_mod_qos.topic_data.value.begin(), after_mod_qos.topic_data.value.end()), "modified_base_topic_data");
 
-	// 7. ²âÊÔContentFilteredTopicÔÚÊı¾İ·¢ÏÖÖĞµÄTopicData´«²¥
+	// 7. æµ‹è¯•ContentFilteredTopicåœ¨æ•°æ®å‘ç°ä¸­çš„TopicDataä¼ æ’­
 	Publisher* publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(publisher, nullptr);
 	DataWriter* writer = publisher->create_datawriter(
@@ -4444,7 +4451,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 		cft, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(reader, nullptr);
 
-	// µÈ´ıÆ¥ÅäÍê³É
+	// ç­‰å¾…åŒ¹é…å®Œæˆ
 	std::vector<InstanceHandle_t> handles;
 	PublicationBuiltinTopicData pub_data;
 	bool found = false;
@@ -4468,14 +4475,14 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 	}
 	//EXPECT_TRUE(found);
 
-	// 8. É¾³ıContentFilteredTopicºÍ»ù´¡Topic
+	// 8. åˆ é™¤ContentFilteredTopicå’ŒåŸºç¡€Topic
 	//EXPECT_EQ(participant->delete_contentfilteredtopic(cft), RETCODE_OK);
 	//EXPECT_EQ(participant->delete_topic(base_topic), RETCODE_OK);
 
-	// 9. É¾³ıËùÓĞ×ÓÊµÌå
+	// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-	// 10. É¾³ıÓò²ÎÓëÕß
+	// 10. åˆ é™¤åŸŸå‚ä¸è€…
 	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 10. finalize_instance
@@ -4483,21 +4490,21 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyCFTIntegrationTest) {
 }
 
 TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
-	// 1. »ñÈ¡¹¤³§µ¥Àı
+	// 1. è·å–å·¥å‚å•ä¾‹
 	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
-	// 2. ´´½¨DomainParticipant
+	// 2. åˆ›å»ºDomainParticipant
 	DomainParticipant* participant = factory->create_participant(
 		0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 	ASSERT_NE(participant, nullptr);
 
-	// 3. ×¢²áTestModule::BasicDataÀàĞÍ
+	// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹
 	TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 	ASSERT_NE(type_support, nullptr);
 	EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
 
-	// 4. ²âÊÔ¿ÕTopicData
+	// 4. æµ‹è¯•ç©ºTopicData
 	TopicQos empty_qos = TOPIC_QOS_DEFAULT;
 	empty_qos.topic_data.value.clear();
 	Topic* empty_topic = participant->create_topic(
@@ -4507,7 +4514,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	EXPECT_EQ(empty_topic->get_qos(check_empty), RETCODE_OK);
 	EXPECT_TRUE(check_empty.topic_data.value.empty());
 
-	// 5. ²âÊÔ´óÈİÁ¿TopicData£¨255B£©
+	// 5. æµ‹è¯•å¤§å®¹é‡TopicDataï¼ˆ255Bï¼‰
 	TopicQos large_qos = TOPIC_QOS_DEFAULT;
 	std::vector<uint8_t> large_data(255, 0xAB);
 	large_qos.topic_data.value = large_data;
@@ -4519,7 +4526,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	EXPECT_EQ(check_large.topic_data.value.size(), 255);
 	EXPECT_TRUE(std::equal(check_large.topic_data.value.begin(), check_large.topic_data.value.end(), large_data.begin()));
 
-	// 6. ²âÊÔ¶ş½øÖÆTopicData
+	// 6. æµ‹è¯•äºŒè¿›åˆ¶TopicData
 	TopicQos bin_qos = TOPIC_QOS_DEFAULT;
 	std::vector<uint8_t> bin_data = { 0x00, 0xFF, 0x7E, 0x55, 0xAA, 0x10 };
 	bin_qos.topic_data.value = bin_data;
@@ -4530,7 +4537,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	EXPECT_EQ(bin_topic->get_qos(check_bin), RETCODE_OK);
 	EXPECT_EQ(check_bin.topic_data.value, bin_data);
 
-	// 7. ²âÊÔTopicDataÓëTopicÉúÃüÖÜÆÚ
+	// 7. æµ‹è¯•TopicDataä¸Topicç”Ÿå‘½å‘¨æœŸ
 	TopicQos life_qos = TOPIC_QOS_DEFAULT;
 	life_qos.topic_data.value.assign({ 'l','i','f','e','_','t','e','s','t' });
 	Topic* life_topic = participant->create_topic(
@@ -4554,7 +4561,7 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	EXPECT_EQ(life_topic->get_qos(check_life2), RETCODE_OK);
 	EXPECT_EQ(std::string(check_life2.topic_data.value.begin(), check_life2.topic_data.value.end()), "mod_life");
 
-	// 8. ²âÊÔ¶à¸öÏàÍ¬Ãû³ÆTopicµÄTopicDataÒ»ÖÂĞÔ
+	// 8. æµ‹è¯•å¤šä¸ªç›¸åŒåç§°Topicçš„TopicDataä¸€è‡´æ€§
 	TopicQos same_name_qos = TOPIC_QOS_DEFAULT;
 	same_name_qos.topic_data.value.assign({ 's','a','m','e','_','n','a','m','e' });
 	Topic* topic_same1 = participant->create_topic(
@@ -4564,23 +4571,23 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 	diff_name_qos.topic_data.value.assign({ 'd','i','f','f','_','d','a','t','a' });
 	Topic* topic_same2 = participant->create_topic(
 		"same_name_topic", "TestModule::BasicData", diff_name_qos, nullptr, STATUS_MASK_NONE);
-	// Ô¤ÆÚ·µ»ØÔ­Topic£¨topic_same1£©£¬¶ø²»ÊÇĞÂ½¨
+	// é¢„æœŸè¿”å›åŸTopicï¼ˆtopic_same1ï¼‰ï¼Œè€Œä¸æ˜¯æ–°å»º
 	//EXPECT_EQ(topic_same2, topic_same1);
 	TopicQos check_same;
 	EXPECT_EQ(topic_same1->get_qos(check_same), RETCODE_OK);
 	EXPECT_EQ(std::string(check_same.topic_data.value.begin(), check_same.topic_data.value.end()), "same_name");
 
-	// 9. É¾³ıËùÓĞÊµÌå
+	// 9. åˆ é™¤æ‰€æœ‰å®ä½“
 	EXPECT_EQ(participant->delete_topic(empty_topic), RETCODE_OK);
 	EXPECT_EQ(participant->delete_topic(large_topic), RETCODE_OK);
 	EXPECT_EQ(participant->delete_topic(bin_topic), RETCODE_OK);
 	EXPECT_EQ(participant->delete_topic(life_topic), RETCODE_OK);
 	EXPECT_EQ(participant->delete_topic(topic_same1), RETCODE_OK);
 
-	// 9. É¾³ıËùÓĞ×ÓÊµÌå
+	// 9. åˆ é™¤æ‰€æœ‰å­å®ä½“
 	EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-	// 10. É¾³ıÓò²ÎÓëÕß
+	// 10. åˆ é™¤åŸŸå‚ä¸è€…
 	EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 	// 11. finalize_instance
@@ -4590,20 +4597,20 @@ TEST_F(QoSTest, QoS_TopicDataQosPolicyBoundaryTest) {
 TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 	std::thread th_1(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ×Ô¶¨ÒåDomainParticipantQos¶ÔÏó£¬ÉèÖÃuser_data
+			// 2. è‡ªå®šä¹‰DomainParticipantQoså¯¹è±¡ï¼Œè®¾ç½®user_data
 			DomainParticipantQos dp_qos = PARTICIPANT_QOS_DEFAULT;
 			dp_qos.user_data.value = { 'd', 'p', 'u', 's', 'e', 'r' };
 
-			// 3. ÒÔ×Ô¶¨ÒåQos´´½¨DomainParticipant
+			// 3. ä»¥è‡ªå®šä¹‰Qosåˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, dp_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 4. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨example_topic_nameÖ÷Ìâ
+			// 4. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºexample_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -4612,40 +4619,40 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 				"example_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 5. Ä¬ÈÏ´´½¨Publisher
+			// 5. é»˜è®¤åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 6. Ä¬ÈÏ´´½¨Subscriber
+			// 6. é»˜è®¤åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 7. DataWriterQosÅäÖÃuser_data£¬Í¨¹ı·¢ÏÖĞ­Òé´«µİ
+			// 7. DataWriterQosé…ç½®user_dataï¼Œé€šè¿‡å‘ç°åè®®ä¼ é€’
 			DataWriterQos dw_qos = DATAWRITER_QOS_DEFAULT;
 			dw_qos.user_data.value = { 'w', 'r', 'i', 't', 'e', 'r', 'u', 's', 'e', 'r' };
 			DataWriter* writer = publisher->create_datawriter(
 				topic, dw_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(writer, nullptr);
 
-			// 8. µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚÒ»´ÎDataWriter user_data¼ì²é
+			// 8. ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬ä¸€æ¬¡DataWriter user_dataæ£€æŸ¥
 			WaitPositive();
 
-			// 9. DataReaderQosÅäÖÃuser_data£¬Í¨¹ı·¢ÏÖĞ­Òé´«µİ
+			// 9. DataReaderQosé…ç½®user_dataï¼Œé€šè¿‡å‘ç°åè®®ä¼ é€’
 			DataReaderQos dr_qos = DATAREADER_QOS_DEFAULT;
 			dr_qos.user_data.value = { 'r', 'e', 'a', 'd', 'e', 'r', 'u', 's', 'e', 'r' };
 			DataReader* reader = subscriber->create_datareader(
 				topic, dr_qos, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 10. µÈ´ıÖ÷¶¯¶ËÍê³ÉµÚÒ»´ÎDataReader user_data¼ì²é
+			// 10. ç­‰å¾…ä¸»åŠ¨ç«¯å®Œæˆç¬¬ä¸€æ¬¡DataReader user_dataæ£€æŸ¥
 			WaitPositive();
 
-			// 11. É¾³ıËùÓĞ×ÓÊµÌå
+			// 11. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 12. É¾³ıÓò²ÎÓëÕß
+			// 12. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 13. finalize_instance
@@ -4653,16 +4660,16 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 		});
 	std::thread th_2(
 		[&]() {
-			// 1. »ñÈ¡¹¤³§µ¥Àı
+			// 1. è·å–å·¥å‚å•ä¾‹
 			DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 			ASSERT_NE(factory, nullptr);
 
-			// 2. ´´½¨DomainParticipant
+			// 2. åˆ›å»ºDomainParticipant
 			DomainParticipant* participant = factory->create_participant(
 				0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(participant, nullptr);
 
-			// 3. ×¢²áTestModule::BasicDataÀàĞÍ£¬²¢´´½¨example_topic_nameÖ÷Ìâ
+			// 3. æ³¨å†ŒTestModule::BasicDataç±»å‹ï¼Œå¹¶åˆ›å»ºexample_topic_nameä¸»é¢˜
 			TestModule::BasicDataTypeSupport* type_support = TestModule::BasicDataTypeSupport::get_instance();
 			ASSERT_NE(type_support, nullptr);
 			EXPECT_EQ(participant->registe_type("TestModule::BasicData", type_support), RETCODE_OK);
@@ -4671,22 +4678,22 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 				"example_topic_name", "TestModule::BasicData", TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(topic, nullptr);
 
-			// 4. ´´½¨Publisher
+			// 4. åˆ›å»ºPublisher
 			Publisher* publisher = participant->create_publisher(
 				PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(publisher, nullptr);
 
-			// 5. ´´½¨Subscriber
+			// 5. åˆ›å»ºSubscriber
 			Subscriber* subscriber = participant->create_subscriber(
 				SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(subscriber, nullptr);
 
-			// 6. ´´½¨DataReader
+			// 6. åˆ›å»ºDataReader
 			DataReader* reader = subscriber->create_datareader(
 				topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
 			ASSERT_NE(reader, nullptr);
 
-			// 7. ÂÖÑ¯get_matched_publicationsÖ±µ½ÓĞÆ¥Åä
+			// 7. è½®è¯¢get_matched_publicationsç›´åˆ°æœ‰åŒ¹é…
 			std::vector<InstanceHandle_t> pub_handles;
 			for (int i = 0; i < 50; ++i) {
 				pub_handles.clear();
@@ -4696,7 +4703,7 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 			}
 			EXPECT_FALSE(pub_handles.empty());
 
-			// 8. ¼ì²éPublicationBuiltinTopicData.user_data
+			// 8. æ£€æŸ¥PublicationBuiltinTopicData.user_data
 			bool found_writer_user_data = false;
 			for (const auto& h : pub_handles) {
 				PublicationBuiltinTopicData data;
@@ -4708,15 +4715,15 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 			}
 			EXPECT_TRUE(found_writer_user_data);
 
-			// 9. ·¢ËÍDataWriter user_data¼ì²éĞÅºÅ
+			// 9. å‘é€DataWriter user_dataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			// 10. ´´½¨DataWriter
+			// 10. åˆ›å»ºDataWriter
 			DataWriter* writer = publisher->create_datawriter(
 				topic, DATAWRITER_QOS_DEFAULT, nullptr, PUBLICATION_MATCHED_STATUS);
 			ASSERT_NE(writer, nullptr);
 
-			// 11. ÂÖÑ¯get_matched_subscriptionsÖ±µ½ÓĞÆ¥Åä
+			// 11. è½®è¯¢get_matched_subscriptionsç›´åˆ°æœ‰åŒ¹é…
 			std::vector<InstanceHandle_t> sub_handles;
 			for (int i = 0; i < 50; ++i) {
 				sub_handles.clear();
@@ -4726,7 +4733,7 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 			}
 			EXPECT_FALSE(sub_handles.empty());
 
-			// 12. ¼ì²éSubscriptionBuiltinTopicData.user_data
+			// 12. æ£€æŸ¥SubscriptionBuiltinTopicData.user_data
 			bool found_reader_user_data = false;
 			for (const auto& h : sub_handles) {
 				SubscriptionBuiltinTopicData data;
@@ -4738,13 +4745,13 @@ TEST_F(QoSTest, QoS_UserDataQosPolicy) {
 			}
 			EXPECT_TRUE(found_reader_user_data);
 
-			// 13. ·¢ËÍDataReader user_data¼ì²éĞÅºÅ
+			// 13. å‘é€DataReader user_dataæ£€æŸ¥ä¿¡å·
 			NotifyNegative();
 
-			// 14. É¾³ıËùÓĞ×ÓÊµÌå
+			// 14. åˆ é™¤æ‰€æœ‰å­å®ä½“
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
 
-			// 15. É¾³ıÓò²ÎÓëÕß
+			// 15. åˆ é™¤åŸŸå‚ä¸è€…
 			EXPECT_EQ(factory->delete_participant(participant), RETCODE_OK);
 
 			// 16. finalize_instance

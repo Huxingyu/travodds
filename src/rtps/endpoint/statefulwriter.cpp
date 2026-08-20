@@ -467,7 +467,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 		/* wangyi fastdds 适配测试默认16 */
-		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = 0;
 		dataFragSubMessage.extraFlags[1] = 0;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
@@ -1381,7 +1381,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 		/* wangyi fastdds 适配测试默认16 */
-		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;

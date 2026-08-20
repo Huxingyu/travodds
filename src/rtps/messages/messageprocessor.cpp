@@ -156,7 +156,11 @@ ReturnCode_t MessageProcessor::EncapsulateDataFragMessage(SerializedBuffer& mess
 		}
 	}
 	shift += sizeof(DataFrag_t);
-	memcpy(messageBuf.buffer - shift, &dataFragSubMessage.dataFrag, sizeof(DataFrag_t));
+	
+	/* 添加大小端信息大小 */
+	DataFrag_t dataFrag = dataFragSubMessage.dataFrag;
+	dataFrag.sampleSize += sizeof(uint32_t);
+	memcpy(messageBuf.buffer - shift, &dataFrag, sizeof(DataFrag_t));
 	
 	shift += sizeof(SequenceNumber_t);
 	memcpy(messageBuf.buffer - shift, &dataFragSubMessage.writerSN, sizeof(SequenceNumber_t));
@@ -1146,6 +1150,9 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 		dataFragSubMessage.dataFrag.fragmentSize			= htons(dataFragSubMessage.dataFrag.fragmentSize);
 	}
 
+	/* 移除大小端信息大小 */
+	dataFragSubMessage.dataFrag.sampleSize -= sizeof(uint32_t);
+	
 	/* 判断是否存在inlineQos*/
 	if (inlineQosFlag) {
 		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, dataFragSubMessage.related_sample_identity,endiannessFlag);
