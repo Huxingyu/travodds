@@ -190,7 +190,7 @@ TEST(PublisherTest, Publisher_lookup_datawriter2) {
 TEST(PublisheTest, Publisher_suspend_publications) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	// 暂时未支持该接口
+	// 鏆傛椂鏈敮鎸佽鎺ュ彛
     ReturnCode_t result = publisher->suspend_publications();
     EXPECT_EQ(result, RETCODE_UNSUPPORTED);
     par->delete_contained_entities();
@@ -199,7 +199,7 @@ TEST(PublisheTest, Publisher_suspend_publications) {
 TEST(PublisheTest, Publisher_resume_publications) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-    // 暂时未支持该接口
+    // 鏆傛椂鏈敮鎸佽鎺ュ彛
     ReturnCode_t result = publisher->resume_publications();
     EXPECT_EQ(result, RETCODE_UNSUPPORTED);
     par->delete_contained_entities();
@@ -208,7 +208,7 @@ TEST(PublisheTest, Publisher_resume_publications) {
 TEST(PublisheTest, Publisher_begin_coherent_changes) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-    // 暂时未支持该接口
+    // 鏆傛椂鏈敮鎸佽鎺ュ彛
     ReturnCode_t result = publisher->begin_coherent_changes();
     EXPECT_EQ(result, RETCODE_UNSUPPORTED);
     par->delete_contained_entities();
@@ -217,13 +217,13 @@ TEST(PublisheTest, Publisher_begin_coherent_changes) {
 TEST(PublisheTest, Publisher_end_coherent_changes) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-    // 暂时未支持该接口
+    // 鏆傛椂鏈敮鎸佽鎺ュ彛
     ReturnCode_t result = publisher->end_coherent_changes();
     EXPECT_EQ(result, RETCODE_UNSUPPORTED);
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);
 }
-// TODO: 可靠和不可靠的通信测试
+// TODO: 鍙潬鍜屼笉鍙潬鐨勯�氫俊娴嬭瘯
 TEST(PublisheTest, Publisher_wait_for_acknowledgments) {
     DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
     Publisher* publisher = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);

@@ -26,7 +26,7 @@ enum class FlowControllerKind : uint8_t {
 	SEMI_SYNC
 };
 
-enum class SchedulerPolicy : uint8_t {
+enum SchedulerPolicy : uint8_t {
 	// 先进先出
 	FIFO
 };
@@ -37,15 +37,19 @@ struct FlowParameters
 
 	uint64_t periodMs = 1000; // 周期长度，单位毫秒
 	FlowParameters() = default;
-	FlowParameters(int32_t maxBytes, uint64_t period)
-		: maxBytesPerPeriod(maxBytes), periodMs(period) {
-	}
+	//jdxcz TODO
+	//FlowParameters(int32_t maxBytes, uint64_t period)
+	//	: maxBytesPerPeriod(maxBytes), periodMs(period) {
+	//}
 };
 
 struct FlowControllerConfig {
 	FlowControllerKind kind = FlowControllerKind::SEMI_SYNC;
 
 	SchedulerPolicy policy = SchedulerPolicy::FIFO;
+	FlowControllerConfig() {
+
+	}
 };
 
 

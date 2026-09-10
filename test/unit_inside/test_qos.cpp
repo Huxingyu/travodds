@@ -77,7 +77,7 @@ bool QoSTest::waitmatch(DataReader* reader, unsigned int count, int timeout) {
 
 TEST_F(QoSTest, QoS_domainparticipant_check) {
 	// 1. 获取工厂单例
-	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
+    DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 	DomainParticipantFactoryQos factory_qos;
 
@@ -103,7 +103,7 @@ TEST_F(QoSTest, QoS_domainparticipant_check) {
 TEST_F(QoSTest, QoS_publisher_check) {
 
 	// 1. 获取工厂单例
-	DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
+    DomainParticipantFactory* factory = DomainParticipantFactory::get_instance();
 	ASSERT_NE(factory, nullptr);
 
 	// 2. 创建DomainParticipant
@@ -392,7 +392,7 @@ TEST_F(QoSTest, QoS_dicovery_udpv4) {
 		EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
 		for (auto cond : active_conditions) {
 			if(cond == &sc_w){
-				matched_writer = true;
+                matched_writer = true;
 				PublicationMatchedStatus status;
 				dw->get_publication_matched_status(status);
 				
@@ -1870,8 +1870,6 @@ TEST_F(QoSTest, QoS_LivelinessQosPolicy) {
 }
 
 TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
 	std::thread th_1(
 		[&]() {
 			// 2. 获取工厂单例
@@ -3718,6 +3716,7 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 
 			// 14. 检查SampleRejectStatus
 			SampleRejectedStatus reject_status;
+
 			EXPECT_EQ(reader1->get_sample_rejected_status(reject_status), RETCODE_OK);
 			EXPECT_EQ(reject_status.total_count, 1);
 			EXPECT_EQ(reject_status.total_count_change, 1);
@@ -3781,8 +3780,9 @@ TEST_F(QoSTest, QoS_ResourceLimitsQosPolicy_reader) {
 			ConditionSeq active_conditions;
             //EXPECT_EQ(ws.wait(active_conditions,{10,0}), RETCODE_OK);
             ws.wait(active_conditions,{5,0});
-			// ?ī?úRETCODE_OK
+
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			// 预期RETCODE_OK
 			for (int i = 0; i < 11; ++i) {
 				TestModule::BasicData sample;
 				sample.id = i;

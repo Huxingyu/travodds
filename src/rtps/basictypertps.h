@@ -23,7 +23,7 @@ TRAVODDS_NAMESPACE_BEGIN
 using VendorId_t = std::array<octet, 2>;//octet[2];
 
 const VendorId_t VENDORID_UNKNOWN = { 0,0 };
-const VendorId_t VENDORID_PROSIMA = { 0,0 };
+const VendorId_t VENDORID_PROSIMA = { 2 ,0 };
 
 struct ChangeCount_t {
 	int32_t high;

@@ -496,6 +496,10 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 #endif // DDSSECURITY
 
 			MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
+			InfoTimestamp_t ints;
+			ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+			ints.timestamp = change->sourceTimespace;
+			MessageProcessor::EncapsulateINFOTSMessageNow(*buffer, shift, ints);
 
 #ifdef DDSSECURITY
 			// encodeBuffer为子消息缓冲区
@@ -661,7 +665,12 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 #endif // DDSSECURITY
 
 		MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
-
+		
+		InfoTimestamp_t ints;
+		ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+		ints.timestamp = change->sourceTimespace;
+		MessageProcessor::EncapsulateINFOTSMessageNow(*change->serializedBuffer, shift, ints);
+	
 #ifdef DDSSECURITY
 		SerializedBuffer srcBuffer;
 		// encodeBuffer为临时开辟缓冲区，存储加密后子消息

@@ -990,8 +990,11 @@ void Sedp::ReceiveDiscoveredReaderData(DiscoveredReaderData& data)
 	SPDPdiscoveredParticipantData participantData;
 	if( RETCODE_OK  == spdp_->GetParticipantData(data.ddsSubscriptionData.participant_key, participantData))
 	{
-		data.unicastLocatorList = participantData.defaultUnicastLocatorList;
-		data.multicastLocatorList = participantData.defaultMulticastLocatorList;
+		//jdxcz 20260712 此处逻辑存在bug 
+		if(0 == data.unicastLocatorList.size())
+			data.unicastLocatorList = participantData.defaultUnicastLocatorList;
+		if(0 == data.multicastLocatorList.size())
+			data.multicastLocatorList = participantData.defaultMulticastLocatorList;
 	}
 #ifdef DDSSECURITY
 	participant_->AddRemoteReader(data, isSecure);

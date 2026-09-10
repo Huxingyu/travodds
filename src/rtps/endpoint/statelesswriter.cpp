@@ -186,7 +186,7 @@ void StatelessWriter::ReaderLocatorAdd(Locator_t& locator, const GUID_t& guid)
 			readerLocator->SetHistoryCache(writerCache_);
 			return;
 		}
-		itor->second->LocatorAdd(locator);
+		//itor->second->LocatorAdd(locator);
 	}
 }
 
@@ -337,6 +337,11 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
 			MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
 
+			InfoTimestamp_t ints;
+			ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+			ints.timestamp = change->sourceTimespace;
+			MessageProcessor::EncapsulateINFOTSMessageNow(*buffer, shift, ints);
+	
 #ifdef DDSSECURITY
 			//加密子消息
 			SerializedBuffer srcBuffer;
@@ -489,6 +494,10 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
         MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
 
+		InfoTimestamp_t ints;
+		ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+		ints.timestamp = change->sourceTimespace;
+		MessageProcessor::EncapsulateINFOTSMessageNow(*change->serializedBuffer, shift, ints);
 #ifdef DDSSECURITY
         // srcBuffer指向被加密子消息
         SerializedBuffer srcBuffer;
