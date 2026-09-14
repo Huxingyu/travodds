@@ -591,7 +591,7 @@ bool HistoryCache::GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::
 	return true;
 }
 
-void HistoryCache::SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache)
+void HistoryCache::SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange>& cache)
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	auto& readinstance = instanceChanges_[handle];

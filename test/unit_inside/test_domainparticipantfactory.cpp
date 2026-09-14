@@ -40,13 +40,13 @@ TEST(DomainParticipantFactoryTest, DomainParticipantFactory_get_instance) {
 
 TEST(DomainParticipantFactoryTest, DomainParticipantFactory_lookup_participant1) {
 
-    DomainParticipant* result = TheParticipantFactory->lookup_participant(0);
+    DomainParticipant* result = TheParticipantFactory->lookup_participant(112);
     EXPECT_EQ(result, nullptr);
 }
 
 TEST(DomainParticipantFactoryTest, DomainParticipantFactory_lookup_participant2) {
-    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
-    DomainParticipant* result = TheParticipantFactory->lookup_participant(0);
+    DomainParticipant* par = TheParticipantFactory->create_participant(112, PARTICIPANT_QOS_DEFAULT, nullptr, 0);
+    DomainParticipant* result = TheParticipantFactory->lookup_participant(112);
     EXPECT_EQ(result, par);
     TheParticipantFactory->delete_participant(par);
 }

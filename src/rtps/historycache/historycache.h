@@ -406,7 +406,7 @@ public:
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
 
 	bool GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextTime);
-	void SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache);
+	void SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange>& cache);
 	void RsetAllTimeBasedFilte();
 
 	void RemoveRemoteWriter(const GUID_t& guid);

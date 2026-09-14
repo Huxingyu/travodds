@@ -568,3 +568,204 @@ TEST(DomainParticipantTest, DomainParticipant_registe_type2) {
     EXPECT_EQ(result, RETCODE_PRECONDITION_NOT_MET);
     TheParticipantFactory->delete_participant(par);
 }
+TEST(DomainParticipantTest, DomainParticipant_get_discovered_data) { 
+
+    DomainParticipant* par = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DomainParticipant* par_ = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    par->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = par->create_topic("topic", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+
+    Publisher* pub = par->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataWriter* dw = pub->create_datawriter(topic, DATAWRITER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);;
+    Subscriber* sub = par->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReader* dr = sub->create_datareader(topic, DATAREADER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    InstanceHandleSeq participant_handles;
+    par_->get_discovered_participants(participant_handles);
+    EXPECT_EQ(participant_handles.size(), 2);
+    ParticipantBuiltinTopicData participant_data;
+    par_->get_discovered_participant_data(participant_data,participant_handles[0]);
+    InstanceHandleSeq publication_handles;
+    par_->get_publications(publication_handles,false);
+    EXPECT_EQ(publication_handles.size(), 1);
+    PublicationBuiltinTopicData  publication_data;
+    par_->get_publication_data(publication_data,publication_handles[0]);
+    InstanceHandleSeq subscription_handles;
+    par_->get_subscriptions(subscription_handles,false);
+    EXPECT_EQ(subscription_handles.size(), 1);
+    SubscriptionBuiltinTopicData subscription_data;
+    par_->get_subscription_data(subscription_data,subscription_handles[0]);
+
+    par->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par);
+    TheParticipantFactory->delete_participant(par_);
+
+}
+TEST(ParticipantImplTest, IgnoreParticipant)
+{
+    // 宏已经包装单例，直接使用即可
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    // 基类指针强转为内部实现类
+    //DomainParticipantImpl* dp_impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(dp_impl, nullptr);
+
+    InstanceHandle_t dummy_handle{};
+	dp->ignore_participant(dummy_handle);
+
+    // 销毁
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
+TEST(DomainParticipantImplTest, IgnoreTopic_Unsupported)
+{
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    //// 向下强转至实现类
+    //DomainParticipantImpl* dp_impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(dp_impl, nullptr);
+
+    InstanceHandle_t dummy_handle{};
+    // 调用接口
+    ReturnCode_t ret = dp->ignore_topic(dummy_handle);
+    // 断言返回固定不支持码
+    EXPECT_EQ(ret, RETCODE_UNSUPPORTED);
+
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
+TEST(DomainParticipantImplIgnoreTest, IgnorePubSubUnsupported)
+{
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    //DomainParticipantImpl* dp_impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(dp_impl, nullptr);
+
+    InstanceHandle_t dummy_handle{};
+    ReturnCode_t ret;
+
+    // 覆盖 ignore_publication
+    ret = dp->ignore_publication(dummy_handle);
+    EXPECT_EQ(ret, RETCODE_UNSUPPORTED);
+
+    // 覆盖 ignore_subscription
+    ret = dp->ignore_subscription(dummy_handle);
+    EXPECT_EQ(ret, RETCODE_UNSUPPORTED);
+
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
+TEST(DomainParticipantImplTest, AssertLiveliness)
+{
+    // 创建合法参与者，内部participant_自动赋值、存活管理器正常创建
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    //DomainParticipantImpl* dp_impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(dp_impl, nullptr);
+
+    // 调用保活上报接口
+    ReturnCode_t ret = dp->assert_liveliness();
+    // 正常初始化环境下预期返回成功
+    EXPECT_EQ(ret, RETCODE_OK);
+
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
+TEST(DomainParticipantImplTest, SetDefaultPublisherQos)
+{
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    //DomainParticipantImpl* impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(impl, nullptr);
+
+    ReturnCode_t rc;
+
+    PublisherQos default_qos = PUBLISHER_QOS_DEFAULT;
+    // 分支1：传入 PUBLISHER_QOS_DEFAULT 宏地址
+    rc = dp->set_default_publisher_qos(default_qos);
+    EXPECT_EQ(rc, RETCODE_OK);
+
+    // 分支2：传入合法自定义PublisherQoS，校验通过
+    PublisherQos valid_qos = PUBLISHER_QOS_DEFAULT;
+    rc = dp->set_default_publisher_qos(valid_qos);
+    EXPECT_EQ(rc, RETCODE_OK);
+
+    // 分支3：构造非法QoS，触发 CheckQos 失败分支
+    PublisherQos invalid_qos;
+    // 篡改 entity_factory 内部枚举值为非法值，让QoS校验不通过
+    invalid_qos.entity_factory.autoenable_created_entities = static_cast<bool>(9999);
+
+    // 10 > 2*1 违反约束，QoS校验会报错
+    rc = dp->set_default_publisher_qos(invalid_qos);
+    EXPECT_NE(!rc, RETCODE_OK);
+
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
+TEST(DomainParticipantImplTest, SetDefaultSubscriberQos_FullBranch)
+{
+    DomainParticipant* dp = TheParticipantFactory->create_participant(
+        0,
+        PARTICIPANT_QOS_DEFAULT,
+        nullptr,
+        STATUS_MASK_ALL
+    );
+    ASSERT_NE(dp, nullptr);
+
+    //DomainParticipantImpl* impl = dynamic_cast<DomainParticipantImpl*>(dp);
+    //ASSERT_NE(impl, nullptr);
+
+    ReturnCode_t rc;
+
+    // 分支1：传入 SUBSCRIBER_QOS_DEFAULT 常量
+    rc = dp->set_default_subscriber_qos(SUBSCRIBER_QOS_DEFAULT);
+    EXPECT_EQ(rc, RETCODE_OK);
+
+    // 分支2：普通合法 SubscriberQos
+    SubscriberQos normal_qos;
+    rc = dp->set_default_subscriber_qos(normal_qos);
+    EXPECT_EQ(rc, RETCODE_OK);
+
+    // 分支3：构造非法QoS，触发CheckQos错误分支
+    SubscriberQos invalid_qos;
+    invalid_qos.entity_factory.autoenable_created_entities = static_cast<bool>(0xFFFF);
+    rc = dp->set_default_subscriber_qos(invalid_qos);
+
+    EXPECT_NE(!rc, RETCODE_OK);
+
+    dp->delete_contained_entities();
+    TheParticipantFactory->delete_participant(dp);
+}
