@@ -417,13 +417,10 @@ ReturnCode_t MessageProcessor::EncapsulateINFOTSMessageNow(SerializedBuffer& mes
 													uint32_t& shift,
 													InfoTimestamp_t infoTS)
 {
-	Time_t timeNow;
-	Time_t::now(timeNow);
-
 	bool invalidateFlag = (infoTS.header.flags & SubMessageFlag::INVALIDATE_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (invalidateFlag) {
-		infoTS.timestamp = timeNow;
+		Time_t::now(infoTS.timestamp);
 	}
 
 	return EncapsulateINFOTSMessage(messageBuf, shift, infoTS);

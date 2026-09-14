@@ -35,7 +35,7 @@ public:
 
 	ReturnCode_t ReceiveAddrAdd(Locator_t receiveAddr);
 	
-	ReturnCode_t ReceiveAddrRemove(Locator_t ReceiveAddr) { static_cast<void>(ReceiveAddr); return RETCODE_OK; };
+	ReturnCode_t ReceiveAddrRemove(Locator_t ReceiveAddr);
 	
 	ReturnCode_t MessageSend(
 		Locator_t source,

@@ -152,69 +152,69 @@ TEST(StatusConditionTest, StatusCondition_REQUESTED_DEADLINE_MISSED_STATUS)
 }
 
 TEST(StatusConditionTest, StatusCondition_INCOMPATIBLE_QOS_STATUS) {
-	std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
-	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
-	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataWriterQos qos_dw;
-	qos_dw.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
-	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datawriter(top_w, qos_dw, nullptr, OFFERED_INCOMPATIBLE_QOS_STATUS);
-	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataReaderQos qos_dr;
-	qos_dr.reliability.kind = RELIABLE_RELIABILITY_QOS;
-	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datareader(top_r, qos_dr, nullptr, REQUESTED_INCOMPATIBLE_QOS_STATUS);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataWriterQos qos_dw;
+    qos_dw.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
+    DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datawriter(top_w, qos_dw, nullptr, OFFERED_INCOMPATIBLE_QOS_STATUS);
+    DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReaderQos qos_dr;
+    qos_dr.reliability.kind = RELIABLE_RELIABILITY_QOS;
+    DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datareader(top_r, qos_dr, nullptr, REQUESTED_INCOMPATIBLE_QOS_STATUS);
 
-	StatusCondition& sc_w = dw->get_statuscondition();
-	StatusCondition& sc_r = dr->get_statuscondition();
-	WaitSet ws;
+    StatusCondition& sc_w = dw->get_statuscondition();
+    StatusCondition& sc_r = dr->get_statuscondition();
+    WaitSet ws;
 
-	EXPECT_EQ(ws.attach_condition(sc_w), RETCODE_OK);
-	EXPECT_EQ(ws.attach_condition(sc_r), RETCODE_OK);
-	ConditionSeq active_conditions;
-	bool matched_writer = false;
-	bool matched_reader = false;
-
+    EXPECT_EQ(ws.attach_condition(sc_w), RETCODE_OK);
+    EXPECT_EQ(ws.attach_condition(sc_r), RETCODE_OK);
+    ConditionSeq active_conditions;
+    bool matched_writer = false;
+    bool matched_reader = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     for (int i = 0; i < 6; i++) {
         ws.wait(active_conditions, { 10,0 });
-		for (auto cond : active_conditions) {
-			if (cond == &sc_w) {
-				matched_writer = true;
-				OfferedIncompatibleQosStatus status;
-				dw->get_offered_incompatible_qos_status(status);
-				EXPECT_EQ(status.total_count, 1);
-				EXPECT_EQ(status.total_count_change, 1);
-				EXPECT_EQ(status.last_policy_id, RELIABILITY_QOS_POLICY_ID);
-				EXPECT_EQ(status.policies.size(), 1);
-				EXPECT_EQ(status.policies[0].policy_id, RELIABILITY_QOS_POLICY_ID);
-				EXPECT_EQ(status.policies[0].count, 1);
-			}
-			else if (cond == &sc_r) {
-				matched_reader = true;
-				RequestedIncompatibleQosStatus status;
-				dr->get_requested_incompatible_qos_status(status);
-				EXPECT_EQ(status.total_count, 1);
-				EXPECT_EQ(status.total_count_change, 1);
-				EXPECT_EQ(status.last_policy_id, RELIABILITY_QOS_POLICY_ID);
-				EXPECT_EQ(status.policies.size(), 1);
-				EXPECT_EQ(status.policies[0].policy_id, RELIABILITY_QOS_POLICY_ID);
-				EXPECT_EQ(status.policies[0].count, 1);
-			}
-		}
-		if (matched_writer && matched_reader) {
-			break;
-		}
-	}
-	EXPECT_TRUE(matched_writer);
-	EXPECT_TRUE(matched_reader);
-	par_w->delete_contained_entities();
-	par_r->delete_contained_entities();
-	TheParticipantFactory->delete_participant(par_w);
-	TheParticipantFactory->delete_participant(par_r);
+        for (auto cond : active_conditions) {
+            if (cond == &sc_w) {
+                matched_writer = true;
+                OfferedIncompatibleQosStatus status;
+                dw->get_offered_incompatible_qos_status(status);
+                EXPECT_EQ(status.total_count, 1);
+                EXPECT_EQ(status.total_count_change, 1);
+                EXPECT_EQ(status.last_policy_id, RELIABILITY_QOS_POLICY_ID);
+                EXPECT_EQ(status.policies.size(), 1);
+                EXPECT_EQ(status.policies[0].policy_id, RELIABILITY_QOS_POLICY_ID);
+                EXPECT_EQ(status.policies[0].count, 1);
+            }
+            else if (cond == &sc_r) {
+                matched_reader = true;
+                RequestedIncompatibleQosStatus status;
+                dr->get_requested_incompatible_qos_status(status);
+                EXPECT_EQ(status.total_count, 1);
+                EXPECT_EQ(status.total_count_change, 1);
+                EXPECT_EQ(status.last_policy_id, RELIABILITY_QOS_POLICY_ID);
+                EXPECT_EQ(status.policies.size(), 1);
+                EXPECT_EQ(status.policies[0].policy_id, RELIABILITY_QOS_POLICY_ID);
+                EXPECT_EQ(status.policies[0].count, 1);
+            }
+        }
+        if (matched_writer && matched_reader) {
+            break;
+        }
+    }
+    EXPECT_TRUE(matched_writer);
+    EXPECT_TRUE(matched_reader);
+    par_w->delete_contained_entities();
+    par_r->delete_contained_entities();
+    TheParticipantFactory->delete_participant(par_w);
+    TheParticipantFactory->delete_participant(par_r);
 
 }
 // 需要硬件模拟丢包配合测试
