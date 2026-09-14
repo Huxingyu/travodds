@@ -65,6 +65,38 @@ const  QosPolicyId_t  TRANSPORTPRIORITY_QOS_POLICY_ID = 20;
 const  QosPolicyId_t  LIFESPAN_QOS_POLICY_ID = 21;
 const  QosPolicyId_t  DURABILITYSERVICE_QOS_POLICY_ID = 22;
 
+struct FlowParametersQosPolicy
+{
+	int32_t maxBytesPerPeriod = 0; // 每个周期内最大发送字节数，0表示不限制
+
+	uint64_t periodMs = 1000; // 周期长度，单位毫秒
+	FlowParametersQosPolicy() = default;
+};
+enum FlowControllerQosKind {
+	// 完全同步,阻塞发送线程，直到接收线程处理完数据，策略调度无效
+	SYNC,
+	// 异步
+	ASYNC,
+	// 半同步，新数据同步，旧重传数据异步
+	SEMI_SYNC
+};
+
+enum class SchedulerQosPolicy {
+	// 先进先出
+	FIFO
+};
+struct FlowControllerConfigQosPolicy {
+	FlowControllerQosKind kind = FlowControllerQosKind::SEMI_SYNC;
+
+	SchedulerQosPolicy policy = SchedulerQosPolicy::FIFO;
+	FlowControllerConfigQosPolicy()
+	{
+
+	}
+};
+
+
+
 struct UserDataQosPolicy {
 	Sequence<octet> value;
 };
@@ -350,6 +382,8 @@ struct DomainParticipantQos {
 	DiscoveredMethodQosPolicy discovery;
 	NetworkInterfaceQosPolicy network_interface;
 	DynamicAdjustQosPolicy dynamic_adjust;
+	//20260713 
+	FlowParametersQosPolicy flow_parameters;
 	DomainParticipantQos() {
 	}
 };
@@ -391,6 +425,7 @@ struct DataWriterQos {
 	WriterDataLifecycleQosPolicy writer_data_lifecycle;
     /* 属性列表 */
     PropertyQosPolicy property;
+	FlowControllerConfigQosPolicy flow_controller_config;
 	DataWriterQos() {
 		reliability.kind = RELIABLE_RELIABILITY_QOS;
 	}

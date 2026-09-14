@@ -791,7 +791,11 @@ ReturnCode_t DataWriterImpl::enable()
 		return RETCODE_ERROR;
 	}
 
-    std::shared_ptr<Writer>  writerPtr = domainParticipant->GetRelatedParticipant()->CreateWriter(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
+
+	FlowControllerConfig flowContropllerConfig;
+	flowContropllerConfig.kind = (FlowControllerKind)qos_.flow_controller_config.kind;
+
+    std::shared_ptr<Writer>  writerPtr = domainParticipant->GetRelatedParticipant()->CreateWriter(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key(), flowContropllerConfig);
 	if (!writerPtr.get()) {
 		return RETCODE_ERROR;
 	}

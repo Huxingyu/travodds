@@ -7,7 +7,12 @@
 #include "common/log/logger.h"
 #include <algorithm>
 USING_TRAVODDS_NAMESPACE
-
+LivelinesStatus::LivelinesStatus(): guid_()
+{
+	livelinessQos_.kind = LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS;
+	livelinessQos_.lease_duration = TIME_INFINITE;
+	status_ = WriterStatus::NOTASSERTED;
+}
 LivelinessManager::LivelinessManager(Participant* participant):participant_(participant), automaticReaders_(false)
 {
 	GUID_t tmpGuid = participant_->GetGuid();

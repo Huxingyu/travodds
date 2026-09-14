@@ -88,6 +88,10 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	qos_ = qos;
 
 	FlowParameters flowParameters;
+	//20260713 
+	flowParameters.maxBytesPerPeriod  = qos.flow_parameters.maxBytesPerPeriod;
+	flowParameters.periodMs = qos.flow_parameters.periodMs;
+
 	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
 	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	regulator_ = std::make_unique<DynamicPerformanceRegulator>(qos.dynamic_adjust, flowRateLimitedManager_.get());

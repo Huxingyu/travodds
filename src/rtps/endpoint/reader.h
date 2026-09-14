@@ -21,9 +21,7 @@ TRAVODDS_NAMESPACE_BEGIN
 
 class ReaderListener {
 public:
-	virtual void on_data_available(std::shared_ptr<CacheChange> change) {
-		static_cast<void>(change);
-	};
+	virtual void on_data_available(std::shared_ptr<CacheChange> change) = 0;
 };
 
 class DataReaderImpl;
