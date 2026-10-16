@@ -295,6 +295,12 @@ public:
 
 	static bool IsRegexPattern(const std::string& str);
 
+	/* 【新增】检查字符串是否包含通配符(POSIX fnmatch风格 : *? []) */
+	static bool IsWildcardPattern(const std::string& str);
+
+	/* 【新增】将通配符表达式转换为等价的正则表达式 */
+	static std::string ConvertWildcardToRegex(const std::string& wildcard);
+
 	bool RegexPartitionMatch(const std::string& pubName, const std::string& subName);
 
 	bool RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns);
