@@ -850,7 +850,7 @@ ReturnCode_t DataReaderImpl::enable()
 	readerData.contentFilter = contentFilter_;
 	/* jdxcz TODO */
 	readerData.unicastLocatorList = domainParticipant->GetRelatedParticipant()->GetDefaultUnicastLocators();
-	readerData.multicastLocatorList = domainParticipant->GetRelatedParticipant()->GetMetatrafficMulticastLocators();
+	readerData.multicastLocatorList = domainParticipant->GetRelatedParticipant()->GetDefaultMulticastLocators();
 
 
 	discovery->WriteSubscriptionData(readerData);
