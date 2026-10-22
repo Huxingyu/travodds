@@ -19,7 +19,7 @@
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		-DCMAKE_INSTALL_PREFIX=/opt/agiros/loong \
+		-DCMAKE_INSTALL_PREFIX=/opt/agiros/pixiu \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 override_dh_auto_install:
