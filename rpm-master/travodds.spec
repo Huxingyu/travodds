@@ -67,7 +67,7 @@ echo "%{Installprefix}/lib/travodds" > %{buildroot}/etc/ld.so.conf.d/travodds.co
 # 开发包文件列表（头文件、符号链接等）
 %files devel
 %{Installprefix}/include/travodds/
-%{Installprefix}/lib/travodds/libtravodds.so
+%{Installprefix}/lib/libtravodds.so
 %{Installprefix}/share/travodds/cmake/
 
 %post

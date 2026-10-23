@@ -103,7 +103,7 @@ option(BUILD_SHARED_LIBS "Create shared libraries by default" ON)
 ###############################################################################
 # 默认DDS 安全配置选项启用
 ###############################################################################
-option(SECURITY "Enable DDS Security features" OFF)
+option(SECURITY "Enable DDS Security features"  OFF)
 
 ###############################################################################
 # 加载外部项目

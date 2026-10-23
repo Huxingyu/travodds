@@ -32,13 +32,9 @@ struct LivelinesStatus
 
     /**
      * @brief 构造函数，生成默认值LivelinesStatus对象。
+	 * jdxcz TODO是否删除
      */
-    LivelinesStatus(): guid_()
-    {
-        livelinessQos_.kind = LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS;
-        livelinessQos_.lease_duration = TIME_INFINITE;
-        status_ = WriterStatus::NOTASSERTED;
-    }
+    LivelinesStatus();
 
     /**
      * @brief 析构函数。

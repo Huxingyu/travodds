@@ -6,6 +6,7 @@
 #include <map>
 #include <cstdint>
 #include "cdr/travoddscdr.h"
+USING_TRAVODDS_NAMESPACE
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -96,6 +97,7 @@ public:
     unsigned long long ulonglongField;
     float floatField;
     double doubleField;
+    LongDouble long_doubleField;
     char boolField;
     char charField;
     unsigned char byteField;
@@ -107,6 +109,13 @@ public:
     double doubleArray[5];
     char boolArray[3];
     std::string stringArray[4];
+    unsigned char byteArray[10];
+    short shortArray[5];
+    unsigned short usArray[5];
+    long long llArray[3];
+    unsigned long long ullArray[3];
+    LongDouble ldArray[10];
+    unsigned int ulArray[2];
     int matrix2x3[2][3];
     float floatMatrix[3][3];
     TestModule::Matrix4x4 matrix4x4;

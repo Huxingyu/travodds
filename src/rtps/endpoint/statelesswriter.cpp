@@ -186,7 +186,7 @@ void StatelessWriter::ReaderLocatorAdd(Locator_t& locator, const GUID_t& guid)
 			readerLocator->SetHistoryCache(writerCache_);
 			return;
 		}
-		itor->second->LocatorAdd(locator);
+		//itor->second->LocatorAdd(locator);
 	}
 }
 
@@ -288,6 +288,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
 	transportGroup_.GetLocator(prefixs, dstLocators);
 
+	if (prefixs.empty() && dstLocators.empty()) {
+		return RETCODE_OK;
+	} else if (dstLocators.empty()) {
+		return RETCODE_ERROR;
+	}
+
 	if (buffer->next) {
 		DataFragSubMessage_t dataFragSubMessage;
 
@@ -300,7 +306,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		dataFragSubMessage.header.flags |= IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 
 		/* wangyi fastdds 适配测试默认16 */
-		dataFragSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
+		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
@@ -331,6 +337,11 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
 			MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
 
+			InfoTimestamp_t ints;
+			ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+			ints.timestamp = change->sourceTimespace;
+			MessageProcessor::EncapsulateINFOTSMessageNow(*buffer, shift, ints);
+	
 #ifdef DDSSECURITY
 			//加密子消息
 			SerializedBuffer srcBuffer;
@@ -483,6 +494,10 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 
         MessageProcessor::EncapsulateDATAMessage(*change->serializedBuffer, shift, dataSubMessage);
 
+		InfoTimestamp_t ints;
+		ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
+		ints.timestamp = change->sourceTimespace;
+		MessageProcessor::EncapsulateINFOTSMessageNow(*change->serializedBuffer, shift, ints);
 #ifdef DDSSECURITY
         // srcBuffer指向被加密子消息
         SerializedBuffer srcBuffer;

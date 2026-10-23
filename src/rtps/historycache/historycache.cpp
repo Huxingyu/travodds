@@ -114,6 +114,7 @@ std::shared_ptr<CacheChange> HistoryCache::GetChange(const SequenceNumber_t& seq
 std::shared_ptr<CacheChange> HistoryCache::GetMinSourceTimespace()
 {
 	std::shared_ptr<CacheChange> MinSourceTimespaceCache = nullptr;
+	std::lock_guard<std::mutex> lock(changeMutex_);
 
 	for (auto itor = instanceChanges_.begin(); itor != instanceChanges_.end();itor++) {
 		if (itor->second.cacheChanges.empty()) continue;
@@ -184,6 +185,7 @@ ReturnCode_t HistoryCache::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheC
 			}
 			sampleInfo.write_sequence_number = (*cache)->sequenceNumber.low;
 			sampleInfo.source_timestamp = (*cache)->sourceTimespace;
+			sampleInfo.related_sample_identity = (*cache)->related_sample_identity;
 			dataValues.push_back(*cache);
 			sampleInfos.push_back(sampleInfo);
 
@@ -589,7 +591,7 @@ bool HistoryCache::GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::
 	return true;
 }
 
-void HistoryCache::SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache)
+void HistoryCache::SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange>& cache)
 {
 	std::unique_lock<std::mutex> lock(changeMutex_);
 	auto& readinstance = instanceChanges_[handle];

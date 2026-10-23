@@ -91,7 +91,7 @@ public:
 	 *
 	 * @return 返回远端DataReader Guid配置信息。
 	 */
-	GUID_t GetGuid();
+	GUID_t GetGuid() const;
 
 	/**
 	 * @brief 判定报文请求是否已确认。

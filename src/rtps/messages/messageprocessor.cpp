@@ -156,7 +156,11 @@ ReturnCode_t MessageProcessor::EncapsulateDataFragMessage(SerializedBuffer& mess
 		}
 	}
 	shift += sizeof(DataFrag_t);
-	memcpy(messageBuf.buffer - shift, &dataFragSubMessage.dataFrag, sizeof(DataFrag_t));
+	
+	/* 添加大小端信息大小 */
+	DataFrag_t dataFrag = dataFragSubMessage.dataFrag;
+	dataFrag.sampleSize += sizeof(uint32_t);
+	memcpy(messageBuf.buffer - shift, &dataFrag, sizeof(DataFrag_t));
 	
 	shift += sizeof(SequenceNumber_t);
 	memcpy(messageBuf.buffer - shift, &dataFragSubMessage.writerSN, sizeof(SequenceNumber_t));
@@ -413,13 +417,10 @@ ReturnCode_t MessageProcessor::EncapsulateINFOTSMessageNow(SerializedBuffer& mes
 													uint32_t& shift,
 													InfoTimestamp_t infoTS)
 {
-	Time_t timeNow;
-	Time_t::now(timeNow);
-
 	bool invalidateFlag = (infoTS.header.flags & SubMessageFlag::INVALIDATE_FLAG) != SubMessageFlag::NONE_FLAG;
 
 	if (invalidateFlag) {
-		infoTS.timestamp = timeNow;
+		Time_t::now(infoTS.timestamp);
 	}
 
 	return EncapsulateINFOTSMessage(messageBuf, shift, infoTS);
@@ -888,7 +889,7 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> m
 
 	/*  判断是否存在inlineQos */
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message->buffer, messageShift, dataSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataSubMessage.inlineQos,dataSubMessage.related_sample_identity, endiannessFlag);
 	}
 
 	/* 判断是否有Serialized Data数据 */
@@ -1146,9 +1147,12 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 		dataFragSubMessage.dataFrag.fragmentSize			= htons(dataFragSubMessage.dataFrag.fragmentSize);
 	}
 
+	/* 移除大小端信息大小 */
+	dataFragSubMessage.dataFrag.sampleSize -= sizeof(uint32_t);
+	
 	/* 判断是否存在inlineQos*/
 	if (inlineQosFlag) {
-		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, endiannessFlag);
+		InterpretInlineQosMessage(message->buffer, messageShift, dataFragSubMessage.inlineQos, dataFragSubMessage.related_sample_identity,endiannessFlag);
 	}
 
 	if (!keyFlag) {
@@ -1230,6 +1234,7 @@ ReturnCode_t MessageProcessor::InterpretINFODSTMessage(char* message,
 ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 	uint32_t& messageShift,
 	ParameterList_t& inlineQos,
+	SampleIdentity& related_sample_identity,
 	bool endiannessFlag)
 {
 	Parameter_t parameter;
@@ -1244,10 +1249,23 @@ ReturnCode_t MessageProcessor::InterpretInlineQosMessage(char*& message,
 			parameter.length = ntohs(parameter.length);
 		}
 
-		parameter.value.assign(message + messageShift, message + messageShift + parameter.length);
-		messageShift += parameter.length;
+		if (parameter.parameterId == PID_RELATED_SAMPLE_IDENTITY ||
+			parameter.parameterId == PID_CUSTOM_RELATED_SAMPLE_IDENTITY) {
+			memcpy(related_sample_identity.writer_handle.keyHash.value, message + messageShift, MIG_RTPS_KEY_HASH_MAX_LENGTH);
+			related_sample_identity.writer_handle.isValid = true;
+			messageShift += MIG_RTPS_KEY_HASH_MAX_LENGTH;
+			memcpy(&related_sample_identity.sequence_number, message + messageShift, sizeof(SequenceNumber_t));
+			if (IS_LITTLE_ENDIAN != endiannessFlag) {
+				related_sample_identity.sequence_number.high = ntohs(related_sample_identity.sequence_number.high);
+				related_sample_identity.sequence_number.low = ntohs(related_sample_identity.sequence_number.low);
+			}
+			messageShift += sizeof(SequenceNumber_t);
+		} else {
+			parameter.value.assign(message + messageShift, message + messageShift + parameter.length);
+			messageShift += parameter.length;
 
-		inlineQos.push_back(parameter);
+			inlineQos.push_back(parameter);
+		}
 
 		memcpy(&parameter, message + messageShift, sizeof(parameter.parameterId) + sizeof(parameter.length));
 		messageShift += sizeof(parameter.parameterId) + sizeof(parameter.length);

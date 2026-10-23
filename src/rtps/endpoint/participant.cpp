@@ -88,6 +88,10 @@ ReturnCode_t Participant::Init(const DomainParticipantQos& qos)
 	qos_ = qos;
 
 	FlowParameters flowParameters;
+	//20260713 
+	flowParameters.maxBytesPerPeriod  = qos.flow_parameters.maxBytesPerPeriod;
+	flowParameters.periodMs = qos.flow_parameters.periodMs;
+
 	flowRateLimitedManager_ = std::make_unique<FlowRateLimitedManager>(this, flowParameters);
 	flowControlManager_ = std::make_unique<FlowControlManager>(this);
 	regulator_ = std::make_unique<DynamicPerformanceRegulator>(qos.dynamic_adjust, flowRateLimitedManager_.get());
@@ -1270,6 +1274,7 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 	if (0 != pubData.partition.name.size()  || 0 != subData.partition.name.size()) {
 		ret = RegexPartitionsMatch(pubData.partition.name, subData.partition.name);
 	}
+
 	//for (auto pubName : pubData.partition.name) {
 	//	if (ret) {
 	//		/* 已经匹配成功 */
@@ -1386,46 +1391,115 @@ bool Participant::IsRegexPattern(const std::string& str)
 	return false;
 }
 
+/* 检查字符串是否包含通配符 */
+bool Participant::IsWildcardPattern(const std::string& str)
+{
+	return str.find('*') != std::string::npos ||
+		str.find('?') != std::string::npos ||
+		str.find('[') != std::string::npos ||
+		str.find(']') != std::string::npos;
+}
+
+/* 将通配符转换为等价的正则表达式 */
+std::string Participant::ConvertWildcardToRegex(const std::string& wildcard)
+{
+	std::string regexStr;
+	for (char c : wildcard) {
+		switch (c) {
+		case '*': regexStr += ".*"; break;
+		case '?': regexStr += "."; break;
+			// 转义正则表达式的特殊字符，防止语义冲突
+		case '.': regexStr += "\\."; break;
+		case '+': regexStr += "\\+"; break;
+		case '^': regexStr += "\\^"; break;
+		case '$': regexStr += "\\$"; break;
+		case '|': regexStr += "\\|"; break;
+		case '(': regexStr += "\\("; break;
+		case ')': regexStr += "\\)"; break;
+		case '{': regexStr += "\\{"; break;
+		case '}': regexStr += "\\}"; break;
+		default: regexStr += c; break; // [ 和 ] 保留，正则和 fnmatch 都支持字符集
+		}
+	}
+	return regexStr;
+}
+
 /* 分区匹配检测函数 */
-bool Participant::RegexPartitionMatch(const std::string& pubName,const std::string& subName)
+bool Participant::RegexPartitionMatch(const std::string& pubName, const std::string& subName)
 {
 	bool pubIsRegex = IsRegexPattern(pubName);
 	bool subIsRegex = IsRegexPattern(subName);
+	bool pubIsWildcard = IsWildcardPattern(pubName);
+	bool subIsWildcard = IsWildcardPattern(subName);
 
-	/* 规则1: 双方都是正则模式 -> 不匹配 */
-	if (pubIsRegex && subIsRegex) {
+	// 规则1: 双方都是正则模式，或双方都是通配符模式 -> 不匹配（符合 DDS 规范）
+	if ((pubIsRegex && subIsRegex) || (pubIsWildcard && subIsWildcard)) {
 		return false;
 	}
 
 	try {
-		/* 规则2: 发布者是正则，订阅者是具体名称 */
-		if (pubIsRegex && !subIsRegex) {
-			std::regex pubPattern(pubName);
+		std::regex pubPattern;
+		std::regex subPattern;
+		bool pubHasPattern = false;
+		bool subHasPattern = false;
+
+		// 处理发布者模式（正则或通配符）
+		if (pubIsRegex) {
+			pubPattern = std::regex(pubName);
+			pubHasPattern = true;
+		}
+		else if (pubIsWildcard) {
+			pubPattern = std::regex(ConvertWildcardToRegex(pubName));
+			pubHasPattern = true;
+		}
+
+		// 处理订阅者模式（正则或通配符）
+		if (subIsRegex) {
+			subPattern = std::regex(subName);
+			subHasPattern = true;
+		}
+		else if (subIsWildcard) {
+			subPattern = std::regex(ConvertWildcardToRegex(subName));
+			subHasPattern = true;
+		}
+
+		// 规则2: 发布者是模式，订阅者是具体名称
+		if (pubHasPattern && !subHasPattern) {
 			return std::regex_match(subName, pubPattern);
 		}
 
-		/* 规则3: 订阅者是正则，发布者是具体名称 */
-		if (!pubIsRegex && subIsRegex) {
-			std::regex subPattern(subName);
+		// 规则3: 订阅者是模式，发布者是具体名称
+		if (!pubHasPattern && subHasPattern) {
 			return std::regex_match(pubName, subPattern);
 		}
 
-		/* 规则4: 双方都是具体名称 */
+		// 规则4: 双方都是具体名称
 		return pubName == subName;
 	}
 	catch (const std::regex_error& e) {
-		std::cerr << "正则表达式错误: " << e.what()
-			<< " 模式: " << (pubIsRegex ? pubName : subName)
-			<< std::endl;
+		// 【修改】使用标准日志宏，避免污染标准错误输出
+		TRAVODDS_LOG(LOG_ERROR, "Regex error: %s, Pattern: %s", e.what(),
+			(pubIsRegex || pubIsWildcard) ? pubName.c_str() : subName.c_str());
 		return false;
 	}
 }
 
 /* 分区列表匹配 */
-bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const StringSeq& subPatterns)
+bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions, const StringSeq& subPatterns)
 {
-	for (const auto& subPattern : subPatterns) {
-		for (const auto& pubPartition : pubPartitions) {
+	// 【修改】处理默认分区（空字符串 ""），依据规范：空字符串被视为有效分区
+	StringSeq effectivePub = pubPartitions;
+	StringSeq effectiveSub = subPatterns;
+
+	if (effectivePub.empty()) {
+		effectivePub.push_back("");
+	}
+	if (effectiveSub.empty()) {
+		effectiveSub.push_back("");
+	}
+
+	for (const auto& subPattern : effectiveSub) {
+		for (const auto& pubPartition : effectivePub) {
 			if (RegexPartitionMatch(pubPartition, subPattern)) {
 				return true;
 			}
@@ -1433,6 +1507,7 @@ bool Participant::RegexPartitionsMatch(const StringSeq& pubPartitions,const Stri
 	}
 	return false;
 }
+
 #ifdef DDSSECURITY
 WriterSampleList* Participant::addReaderMatchWithSecurity(std::shared_ptr<Reader> reader, const DiscoveredWriterData& pubData, bool isSecure)
 {

@@ -88,7 +88,8 @@ void Spdp::SetParticipantDataWriter(std::shared_ptr<DataWriterImpl> dataWriter)
 	}
 	writer_ = std::dynamic_pointer_cast<StatelessWriter>(writer);
 
-	writer_->SetResendDataPeriod(leaseDuration_);
+	Duration_t leaseDuration = { 5, 0};
+	writer_->SetResendDataPeriod(leaseDuration);
 	DomainParticipantQos dpqos;
 	dataWriter->get_publisher()->get_participant()->get_qos(dpqos);
 	//TODO 补充locator与ip的装换函数
@@ -941,7 +942,7 @@ void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
 	if (0 == remoteParticipantStatus_.count(key)) {
-		TRAVODDS_LOG(LOG_DEBUG, "guid not exist");
+		//TRAVODDS_LOG(LOG_DEBUG, "guid not exist");
 		return;
 	}
 		

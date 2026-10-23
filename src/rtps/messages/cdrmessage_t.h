@@ -31,18 +31,15 @@ struct Message_t {
 	char* buffer;
 	uint32_t length;
 	char* originBuffer;
-	bool onlyCopy;  /* 仅允许拷贝，不允许共享控制权 */
-	Message_t(char* buffer, uint32_t length, bool copy = false)
+	Message_t(char* buffer, uint32_t length)
 	  : buffer(buffer),
 	    length(length),
-	    originBuffer(buffer),
-		onlyCopy(copy) {
+	    originBuffer(buffer){
 	}
 	Message_t(const Message_t& other)
 	  : buffer(other.buffer),
 		length(other.length),
-		originBuffer(other.originBuffer),
-		onlyCopy(other.onlyCopy) {
+		originBuffer(other.originBuffer){
 	}
 };
 
@@ -249,6 +246,8 @@ struct DataSubMessage_t {
 	EntityId_t writerId;
 	SequenceNumber_t writerSN;
 	ParameterList_t inlineQos; 
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
 	SerializedPayload serializedPayload;
 };
 
@@ -359,6 +358,8 @@ struct DataFragSubMessage_t {
 
 	//TODO
 	ParameterList_t inlineQos;
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
 	DataFrag_t dataFrag;
 	SerializedPayload serializedPayload;
 };

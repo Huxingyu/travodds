@@ -848,6 +848,11 @@ ReturnCode_t DataReaderImpl::enable()
 	//readerData.remoteReaderGuid = reader_->GetGuid();
 	readerData.ddsSubscriptionData = GetBuiltinTopicData();
 	readerData.contentFilter = contentFilter_;
+	/* jdxcz TODO */
+	readerData.unicastLocatorList = domainParticipant->GetRelatedParticipant()->GetDefaultUnicastLocators();
+	readerData.multicastLocatorList = domainParticipant->GetRelatedParticipant()->GetDefaultMulticastLocators();
+
+
 	discovery->WriteSubscriptionData(readerData);
 #endif // DDSSECURITY
 

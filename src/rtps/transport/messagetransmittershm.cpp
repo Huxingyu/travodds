@@ -23,15 +23,15 @@ MessageTransmitterSHM::~MessageTransmitterSHM()
 	}
 	sendSockets_.clear();
 
+	for (auto& it : recvSockets_) {
+		it->Close();
+	}
+	recvSockets_.clear();
+
 	if (acceptor_) {
 		acceptor_->Close();
 		acceptor_.reset();
 	}
-
-	for (auto& it : recvSockets_) {
-		it->Close();
-	}
-	sendSockets_.clear();
 }
 
 
@@ -100,7 +100,11 @@ ReturnCode_t  MessageTransmitterSHM::ReceiveAddrAdd(Locator_t receiveAddr)
 	}
 	return RETCODE_OK;
 }
-
+ReturnCode_t MessageTransmitterSHM::ReceiveAddrRemove(Locator_t ReceiveAddr) 
+{ 
+	static_cast<void>(ReceiveAddr); 
+	return RETCODE_OK; 
+}
 ReturnCode_t MessageTransmitterSHM::MessageSend(
 	Locator_t source,
 	Locator_t destination,
@@ -158,7 +162,10 @@ void MessageTransmitterSHM::SetStop()
 
 ReturnCode_t MessageTransmitterSHM::InterpretMessage(char* message, uint32_t len)
 {
-	return messageProcessor_->InterpretSubmessage(std::make_shared<Message_t>(message, len, true));
+    char* buffer = nullptr;
+	receivePool_->getBuffer(len, buffer);
+	std::memcpy(buffer, message, len);
+	return MessageTransmitter::InterpretMessage(buffer, len);
 }
 
 bool MessageTransmitterSHM::IsLocalhost(Locator_t locator)
@@ -187,8 +194,10 @@ void MessageTransmitterSHM::AsyncAccept()
 				if (!ec) {
 				    recvSockets_.insert(newSocket);
 				} else {
-					TRAVODDS_LOG(LOG_DEBUG,
-						"Accept error: %s", ec->what());
+					std::string err = ec->what();
+					if (err != "Accept is shutdown.") {
+						TRAVODDS_LOG(LOG_ERROR, "Accept unexpected error: %s", err.c_str());
+					} 
 				}
 				flagNum_.fetch_sub(1, std::memory_order_release);
 				if (acceptor_ && !acceptor_->IsShutdown()) {

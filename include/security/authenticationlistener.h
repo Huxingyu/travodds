@@ -11,6 +11,7 @@
 //See the Mulan PSL v2 for more details.
 #ifndef AUTHENTICATION_LISTENER_H
 #define AUTHENTICATION_LISTENER_H
+#include "travodds_dll.h"
 #ifdef DDSSECURITY
 TRAVODDS_NAMESPACE_BEGIN
 

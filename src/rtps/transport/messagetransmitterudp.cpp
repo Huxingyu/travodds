@@ -41,8 +41,9 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		/* 该发送IP的地址和优先级已创建发送socket，直接返回 */
 		if (0 != sendSocketMap_.count(uiAddress) && 0 != sendSocketMap_[uiAddress].count(priority)) {
 			return RETCODE_OK;
-		} 
-	} else {
+		}
+	}
+	else {
 		/* 该发送IP+端口号已创建发送socket，直接返回 */
 		if (sendPortSocketMap_.count(src) != 0) {
 			return RETCODE_OK;
@@ -82,9 +83,14 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		0010–maximize reliability；
 		0001–minimize monetary cost。
 		*/
-		int32_t tos_value = 1;
-		asio::detail::socket_option::integer<IPPROTO_IP, IP_TOS> tos_option(tos_value);
-		NewSendSocket->set_option(tos_option);
+		try {
+			int32_t tos_value = 1;
+			asio::detail::socket_option::integer<IPPROTO_IP, IP_TOS> tos_option(tos_value);
+			NewSendSocket->set_option(tos_option);
+		}
+		catch (std::exception& e) {
+			TRAVODDS_LOG(LOG_ERROR, "Set IP_TOS failed (ignored): %s", e.what());
+		}
 
 		/* 既不指定发送ip也不指定发送端口号时，不进行绑定操作，由系统自动选择 */
 		if (0 == src.port && src.Empty()) {
@@ -102,7 +108,8 @@ ReturnCode_t MessageTransmitterUDP::SendAddrAdd(Locator_t source, Locator_t dest
 		NewSendSocket->bind(local_endpoint);
 		if (0 == src.port) {
 			sendSocketMap_[uiAddress][priority] = std::move(NewSendSocket);
-		} else {
+		}
+		else {
 			sendPortSocketMap_.insert(std::pair<Locator_t, std::shared_ptr<asio::ip::udp::socket>>(src, NewSendSocket));
 		}
 

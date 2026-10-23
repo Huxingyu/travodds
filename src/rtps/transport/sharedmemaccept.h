@@ -48,8 +48,6 @@ private:
 
     bool isClosed_ = false;
 
-    std::atomic<uint32_t> refs_;
-
     std::unique_ptr<InterprocessType::managed_shared_memory> segment_;
 
     InterprocessType::SharedAcceptList* sharedAcceptList_;

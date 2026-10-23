@@ -733,9 +733,9 @@ private:
          qos.destination_order.kind = BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS;
          qos.history.kind = KEEP_LAST_HISTORY_QOS;
          qos.history.depth = 1;
-         qos.resource_limits.max_samples = 5000;
-         qos.resource_limits.max_instances = 10;
-         qos.resource_limits.max_samples_per_instance = 400;
+         qos.resource_limits.max_samples = LENGTH_UNLIMITED;
+         qos.resource_limits.max_instances = LENGTH_UNLIMITED;
+         qos.resource_limits.max_samples_per_instance = LENGTH_UNLIMITED;
          qos.user_data.value.clear();
          qos.ownership.kind = SHARED_OWNERSHIP_QOS;
          qos.time_based_filter.minimum_separation = TIME_ZERO;

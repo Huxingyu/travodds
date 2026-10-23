@@ -120,6 +120,9 @@ public:
 	/* 需要过滤的订阅者 */
 	std::set<GUID_t> filterReaders_;
 
+	// Related Sample Identity (Extension for RPC)
+	SampleIdentity related_sample_identity;
+
 	/**
 	 * @brief 构造函数。
 	 */
@@ -132,7 +135,6 @@ public:
 		fragmentTatolNum(0),
         memoryPool(MemoryPool::GetInstance())
 	{
-		serializedBuffer = nullptr;
 	}
 
 	/**
@@ -404,7 +406,7 @@ public:
 	void UpAllDeadline(const std::chrono::steady_clock::time_point& nextDeadline);
 
 	bool GetNextTimeBasedFilte(InstanceHandle_t& handle, std::chrono::steady_clock::time_point& nextTime);
-	void SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange> cache);
+	void SetNextTimeBasedFilte(const InstanceHandle_t& handle, std::shared_ptr<CacheChange>& cache);
 	void RsetAllTimeBasedFilte();
 
 	void RemoveRemoteWriter(const GUID_t& guid);

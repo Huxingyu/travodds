@@ -137,20 +137,14 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	if (!dataFlags.nonStandardPayloadFlag && nullptr != data.data) {
 		buffer->writer_position = data.length;
 		buffer->buffer_size = data.length;
-		if (data.originMessage->onlyCopy) {
-			MemoryPool::GetInstance()->getBuffer(data.length, buffer->origin_buffer);
-			buffer->buffer = buffer->origin_buffer;
-			memcpy(buffer->buffer, data.data, data.length);
-		} else {
-			buffer->buffer = data.data;
-			buffer->originMessage = data.originMessage;
-		}
-
+		buffer->buffer = data.data;
+		buffer->originMessage = data.originMessage;
 	}
 
 	std::shared_ptr<CacheChange> cache = new_change(kind, buffer, dataHandle, pubHandle, headerMsg.timestamp);
 	cache->sequenceNumber = dataMsg.writerSN;
 	cache->inlineQos = dataMsg.inlineQos;
+	cache->related_sample_identity = dataMsg.related_sample_identity;
 
 	ReturnCode_t ret = RETCODE_OK;
 
@@ -215,6 +209,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 		std::shared_ptr<CacheChange> dataFragCache = new_change(kind, nullptr, dataHandle, pubHandle, headerMsg.timestamp);
 
 		dataFragCache->sequenceNumber = dataMsg.writerSN;
+		dataFragCache->related_sample_identity = dataMsg.related_sample_identity;
 		dataFragCache->dataSize = dataMsg.dataFrag.sampleSize;
 		dataFragCache->fraqmentSize = dataMsg.dataFrag.fragmentSize;
 		dataFragCache->fragmentTatolNum = dataMsg.dataFrag.sampleSize / dataMsg.dataFrag.fragmentSize;
@@ -295,7 +290,7 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	std::vector<NackFragSubMessage_t> nackFragVec;
 	proxy->GetNackSequenceSet(nackFragVec);
 	/*  发送Nack的报文  */
-	if (set.bitmap.size != 0 || flags.finalFlag) {
+	if (set.bitmap.size != 0 || !flags.finalFlag) {
 		//TODO 存在丢包，或者强制回复Ack报文。创建Ack报文进行回复 
 		/* 1. 先给分片数据发送NackFrag  */
 		for (size_t i = 0; i < nackFragVec.size(); i++) {
@@ -580,7 +575,12 @@ ReturnCode_t StatefulReader::SendAckMessage(std::shared_ptr<WriterProxy> writerP
 	uint32_t lengthInfoMsg = 0;
 #endif // DDSSECURITY
 
-	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG) | SubMessageFlag::FINAL_FLAG;
+	ackMsg.header.flags = (IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG);
+
+	if (ackMsg.readerSNState.bitmap.size == 0)
+	{
+		ackMsg.header.flags |= SubMessageFlag::FINAL_FLAG;
+	}
 
 	// 序列化AckNack, bufffer指向AckNack头部位置
 	MessageProcessor::EncapsulateAckNackMessage(bufffer, shift, ackMsg); // 出参shift为AckNack消息长度

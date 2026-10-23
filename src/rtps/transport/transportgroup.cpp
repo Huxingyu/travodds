@@ -13,7 +13,7 @@ void TransportGroup::AddLocator(const GuidPrefix_t& prefix, const LocatorSeq& lo
             [](const Locator_t& a, const Locator_t& b) {
                 return uint32_t(a.kind - 5) < uint32_t(b.kind - 5);
             });
-        locators_.insert({ prefix ,{locs, 0}});
+        locators_.insert({ prefix ,{locs, 1}});
     } else {
         itor->second.second++;
     }
