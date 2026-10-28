@@ -62,7 +62,7 @@ class file_wrapper
 
    //!Creates a file object with name "name" and mode "mode", with the access mode "mode"
    //!If the file previously exists, throws an error.
-   //! 
+   //!
    //!Note: This function is only available on operating systems with
    //!      native wchar_t APIs (e.g. Windows).
    file_wrapper(create_only_t, const wchar_t *name, mode_t mode, const permissions &perm = permissions())
@@ -71,7 +71,7 @@ class file_wrapper
    //!Tries to create a file with name "name" and mode "mode", with the
    //!access mode "mode". If the file previously exists, it tries to open it with mode "mode".
    //!Otherwise throws an error.
-   //! 
+   //!
    //!Note: This function is only available on operating systems with
    //!      native wchar_t APIs (e.g. Windows).
    file_wrapper(open_or_create_t, const wchar_t *name, mode_t mode, const permissions &perm  = permissions())
@@ -79,7 +79,7 @@ class file_wrapper
 
    //!Tries to open a file with name "name", with the access mode "mode".
    //!If the file does not previously exist, it throws an error.
-   //! 
+   //!
    //!Note: This function is only available on operating systems with
    //!      native wchar_t APIs (e.g. Windows).
    file_wrapper(open_only_t, const wchar_t *name, mode_t mode)

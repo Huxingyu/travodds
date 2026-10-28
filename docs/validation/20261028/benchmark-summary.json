@@ -1,0 +1,1069 @@
+{
+  "utc": "2026-10-28T06:33:52.583270+00:00",
+  "passed": true,
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+  "libc": [
+    "glibc",
+    "2.39"
+  ],
+  "cpu_count": 2,
+  "binary": "/home/ubuntu/project/travodds/artifacts/local-loan/build-benchmark/datasharing_benchmark",
+  "binary_sha256": "02dfea227bd5039ae060d9753eaaccf98826ded2bda436b4e5a014a21cc4cc5f",
+  "meminfo": "MemTotal:        2014872 kB\nMemFree:          343052 kB\nMemAvailable:    1150360 kB\nBuffers:           31604 kB\nCached:           878508 kB\nSwapCached:        47268 kB\nActive:           748940 kB\nInactive:         632708 kB\nActive(anon):     390756 kB\nInactive(anon):    92360 kB\nActive(file):     358184 kB\nInactive(file):   540348 kB\nUnevictable:       29200 kB\nMlocked:           27664 kB\nSwapTotal:       2035708 kB\nSwapFree:         744472 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              5224 kB\nWriteback:             0 kB\nAnonPages:        453784 kB\nMapped:           205656 kB\nShmem:              2776 kB\nKReclaimable:      80540 kB\nSlab:             165396 kB\nSReclaimable:      80540 kB\nSUnreclaim:        84856 kB\nKernelStack:        7200 kB\nPageTables:        22856 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     3043144 kB\nCommitted_AS:    4678384 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       22284 kB\nVmallocChunk:          0 kB\nPercpu:             1464 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      153464 kB\nDirectMap2M:     1943552 kB\nDirectMap1G:           0 kB\n",
+  "method": "Same-host independent Writer/Reader processes, RELIABLE KEEP_LAST16, 64 native slots, batches of8 with receiver acknowledgements; 32 warmup samples excluded from timing, every payload word validated. Throughput includes fill/validation/control/scheduling. Latency from monotonic timestamp immediately before write to take before integrity scan; nearest-rank quantiles. Shared VM with swap, no dedicated-host SLA or maximum sustainable-throughput claim.",
+  "results": [
+    {
+      "label": "round-01-64-rtps",
+      "mode": "rtps",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571346,
+          "deserializations": 288,
+          "latency_p50_us": 106.989,
+          "latency_p95_us": 173.178,
+          "latency_p99_us": 226.907,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571334,
+          "serializations": 288,
+          "seconds": 0.00871379,
+          "samples_per_second": 29378.7,
+          "mib_per_second": 1.79313,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-DkWfEu"
+        }
+      }
+    },
+    {
+      "label": "round-01-64-ordinary",
+      "mode": "ordinary",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571375,
+          "deserializations": 0,
+          "latency_p50_us": 436.517,
+          "latency_p95_us": 761.156,
+          "latency_p99_us": 2264.38,
+          "peak_rss_kib": 8192
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571363,
+          "serializations": 0,
+          "seconds": 0.0286273,
+          "samples_per_second": 8942.51,
+          "mib_per_second": 0.545808,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-dDaoiZ"
+        }
+      }
+    },
+    {
+      "label": "round-01-64-loan",
+      "mode": "loan",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571405,
+          "deserializations": 0,
+          "latency_p50_us": 373.869,
+          "latency_p95_us": 678.152,
+          "latency_p99_us": 1143.33,
+          "peak_rss_kib": 8320
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571393,
+          "serializations": 0,
+          "seconds": 0.0287073,
+          "samples_per_second": 8917.6,
+          "mib_per_second": 0.544287,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-Sa75uY"
+        }
+      }
+    },
+    {
+      "label": "round-01-4096-rtps",
+      "mode": "rtps",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571437,
+          "deserializations": 288,
+          "latency_p50_us": 157.893,
+          "latency_p95_us": 211.382,
+          "latency_p99_us": 314.071,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571425,
+          "serializations": 288,
+          "seconds": 0.0113963,
+          "samples_per_second": 22463.5,
+          "mib_per_second": 87.748,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-yqtcgG"
+        }
+      }
+    },
+    {
+      "label": "round-01-4096-ordinary",
+      "mode": "ordinary",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571468,
+          "deserializations": 0,
+          "latency_p50_us": 404.458,
+          "latency_p95_us": 694.455,
+          "latency_p99_us": 1082.32,
+          "peak_rss_kib": 8320
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571456,
+          "serializations": 0,
+          "seconds": 0.030311,
+          "samples_per_second": 8445.79,
+          "mib_per_second": 32.9914,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-zT8uCY"
+        }
+      }
+    },
+    {
+      "label": "round-01-4096-loan",
+      "mode": "loan",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571498,
+          "deserializations": 0,
+          "latency_p50_us": 394.826,
+          "latency_p95_us": 633.595,
+          "latency_p99_us": 815.979,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571486,
+          "serializations": 0,
+          "seconds": 0.0304211,
+          "samples_per_second": 8415.22,
+          "mib_per_second": 32.8719,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-FQoii1"
+        }
+      }
+    },
+    {
+      "label": "round-01-65536-rtps",
+      "mode": "rtps",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571529,
+          "deserializations": 160,
+          "latency_p50_us": 728.139,
+          "latency_p95_us": 190047,
+          "latency_p99_us": 199619,
+          "peak_rss_kib": 9344
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571517,
+          "serializations": 160,
+          "seconds": 1.19964,
+          "samples_per_second": 106.699,
+          "mib_per_second": 6.66867,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-gl5vkj"
+        }
+      }
+    },
+    {
+      "label": "round-01-65536-ordinary",
+      "mode": "ordinary",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571559,
+          "deserializations": 0,
+          "latency_p50_us": 647.267,
+          "latency_p95_us": 1204.65,
+          "latency_p99_us": 2018.5,
+          "peak_rss_kib": 12288
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571547,
+          "serializations": 0,
+          "seconds": 0.0325701,
+          "samples_per_second": 3929.98,
+          "mib_per_second": 245.624,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-s7uohD"
+        }
+      }
+    },
+    {
+      "label": "round-01-65536-loan",
+      "mode": "loan",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571589,
+          "deserializations": 0,
+          "latency_p50_us": 750.63,
+          "latency_p95_us": 1114.06,
+          "latency_p99_us": 1280.95,
+          "peak_rss_kib": 12416
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571577,
+          "serializations": 0,
+          "seconds": 0.0303457,
+          "samples_per_second": 4218.06,
+          "mib_per_second": 263.629,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-mEsoGL"
+        }
+      }
+    },
+    {
+      "label": "round-02-64-ordinary",
+      "mode": "ordinary",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571619,
+          "deserializations": 0,
+          "latency_p50_us": 268.828,
+          "latency_p95_us": 518.556,
+          "latency_p99_us": 598.387,
+          "peak_rss_kib": 8320
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571607,
+          "serializations": 0,
+          "seconds": 0.0327875,
+          "samples_per_second": 7807.84,
+          "mib_per_second": 0.476553,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-JAF2pv"
+        }
+      }
+    },
+    {
+      "label": "round-02-64-loan",
+      "mode": "loan",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571655,
+          "deserializations": 0,
+          "latency_p50_us": 225.738,
+          "latency_p95_us": 524.485,
+          "latency_p99_us": 819.973,
+          "peak_rss_kib": 8192
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571643,
+          "serializations": 0,
+          "seconds": 0.0339894,
+          "samples_per_second": 7531.75,
+          "mib_per_second": 0.459702,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-EC8wR6"
+        }
+      }
+    },
+    {
+      "label": "round-02-64-rtps",
+      "mode": "rtps",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571685,
+          "deserializations": 288,
+          "latency_p50_us": 100.885,
+          "latency_p95_us": 153.685,
+          "latency_p99_us": 205.882,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571673,
+          "serializations": 288,
+          "seconds": 0.00860941,
+          "samples_per_second": 29734.9,
+          "mib_per_second": 1.81487,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-aT8SIA"
+        }
+      }
+    },
+    {
+      "label": "round-02-4096-ordinary",
+      "mode": "ordinary",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571714,
+          "deserializations": 0,
+          "latency_p50_us": 417.842,
+          "latency_p95_us": 685.592,
+          "latency_p99_us": 1035.76,
+          "peak_rss_kib": 8576
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571702,
+          "serializations": 0,
+          "seconds": 0.0295444,
+          "samples_per_second": 8664.91,
+          "mib_per_second": 33.8473,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-B63gYp"
+        }
+      }
+    },
+    {
+      "label": "round-02-4096-loan",
+      "mode": "loan",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571744,
+          "deserializations": 0,
+          "latency_p50_us": 413.098,
+          "latency_p95_us": 637.416,
+          "latency_p99_us": 686.458,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571732,
+          "serializations": 0,
+          "seconds": 0.0294466,
+          "samples_per_second": 8693.71,
+          "mib_per_second": 33.9598,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-KRfKy1"
+        }
+      }
+    },
+    {
+      "label": "round-02-4096-rtps",
+      "mode": "rtps",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571777,
+          "deserializations": 288,
+          "latency_p50_us": 157.046,
+          "latency_p95_us": 241.581,
+          "latency_p99_us": 756.456,
+          "peak_rss_kib": 8448
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571765,
+          "serializations": 288,
+          "seconds": 0.0118478,
+          "samples_per_second": 21607.4,
+          "mib_per_second": 84.404,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-KYuSjo"
+        }
+      }
+    },
+    {
+      "label": "round-02-65536-ordinary",
+      "mode": "ordinary",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571808,
+          "deserializations": 0,
+          "latency_p50_us": 639.69,
+          "latency_p95_us": 1229.05,
+          "latency_p99_us": 1377.83,
+          "peak_rss_kib": 12288
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571796,
+          "serializations": 0,
+          "seconds": 0.0312303,
+          "samples_per_second": 4098.59,
+          "mib_per_second": 256.162,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-V2ZGTN"
+        }
+      }
+    },
+    {
+      "label": "round-02-65536-loan",
+      "mode": "loan",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571838,
+          "deserializations": 0,
+          "latency_p50_us": 541.853,
+          "latency_p95_us": 969.499,
+          "latency_p99_us": 1179.42,
+          "peak_rss_kib": 12288
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571826,
+          "serializations": 0,
+          "seconds": 0.031872,
+          "samples_per_second": 4016.07,
+          "mib_per_second": 251.004,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-CawQal"
+        }
+      }
+    },
+    {
+      "label": "round-02-65536-rtps",
+      "mode": "rtps",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571874,
+          "deserializations": 160,
+          "latency_p50_us": 724.386,
+          "latency_p95_us": 197807,
+          "latency_p99_us": 199535,
+          "peak_rss_kib": 9216
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571862,
+          "serializations": 160,
+          "seconds": 1.80188,
+          "samples_per_second": 71.0369,
+          "mib_per_second": 4.43981,
+          "peak_rss_kib": 17792,
+          "directory": "/dev/shm/travodds-bench-C1ao3a"
+        }
+      }
+    },
+    {
+      "label": "round-03-64-loan",
+      "mode": "loan",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571927,
+          "deserializations": 0,
+          "latency_p50_us": 397.655,
+          "latency_p95_us": 665.292,
+          "latency_p99_us": 1312.07,
+          "peak_rss_kib": 8192
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571915,
+          "serializations": 0,
+          "seconds": 0.0288325,
+          "samples_per_second": 8878.88,
+          "mib_per_second": 0.541924,
+          "peak_rss_kib": 17876,
+          "directory": "/dev/shm/travodds-bench-fKcAPc"
+        }
+      }
+    },
+    {
+      "label": "round-03-64-rtps",
+      "mode": "rtps",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571957,
+          "deserializations": 288,
+          "latency_p50_us": 105.398,
+          "latency_p95_us": 151.862,
+          "latency_p99_us": 161.067,
+          "peak_rss_kib": 8576
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571945,
+          "serializations": 288,
+          "seconds": 0.00874142,
+          "samples_per_second": 29285.9,
+          "mib_per_second": 1.78747,
+          "peak_rss_kib": 17876,
+          "directory": "/dev/shm/travodds-bench-7K9rBt"
+        }
+      }
+    },
+    {
+      "label": "round-03-64-ordinary",
+      "mode": "ordinary",
+      "bytes": 64,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571986,
+          "deserializations": 0,
+          "latency_p50_us": 425.478,
+          "latency_p95_us": 737.878,
+          "latency_p99_us": 970.491,
+          "peak_rss_kib": 8192
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 64,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1571974,
+          "serializations": 0,
+          "seconds": 0.0286653,
+          "samples_per_second": 8930.65,
+          "mib_per_second": 0.545084,
+          "peak_rss_kib": 17876,
+          "directory": "/dev/shm/travodds-bench-KCQdM7"
+        }
+      }
+    },
+    {
+      "label": "round-03-4096-loan",
+      "mode": "loan",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572016,
+          "deserializations": 0,
+          "latency_p50_us": 440.705,
+          "latency_p95_us": 640.139,
+          "latency_p99_us": 718.582,
+          "peak_rss_kib": 8320
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572004,
+          "serializations": 0,
+          "seconds": 0.0306494,
+          "samples_per_second": 8352.52,
+          "mib_per_second": 32.627,
+          "peak_rss_kib": 17876,
+          "directory": "/dev/shm/travodds-bench-30zH46"
+        }
+      }
+    },
+    {
+      "label": "round-03-4096-rtps",
+      "mode": "rtps",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572046,
+          "deserializations": 288,
+          "latency_p50_us": 168.496,
+          "latency_p95_us": 222.325,
+          "latency_p99_us": 316.001,
+          "peak_rss_kib": 8320
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572034,
+          "serializations": 288,
+          "seconds": 0.0122627,
+          "samples_per_second": 20876.3,
+          "mib_per_second": 81.5481,
+          "peak_rss_kib": 18004,
+          "directory": "/dev/shm/travodds-bench-Q2zsri"
+        }
+      }
+    },
+    {
+      "label": "round-03-4096-ordinary",
+      "mode": "ordinary",
+      "bytes": 4096,
+      "samples": 256,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572075,
+          "deserializations": 0,
+          "latency_p50_us": 524.351,
+          "latency_p95_us": 724.546,
+          "latency_p99_us": 2224.84,
+          "peak_rss_kib": 8576
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 4096,
+          "samples": 256,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572063,
+          "serializations": 0,
+          "seconds": 0.0305544,
+          "samples_per_second": 8378.5,
+          "mib_per_second": 32.7285,
+          "peak_rss_kib": 18004,
+          "directory": "/dev/shm/travodds-bench-43RyyT"
+        }
+      }
+    },
+    {
+      "label": "round-03-65536-loan",
+      "mode": "loan",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572108,
+          "deserializations": 0,
+          "latency_p50_us": 718.04,
+          "latency_p95_us": 1078.72,
+          "latency_p99_us": 1200.98,
+          "peak_rss_kib": 12288
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "loan",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572096,
+          "serializations": 0,
+          "seconds": 0.0310784,
+          "samples_per_second": 4118.62,
+          "mib_per_second": 257.414,
+          "peak_rss_kib": 18004,
+          "directory": "/dev/shm/travodds-bench-zO7ajg"
+        }
+      }
+    },
+    {
+      "label": "round-03-65536-rtps",
+      "mode": "rtps",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572140,
+          "deserializations": 160,
+          "latency_p50_us": 768.384,
+          "latency_p95_us": 197495,
+          "latency_p99_us": 199612,
+          "peak_rss_kib": 9216
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "rtps",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572128,
+          "serializations": 160,
+          "seconds": 1.79991,
+          "samples_per_second": 71.1147,
+          "mib_per_second": 4.44467,
+          "peak_rss_kib": 18004,
+          "directory": "/dev/shm/travodds-bench-feK3RV"
+        }
+      }
+    },
+    {
+      "label": "round-03-65536-ordinary",
+      "mode": "ordinary",
+      "bytes": 65536,
+      "samples": 128,
+      "passed": true,
+      "exit_code": 0,
+      "records": {
+        "reader": {
+          "role": "reader",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572180,
+          "deserializations": 0,
+          "latency_p50_us": 680.842,
+          "latency_p95_us": 1060.09,
+          "latency_p99_us": 1255.87,
+          "peak_rss_kib": 12288
+        },
+        "writer": {
+          "role": "writer",
+          "mode": "ordinary",
+          "bytes": 65536,
+          "samples": 128,
+          "warmup": 32,
+          "batch": 8,
+          "pid": 1572168,
+          "serializations": 0,
+          "seconds": 0.0318015,
+          "samples_per_second": 4024.97,
+          "mib_per_second": 251.561,
+          "peak_rss_kib": 18004,
+          "directory": "/dev/shm/travodds-bench-qMDl00"
+        }
+      }
+    }
+  ]
+}

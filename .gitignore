@@ -32,3 +32,11 @@
 *.app
 build*
 install
+
+# Local build, test and agent output
+/artifacts/
+*.ddslog
+__pycache__/
+*.py[cod]
+/.worktrees/
+/.worktree-archive/

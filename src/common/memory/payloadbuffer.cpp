@@ -46,4 +46,3 @@ ReturnCode_t CreateSerializedPayload(const std::shared_ptr<IPayloadPool>& pool,
 }
 
 TRAVODDS_NAMESPACE_END
-

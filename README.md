@@ -1,7 +1,11 @@
 ﻿# TravoDDS
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://gitee.com/agiros/travodds)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue)](LICENSE)
+
+本仓库在 [AGIROS / TravoDDS（Gitee 上游）](https://gitee.com/agiros/travodds) 基础上继续开发，保留上游提交历史、分支与标签。GitHub 开发主分支为 `main`，`master` 保留迁移时的上游版本。
+
+本分支已加入 DataSharing、PayloadPool 与 Loan API。参见 [实现与验收报告](docs/DATASHARING-COMPLETION-20261028.md)、[示例](example/cpp/data_sharing/README.md) 和 [GitHub 迁移及同步上游](docs/GITHUB-UPSTREAM.md)。报告记录的是发布前验收状态，后续提交记录见同步说明。
 
 ## 目录
 
@@ -56,7 +60,7 @@ travodds 是 AGIROS 开源社区自研的 DDS 数据分发通信中间件，支�
 ### 2. 克隆仓库
 
 ```bash
-git clone https://gitee.com/agiros/travodds.git
+git clone https://github.com/Huxingyu/travodds.git
 cd travodds
 ```
 
@@ -194,4 +198,4 @@ A: 请先确认已执行 `cd example/cpp/hello_world && mkdir -p build && cd bui
 
 ## 许可证
 
-本项目采用 [Apache License 2.0](LICENSE) 许可证。
+本项目采用 [木兰宽松许可证第 2 版（MulanPSL-2.0）](LICENSE)。保留上游及各第三方组件的版权声明和许可证。
