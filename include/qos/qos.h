@@ -16,6 +16,8 @@
 #include "type/basictype.h"
 #include "security/securitycommon.h"
 #include "security/propertyqospolicy.h"
+#include "qos/datasharingqospolicy.h"
+#include "qos/payloadpoolqospolicy.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -408,6 +410,8 @@ struct TopicQos {
 };
 
 struct DataWriterQos {
+	DataSharingQosPolicy         data_sharing;
+	PayloadPoolQosPolicy         payload_pool;
 	DurabilityQosPolicy          durability;
 	DurabilityServiceQosPolicy   durability_service;
 	DeadlineQosPolicy            deadline;
@@ -442,6 +446,7 @@ struct PublisherQos {
 };
 
 struct DataReaderQos {
+	DataSharingQosPolicy          data_sharing;
 	DurabilityQosPolicy           durability;
 	DeadlineQosPolicy             deadline;
 	LatencyBudgetQosPolicy        latency_budget;

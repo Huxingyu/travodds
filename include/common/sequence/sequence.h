@@ -15,7 +15,8 @@
 #include "common/sequence/sequencebase.h"
 #include <stdexcept>
 #include <vector>
-#include <stdexcept>
+#include <memory>
+#include <utility>
 /**
  * @brief SequenceData模板类,Sequence序列具体功能实现类。
  */
@@ -32,6 +33,7 @@ public:
 	 * @param [in] other SequenceData序列。
 	 */
 	SequenceData(const SequenceData& other);
+	SequenceData(SequenceData&& other) noexcept;
 	/**
 	 * @brief 构造函数。
 	 * 
@@ -63,6 +65,10 @@ public:
 	 * @brief 序列类深拷贝函数。
 	 */
 	SequenceData& operator =(const SequenceData& other);
+	SequenceData& operator =(SequenceData&& other) noexcept;
+	void swap(SequenceData& other) noexcept;
+	size_t element_size() const override { return sizeof(T); }
+	size_t element_alignment() const override { return alignof(T); }
 
 	/**
 	 * @brief 序列元素存储函数。
@@ -123,6 +129,10 @@ private:
 	bool to_array(T array[], uint32_t copyLength);
 
 	std::vector<T*> datas_;
+	void refresh_elements() noexcept {
+		elements_ = has_loan() ? loan_elements_.data() :
+			(datas_.empty() ? nullptr : reinterpret_cast<void**>(datas_.data()));
+	}
 };
 
 #define TRAVODDS_SEQUENCE(FooSeq, Foo) using FooSeq = SequenceData<Foo>;
@@ -142,6 +152,9 @@ SequenceData<T>::SequenceData(uint32_t max)
 }
 
 template<typename T>
+SequenceData<T>::SequenceData(SequenceData&& other) noexcept { swap(other); }
+
+template<typename T>
 SequenceData<T>::~SequenceData()
 {
 	release();
@@ -153,7 +166,7 @@ T& SequenceData<T>::operator [](uint32_t element)
 		throw std::out_of_range("out of range");
 	}
 
-	return *datas_[element];
+	return *static_cast<T*>(elements_[element]);
 }
 template<typename T>
 T& SequenceData<T>::operator [](uint32_t ele) const
@@ -162,31 +175,50 @@ T& SequenceData<T>::operator [](uint32_t ele) const
 		throw std::out_of_range("out of range");
 	}
 
-	return *datas_[ele];
+	return *static_cast<T*>(elements_[ele]);
 }
 
 template<typename T>
 SequenceData<T>& SequenceData<T>::operator =(const SequenceData& other)
 {
-	this->length_ = other.length();
-	resize(length_);
-
-	for (int32_t i = 0; i < length_; i++) {
-		//TODO
-		*datas_[i] = other[i];
-	}
+	if (this == &other) return *this;
+	SequenceData copy(other.length());
+	for (uint32_t i = 0; i < copy.length_; ++i) *copy.datas_[i] = other[i];
+	swap(copy);
 	return *this;
+}
+
+template<typename T>
+SequenceData<T>& SequenceData<T>::operator =(SequenceData&& other) noexcept {
+	if (this != &other) { SequenceData moved(std::move(other)); swap(moved); }
+	return *this;
+}
+
+template<typename T>
+void SequenceData<T>::swap(SequenceData& other) noexcept {
+	using std::swap;
+	datas_.swap(other.datas_);
+	swap(maximum_, other.maximum_);
+	swap(length_, other.length_);
+	loan_elements_.swap(other.loan_elements_);
+	loan_pin_.swap(other.loan_pin_);
+	loan_owner_.swap(other.loan_owner_);
+	swap(loan_role_, other.loan_role_);
+	refresh_elements();
+	other.refresh_elements();
 }
 template<typename T>
 void SequenceData<T>::push_back(T& data)
 {
-	T* value = new T();
+	if (has_loan()) throw std::logic_error("Cannot append to a borrowed sequence");
+	if (length_ < maximum_) { *datas_[length_] = data; ++length_; return; }
+	auto value = std::make_unique<T>();
 	*value = data;
-
-	datas_.push_back(value);
-	elements_ = reinterpret_cast<void**>(datas_.data());
-	length_++;
-	maximum_++;
+	datas_.push_back(value.get());
+	value.release();
+	refresh_elements();
+	++length_;
+	++maximum_;
 }
 template<typename T>
 uint32_t SequenceData<T>::length() const
@@ -197,6 +229,7 @@ uint32_t SequenceData<T>::length() const
 template<typename T>
 bool SequenceData<T>::length(uint32_t newLength)
 {
+	if (has_loan()) return false;
 	if (newLength <= maximum_) {
 		length_ = newLength;
 		return true;
@@ -215,12 +248,14 @@ void SequenceData<T>::unloan()
 }
 template<typename T>
 void SequenceData<T>::resize(uint32_t maximum) {
+	if (maximum <= maximum_) return;
+	std::vector<std::unique_ptr<T>> pending;
+	pending.reserve(maximum - maximum_);
+	for (uint32_t i = maximum_; i < maximum; ++i) pending.emplace_back(new T());
 	datas_.reserve(maximum);
-	datas_.resize(maximum);
-	elements_ = reinterpret_cast<void**>(datas_.data());
-	while (maximum_ < maximum) {
-		datas_[maximum_++] = new T();
-	}
+	for (auto& value : pending) datas_.push_back(value.release());
+	maximum_ = maximum;
+	refresh_elements();
 }
 
 template<typename T>
@@ -231,10 +266,7 @@ void SequenceData<T>::release()
 		delete data;
 	}
 	std::vector<T*>().swap(datas_);
-
-	maximum_ = 0;
-    length_ = 0;
-	elements_ = nullptr;
+	clear_loan();
 }
 
 template<typename T>

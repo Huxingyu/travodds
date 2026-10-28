@@ -171,6 +171,7 @@ public:
 		return &matchedWriters_;
 	}
 #endif // DDSSECURITY
+    ReturnCode_t SubmitDataChange(std::shared_ptr<CacheChange> cache) override;
 private:	
 	/**
 	 * @brief TIME_BASED_FILTER Qos 最后一包数据回传定时器超时执行回传功能函数。
@@ -184,6 +185,7 @@ private:
 	int EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy, SerializedBuffer& buffer, SerializedBuffer& encodeBuffer);
 #endif // DDSSECURITY
 private:
+    mutable std::mutex proxiesMutex_;
 	WriterProxyMap matchedWriters_;
 };
 

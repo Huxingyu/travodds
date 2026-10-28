@@ -115,6 +115,9 @@ public:
 	 * @brief 析构函数。
 	 */
     ~DataWriterImpl();
+    ReturnCode_t loan_sample(SampleLoan& loan) override;
+    ReturnCode_t discard_loan(SampleLoan& loan) override;
+    ReturnCode_t write(SampleLoan& loan, const InstanceHandle_t& handle) override;
 
 	/**
 	 * 为此DataWriter设置DataWriterQos。
@@ -504,7 +507,7 @@ public:
 	  *
 	  * @return 内置主题数据参数。
 	  */
-    const PublicationBuiltinTopicData& GetBuiltinTopicData();
+    PublicationBuiltinTopicData GetBuiltinTopicData();
 #ifdef DDSSECURITY
 	const PublicationBuiltinTopicSecureData& GetBuiltinTopicSecureData();
 #endif // DDSSECURITY
@@ -518,7 +521,7 @@ public:
 	 *
 	 * @return 生成成功返回true，否则返回false。
 	 */
-	bool MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const;
+	ReturnCode_t MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const;
 	
 	/**
 	 * @brief Qos策略中deadline Qos相关定时器超时执行函数。
@@ -551,15 +554,6 @@ public:
 	 */
 	ReturnCode_t CreateSerializedBuffer(SerializedBuffer* &bufferHeader, uint32_t dataLen);
 	
-	/**
-	 * @brief 释放对应的空间。
-	 *
-	 * @param [in]  buffer 用户报文指针。
-	 *
-	 * @return 释放成功返回RETCODE_OK，否则返回RETCODE_ERROR。
-	 */
-	ReturnCode_t DeleteSerializedBuffer(SerializedBuffer* buffer);
-
 	/**
 	 * @brief 添加Reader过滤器。
 	 *
@@ -607,6 +601,7 @@ private:
 	std::shared_ptr<Timer> deadlineTimer_;
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
+    bool timersClosing_ = false;
 	/* wangyi lifespan 定时器 */
 	std::shared_ptr<Timer> lifespanTimer_;
 
@@ -629,6 +624,20 @@ public:
 #endif // DDSSECURITY
 
 	std::shared_ptr<MemoryPool> memoryPool_;
+	// Serialized user payloads use the registered Topic pool. CDR registration
+	// snapshots retain the legacy pool; native snapshots own aligned storage.
+	std::shared_ptr<IPayloadPool> payloadPool_;
+	std::shared_ptr<const void> loanIdentity_ = std::make_shared<int>(0);
+	std::mutex loanMutex_;
+	ReturnCode_t PrepareDataSharing();
+    mutable std::mutex writeMutex_;
+    ReturnCode_t WriteSample(const void* data, const InstanceHandle_t& handle, const Time_t& timestamp,
+        SampleIdentity& identity, const SampleIdentity& related,
+        const std::shared_ptr<SampleLoan::State>& native = {});
+    void AfterWrite(const InstanceHandle_t& handle);
+#if defined(__linux__)
+	std::shared_ptr<class SharedPayloadPool> nativePool_;
+#endif
 protected:
 	TypeSupport* typeSupport_ = nullptr;
 

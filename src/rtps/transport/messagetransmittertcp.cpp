@@ -31,6 +31,8 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 	}
 
 	/* 关闭所有接收socket */
+    {
+    std::lock_guard<std::mutex> lock(sessionsMtx_);
 	for (auto& it : sessions_) {
 		if (it.second->messageBuffer) {
 			receivePool_->releaseBuffer(it.second->messageBuffer);
@@ -40,15 +42,19 @@ MessageTransmitterTCP::~MessageTransmitterTCP()
 		}
 	}
 	sessions_.clear();
+    }
 
 	/* 关闭所有发送socket */
+    {
+    std::lock_guard<std::mutex> lock(sendSocketsMtx_);
 	for (auto& it : sendSocketMap_) {
-		if (it.second->socket->is_open()) {
+		if (it.second->socket && it.second->socket->is_open()) {
 			it.second->socket->shutdown(asio::ip::tcp::socket::shutdown_send, ec);
 			it.second->socket->close(ec);
 		}
 	}
 	sendSocketMap_.clear();
+    }
 	workGuard_.reset();
 	ioContext_.stop();
 	if (ioThread_.joinable()) {
@@ -242,29 +248,27 @@ ReturnCode_t MessageTransmitterTCP::MessageSend(Locator_t source, Locator_t dest
 
 void MessageTransmitterTCP::SetStop()
 {
-	if (!runFlag_.load()) {
-		return;
-	}
-	MessageTransmitter::SetStop();
-	if (acceptor_ && acceptor_->is_open()) {
-		acceptor_->cancel();
-	}
+    if (!runFlag_.exchange(false)) return;
+    asio::error_code error;
+    if (acceptor_ && acceptor_->is_open()) acceptor_->cancel(error);
 
-	for (auto& socketItor : sessions_) {
-		if (socketItor.first->is_open()) {
-			socketItor.first->cancel();
-		}
-	}
-
-	for (auto& socketItor : sendSocketMap_) {
-		if (socketItor.second->socket->is_open()) {
-			socketItor.second->socket->cancel();
-	    }
-	}
-	uint32_t tries = 0;
-	while (flagNum_.load(std::memory_order_acquire) > 0 && tries++ < 20) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
+    // Snapshot shared owners under the map locks. Cancellation may invoke
+    // callbacks that take those locks, so cancel after releasing them.
+    std::vector<std::shared_ptr<asio::ip::tcp::socket>> sockets;
+    {
+        std::lock_guard<std::mutex> lock(sessionsMtx_);
+        for (const auto& session : sessions_)
+            if (session.second->socket) sockets.push_back(session.second->socket);
+    }
+    {
+        std::lock_guard<std::mutex> lock(sendSocketsMtx_);
+        for (const auto& session : sendSocketMap_)
+            if (session.second->socket) sockets.push_back(session.second->socket);
+    }
+    for (const auto& socket : sockets) socket->cancel(error);
+    uint32_t tries = 0;
+    while (flagNum_.load(std::memory_order_acquire) > 0 && tries++ < 20)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void MessageTransmitterTCP::InterpreHeader(std::shared_ptr<ReceiveSession> session, const asio::error_code& ec, size_t bytesTransferred)
@@ -448,6 +452,12 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 
 		// TODO v4和v6的处理
 		std::shared_ptr<asio::ip::tcp::socket> newSendSocket = GetSocketInit();
+        if (!IsRun()) {
+            std::lock_guard<std::mutex> lock(sendSocketsMtx_);
+            auto it = sendSocketMap_.find(dest);
+            if (it != sendSocketMap_.end() && !it->second->socket) sendSocketMap_.erase(it);
+            return;
+        }
 
 		/* 设置端口复用  */
 		asio::socket_base::reuse_address reuse_address_option(true);
@@ -509,7 +519,12 @@ void MessageTransmitterTCP::AsyncConnect(const AsioLocator& src, const AsioLocat
 
 			});
 
-	} catch (std::exception& e) {
+    } catch (std::exception& e) {
+        {
+            std::lock_guard<std::mutex> lock(sendSocketsMtx_);
+            auto it = sendSocketMap_.find(dest);
+            if (it != sendSocketMap_.end() && !it->second->socket) sendSocketMap_.erase(it);
+        }
 		static_cast<void>(e);
 		//std::cerr << "Exception: " << e.what() << std::endl;
 		TRAVODDS_LOG(LOG_ERROR, "ioContext Err e[%s]", e.what());

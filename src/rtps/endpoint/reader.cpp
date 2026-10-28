@@ -27,9 +27,10 @@ Reader::Reader(const DataReaderQos& qos, const TopicKind_t& kind)
 
 Reader::~Reader()
 {
+    StopDataSharing();
 }
 ReturnCode_t Reader::ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
-	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
+	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake, bool preview)
 {
 	InstanceHandle_t handle = HANDLE_NIL;
 	InstanceHandle_t nextHandle = HANDLE_NIL;
@@ -41,7 +42,7 @@ ReturnCode_t Reader::ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataV
 			break;
 		}
 
-		ret = ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, nextHandle, sampleStates, viewStates, instanceStates, shouldTake);
+		ret = ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, nextHandle, sampleStates, viewStates, instanceStates, shouldTake, preview);
 
 		handle = nextHandle;
 		ret = FindNextInstance(handle, nextHandle);	
@@ -56,22 +57,22 @@ ReturnCode_t Reader::ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataV
 }
 
 ReturnCode_t Reader::ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
-	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
+	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake, bool preview)
 {
-	GetRelatedDataReader()->SetStatus(false);
+	if (!preview) GetRelatedDataReader()->SetStatus(false);
 	ReturnCode_t ret = RETCODE_OK;
 
-	ret = readerCache_->ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, handle, sampleStates, viewStates, instanceStates, shouldTake);
+	ret = readerCache_->ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, handle, sampleStates, viewStates, instanceStates, shouldTake, preview);
 	if (RETCODE_OK != ret) {
 		return ret;
 	}
 
-	GetRelatedDataReader()->NotifyReadConditions();
+	if (!preview) GetRelatedDataReader()->NotifyReadConditions();
 	return ret;
 }
 
 ReturnCode_t Reader::ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq & sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
-	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake)
+	SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake, bool preview)
 {
 	InstanceHandle_t takeHandle = HANDLE_NIL;
 	ReturnCode_t ret = RETCODE_ERROR;
@@ -81,12 +82,13 @@ ReturnCode_t Reader::ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheCha
 		return ret;
 	}
 		
-	return ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, takeHandle, sampleStates, viewStates, instanceStates, shouldTake);
+	return ReadOrTakeInstance(dataValues, sampleInfos, maxSamples, takeHandle, sampleStates, viewStates, instanceStates, shouldTake, preview);
 }
 
 
 ReturnCode_t Reader::FindNextInstance(const InstanceHandle_t& preHander, InstanceHandle_t& instanceHandle)
 {
+    std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
 	for (auto& handle : instanceHandles_) {
 		if (preHander < handle) {
 			instanceHandle = handle;
@@ -109,26 +111,14 @@ std::shared_ptr<CacheChange> Reader::new_change(ChangeKind_t kind, SerializedBuf
 	cacheChange->sampleInfo.instance_handle = handle;
 	cacheChange->sampleInfo.publication_handle = pubHandle;
 	cacheChange->sampleInfo.source_timestamp = sourceTimespace;
+	cacheChange->sourceTimespace = sourceTimespace;
+	// RTPS without INFO_TS carries TIME_INVALID: use the local reception time.
+	if (sourceTimespace == Time_t(TIME_INVALID)) {
+		Time_t::now(cacheChange->sourceTimespace);
+		cacheChange->sampleInfo.source_timestamp = cacheChange->sourceTimespace;
+	}
 	cacheChange->sampleInfo.sample_state = NOT_READ_SAMPLE_STATE;
 
-	auto itor = instanceHandles_.begin();
-	for (; itor != instanceHandles_.end(); itor++) {
-		if (handle < *itor) {
-			instanceHandles_.insert(itor, handle);
-			std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
-			readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
-			break;
-		}
-		if (handle == *itor) {
-			break;
-		}
-	}
-
-	if (itor == instanceHandles_.end()) {
-		instanceHandles_.insert(itor, handle);
-		std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
-		readerCache_->instanceChanges_.insert(std::make_pair(handle, CacheChangeVector(nullptr, readerCache_->maxSamplesPerInstance_)));
-	}
 
 	return cacheChange;
 }
@@ -140,6 +130,10 @@ void Reader::SetReaderListener(ReaderListener* listener)
 
 ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 {
+	std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
+	MaintainHistory();
+	if (!cache) return RETCODE_BAD_PARAMETER;
+	if (datareader_ && !datareader_->CheckLifespan(cache)) return RETCODE_LIFESPAN_TIMEOUT;
 	/* 判断是否有key  */
 	std::map<InstanceHandle_t, CacheChangeVector>::iterator vitOut;
 	SerializedBuffer* buffer = nullptr;
@@ -149,8 +143,44 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 		if (RETCODE_OUT_OF_RESOURCES == readerCache_->FindORAddKey(cache->instanceHandle, buffer, &vitOut)) {
 			return REJECTED_BY_INSTANCES_LIMIT;
 		}
+        // Allocate descriptors without registering keys. Only an admitted
+        // instance belongs in either history or the ordered read/take index.
+        auto next = std::lower_bound(instanceHandles_.begin(), instanceHandles_.end(), cache->instanceHandle);
+        if (next == instanceHandles_.end() || *next != cache->instanceHandle)
+            instanceHandles_.insert(next, cache->instanceHandle);
 	}
 	
+	// sourceTimespace is the writer timestamp, independently of transport.
+
+	//wangyi time_based_filter 过滤判断
+	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
+        std::unique_lock<std::mutex> filtering(readerCache_->changeMutex_);
+		auto now = std::chrono::steady_clock::now();
+		//wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数
+		if (now < vitOut->second.nextTimeBasedFilte) {
+			vitOut->second.lastCache = cache;
+            if (lastNewCacheTimer_) {
+                lastInstance_ = cache->instanceHandle;
+                const auto delay = std::chrono::ceil<std::chrono::milliseconds>(vitOut->second.nextTimeBasedFilte - now).count();
+                lastNewCacheTimer_->UpdatePeriod(std::max<int64_t>(1, delay));
+            }
+			return RETCODE_TIME_BASED_FILTER;
+		}
+		vitOut->second.lastCache.reset();
+		vitOut->second.nextTimeBasedFilte = now + std::chrono::nanoseconds(qos_.time_based_filter.minimum_separation.ToNs());
+
+        filtering.unlock();
+		/* 更新定时器时间 */
+		if (lastNewCacheTimer_) {
+			std::chrono::steady_clock::time_point nextTime;
+            if (readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime)) {
+                auto period = nextTime - std::chrono::steady_clock::now();
+                lastNewCacheTimer_->UpdatePeriod(std::max<int64_t>(1, std::chrono::ceil<std::chrono::milliseconds>(period).count()));
+            } else lastNewCacheTimer_->Stop();
+		}
+	}
+
+
 	///* 根据HistoryQos的值进行设置 */
 	if (KEEP_LAST_HISTORY_QOS == qos_.history.kind || BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
@@ -174,28 +204,6 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 
 	}
 
-	/* TODO wangyi 暂时以接收时间为源时间戳 */
-	Time_t::now(cache->sourceTimespace);//获取当前时间
-
-	//wangyi time_based_filter 过滤判断
-	if (qos_.time_based_filter.minimum_separation != Duration_t(TIME_ZERO)) {
-		auto now = std::chrono::steady_clock::now();
-		//wangyi time_based_filter qos加入时间判断，达到时间间隔后触发回调函数
-		if (now < vitOut->second.nextTimeBasedFilte) {
-			vitOut->second.lastCache = cache;
-			return RETCODE_TIME_BASED_FILTER;
-		}
-		vitOut->second.lastCache.reset();
-		vitOut->second.nextTimeBasedFilte = now + std::chrono::nanoseconds(qos_.time_based_filter.minimum_separation.ToNs());
-
-		/* 更新定时器时间 */
-		if (lastNewCacheTimer_) {
-			std::chrono::steady_clock::time_point nextTime;
-			readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime);
-			auto period = nextTime - std::chrono::steady_clock::now();
-			lastNewCacheTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
-		}
-	}
 
 
 	/* wangyi 获取远端数据写者QoS */
@@ -217,6 +225,10 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 			return ret;
 		}
 		auto& ins = readerCache_->instanceChanges_[cache->instanceHandle];
+		if (datareader_ && !ins.keyBuffer && !ins.nativeKey) {
+			const auto keyResult = datareader_->CreateInstanceKey(cache, ins.keyBuffer, ins.nativeKey);
+			if (keyResult != RETCODE_OK) return keyResult;
+		}
 		ins.cacheChanges.push_back(cache);
 		readerCache_->AddSampleCounters(cache->sampleInfo.sample_state, ins.viewState, ins.instanceState);
 
@@ -279,7 +291,22 @@ bool Reader::IsReliable()
 
 void Reader::SetRelatedDataReader(DataReaderImpl* reader)
 {
-	datareader_ = reader;
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
+    datareader_ = reader;
+}
+
+void Reader::NotifySubscriptionMatched(InstanceHandle_t handle, bool add)
+{
+    // Builtin DCPS owners live until participant reception has stopped. Their
+    // discovery callbacks run under other builtin ingress locks and the Reader
+    // table lock, so taking this ingress would invert the SEDP lock order.
+    if (guid_.entityId.entityKind != ENTITYKIND_USER_READER_NO_KEY &&
+        guid_.entityId.entityKind != ENTITYKIND_USER_READER_WITH_KEY) {
+        if (datareader_) datareader_->OnSubscriptionMatched(handle, add);
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
+    if (datareader_) datareader_->OnSubscriptionMatched(handle, add);
 }
 
 const DataReaderQos& Reader::GetQos()
@@ -289,10 +316,16 @@ const DataReaderQos& Reader::GetQos()
 
 void Reader::SetQos(const DataReaderQos& qos)
 {
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
 	if (qos.time_based_filter.minimum_separation != qos_.time_based_filter.minimum_separation) {
 		readerCache_->RsetAllTimeBasedFilte();
 	}
-	qos_ = qos;
+    qos_.deadline = qos.deadline;
+    qos_.latency_budget = qos.latency_budget;
+    qos_.time_based_filter = qos.time_based_filter;
+    qos_.reader_data_lifecycle = qos.reader_data_lifecycle;
+    qos_.user_data = qos.user_data;
+    qos_.property = qos.property;
 }
 
 void Reader::GetMatchedPublications(InstanceHandleSeq& publication_handles) const
@@ -314,4 +347,27 @@ bool Reader::GetMatchedPublicationData(PublicationBuiltinTopicData& publicationD
 std::shared_ptr<HistoryCache> Reader::GetReaderCache()
 {
 	return readerCache_;
+}
+
+void Reader::StartMaintenance(const std::shared_ptr<Reader>& self) {
+    if (guid_.entityId.entityKind != ENTITYKIND_USER_READER_NO_KEY &&
+        guid_.entityId.entityKind != ENTITYKIND_USER_READER_WITH_KEY) return;
+    maintenanceTimer_ = TimerManager::CreateTimer({0, 10000000}, [weak = std::weak_ptr<Reader>(self)] {
+        if (auto reader = weak.lock()) reader->MaintainHistory();
+    }, "reader.purge");
+}
+void Reader::MaintainHistory() {
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
+    if (!datareader_) return;
+    std::vector<InstanceHandle_t> removed;
+    if (!readerCache_->MaintainReader(qos_.reader_data_lifecycle, removed)) return;
+    {
+        std::lock_guard<std::mutex> lock(readerCache_->changeMutex_);
+        for (const auto& handle : removed) {
+            auto pos = std::lower_bound(instanceHandles_.begin(), instanceHandles_.end(), handle);
+            if (pos != instanceHandles_.end() && *pos == handle) instanceHandles_.erase(pos);
+        }
+    }
+    if (!readerCache_->GetSampleCounters(false).sampleNotRead) datareader_->SetStatus(false);
+    datareader_->NotifyReadConditions();
 }

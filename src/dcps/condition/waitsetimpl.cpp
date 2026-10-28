@@ -72,7 +72,7 @@ ReturnCode_t WaitSetImpl::detach_condition(const Condition& condition)
 ReturnCode_t WaitSetImpl::wait(ConditionSeq& active_conditions, const Duration_t& timeout)
 {
 	active_conditions.clear();
-	active_conditions.reserve(conditions_.size());
+	{ std::lock_guard<std::mutex> lock(mtx_); active_conditions.reserve(conditions_.size()); }
 
 	std::unique_lock<std::mutex> lockCv(mtxCv_);
 	if (timeout == Duration_t(TIME_INFINITE)) {
@@ -103,9 +103,13 @@ ReturnCode_t WaitSetImpl::get_conditions(ConditionSeq& attached_conditions) cons
 
 bool WaitSetImpl::FindTrigger(ConditionSeq& active_conditions)
 {
+    std::lock_guard<std::mutex> lock(mtx_);
 	for (auto& it : conditions_) {
 		// 优先确认是否是Notify唤醒
-		if (it->IsNotify() || it->get_trigger_value()) {
+		// Wakeups are hints; only the current predicate makes a condition active.
+		// A consumed status must not reappear due to a delayed notification.
+		it->IsNotify();
+		if (it->get_trigger_value()) {
 			Condition* guard = IsGuardConditionImpl(it);
 			if (nullptr != guard) {
 				active_conditions.emplace_back(guard);

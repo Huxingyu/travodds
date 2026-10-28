@@ -19,6 +19,8 @@
 #include "boost/interprocess/allocators/allocator.hpp"
 #include "boost/interprocess/containers/map.hpp"
 #include "boost/interprocess/managed_shared_memory.hpp"
+#include "boost/interprocess/mapped_region.hpp"
+#include "boost/interprocess/detail/file_wrapper.hpp"
 #include "boost/interprocess/sync/named_mutex.hpp"
 #include "boost/interprocess/sync/named_condition.hpp"
 #include "boost/interprocess/sync/scoped_lock.hpp"
@@ -33,6 +35,14 @@ namespace InterprocessType {
     using interprocess_exception = boost::interprocess::interprocess_exception;
 
     using managed_shared_memory = boost::interprocess::managed_shared_memory;
+
+    // Fixed-layout DataSharing uses Boost devices without a segment allocator.
+    // file_wrapper is the Boost 1.88 device underlying managed_mapped_file;
+    // pin its vendored implementation for configured filesystem directories.
+    using shared_file = boost::interprocess::ipcdetail::file_wrapper;
+    using mapped_region = boost::interprocess::mapped_region;
+    using permissions = boost::interprocess::permissions;
+    using boost::interprocess::read_write;
 
     using named_condition = boost::interprocess::named_condition;
 

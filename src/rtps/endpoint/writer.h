@@ -39,6 +39,10 @@ public:
 	 * @brief 析构函数。
 	 */
 	virtual ~Writer();
+    void SetDataSharingReader(const GUID_t& reader, bool eligible);
+    void RemoveDataSharingReader(const GUID_t& reader);
+    std::vector<GUID_t> SelectDataSharingReaders(const std::vector<GUID_t>& registered);
+    bool HasRtpsReaders(const std::vector<GUID_t>& native);
 
 	/**
 	 * @brief 创建新的报文缓存空间。
@@ -50,8 +54,10 @@ public:
 	 *
 	 * @return 创建的新缓存。
 	 */
-	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace);
-	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace, SampleIdentity& sample_identity);
+	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace,
+		std::shared_ptr<IPayloadPool> payloadPool = MemoryPool::GetInstance());
+	std::shared_ptr<CacheChange> NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace, SampleIdentity& sample_identity,
+		std::shared_ptr<IPayloadPool> payloadPool = MemoryPool::GetInstance());
 
 	/**
 	 * @brief 添加新的报文缓存空间到HistoryCache管理容器中。
@@ -251,6 +257,9 @@ public:
 private:
     /* 写入锁  */
     mutable std::mutex wirterMtx_;
+    std::mutex sequenceMutex_;
+    std::mutex sharingReadersMutex_;
+    std::map<GUID_t, bool> sharingReaders_;
 protected:
 
 	bool pushMode_ = true;

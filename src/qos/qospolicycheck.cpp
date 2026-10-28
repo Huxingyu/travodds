@@ -119,6 +119,8 @@ ReturnCode_t QosPolicyCheck::CheckQos(const TopicQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 {
+	if (!qos.data_sharing.valid()) return RETCODE_INCONSISTENT_POLICY;
+	if (!qos.payload_pool.valid()) return RETCODE_INCONSISTENT_POLICY;
 	if (qos.user_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
 		TRAVODDS_LOG(LOG_ERROR, "Error user_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
 		return RETCODE_OUT_OF_RESOURCES;
@@ -136,6 +138,12 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DataReaderQos& qos)
 {
+    auto validDelay = [](const Duration_t& d) {
+        return d == Duration_t(TIME_INFINITE) || (d.sec >= 0 && d.nanosec < 1000000000u);
+    };
+    if (!validDelay(qos.reader_data_lifecycle.autopurge_nowriter_samples_delay) ||
+        !validDelay(qos.reader_data_lifecycle.autopurge_disposed_samples_delay)) return RETCODE_INCONSISTENT_POLICY;
+	if (!qos.data_sharing.valid()) return RETCODE_INCONSISTENT_POLICY;
 	if (qos.user_data.value.size() > BYTE_ORDER_LENGTH_MAX) {
 		TRAVODDS_LOG(LOG_ERROR, "Error user_data.value out of resources, max length %d.", BYTE_ORDER_LENGTH_MAX);
 		return RETCODE_OUT_OF_RESOURCES;
@@ -237,7 +245,9 @@ bool QosPolicyCheck::CanQosBeUpdated(const TopicQos& curQos, const TopicQos& tag
 
 bool QosPolicyCheck::CanQosBeUpdated(const DataWriterQos& curQos, const DataWriterQos& tagQos)
 {
-	return ConsistebcyCheckDurabilityQos(curQos.durability, tagQos.durability) &&
+	return curQos.data_sharing == tagQos.data_sharing &&
+		   curQos.payload_pool == tagQos.payload_pool &&
+		   ConsistebcyCheckDurabilityQos(curQos.durability, tagQos.durability) &&
 		   ConsistebcyCheckDurabilityServiceQos(curQos.durability_service, tagQos.durability_service) &&
 		   ConsistebcyCheckOwnershipQos(curQos.ownership, tagQos.ownership) &&
 		   ConsistebcyCheckLivelinessQos(curQos.liveliness, tagQos.liveliness) &&
@@ -249,7 +259,8 @@ bool QosPolicyCheck::CanQosBeUpdated(const DataWriterQos& curQos, const DataWrit
 
 bool QosPolicyCheck::CanQosBeUpdated(const DataReaderQos& curQos, const DataReaderQos& tagQos)
 {
-	return ConsistebcyCheckDurabilityQos(curQos.durability, tagQos.durability) &&
+	return curQos.data_sharing == tagQos.data_sharing &&
+		   ConsistebcyCheckDurabilityQos(curQos.durability, tagQos.durability) &&
 		   ConsistebcyCheckOwnershipQos(curQos.ownership, tagQos.ownership) &&
 		   ConsistebcyCheckLivelinessQos(curQos.liveliness, tagQos.liveliness) &&
 		   ConsistebcyCheckReliabilityQos(curQos.reliability, tagQos.reliability) &&

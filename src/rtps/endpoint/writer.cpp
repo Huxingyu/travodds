@@ -21,11 +21,13 @@ Writer::~Writer()
 }
 
 
-std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace)
+std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle, const Time_t& timespace,
+        std::shared_ptr<IPayloadPool> payloadPool)
 {
+	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>(std::move(payloadPool));
+	std::lock_guard<std::mutex> sequenceLock(sequenceMutex_);
 	lastChangeSequenceNumber_++;
 
-	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
 	cacheChange->kind = kind;
 	cacheChange->serializedBuffer = data;
 	cacheChange->instanceHandle = handle;
@@ -35,20 +37,13 @@ std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuff
 	return cacheChange;
 }
 
-std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,const Time_t& timespace, SampleIdentity& sample_identity)
+std::shared_ptr<CacheChange> Writer::NewChange(ChangeKind_t kind, SerializedBuffer* data, InstanceHandle_t handle,const Time_t& timespace, SampleIdentity& sample_identity,
+        std::shared_ptr<IPayloadPool> payloadPool)
 {
-	lastChangeSequenceNumber_++;
-
-	std::shared_ptr<CacheChange> cacheChange = std::make_shared<CacheChange>();
-	cacheChange->kind = kind;
-	cacheChange->serializedBuffer = data;
-	cacheChange->instanceHandle = handle;
-	cacheChange->sequenceNumber = lastChangeSequenceNumber_;
-	cacheChange->writerGuid = guid_;
-	cacheChange->sourceTimespace = timespace;
+	auto cacheChange = NewChange(kind, data, handle, timespace, std::move(payloadPool));
 
 	sample_identity.writer_handle = Conversion::ToInstanceHandle(guid_);
-	sample_identity.sequence_number = lastChangeSequenceNumber_;
+	sample_identity.sequence_number = cacheChange->sequenceNumber;
 
 	return cacheChange;
 
@@ -105,9 +100,30 @@ ReturnCode_t Writer::AddNewCachce(std::shared_ptr<CacheChange> cacheChange)
 		}
 
 		writerCache_->AddChange(cacheChange);
+        if (cacheChange->nativeCommit) {
+            const auto result = cacheChange->nativeCommit(*cacheChange);
+            if (result != RETCODE_OK) {
+                writerCache_->RemoveChange(cacheChange->sequenceNumber);
+                return result;
+            }
+            cacheChange->nativeCommitted = true;
+        }
 	}
 
-	return flowController_->AddNewData(this, cacheChange, qos_.reliability.max_blocking_time);
+    ReturnCode_t delivery = RETCODE_ERROR;
+    try {
+        delivery = flowController_->AddNewData(this, cacheChange, qos_.reliability.max_blocking_time);
+    } catch (...) {
+        if (!cacheChange->nativeCommitted) throw;
+        TRAVODDS_LOG(LOG_WARNING, "DataSharing accepted sample; RTPS delivery threw an exception");
+    }
+    // Shared publication is irrevocable: the application must lose mutable
+    // ownership even if a subsequent socket send fails. Reliable history can retry.
+    if (cacheChange->nativeCommitted && delivery != RETCODE_OK) {
+        TRAVODDS_LOG(LOG_WARNING, "DataSharing accepted sample; RTPS delivery pending: %d", delivery);
+        return RETCODE_OK;
+    }
+    return delivery;
 }
 
 ReturnCode_t Writer::WaitForAcknowledgments(const Duration_t & max_wait)
@@ -161,7 +177,15 @@ const DataWriterQos & Writer::GetQos()
 
 void Writer::SetQos(const DataWriterQos& qos)
 {
-	qos_ = qos;
+    std::lock_guard<std::mutex> lock(wirterMtx_);
+    qos_.deadline = qos.deadline;
+    qos_.lifespan = qos.lifespan;
+    qos_.latency_budget = qos.latency_budget;
+    qos_.ownership_strength = qos.ownership_strength;
+    qos_.transport_priority = qos.transport_priority;
+    qos_.writer_data_lifecycle = qos.writer_data_lifecycle;
+    qos_.user_data = qos.user_data;
+    qos_.property = qos.property;
 }
 
 ReturnCode_t Writer::AddBuiltinCache(std::shared_ptr<CacheChange> cacheChange)
@@ -229,3 +253,27 @@ void Writer::ResetLastChangeSequenceNumber() {
     lastChangeSequenceNumber_.low = 0;
 }
 #endif // DDSSECURITY
+
+void Writer::SetDataSharingReader(const GUID_t& reader, bool eligible) {
+    std::lock_guard<std::mutex> lock(sharingReadersMutex_);
+    sharingReaders_[reader] = eligible;
+}
+void Writer::RemoveDataSharingReader(const GUID_t& reader) {
+    std::lock_guard<std::mutex> lock(sharingReadersMutex_);
+    sharingReaders_.erase(reader);
+}
+std::vector<GUID_t> Writer::SelectDataSharingReaders(const std::vector<GUID_t>& registered) {
+    std::lock_guard<std::mutex> lock(sharingReadersMutex_);
+    std::vector<GUID_t> selected;
+    for (const auto& guid : registered) {
+        const auto it = sharingReaders_.find(guid);
+        if (it != sharingReaders_.end() && it->second) selected.push_back(guid);
+    }
+    return selected;
+}
+bool Writer::HasRtpsReaders(const std::vector<GUID_t>& native) {
+    std::lock_guard<std::mutex> lock(sharingReadersMutex_);
+    for (const auto& reader : sharingReaders_)
+        if (std::find(native.begin(), native.end(), reader.first) == native.end()) return true;
+    return false;
+}

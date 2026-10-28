@@ -6,6 +6,7 @@
 #include "qos/qos.h"
 #include "testdataTypeSupport.h"
 #include <chrono>
+#include <future>
 USING_TRAVODDS_NAMESPACE
 
 void QoSTest::SetUp()
@@ -725,6 +726,8 @@ TEST_F(QoSTest, QoS_transport_shm) {
 }
 
 TEST_F(QoSTest, QoS_DadlineQosPolicy) {
+    std::promise<void> readerChecked;
+    auto readerDone = readerChecked.get_future();
 	std::thread th_1(
 		[&] {
 			// 2. 获取工厂单例
@@ -775,12 +778,13 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 			WaitPositive();
 
 			// 12. 在周期内不能接收到数据
-			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+			EXPECT_EQ(listener.wait_requested_deadline_missed(3500), 0);
 			EXPECT_EQ(reader->get_requested_deadline_missed_status(status), RETCODE_OK);
 			EXPECT_EQ(status.total_count, 1);
 			//因为在listener中读取过status,total_count_change会被重置为0
 			EXPECT_EQ(status.total_count_change, 0);
-			EXPECT_EQ(listener.wait_requested_deadline_missed(1000), 0); // 成功
+			// Keep the Writer alive until the actual Reader deadline assertion.
+            readerChecked.set_value();
 
 			// 13. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);
@@ -830,11 +834,12 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 
 			// 9. 发送DataWriter创建完成信号
 			NotifyNegative();
+            EXPECT_TRUE(waitmatch(writer, 1, 4000));
 
 			// 10. 满足Deadline不产生状态和触发回调
 			for (int i = 0; i < 10; ++i) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(20));
-				TestModule::BasicData sample;
+				TestModule::BasicData sample{};
 				sample.id = i;
 				EXPECT_EQ(writer->write(&sample, HANDLE_NIL), RETCODE_OK);
 				OfferedDeadlineMissedStatus status;
@@ -846,7 +851,7 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 
 			// 11. 不满足Deadline产生状态和触发回调
 			std::this_thread::sleep_for(std::chrono::milliseconds(800));
-			TestModule::BasicData sample;
+			TestModule::BasicData sample{};
 			sample.id = 100;
 			EXPECT_EQ(writer->write(&sample, HANDLE_NIL), RETCODE_OK);
 			OfferedDeadlineMissedStatus status;
@@ -856,8 +861,9 @@ TEST_F(QoSTest, QoS_DadlineQosPolicy) {
 			EXPECT_EQ(status.total_count_change, 0);
 			EXPECT_EQ(listener.wait_offered_deadline_missed(1000), 0); // 成功
 
-			// 12. 发送写入完成信号
+			// 12. 发送写入完成信号。删除 Writer 会停止 Reader 的实例监视。
 			NotifyNegative();
+            EXPECT_EQ(readerDone.wait_for(std::chrono::seconds(10)), std::future_status::ready);
 
 			// 13. 删除所有子实体
 			EXPECT_EQ(participant->delete_contained_entities(), RETCODE_OK);

@@ -245,8 +245,13 @@ TEST(DataWriterTest, DataWriter_unregister_instance_2) {
     InstanceHandle_t handle = writer->register_instance(&data);
     EXPECT_NE(handle, HANDLE_NIL);
     ReturnCode_t ret = writer->unregister_instance(&data, handle);
-    ret = writer->unregister_instance(&data, handle);
     EXPECT_EQ(ret, RETCODE_OK);
+    ret = writer->unregister_instance(&data, handle);
+    EXPECT_EQ(ret, RETCODE_BAD_PARAMETER);
+    EXPECT_EQ(writer->lookup_instance(&data), HANDLE_NIL);
+    InstanceHandle_t registeredAgain = writer->register_instance(&data);
+    EXPECT_EQ(registeredAgain, handle);
+    EXPECT_EQ(writer->unregister_instance(&data, registeredAgain), RETCODE_OK);
 
     par->delete_contained_entities();
     TheParticipantFactory->delete_participant(par);

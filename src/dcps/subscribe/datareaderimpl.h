@@ -767,6 +767,8 @@ public:
 	 * @return 为空则返回true，否则返回false。
 	 */
 	ReturnCode_t OnDataAvaible();
+	ReturnCode_t CreateInstanceKey(const std::shared_ptr<CacheChange>& change,
+		std::shared_ptr<SerializedBuffer>& serialized, std::shared_ptr<void>& native);
 
 	/**
 	 * @brief 更新样本丢失状态。
@@ -817,7 +819,7 @@ public:
 	 *
 	 * @return 为空则返回true，否则返回false。
 	 */
-	const SubscriptionBuiltinTopicData& GetBuiltinTopicData();
+	SubscriptionBuiltinTopicData GetBuiltinTopicData();
 #ifdef DDSSECURITY
 	const SubscriptionBuiltinTopicSecureData& GetBuiltinTopicSecureData();
 
@@ -940,6 +942,11 @@ public:
 	bool ValidateFilterData(SerializedBuffer* buffer);
 
 private:
+	ReturnCode_t CopySample(void* destination, const std::shared_ptr<CacheChange>& change);
+	ReturnCode_t MaterializeSamples(DataSeq& values, SampleInfoSeq& infos,
+		const std::vector<std::shared_ptr<CacheChange>>& changes, bool requestLoan);
+	std::shared_ptr<const void> loanIdentity_ = std::make_shared<int>(0);
+	mutable std::mutex conditionsMutex_;
 	std::vector<std::shared_ptr<ReadConditionImpl>> readcdts_;
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
 	TopicDescriptionImpl* topic_ = nullptr;
@@ -952,6 +959,7 @@ private:
 	/* 当前deadline计时器所属实例 */
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
+    bool timersClosing_ = false;
 	/* wangyi lifespan 定时器 */
 	// std::shared_ptr<Timer> lifespanTimer_;
 	SubscriptionBuiltinTopicData builtinData_;

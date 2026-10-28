@@ -280,14 +280,17 @@ void SharedMemSocket::ReadFromSharedMem() {
 		uint32_t startpos = currentreadpos;
 		char* temp = data_->msg + startpos;
 		while (!shutdown_ && data_->usedBytes.load(std::memory_order_acquire) != 0) {
-			Message_t& msg = *reinterpret_cast<Message_t*>(temp);
-			if (msg.dataSize == uint32_t(~0)) {
+			// Records are byte-packed, including odd payload lengths. Neither
+			// the ring base nor the next record promises uint32_t alignment.
+			uint32_t messageSize;
+			std::memcpy(&messageSize, temp, sizeof(messageSize));
+			if (messageSize == uint32_t(~0)) {
 				startpos = 0;
 				temp = data_->msg;
 			} else  {
-				callback_(msg.data, msg.dataSize);
-				data_->usedBytes.fetch_sub(msg.dataSize + sizeof(uint32_t), std::memory_order_acq_rel);
-				startpos += (msg.dataSize + sizeof(uint32_t));
+				callback_(temp + sizeof(uint32_t), messageSize);
+				data_->usedBytes.fetch_sub(messageSize + sizeof(uint32_t), std::memory_order_acq_rel);
+				startpos += (messageSize + sizeof(uint32_t));
 				temp = data_->msg + startpos;
 			}
 			data_->readpos.store(startpos, std::memory_order_release);

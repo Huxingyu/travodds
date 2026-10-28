@@ -9,9 +9,9 @@ ConditionImpl::ConditionImpl()
 
 ConditionImpl::~ConditionImpl()
 {
-	for (const auto& it : waitSets_) {
-		it->detach_condition(*this);
-	}
+    std::vector<WaitSetImpl*> attached;
+    { std::lock_guard<std::mutex> lock(mtx_); attached.swap(waitSets_); }
+    for (auto* wait : attached) wait->detach_condition(*this);
 }
 
 bool ConditionImpl::get_trigger_value() const

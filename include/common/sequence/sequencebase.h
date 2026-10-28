@@ -14,6 +14,9 @@
 
 #include <stdint.h>
 #include <type_traits>
+#include <memory>
+#include <vector>
+#include <cstddef>
 #include "travodds_dll.h"
 
 /**
@@ -43,6 +46,16 @@ public:
 	 * @return 序列存储空间句柄。
 	 */
 	void** buffer() const;
+
+	// A borrowed sequence owns its pointer array and a pin, never the samples.
+	bool has_ownership() const { return maximum_ != 0 && !loan_pin_; }
+	bool has_loan() const { return static_cast<bool>(loan_pin_); }
+	virtual size_t element_size() const { return 0; }
+	virtual size_t element_alignment() const { return 0; }
+	bool borrow(std::vector<void*> elements, std::shared_ptr<void> pin,
+		std::shared_ptr<const void> owner, uint32_t role = 0);
+	bool matches_loan(const SequenceBase& other, const std::shared_ptr<const void>& owner,
+		uint32_t ownRole, uint32_t otherRole) const;
 
 	/**
 	 * @brief 获取序列当前长度。
@@ -77,6 +90,11 @@ protected:
 	uint32_t maximum_ = 0;
 	uint32_t length_ = 0;
 	void** elements_ = nullptr;
+	std::vector<void*> loan_elements_;
+	std::shared_ptr<void> loan_pin_;
+	std::shared_ptr<const void> loan_owner_;
+	uint32_t loan_role_ = 0;
+	void clear_loan();
 };
 
 #endif

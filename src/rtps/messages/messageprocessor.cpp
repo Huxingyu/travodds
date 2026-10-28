@@ -528,6 +528,7 @@ ReturnCode_t MessageProcessor::InterpretMessageHeader(char*& message, Receive_t&
 	messageReceiver.sourceVendorId[0] = Header.vendorId[0];
 	messageReceiver.sourceVendorId[1] = Header.vendorId[1];
 	messageReceiver.haveTimestame = false;
+    messageReceiver.timestamp = TIME_INVALID;
 	return RETCODE_OK;
 }
 
@@ -844,6 +845,11 @@ ReturnCode_t MessageProcessor::InterpretDataMessage(std::shared_ptr<Message_t> m
 	SubMessageHeader_t & submessageHeader,
 	Receive_t & messageReceiver)
 {
+    // Entity IDs are participant-local. Respect INFO_DST before looking up a Reader.
+    if (messageReceiver.destGuidPrefix != GUIDPREFIX_UNKNOWN &&
+        messageReceiver.destGuidPrefix != participant_->GetGuid().prefix)
+        return RETCODE_OK;
+
 	uint32_t messageShift = 0;
 	/* 解析 flags 每一位 */
 	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
@@ -1095,6 +1101,11 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 	SubMessageHeader_t& submessageHeader,
 	Receive_t& messageReceiver)
 {
+    // Entity IDs are participant-local. Respect INFO_DST before looking up a Reader.
+    if (messageReceiver.destGuidPrefix != GUIDPREFIX_UNKNOWN &&
+        messageReceiver.destGuidPrefix != participant_->GetGuid().prefix)
+        return RETCODE_OK;
+
 	uint32_t messageShift = 0;
 	uint32_t serializedPayloadLen = 0;
 	bool endiannessFlag = (submessageHeader.flags & SubMessageFlag::ENDIANNESS_FLAG) != SubMessageFlag::NONE_FLAG;
@@ -1184,21 +1195,24 @@ ReturnCode_t MessageProcessor::InterpretDataFragMessage(std::shared_ptr<Message_
 	return RETCODE_OK;
 }
 
-ReturnCode_t MessageProcessor::InterpretINFOTSMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)
+ReturnCode_t MessageProcessor::InterpretINFOTSMessage(char* message, SubMessageHeader_t& header, Receive_t& receiver)
 {
-	static_cast<void>(submessageHeader);
-	InfoTimestamp_t infoTs;
-
-	memcpy(&infoTs, message, sizeof(InfoTimestamp_t));
-	message += sizeof(InfoTimestamp_t);
-
-	bool invalidateFlag = (infoTs.header.flags & SubMessageFlag::INVALIDATE_FLAG) != SubMessageFlag::NONE_FLAG;
-
-	if (invalidateFlag) {
-		messageReceiver.timestamp = infoTs.timestamp;
-	}
-
-	return RETCODE_OK;
+    if (header.flags & SubMessageFlag::INVALIDATE_FLAG) {
+        receiver.haveTimestame = false;
+        receiver.timestamp = TIME_INVALID;
+        return RETCODE_OK;
+    }
+    if (header.subMessageLength < sizeof(Time_t)) return RETCODE_BAD_PARAMETER;
+    Time_t stamp;
+    std::memcpy(&stamp, message + sizeof(SubMessageHeader_t), sizeof(stamp));
+    if (DEFAULT_ENDIAN != (header.flags & SubMessageFlag::ENDIANNESS_FLAG)) {
+        stamp.sec = int32_t(__builtin_bswap32(uint32_t(stamp.sec)));
+        stamp.nanosec = __builtin_bswap32(stamp.nanosec);
+    }
+    if (stamp.sec < 0 || stamp.nanosec >= 1000000000u) return RETCODE_BAD_PARAMETER;
+    receiver.timestamp = stamp;
+    receiver.haveTimestame = true;
+    return RETCODE_OK;
 }
 
 ReturnCode_t MessageProcessor::InterpretINFOSRCMessage(char* message, SubMessageHeader_t& submessageHeader, Receive_t& messageReceiver)

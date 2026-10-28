@@ -13,30 +13,41 @@
 #define TRAVODDS_RTPS_TRANSPORT_RECIVER_SOCKET_H
 
 #include <asio.hpp>
+#include <memory>
+#include <thread>
 #include "travodds_dll.h"
 #include "common/sys/sysinfo.h"
 TRAVODDS_NAMESPACE_BEGIN
 
 class ReciverSocket
 {
+    struct Runtime {
+        asio::io_context context;
+        asio::executor_work_guard<asio::io_context::executor_type> guard{asio::make_work_guard(context)};
+    };
+    std::shared_ptr<Runtime> runtime_;
 public:
 	ReciverSocket(const std::string& name)
-		: workGuard_(asio::make_work_guard(ioContext_)),
-		  ioThread_([name,this]() {
+		: runtime_(std::make_shared<Runtime>()), ioContext_(runtime_->context),
+		  ioThread_([name, runtime = runtime_]() {
 		      ThreadFunction::SetThreadName(name);
-		      ioContext_.run(); 
+		      runtime->context.run();
 		  }) {
 	}
 	virtual ~ReciverSocket() {
-		workGuard_.reset();
+		runtime_->guard.reset();
 		ioContext_.stop();
-		if (std::this_thread::get_id() != ioThread_.get_id()) {
-			ioThread_.join();
+		if (ioThread_.joinable()) {
+			if (std::this_thread::get_id() == ioThread_.get_id()) {
+				// The last socket reference can disappear inside its handler.
+				// Keep the context alive through run() and avoid self-join or
+				// destroying a joinable std::thread on this same worker.
+				ioThread_.detach();
+			} else ioThread_.join();
 		}
 	}
 protected:
-	asio::io_context ioContext_;
-	asio::executor_work_guard<asio::io_context::executor_type> workGuard_;
+	asio::io_context& ioContext_;
 	std::thread ioThread_;
 
 };

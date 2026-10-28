@@ -150,7 +150,9 @@ public:
 		return &matchWriters_;
 	}
 #endif // DDSSECURITY
+    ReturnCode_t SubmitDataChange(std::shared_ptr<CacheChange> cache) override;
 private:
+    mutable std::mutex proxiesMutex_;
 	std::map<GUID_t, std::shared_ptr<WriterProxy>> matchWriters_;
 
 	std::map<GUID_t, std::shared_ptr<CacheChange>> dataFragCaches_;

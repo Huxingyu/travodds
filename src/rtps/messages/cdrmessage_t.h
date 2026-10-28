@@ -57,7 +57,7 @@ struct Receive_t {
 	bool haveTimestame;
 	Time_t timestamp;
 	uint32_t messageLen;
-	Receive_t() : sourceVersion(PROTOCOLVERSION), sourceVendorId(VENDORID_PROSIMA), haveTimestame(false), timestamp(TIME_ZERO), messageLen(0) {
+	Receive_t() : sourceVersion(PROTOCOLVERSION), sourceVendorId(VENDORID_PROSIMA), haveTimestame(false), timestamp(TIME_INVALID), messageLen(0) {
 	}
 };
 

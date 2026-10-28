@@ -57,7 +57,7 @@ void WriterProxy::NonAvailableChangeSet(SeqNumberVec seqNumSeq, ChangeCount_t fi
 
 	std::lock_guard<std::mutex> lock(changesmtx_);
 	if (insertSeq_ < seq) {
-		for (insertSeq_ = seqNumSeq[0]; insertSeq_ <= seq; insertSeq_++) {
+		for (insertSeq_++; insertSeq_ <= seq; insertSeq_++) {
 			ChangeFromWriter changeInfo;
 			changeInfo.status = UNKNOWN;
 			changeInfo.is_relevant = true;
@@ -69,10 +69,24 @@ void WriterProxy::NonAvailableChangeSet(SeqNumberVec seqNumSeq, ChangeCount_t fi
 		insertSeq_ = insertSeq_ - 1; 
 	}
 
+    // VOLATILE reception can start above one without placeholders for older
+    // samples. A later GAP must still fill those holes, or GetSubmitCache can
+    // never advance. Do not recreate submitted entries or overwrite data.
+    for (const auto& number : seqNumSeq) {
+        if (number <= submitSeq_ || changesFromWriters_.count(number)) continue;
+        ChangeFromWriter gap;
+        gap.status = UNKNOWN;
+        gap.is_relevant = true;
+        gap.sequenceNumber = number;
+        gap.cache = nullptr;
+        changesFromWriters_.emplace(number, std::move(gap));
+    }
+
 	for (auto& change : changesFromWriters_)
 	{
 		if(!std::count(seqNumSeq.begin(), seqNumSeq.end(), change.second.sequenceNumber))
 			continue;
+        if (change.second.status == RECEIVED) continue;
 
 		if (seqNumSeq.size() == changeCount) {
 			change.second.status = NA_FILTERED;
@@ -158,9 +172,11 @@ ReturnCode_t WriterProxy::RecvHeartbeat(const HeartBeatSubMessage_t& hbMsg, int3
 
 	std::lock_guard<std::mutex> lock(changesmtx_);
 	if (hbMsg.firstSN > submitSeq_ + 1) {
-
+        // Data can arrive before the first heartbeat, leaving UNKNOWN entries
+        // below the Writer's retained history. Resolve them even before the
+        // first submission; otherwise they permanently block the cached data.
+        LostChangesUpdate(hbMsg.firstSN, true);
 		if (submitSeq_ != SEQUENCENUMBER_ZERO) {
-			LostChangesUpdate(hbMsg.firstSN, true);
 			lostCount = static_cast<int32_t>(LostChanges().size());
 		}
 		SequenceNumber_t seq = AvailableChangesMax();

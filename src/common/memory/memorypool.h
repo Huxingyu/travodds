@@ -13,6 +13,7 @@
 #define TRAVODDS_COMMON_MEMORY_MEMORYPOOL_H
 
 #include "type/basictype.h"
+#include "common/memory/payloadpool.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -86,7 +87,7 @@ private:
  * @brief MemoryPool类,内存池类。
  * 由NodeInfo结构体和BufferNode类配合构成内存池。
  */
-class MemoryPool {
+class MemoryPool : public IPayloadPool {
 public:
 	/**
 	 * @brief 构造函数。
@@ -98,7 +99,7 @@ public:
 	/**
 	 * @brief 析构函数。
 	 */
-	~MemoryPool();
+	~MemoryPool() override;
 
 	/**
 	 * @brief 内存池类指针获取函数。
@@ -118,7 +119,7 @@ public:
 	 *
 	 * @return 设置成功返回true，否则返回false。
 	 */
-	bool getBuffer(uint32_t size, char*& buffer);
+	bool getBuffer(uint32_t size, char*& buffer) override;
 
 	/**
 	 * @brief 内存池节点回收函数。
@@ -128,7 +129,7 @@ public:
 	 *
 	 * @return 回收成功返回true，否则返回false。
 	 */
-	bool releaseBuffer(char*& buffer);
+	bool releaseBuffer(char*& buffer) override;
 
 private: 
 	/**

@@ -14,6 +14,9 @@
 #include "common/log/logger.h"
 #include <iostream>
 #include <string>
+#include <charconv>
+#include <set>
+#include <limits>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -347,7 +350,7 @@ bool DDSXMLRepo::parseDataWriterQosProfile(XMLElement* element, DataWriterQos& q
     if (!ret)
     {
         TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
-        return RETCODE_ERROR;
+        return false;
     }
     m_dataWriterQosMap[key] = qos;
     return true;
@@ -390,7 +393,7 @@ bool DDSXMLRepo::parseDataReaderQosProfile(XMLElement* element, DataReaderQos& q
     if (!ret)
     {
         TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos in library %s profile %s\n", element->GetLineNum(), libraryName.c_str(), profileName.c_str());
-        return RETCODE_ERROR;
+        return false;
     }
     m_dataReaderQosMap[key] = qos;
     return true;
@@ -586,11 +589,106 @@ bool DDSXMLRepo::parseSubscriberQos(XMLElement* element, SubscriberQos& qos) {
     return true;
 }
 
+bool DDSXMLRepo::parseDataSharingQosPolicy(XMLElement* element, DataSharingQosPolicy& qos) {
+    // Parse transactionally, including overrides of an inherited profile.
+    DataSharingQosPolicy parsed = qos;
+    std::set<std::string> fields;
+    auto number = [](XMLElement* node, uint64_t& value) {
+        const char* text = node->GetText();
+        if (!text || !*text || node->FirstChildElement() || node->FirstAttribute()) return false;
+        const char* end = text + strlen(text);
+        auto result = std::from_chars(text, end, value);
+        return result.ec == std::errc{} && result.ptr == end;
+    };
+    if (element->FirstAttribute() || element->GetText()) return false;
+    for (auto* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
+        const std::string name = child->Name();
+        if (!fields.insert(name).second || child->FirstAttribute()) return false;
+        if (name == "kind") {
+            const char* value = child->GetText();
+            if (!value || child->FirstChildElement()) return false;
+            if (strcmp(value, "AUTO") == 0) parsed.kind = AUTO_DATA_SHARING_QOS;
+            else if (strcmp(value, "ON") == 0) parsed.kind = ON_DATA_SHARING_QOS;
+            else if (strcmp(value, "OFF") == 0) parsed.kind = OFF_DATA_SHARING_QOS;
+            else return false;
+        } else if (name == "shared_memory_directory") {
+            if (!child->GetText() || child->FirstChildElement()) return false;
+            parsed.shared_memory_directory = child->GetText();
+        } else if (name == "domain_ids") {
+            if (child->GetText()) return false;
+            parsed.domain_ids.clear();
+            for (auto* id = child->FirstChildElement(); id; id = id->NextSiblingElement()) {
+                uint64_t value = 0;
+                if (strcmp(id->Name(), "id") != 0 || !number(id, value) || value > UINT32_MAX ||
+                    parsed.domain_ids.size() == 32) return false;
+                parsed.domain_ids.push_back(static_cast<uint32_t>(value));
+            }
+        } else if (name == "max_samples" || name == "max_readers" || name == "max_segment_bytes") {
+            uint64_t value = 0;
+            if (!number(child, value)) return false;
+            if (name == "max_segment_bytes") parsed.max_segment_bytes = value;
+            else {
+                if (value > UINT32_MAX) return false;
+                if (name == "max_samples") parsed.max_samples = static_cast<uint32_t>(value);
+                else parsed.max_readers = static_cast<uint32_t>(value);
+            }
+        } else return false;
+    }
+    if (!parsed.valid()) return false;
+    qos = std::move(parsed);
+    return true;
+}
+
+bool DDSXMLRepo::parsePayloadPoolQosPolicy(XMLElement* element, PayloadPoolQosPolicy& qos) {
+    PayloadPoolQosPolicy parsed = qos;
+    std::set<std::string> fields;
+    if (element->FirstAttribute() || element->GetText()) return false;
+    for (auto* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
+        const std::string name = child->Name();
+        const char* text = child->GetText();
+        if (!fields.insert(name).second || child->FirstAttribute() || child->FirstChildElement() ||
+            !text || !*text) return false;
+        if (name == "policy") {
+            if (strcmp(text, "PREALLOCATED") == 0) parsed.policy = PayloadMemoryPolicy::PREALLOCATED;
+            else if (strcmp(text, "PREALLOCATED_WITH_REALLOC") == 0) parsed.policy = PayloadMemoryPolicy::PREALLOCATED_WITH_REALLOC;
+            else if (strcmp(text, "DYNAMIC_RESERVE") == 0) parsed.policy = PayloadMemoryPolicy::DYNAMIC_RESERVE;
+            else if (strcmp(text, "DYNAMIC_REUSABLE") == 0) parsed.policy = PayloadMemoryPolicy::DYNAMIC_REUSABLE;
+            else return false;
+        } else {
+            uint64_t value = 0;
+            const auto end = text + strlen(text);
+            const auto result = std::from_chars(text, end, value);
+            if (result.ec != std::errc{} || result.ptr != end) return false;
+            if (name == "alignment") {
+                if (value > std::numeric_limits<size_t>::max()) return false;
+                parsed.alignment = static_cast<size_t>(value);
+            } else {
+                if (value > UINT32_MAX) return false;
+                if (name == "payload_size") parsed.payload_size = static_cast<uint32_t>(value);
+                else if (name == "max_payloads") parsed.max_payloads = static_cast<uint32_t>(value);
+                else if (name == "initial_payloads") parsed.initial_payloads = static_cast<uint32_t>(value);
+                else return false;
+            }
+        }
+    }
+    if (!parsed.valid()) return false;
+    qos = parsed;
+    return true;
+}
+
 bool DDSXMLRepo::parseDataWriterQos(XMLElement* element, DataWriterQos& qos) {
+    bool sharingSeen = false;
+    bool poolSeen = false;
     // 遍历子节点
     for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
         const char* nodeName = child->Name();
-        if (strcmp(nodeName, "durability") == 0) {
+        if (strcmp(nodeName, "data_sharing") == 0) {
+            if (sharingSeen || !parseDataSharingQosPolicy(child, qos.data_sharing)) return false;
+            sharingSeen = true;
+        } else if (strcmp(nodeName, "payload_pool") == 0) {
+            if (poolSeen || !parsePayloadPoolQosPolicy(child, qos.payload_pool)) return false;
+            poolSeen = true;
+        } else if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataWriterQos durability\n", child->GetLineNum());
@@ -695,10 +793,14 @@ bool DDSXMLRepo::parseDataWriterQos(XMLElement* element, DataWriterQos& qos) {
 }
 
 bool DDSXMLRepo::parseDataReaderQos(XMLElement* element, DataReaderQos& qos) {
+    bool sharingSeen = false;
     // 遍历子节点
     for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
         const char* nodeName = child->Name();
-        if (strcmp(nodeName, "durability") == 0) {
+        if (strcmp(nodeName, "data_sharing") == 0) {
+            if (sharingSeen || !parseDataSharingQosPolicy(child, qos.data_sharing)) return false;
+            sharingSeen = true;
+        } else if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {
                 TRAVODDS_LOG(LOG_ERROR, "Line[%d] Failed to parse DataReaderQos durability\n", child->GetLineNum());
@@ -1025,6 +1127,7 @@ bool DDSXMLRepo::parseDuration(XMLElement* element, Duration_t& duration) {
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "sec") == 0) {
             const char* text = child->GetText();
+            if (!text) return false;
             if (strcmp("DURATION_INFINITE", text) == 0) {
                 duration.sec = 0x7fffffff;
             } else if (strcmp("DURATION_INFINITE_SEC", text) == 0) {
@@ -1038,6 +1141,7 @@ bool DDSXMLRepo::parseDuration(XMLElement* element, Duration_t& duration) {
             }
         } else if (strcmp(nodeName, "nanosec") == 0) {
             const char* text = child->GetText();
+            if (!text) return false;
             if (strcmp("DURATION_INFINITE", text) == 0) {
                 duration.nanosec = 0x7fffffff;
             } else if (strcmp("DURATION_INFINITE_NSEC", text) == 0) {
@@ -1676,7 +1780,10 @@ bool DDSXMLRepo::parseReaderDataLifecycleQosPolicy(XMLElement* element, ReaderDa
             return false;
         }
     }
-    return true;
+    auto valid = [](const Duration_t& d) {
+        return d == Duration_t(TIME_INFINITE) || (d.sec >= 0 && d.nanosec < 1000000000u);
+    };
+    return valid(qos.autopurge_nowriter_samples_delay) && valid(qos.autopurge_disposed_samples_delay);
 }
 
 bool DDSXMLRepo::parseTopicDataQosPolicy(XMLElement* element, TopicDataQosPolicy& qos) {

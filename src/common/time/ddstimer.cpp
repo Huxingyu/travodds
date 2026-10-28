@@ -33,135 +33,122 @@ std::shared_ptr<Timer> TimerManager::PrivateCreateTimer(const Time_t& time, Time
 	return timer;
 }
 
+// Worker state has independent lifetime: callbacks may release the last Timer
+// reference. No worker accesses Timer after invoking application code.
+struct Timer::Runtime {
+    std::mutex mutex;
+    std::condition_variable changed;
+    std::chrono::milliseconds period;
+    std::chrono::steady_clock::time_point next;
+    TimerCallBack callback;
+    TimerType type;
+    std::string name;
+    uint64_t revision = 0;
+    bool running = false, exiting = false;
+};
+
 Timer::Timer(std::chrono::milliseconds period, TimerCallBack callback, TimerType type, const std::string& name)
-	: name_(name), period_(period), callback_(callback), 
-	  run_(false), exit_(false), restart_(false),
-	  type_(type)
+    : runtime_(std::make_shared<Runtime>())
 {
-	nextTime_ = std::chrono::steady_clock::now() + period_;
+    runtime_->period = std::max(period, std::chrono::milliseconds(1));
+    runtime_->next = std::chrono::steady_clock::now() + runtime_->period;
+    runtime_->callback = std::move(callback);
+    runtime_->type = type;
+    runtime_->name = name;
 }
-
-Timer::~Timer()
-{
-	Exit();
+Timer::~Timer() { Exit(); }
+void Timer::Start() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> threadLock(threadMutex_);
+    std::lock_guard<std::mutex> lock(state->mutex);
+    if (state->exiting) return;
+    state->running = true;
+    state->next = std::chrono::steady_clock::now() + state->period;
+    ++state->revision;
+    if (!thread_.joinable()) thread_ = std::thread([state] { RunRuntime(state); });
+    state->changed.notify_all();
 }
-
-void Timer::Start()
-{
-
-	run_.store(true);
-
-	if (TIMER_MULTIPLE == type_) {
-		if (!thread_.get()) {
-			thread_.reset(new std::thread([this]() {
-				ThreadFunction::SetThreadName(name_);
-				while (!this->exit_.load()) {
-					this->Run();
-				}
-			}
-			));
-		}
-	}
-	else {
-		std::thread thread([this]() {
-			ThreadFunction::SetThreadName(name_);
-			this->Run(); 
-			}
-		);
-		thread.detach();
-	}
+void Timer::Stop() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    state->running = false; ++state->revision;
+    state->changed.notify_all();
 }
-
-void Timer::Stop()
-{
-	run_.store(false);
-	cva_.notify_one();
+void Timer::Exit() {
+    auto state = runtime_;
+    {
+        std::lock_guard<std::mutex> lock(state->mutex);
+        state->exiting = true; state->running = false; ++state->revision;
+        state->changed.notify_all();
+    }
+    std::thread pending;
+    {
+        std::lock_guard<std::mutex> threadLock(threadMutex_);
+        if (thread_.joinable()) {
+            if (thread_.get_id() == std::this_thread::get_id()) thread_.detach();
+            else pending = std::move(thread_);
+        }
+    }
+    if (pending.joinable()) pending.join();
 }
-
-/* 停止定时器 */
-void  Timer::Exit()
-{
-	exit_.store(true);
-	run_.store(false);
-	cva_.notify_one();
-	if (TIMER_MULTIPLE == type_ && thread_->joinable()) {
-		thread_->join();
-	}
+void Timer::RunRuntime(const std::shared_ptr<Runtime>& state) {
+    ThreadFunction::SetThreadName(state->name);
+    std::unique_lock<std::mutex> lock(state->mutex);
+    while (!state->exiting) {
+        state->changed.wait(lock, [&] { return state->exiting || state->running; });
+        if (state->exiting) break;
+        const auto revision = state->revision;
+        const auto due = state->next;
+        if (state->changed.wait_until(lock, due, [&] {
+                return state->exiting || !state->running || state->revision != revision;
+            })) continue;
+        auto callback = state->callback;
+        if (state->type == TIMER_SINGLE) state->running = false;
+        lock.unlock();
+        try { callback(); } catch (...) {
+            // Keep the timer worker valid if an application callback throws.
+        }
+        lock.lock();
+        if (state->revision == revision)
+            state->next = std::chrono::steady_clock::now() + state->period;
+    }
 }
-
-void Timer::Run()
-{
-	std::unique_lock<std::mutex> lock(mutex_);
-
-	if(!restart_.load())
-		cva_.wait_until(lock, nextTime_);
-
-	if (restart_.load()) {
-		restart_.store(false);
-		nextTime_ = std::chrono::steady_clock::now() + period_;
-		return;
-	}
-
-	if (run_.load()) {
-		callback_();
-	}
-
-	UpdateNextTime();
+void Timer::Run() { RunRuntime(runtime_); }
+void Timer::UpdateNextTime() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    state->next = std::chrono::steady_clock::now() + state->period;
+    ++state->revision; state->changed.notify_all();
 }
-
-// void Timer::restartTimer()
-// {
-// 	restartTimer(period_);
-// }
-//
-// void Timer::restartTimer(std::chrono::milliseconds period)
-// {
-// 	restart_.store(true);
-// 	period_ = period;
-// 	cva_.notify_one();
-// }
-
-void Timer::UpdateNextTime()
-{
-	nextTime_ = nextTime_ + period_;
+std::chrono::steady_clock::time_point Timer::GetNextTime() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    return state->next;
 }
-
-std::chrono::milliseconds Timer::GetTriggerTime()
-{
-	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
-	return ms;
+std::chrono::milliseconds Timer::GetTriggerTime() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    return std::chrono::duration_cast<std::chrono::milliseconds>(state->next - std::chrono::steady_clock::now());
 }
-
-void Timer::ReStart()
-{
-	restart_.store(true);
-
-	cva_.notify_one();
+void Timer::ReStart() {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    if (state->exiting) return;
+    state->running = true;
+    state->next = std::chrono::steady_clock::now() + state->period;
+    ++state->revision; state->changed.notify_all();
 }
-
-bool Timer::UpdatePeriod(
-	const Duration_t& period)
-{
-	period_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::nanoseconds(period.nanosec) + std::chrono::seconds(period.sec));
-
-	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
-
-	//if (ms > period_)
-		ReStart();
-
-	return true;
+bool Timer::UpdatePeriod(const Duration_t& period) {
+    return UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::seconds(period.sec) + std::chrono::nanoseconds(period.nanosec)).count());
 }
-
-bool Timer::UpdatePeriod(int64_t period)
-{
-	//std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(nextTime_ - std::chrono::steady_clock::now());
-
-	period_ = std::chrono::milliseconds(period);
-	
-	//if (ms > period_) {
-		ReStart();
-	//}
-
-	return true;
+bool Timer::UpdatePeriod(int64_t period) {
+    auto state = runtime_;
+    std::lock_guard<std::mutex> lock(state->mutex);
+    if (state->exiting) return false;
+    state->period = std::chrono::milliseconds(std::max<int64_t>(1, period));
+    state->next = std::chrono::steady_clock::now() + state->period;
+    state->running = true;
+    ++state->revision; state->changed.notify_all();
+    return true;
 }
-

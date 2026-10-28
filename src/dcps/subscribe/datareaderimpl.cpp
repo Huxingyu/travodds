@@ -1,4 +1,5 @@
 #include "dcps/subscribe/datareaderimpl.h"
+#include "rtps/discovery/datasharingendpoint.h"
 #include "dcps/subscribe/subscriberimpl.h"
 #include "dcps/topic/topicdescriptionimpl.h"
 #include "dcps/topic/typesupport.h"
@@ -12,6 +13,7 @@
 #include "rtps/endpoint/participant.h"
 #include "rtps/discovery/discovery.h"
 #include "qos/qospolicycheck.h"
+#include "common/memory/memorypool.h"
 #include "common/time/ddstimer.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
@@ -23,6 +25,70 @@
 #include "xtypes/dynamicdatafactory.h"
 #include "xtypes/dynamicdatatypesupport.h"
 USING_TRAVODDS_NAMESPACE;
+
+namespace {
+struct NativeReaderBatch {
+	std::vector<std::shared_ptr<CacheChange>> changes;
+	SampleInfoSeq infos;
+};
+}
+
+ReturnCode_t DataReaderImpl::CopySample(void* destination, const std::shared_ptr<CacheChange>& change)
+{
+	if (!destination || !change) return RETCODE_BAD_PARAMETER;
+	if (change->nativePayload) {
+		const auto type = typeSupport_->get_native_type_info();
+		if (!type.loanable() || !(type == change->nativeType)) return RETCODE_BAD_PARAMETER;
+		return typeSupport_->copy_data(destination, change->nativePayload.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
+	}
+	if (!change->serializedBuffer) return RETCODE_ERROR;
+	SerializedBuffer buffer = *change->serializedBuffer;
+	const bool littleEndian = GetEndianess(&buffer);
+	CdrDeserializer cdr(&buffer, littleEndian);
+	return typeSupport_->deserialize_data(destination, &cdr, littleEndian) == 0 ? RETCODE_OK : RETCODE_ERROR;
+}
+
+ReturnCode_t DataReaderImpl::MaterializeSamples(DataSeq& values, SampleInfoSeq& infos,
+	const std::vector<std::shared_ptr<CacheChange>>& changes, bool requestLoan)
+{
+	if (changes.size() != infos.length()) return RETCODE_ERROR;
+	try {
+		const auto type = typeSupport_->get_native_type_info();
+		bool allNative = !changes.empty();
+		for (size_t i = 0; i < changes.size(); ++i) {
+			if (!changes[i]) return RETCODE_ERROR;
+			if (infos[uint32_t(i)].valid_data && changes[i]->nativePayload) {
+				if (!type.loanable() || !(type == changes[i]->nativeType) ||
+					values.element_size() != type.size || values.element_alignment() != type.alignment)
+					return RETCODE_BAD_PARAMETER;
+			} else allNative = false;
+		}
+		if (requestLoan && allNative) {
+			auto batch = std::make_shared<NativeReaderBatch>();
+			batch->changes = changes;
+			std::vector<void*> dataPointers, infoPointers;
+			dataPointers.reserve(changes.size());
+			infoPointers.reserve(changes.size());
+			for (size_t i = 0; i < changes.size(); ++i) dataPointers.push_back(changes[i]->nativePayload.get());
+			batch->infos = std::move(infos);
+			for (uint32_t i = 0; i < batch->infos.length(); ++i) infoPointers.push_back(&batch->infos[i]);
+			if (!values.borrow(std::move(dataPointers), batch, loanIdentity_, 1) ||
+				!infos.borrow(std::move(infoPointers), batch, loanIdentity_, 2)) {
+				values.unloan();
+				infos.unloan();
+				return RETCODE_ERROR;
+			}
+			return RETCODE_OK;
+		}
+		if (!values.length(uint32_t(changes.size()))) return RETCODE_PRECONDITION_NOT_MET;
+		for (uint32_t i = 0; i < changes.size(); ++i) {
+			if (!infos[i].valid_data) continue;
+			const auto result = CopySample(values[i], changes[i]);
+			if (result != RETCODE_OK) return result;
+		}
+		return RETCODE_OK;
+	} catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+}
 
 DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos, DataReaderListener* listener, StatusMask mask, SubscriberImpl* sub, TypeSupport* typeSupport)
     : DomainEntityImpl(mask), topic_(dynamic_cast<TopicDescriptionImpl*>(topic)), 
@@ -119,6 +185,18 @@ DataReaderImpl::DataReaderImpl(TopicDescription* topic, const DataReaderQos& qos
 
 DataReaderImpl::~DataReaderImpl()
 {
+    { std::lock_guard<std::mutex> schedule(lastInstanceMtx_); timersClosing_ = true; }
+    if (reader_) {
+        std::shared_ptr<Timer> filterTimer;
+        { std::lock_guard<std::recursive_mutex> ingress(reader_->dataMutex_); filterTimer = reader_->lastNewCacheTimer_; }
+        // The filter callback releases ingress before calling the application.
+        // Drain it before disconnecting/destroying the associated DCPS state.
+        if (filterTimer) filterTimer->Exit();
+        // Join native listeners without holding ingress, then drain discovery
+        // callbacks before destroying the status manager or other DCPS state.
+        reader_->StopDataSharing();
+        reader_->SetRelatedDataReader(nullptr);
+    }
 	if (deadlineTimer_) {
 		deadlineTimer_->Exit();
 	}
@@ -126,9 +204,6 @@ DataReaderImpl::~DataReaderImpl()
 	//if (lifespanTimer_) {
 	//	lifespanTimer_->Exit();
 	//}
-	if (enable_) {
-		reader_->SetRelatedDataReader(nullptr);
-	}
 	ContentFilteredTopicImpl* filteredTopic = dynamic_cast<ContentFilteredTopicImpl*>(topic_);
 	if (filteredTopic){
 		filteredTopic->RemoveReader(this);
@@ -172,6 +247,11 @@ DataReaderImpl::~DataReaderImpl()
 
 ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
 {
+    std::unique_lock<std::recursive_mutex> ingress;
+    if (reader_) ingress = std::unique_lock<std::recursive_mutex>(reader_->dataMutex_);
+    std::unique_lock<std::mutex> schedule(lastInstanceMtx_);
+    if (timersClosing_) return RETCODE_ALREADY_DELETED;
+
     DataReaderQos defaultQos;
     sub_->get_default_datareader_qos(defaultQos);
     const DataReaderQos& qosTemp = (&qos == &DATAREADER_QOS_DEFAULT) ? defaultQos : qos;
@@ -204,16 +284,36 @@ ReturnCode_t DataReaderImpl::set_qos(const DataReaderQos& qos)
 			}
 		}
 		else if (qosTemp.deadline.period == Duration_t(TIME_INFINITE)) {
-			deadlineTimer_.reset();
+			if (deadlineTimer_) deadlineTimer_->Stop();
+            if (history_) history_->UpAllDeadline(std::chrono::steady_clock::time_point::max());
 		}
 		reader_->SetQos(qosTemp);
 	}
 	qos_ = qosTemp;
+    builtinData_.deadline = qosTemp.deadline;
+    builtinData_.latency_budget = qosTemp.latency_budget;
+    builtinData_.user_data = qosTemp.user_data;
+    builtinData_.time_based_filter = qosTemp.time_based_filter;
+    const auto advertisement = builtinData_;
+    const bool advertise = enable_;
+    schedule.unlock();
+    if (ingress.owns_lock()) ingress.unlock();
+#ifndef DDSSECURITY
+    if (advertise) {
+        auto* domain = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(sub_->get_participant()));
+        if (domain && domain->GetDiscovery()) {
+            DiscoveredReaderData update;
+            update.ddsSubscriptionData = advertisement;
+            domain->GetDiscovery()->WriteSubscriptionData(update);
+        }
+    }
+#endif
     return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::get_qos(DataReaderQos& qos) const
 {
+    std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
     qos = qos_;
     return RETCODE_OK;
 }
@@ -240,432 +340,468 @@ const DataReaderListener * DataReaderImpl::get_listener() const
 ReturnCode_t DataReaderImpl::read(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, SampleStateMask sample_states,
 	ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	ReturnCode_t ret = RETCODE_OK;
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
 	data_values.unloan();
 	sample_infos.unloan();
+	std::vector<std::shared_ptr<CacheChange>> datas;
+	ReturnCode_t ret = RETCODE_OK;
 
-	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states);
+	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, false, true);
 	if (RETCODE_OK != ret) {
 		if(RETCODE_ERROR == ret) {
 			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		}
 		return ret;
 	}
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::take(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	ReturnCode_t ret = RETCODE_OK;
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
 	data_values.unloan();
 	sample_infos.unloan();
-	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true);
+	std::vector<std::shared_ptr<CacheChange>> datas;
+	ReturnCode_t ret = RETCODE_OK;
+	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, sample_states, view_states, instance_states, true, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::read_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, ReadCondition* condition)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	ReturnCode_t ret = RETCODE_OK;
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	if (!condition || condition->get_datareader() != this) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
 	data_values.unloan();
 	sample_infos.unloan();
+	std::vector<std::shared_ptr<CacheChange>> datas;
+	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
-		condition->get_view_state_mask(), condition->get_instance_state_mask());
+		condition->get_view_state_mask(), condition->get_instance_state_mask(), false, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::take_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, ReadCondition* condition)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	ReturnCode_t ret = RETCODE_OK;
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	if (!condition || condition->get_datareader() != this) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
 	data_values.unloan();
 	sample_infos.unloan();
+	std::vector<std::shared_ptr<CacheChange>> datas;
+	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTake(datas, sample_infos, max_samples, condition->get_sample_state_mask(),
-		condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
+		condition->get_view_state_mask(), condition->get_instance_state_mask(), true, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer,littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
-ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo &sample_info)
+ReturnCode_t DataReaderImpl::read_next_sample(void* data_value, SampleInfo& sample_info)
 {
-	if (enable_ == false) {
-		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
-		return RETCODE_NOT_ENABLED;
-	}
-    ReturnCode_t ret = RETCODE_OK;
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	SampleInfoSeq sample_infos;
-	ret = reader_->ReadOrTake(datas, sample_infos,1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE);
-	if (RETCODE_OK == ret) {
-		if (!sample_infos[0].valid_data) {
-			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
-			return ret;
-		}
-		SerializedBuffer buffer = *datas[0]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
-		sample_info = sample_infos[0];
-	}
-	
-    return ret;
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    if (!data_value) return RETCODE_BAD_PARAMETER;
+    std::vector<std::shared_ptr<CacheChange>> changes;
+    SampleInfoSeq infos;
+    const auto result = reader_->ReadOrTake(changes, infos, 1, NOT_READ_SAMPLE_STATE,
+        ANY_VIEW_STATE, ANY_INSTANCE_STATE, false, true);
+    if (result != RETCODE_OK) return result;
+    sample_info = infos[0];
+    const auto copied = sample_info.valid_data ? CopySample(data_value, changes[0]) : RETCODE_OK;
+    if (copied != RETCODE_OK) return copied;
+    history_->CommitSamples(changes, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
-ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo &sample_info)
+ReturnCode_t DataReaderImpl::take_next_sample(void* data_value, SampleInfo& sample_info)
 {
-	if (enable_ == false) {
-		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
-		return RETCODE_NOT_ENABLED;
-	}
-	ReturnCode_t ret = RETCODE_OK;
-	std::vector<std::shared_ptr<CacheChange>> datas;
-	SampleInfoSeq sample_infos;
-	ret = reader_->ReadOrTake(datas, sample_infos, 1, NOT_READ_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE,true);
-	if (RETCODE_OK == ret) {
-		if (!sample_infos[0].valid_data) {
-			TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
-			return ret;
-		}
-		SerializedBuffer buffer = *datas[0]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_value, &cdr, littleEndian);
-		sample_info = sample_infos[0];
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-
-	return ret;
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    if (!data_value) return RETCODE_BAD_PARAMETER;
+    std::vector<std::shared_ptr<CacheChange>> changes;
+    SampleInfoSeq infos;
+    const auto result = reader_->ReadOrTake(changes, infos, 1, NOT_READ_SAMPLE_STATE,
+        ANY_VIEW_STATE, ANY_INSTANCE_STATE, true, true);
+    if (result != RETCODE_OK) return result;
+    sample_info = infos[0];
+    const auto copied = sample_info.valid_data ? CopySample(data_value, changes[0]) : RETCODE_OK;
+    if (copied != RETCODE_OK) return copied;
+    history_->CommitSamples(changes, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::read_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& a_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
-	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, a_handle, sample_states, view_states, instance_states);
+	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, a_handle, sample_states, view_states, instance_states, false, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTake ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-		
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::take_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
-	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, handle, sample_states, view_states, instance_states,true);
+	ret = reader_->ReadOrTakeInstance(datas, sample_infos, max_samples, handle, sample_states, view_states, instance_states,true, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeInstance ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::read_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
-	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states);
+	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states, false, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::take_next_instance(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, SampleStateMask sample_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
-	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states,true);
+	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle, sample_states, view_states, instance_states,true, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::read_next_instance_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, ReadCondition* condition)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	if (!condition || condition->get_datareader() != this) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
-		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask());
+		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask(), false, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-	}
-
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, false);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::take_next_instance_w_condition(DataSeq& data_values, SampleInfoSeq& sample_infos, int32_t max_samples, const InstanceHandle_t& previous_handle, ReadCondition* condition)
 {
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    std::lock_guard<std::recursive_mutex> access(reader_->sampleAccessMutex);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
 		return RETCODE_NOT_ENABLED;
 	}
+	const auto outputType = typeSupport_->get_native_type_info();
+	if (outputType.loanable() && (data_values.element_size() != outputType.size ||
+		data_values.element_alignment() != outputType.alignment)) return RETCODE_BAD_PARAMETER;
+	if (&data_values == static_cast<SequenceBase*>(&sample_infos)) return RETCODE_BAD_PARAMETER;
+	if (data_values.has_loan() || sample_infos.has_loan()) return RETCODE_PRECONDITION_NOT_MET;
+	if (max_samples <= 0 && max_samples != LENGTH_UNLIMITED) return RETCODE_BAD_PARAMETER;
+	if (!condition || condition->get_datareader() != this) return RETCODE_BAD_PARAMETER;
+	const bool requestLoan = data_values.maximum() == 0;
+	data_values.unloan();
+	sample_infos.unloan();
 	std::vector<std::shared_ptr<CacheChange>>  datas;
 	ReturnCode_t ret = RETCODE_OK;
 	ret = reader_->ReadOrTakeNextInstance(datas, sample_infos, max_samples, previous_handle,
-		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask(), true);
+		condition->get_sample_state_mask(), condition->get_view_state_mask(), condition->get_instance_state_mask(), true, true);
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "ReadOrTakeNextInstance ret = %d", ret);
 		return ret;
 	}
 
-	uint32_t dataSize = static_cast<uint32_t>(datas.size());
-	data_values.length(dataSize);
-	for (uint32_t i = 0; i < dataSize; i++) {
-		if (!sample_infos[i].valid_data) {
-			continue;
-		}
-		SerializedBuffer buffer = *datas[i]->serializedBuffer;
-		bool littleEndian = GetEndianess(&buffer);
-
-		CdrDeserializer cdr(&buffer, littleEndian);
-		typeSupport_->deserialize_data(data_values[i], &cdr, littleEndian);
-
-		if (buffer.origin_buffer) {
-			MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-		}
-	}
-	return ret;
+	const auto result = MaterializeSamples(data_values, sample_infos, datas, requestLoan);
+    if (result != RETCODE_OK) { data_values.unloan(); sample_infos.unloan(); return result; }
+    history_->CommitSamples(datas, true);
+    SetStatus(false);
+    NotifyReadConditions();
+    return RETCODE_OK;
 }
 
 ReturnCode_t DataReaderImpl::return_loan(DataSeq& data_values, SampleInfoSeq& sample_infos)
 {
-	static_cast<void>(data_values);
-	static_cast<void>(sample_infos);
+    if (!data_values.has_loan() && !sample_infos.has_loan()) return RETCODE_OK;
+    if (!data_values.matches_loan(sample_infos, loanIdentity_, 1, 2))
+        return RETCODE_PRECONDITION_NOT_MET;
+    data_values.unloan();
+    sample_infos.unloan();
     return RETCODE_OK;
+}
+
+ReturnCode_t DataReaderImpl::CreateInstanceKey(const std::shared_ptr<CacheChange>& change,
+        std::shared_ptr<SerializedBuffer>& serialized, std::shared_ptr<void>& native)
+{
+    if (!change) return RETCODE_BAD_PARAMETER;
+    // Builtin discovery Readers have listeners but no application TypeSupport.
+    if (!typeSupport_ || !typeSupport_->has_key() || change->kind != ALIVE) return RETCODE_OK;
+    try {
+        if (change->nativePayload) {
+            const auto& info = change->nativeType;
+            if (!info.loanable() || !(info == typeSupport_->get_native_type_info())) return RETCODE_BAD_PARAMETER;
+            const auto alignment = std::align_val_t(std::max(info.alignment, uint32_t(alignof(std::max_align_t))));
+            auto snapshot = std::shared_ptr<void>(::operator new(info.size, alignment),
+                [alignment](void* p) { ::operator delete(p, alignment); });
+            if (!typeSupport_->construct_native_sample(snapshot.get())) return RETCODE_ERROR;
+            std::memcpy(snapshot.get(), change->nativePayload.get(), info.size);
+            native = std::move(snapshot);
+        } else {
+            const auto pool = MemoryPool::GetInstance();
+            PayloadBufferPtr owner(nullptr, PayloadBufferDeleter{pool});
+            SerializedBuffer* tail = nullptr;
+            for (auto* source = change->serializedBuffer; source; source = source->next) {
+                PayloadBufferPtr part(new SerializedBuffer, PayloadBufferDeleter{pool});
+                part->buffer_size = source->buffer_size;
+                if (!source->buffer || !pool->getBuffer(part->buffer_size, part->origin_buffer)) return RETCODE_OUT_OF_RESOURCES;
+                part->buffer = part->origin_buffer;
+                part->writer_position = part->buffer_size;
+                std::memcpy(part->buffer, source->buffer, part->buffer_size);
+                auto* current = part.get();
+                if (tail) tail->next = part.release();
+                else owner = std::move(part);
+                tail = current;
+            }
+            if (!owner) return RETCODE_BAD_PARAMETER;
+            serialized = std::shared_ptr<SerializedBuffer>(std::move(owner));
+        }
+        return RETCODE_OK;
+    } catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+    catch (const std::exception&) { return RETCODE_ERROR; }
 }
 
 ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
-	if (enable_ == false) {
-		TRAVODDS_LOG(LOG_WARNING, "DataReader not enable");
-		return RETCODE_NOT_ENABLED;
-	}
-	if (!typeSupport_->has_key()) {
-		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
-		return RETCODE_ILLEGAL_OPERATION;
-	}
-
-	SerializedBuffer* cacheData = history_->get_key_value(handle);
-	if (nullptr == cacheData) {
-		TRAVODDS_LOG(LOG_ERROR, "cacheData is nullptr,RETCODE_BAD_PARAMETER");
-		return RETCODE_BAD_PARAMETER;
-	}
-
-	CdrDeserializer cdr(cacheData);
-	typeSupport_->deserialize_data(key_holder, &cdr, 1);
-	return RETCODE_OK;
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    if (!typeSupport_->has_key()) return RETCODE_ILLEGAL_OPERATION;
+    if (!key_holder || handle == HANDLE_NIL) return RETCODE_BAD_PARAMETER;
+    if (auto native = history_->GetNativeKey(handle)) {
+        return typeSupport_->copy_data(key_holder, native.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
+    }
+    auto data = history_->GetSerializedKey(handle);
+    if (!data) return RETCODE_BAD_PARAMETER;
+    // Each query owns its cursors, including all fragments after the first.
+    std::vector<SerializedBuffer> views;
+    for (auto* part = data.get(); part; part = part->next) views.push_back(*part);
+    for (size_t i = 0; i < views.size(); ++i) {
+        views[i].reader_position = 0;
+        views[i].next = i + 1 < views.size() ? &views[i + 1] : nullptr;
+    }
+    if (views.empty() || views[0].buffer_size < CDR_ENDIANNESS_LEN) return RETCODE_ERROR;
+    const bool littleEndian = GetEndianess(&views[0]);
+    CdrDeserializer cdr(&views[0], littleEndian);
+    return typeSupport_->deserialize_data(key_holder, &cdr, littleEndian) == 0 ? RETCODE_OK : RETCODE_ERROR;
 }
 
 InstanceHandle_t DataReaderImpl::lookup_instance(const void* instance_data) const
 {
-	InstanceHandle_t handle = HANDLE_NIL;
-
-	if (typeSupport_->has_key()) {
-		if (MakeKey(instance_data, handle, true)) {
-			if (!history_->IsInstancePresent(handle)) {
-				handle = HANDLE_NIL;
-			}
-		}
-	}
-	return handle;
+    if (!enable_ || !instance_data || !typeSupport_->has_key()) return HANDLE_NIL;
+    InstanceHandle_t handle = HANDLE_NIL;
+    if (!MakeKey(instance_data, handle, true) || !history_->IsInstancePresent(handle)) return HANDLE_NIL;
+    return handle;
 }
 
 ReadCondition* DataReaderImpl::create_readcondition(SampleStateMask smaple_states, ViewStateMask view_states, InstanceStateMask instance_states)
 {
+    std::lock_guard<std::mutex> conditions(conditionsMutex_);
 	ReadCondition* readcdt = nullptr;
     std::shared_ptr<ReadConditionImpl> readcdtPtr = std::make_shared<ReadConditionImpl>(smaple_states, view_states, instance_states,this);
     if (readcdtPtr) {
@@ -677,6 +813,7 @@ ReadCondition* DataReaderImpl::create_readcondition(SampleStateMask smaple_state
 
 QueryCondition* DataReaderImpl::create_querycondition(SampleStateMask smaple_states, ViewStateMask view_states, InstanceStateMask instance_states, const std::string & query_expression, const StringSeq& query_parameters)
 {
+    std::lock_guard<std::mutex> conditions(conditionsMutex_);
 	QueryCondition* querycdt = nullptr;
 	std::shared_ptr<QueryConditionImpl> querycdtPtr = std::make_shared<QueryConditionImpl>(smaple_states, view_states, instance_states, query_expression, query_parameters, this);
 	if (querycdtPtr) {
@@ -689,6 +826,7 @@ QueryCondition* DataReaderImpl::create_querycondition(SampleStateMask smaple_sta
 
 ReturnCode_t DataReaderImpl::delete_readcondition(ReadCondition* condition)
 {
+    std::lock_guard<std::mutex> conditions(conditionsMutex_);
 	if (condition == nullptr) {
 		TRAVODDS_LOG(LOG_ERROR, "condition is nullptr,RETCODE_BAD_PARAMETER");
 		return RETCODE_BAD_PARAMETER;
@@ -751,6 +889,7 @@ const Subscriber *DataReaderImpl::get_subscriber() const
 
 ReturnCode_t DataReaderImpl::delete_contained_entities()
 {
+    std::lock_guard<std::mutex> conditions(conditionsMutex_);
 	readcdts_.clear();
 	querycdts_.clear();
     return RETCODE_OK;
@@ -793,6 +932,13 @@ ReturnCode_t DataReaderImpl::enable()
 	if (!sub_->IsEnable()) {
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
+	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS) {
+#if defined(__linux__)
+		if (!typeSupport_->get_native_type_info().loanable()) return RETCODE_UNSUPPORTED;
+#else
+		return RETCODE_UNSUPPORTED;
+#endif
+	}
 	/* yuguxu 预留 DataReader 资源申请
 	 *
 	 * 待实现
@@ -801,6 +947,19 @@ ReturnCode_t DataReaderImpl::enable()
 	if (nullptr == domainParticipant) {
 		return RETCODE_ERROR;
 	}
+	bool sharingAllowed = qos_.data_sharing.kind != OFF_DATA_SHARING_QOS &&
+        !dynamic_cast<ContentFilteredTopicImpl*>(topic_);
+    if (!sharingAllowed && qos_.data_sharing.kind == ON_DATA_SHARING_QOS) return RETCODE_UNSUPPORTED;
+#ifdef DDSSECURITY
+	sharingAllowed = sharingAllowed && !domainParticipant->enableDDSSec_;
+#endif
+	if (sharingAllowed)
+		builtinData_.data_sharing = LocalDataSharingInfo(qos_.data_sharing, typeSupport_->get_native_type_info());
+	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS && !builtinData_.data_sharing.valid(false))
+		return RETCODE_UNSUPPORTED;
+#ifdef DDSSECURITY
+	builtinSecureData_.data_sharing = builtinData_.data_sharing;
+#endif
 	std::shared_ptr<Reader> readerPtr = domainParticipant->GetRelatedParticipant()->CreateReader(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
 	if (!readerPtr.get()) {
 		return RETCODE_ERROR;
@@ -827,6 +986,7 @@ ReturnCode_t DataReaderImpl::enable()
 	//);
 
     SetRelatedReader(readerPtr);
+    readerPtr->StartMaintenance(readerPtr);
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
 
@@ -881,6 +1041,7 @@ void DataReaderImpl::SetRelatedReader(std::shared_ptr<Reader> reader)
 
 bool DataReaderImpl::Empty() const
 {
+    std::lock_guard<std::mutex> conditions(conditionsMutex_);
 	return readcdts_.empty() && querycdts_.empty();
 }
 
@@ -893,6 +1054,7 @@ ReturnCode_t DataReaderImpl::OnDataAvaible()
 	}
 
 	NotifyReadConditions();
+    SetStatus(true);
 
 	auto subListener = sub_->GetListener();
 	const DomainParticipantImpl* participant = dynamic_cast<const DomainParticipantImpl*>(sub_->get_participant());
@@ -907,7 +1069,6 @@ ReturnCode_t DataReaderImpl::OnDataAvaible()
 		listener_->on_data_available(this);
 	}
 
-	SetStatus(true);
 	return RETCODE_OK;
 }
 ReturnCode_t DataReaderImpl::OnSampleLost(int32_t lostCount)
@@ -927,8 +1088,9 @@ void DataReaderImpl::OnSubscriptionMatched(InstanceHandle_t& handle, const bool&
 	statusMgr_->UpdateSubscriptionMatchedStatus(handle, add);
 }
 
-const SubscriptionBuiltinTopicData& DataReaderImpl::GetBuiltinTopicData()
+SubscriptionBuiltinTopicData DataReaderImpl::GetBuiltinTopicData()
 {
+    std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
 	return builtinData_;
 }
 
@@ -1154,20 +1316,12 @@ bool DataReaderImpl::GetEndianess(SerializedBuffer* buffer)
 	return ret;
 }
 
-bool DataReaderImpl::MakeKey(const void*  data, InstanceHandle_t& handle, bool forceMd5) const
+bool DataReaderImpl::MakeKey(const void* data, InstanceHandle_t& handle, bool forceMd5) const
 {
-	static_cast<void>(forceMd5);
-	SerializedBuffer buffer;
-	buffer.buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
-	MemoryPool::GetInstance()->getBuffer(buffer.buffer_size, buffer.origin_buffer);
-	buffer.buffer = buffer.origin_buffer;
-
-	CdrSerializer cdr(&buffer);
-	
-	bool ret = typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);
-	MemoryPool::GetInstance()->releaseBuffer(buffer.origin_buffer);
-
-	return ret;
+    handle = HANDLE_NIL;
+    if (!data) return false;
+    try { return typeSupport_->MakeKey(data, handle, forceMd5) == 0; }
+    catch (const std::exception&) { handle = HANDLE_NIL; return false; }
 }
 
 void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& cache)
@@ -1176,15 +1330,20 @@ void DataReaderImpl::SetLastinstanceHandle(const std::shared_ptr<CacheChange>& c
 	// cache->kind;
 	
 
+	if (!history_) return; // Builtin discovery readers have no application history binding.
+	history_->MarkDeadlineActive(cache->instanceHandle, cache->kind == ALIVE);
 	/* deadline */
-	if (deadlineTimer_) {
+	{
 		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
+        if (timersClosing_ || !deadlineTimer_ || qos_.deadline.period == Duration_t(TIME_INFINITE)) return;
 		std::chrono::steady_clock::time_point nextTime = 
-			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
-		history_->SetNextDeadline(cache->instanceHandle, nextTime);
-		history_->GetNextDeadline(lastInstance_, nextTime);
-		auto period = nextTime - std::chrono::steady_clock::now();
-		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
+			cache->kind == ALIVE ? std::chrono::steady_clock::now() + std::chrono::nanoseconds(qos_.deadline.period.ToNs()) :
+            std::chrono::steady_clock::time_point::max();
+		history_->UpdateReaderDeadline(cache->instanceHandle, cache->kind, nextTime);
+        if (history_->GetNextDeadline(lastInstance_, nextTime)) {
+            const auto delay = std::chrono::ceil<std::chrono::milliseconds>(nextTime - std::chrono::steady_clock::now()).count();
+            deadlineTimer_->UpdatePeriod(std::max<int64_t>(1, delay));
+        }
 	}
 
 }
@@ -1194,13 +1353,18 @@ void DataReaderImpl::DeadlineTimeout()
 	InstanceHandle_t instance;
 	{
 		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
-		instance = lastInstance_;
-		std::chrono::steady_clock::time_point nextTime =
-			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
-		history_->SetNextDeadline(lastInstance_, nextTime,true);
-		history_->GetNextDeadline(lastInstance_, nextTime);
-		auto period = nextTime - std::chrono::steady_clock::now();
-		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
+        if (timersClosing_ || !deadlineTimer_ || qos_.deadline.period == Duration_t(TIME_INFINITE)) return;
+        std::chrono::steady_clock::time_point due;
+        if (!history_->GetNextDeadline(instance, due)) return;
+        const auto now = std::chrono::steady_clock::now();
+        bool expired = due <= now;
+        if (expired && !history_->SetNextDeadline(instance,
+                now + std::chrono::nanoseconds(qos_.deadline.period.ToNs()), true)) expired = false;
+        if (history_->GetNextDeadline(lastInstance_, due)) {
+            const auto delay = std::chrono::ceil<std::chrono::milliseconds>(due - std::chrono::steady_clock::now()).count();
+            deadlineTimer_->UpdatePeriod(std::max<int64_t>(1, delay));
+        }
+        if (!expired) return;
 	}
 	
 	statusMgr_->UpdateRequestedDeadlineMissedStatus(instance);
@@ -1208,6 +1372,7 @@ void DataReaderImpl::DeadlineTimeout()
 
 bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 {
+    if (cache->writerGuid == GUID_UNKNOWN) return true; // Internal history-only insertion has no remote QoS.
 	/* 非用户reader不触发判断 */
 	GUID_t guid = reader_->GetGuid();
 	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind) {
@@ -1224,6 +1389,9 @@ bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 		return true;
 	}
 
+    cache->expiresAt = std::chrono::system_clock::time_point(
+        std::chrono::seconds(cache->sourceTimespace.sec) + std::chrono::nanoseconds(cache->sourceTimespace.nanosec) +
+        std::chrono::nanoseconds(publicationData.lifespan.duration.ToNs()));
 	Duration_t expirationTime = cache->sourceTimespace + publicationData.lifespan.duration;
 	Duration_t currentTime;
 	Duration_t::now(currentTime);
@@ -1232,7 +1400,7 @@ bool DataReaderImpl::CheckLifespan(const std::shared_ptr<CacheChange>& cache)
 	//如果已过期，将其从历史记录中删除，并返回false，以避免通知监听器。
 	if (expirationTime < currentTime)
 	{
-		reader_->GetReaderCache()->RemoveChange(cache->sequenceNumber);
+		// Admission is checked before insertion; never remove by sequence alone.
 		return false;
 	}
 
@@ -1302,7 +1470,9 @@ SampleCounters DataReaderImpl::GetSampleCounters(bool trigger)
 
 void DataReaderImpl::NotifyReadConditions()
 {
-	for (auto& it : readcdts_) {
+    std::vector<std::shared_ptr<ReadConditionImpl>> conditions;
+    { std::lock_guard<std::mutex> lock(conditionsMutex_); conditions = readcdts_; }
+	for (auto& it : conditions) {
 		if (it->get_trigger_value()) {
 			it->Notify();
 		}

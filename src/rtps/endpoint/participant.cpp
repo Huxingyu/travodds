@@ -449,6 +449,13 @@ ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
 #endif // DDSSECURITY
 {
 	std::unique_lock<std::mutex> lock(mtxReaders_);
+	// Publish queryable metadata before exposing a match or invoking its
+	// callback. The short matching lock also protects concurrent lookups;
+	// callbacks must never need to reacquire the Reader table lock.
+	{
+		std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
+		remoteWriters_.insert_or_assign(data.remoteWriterGuid, data);
+	}
 	for (auto& reader : readers_) {
 #ifdef DDSSECURITY
 		addReaderMatch(reader.second, data, isSecure);
@@ -456,7 +463,6 @@ ReturnCode_t Participant::AddRemoteWriter(const DiscoveredWriterData& data)
 		addReaderMatch(reader.second, data);
 #endif // DDSSECURITY
 	}
-	remoteWriters_.insert({ data.remoteWriterGuid, data });
 	return RETCODE_OK;
 }
 
@@ -467,6 +473,10 @@ ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 #endif // DDSSECURITY
 {
 	std::unique_lock<std::mutex> lock(mtxWriters_);
+	{
+		std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
+		remoteReaders_.insert_or_assign(data.remoteReaderGuid, data);
+	}
 
 	for (auto& writer : writers_) {
 #ifdef DDSSECURITY
@@ -475,7 +485,6 @@ ReturnCode_t Participant::AddRemoteReader(const DiscoveredReaderData& data)
 		addWriterMatch(writer.second, data);
 #endif // DDSSECURITY
 	}	
-	remoteReaders_.insert({ data.remoteReaderGuid, data });
 
 	return RETCODE_OK;
 }
@@ -485,6 +494,7 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 	DiscoveredWriterData dwData;
 	{
 		std::unique_lock<std::mutex> lock(mtxReaders_);
+		std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 		auto itor = remoteWriters_.find(guid);
 		if (itor == remoteWriters_.end()) {
 			return RETCODE_OK;
@@ -519,6 +529,7 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 			continue;
 		}
 		auto reader = readers_[readerEntityid];
+        lock.unlock();
 		if (!reader) {
 			continue;
 		}
@@ -602,10 +613,9 @@ ReturnCode_t Participant::RemoveRemoteWriter(GUID_t guid)
 		}
 
 		InstanceHandle_t handle = Conversion::ToInstanceHandle(dwData.remoteWriterGuid);
-		DataReaderImpl* dr = reader->GetRelatedDataReader();
-		if (dr) {
-			dr->OnSubscriptionMatched(handle, false);
-		}
+        // MatchedWriterRemove may join the native listener; perform that join
+        // before acquiring the ingress barrier for the DCPS callback.
+        reader->NotifySubscriptionMatched(handle, false);
 	}
 
 
@@ -617,6 +627,7 @@ ReturnCode_t Participant::RemoveRemoteReader(GUID_t guid)
 	DiscoveredReaderData drData;
 	{
 		std::unique_lock<std::mutex> lock(mtxWriters_);
+		std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 		auto itor = remoteReaders_.find(guid);
 		if (itor == remoteReaders_.end()) {
 			return RETCODE_OK;
@@ -744,6 +755,9 @@ ReturnCode_t Participant::AddLocalWriter(std::shared_ptr<Writer> writer)
 
 ReturnCode_t Participant::AddLocalReader(std::shared_ptr<Reader> reader)
 {
+	// SEDP may remove a remote Writer while this application thread enables
+	// a Reader. Use the same lock as Add/RemoveRemoteWriter for iteration.
+	std::unique_lock<std::mutex> lock(mtxReaders_);
 	for (auto& remoteWriterData : remoteWriters_) {
 #ifdef DDSSECURITY
 		bool isSecure = remoteWriterData.second.ddsPublicationData.security_info.endpoint_security_attributes & 
@@ -874,6 +888,9 @@ void Participant::addWriterMatch(std::shared_ptr<Writer> writer, const Discovere
 	writer->MatchedReaderAdd(subData);
 #endif
 
+    writer->SetDataSharingReader(subData.remoteReaderGuid,
+        pubData.data_sharing.compatible_with(subData.ddsSubscriptionData.data_sharing) &&
+        subData.contentFilter.contentFilteredTopicName.empty());
 	//printf("SEPD: topic %s addd remote reader \n", pubData.topic_name.c_str());
 
 	{
@@ -948,6 +965,11 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		return ;
 	}
 
+    if (reader->MatchedWriterIsMatched(pubData.remoteWriterGuid) &&
+        !reader->DataSharingSessionChanged(pubData)) {
+        reader->StartDataSharing(reader, pubData);
+        return;
+    }
 	// yuguxu 传输链接
 	TransmittersConnect(pubData.unicastLocatorList);
 
@@ -1019,8 +1041,11 @@ void Participant::addReaderMatch(std::shared_ptr<Reader> reader, const Discovere
 		writers->second.insert(pubData.remoteWriterGuid);
 	}
 
+	lock.unlock();
+    reader->StartDataSharing(reader, pubData);
+
 	InstanceHandle_t handle = Conversion::ToInstanceHandle(pubData.remoteWriterGuid);
-	reader->GetRelatedDataReader()->OnSubscriptionMatched(handle);
+	reader->NotifySubscriptionMatched(handle);
 }
 
 
@@ -1145,6 +1170,7 @@ LocatorVec Participant::GetMetatrafficMulticastLocators()
 
 ReturnCode_t Participant::GetPublications(InstanceHandleSeq& handles, bool includeContainedEntities)
 {
+	std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 	for (auto& writer : remoteWriters_) {
 
 		if (false == includeContainedEntities && guid_.prefix == writer.first.prefix) {
@@ -1303,6 +1329,7 @@ bool Participant::Match(const PublicationBuiltinTopicData& pubData, const Subscr
 ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubData, const InstanceHandle_t& handle)
 {
 	GUID_t guid = Conversion::ToGuid(handle);
+	std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 
 	auto itor = remoteWriters_.find(guid);
 	if (itor == remoteWriters_.end()) {
@@ -1316,6 +1343,7 @@ ReturnCode_t Participant::GetPublicationData(PublicationBuiltinTopicData &pubDat
 
 ReturnCode_t Participant::GetSublications(InstanceHandleSeq & handles, bool includeContainedEntities)
 {
+	std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 	for (auto& reader : remoteReaders_) {
 
 		if (false == includeContainedEntities && guid_.prefix == reader.first.prefix) {
@@ -1335,6 +1363,7 @@ ReturnCode_t Participant::GetSublications(InstanceHandleSeq & handles, bool incl
 ReturnCode_t Participant::GetSublicationData(SubscriptionBuiltinTopicData& subData, const InstanceHandle_t& handle)
 {
 	GUID_t guid = Conversion::ToGuid(handle);
+	std::lock_guard<std::mutex> metadata(mtxMatchEntitys_);
 
 	auto itor = remoteReaders_.find(guid);
 	if (itor == remoteReaders_.end()) {

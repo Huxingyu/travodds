@@ -114,33 +114,40 @@ ReturnCode_t DataWriterStatusManager::UpdateOfferedDeadlineMissedStatus(const In
 	if (ENTITYKIND_USER_WRITER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_WRITER_WITH_KEY != guid.entityId.entityKind)
 		return  RETCODE_OK;
 
-	std::lock_guard<std::mutex> lock(mtx_);
+	std::unique_lock<std::mutex> lock(mtx_);
 
 	offeredDeadlineMissedStatus_.total_count++;
 	offeredDeadlineMissedStatus_.total_count_change++;
 	offeredDeadlineMissedStatus_.last_instance_handle = handle;
 
+    // Publish the status before calling application code. Listeners can query
+    // or reconfigure this endpoint without reentering the status mutex.
+    const auto snapshot = offeredDeadlineMissedStatus_;
+    lock.unlock();
 	bool flag = false;
 	if (OFFERED_DEADLINE_MISSED_STATUS & writer_->get_status_mask()) {
 		if (nullptr != writer_->get_listener()) {
-			const_cast<DataWriterListener*>(writer_->get_listener())->on_offered_deadline_missed(writer_, offeredDeadlineMissedStatus_);
+			const_cast<DataWriterListener*>(writer_->get_listener())->on_offered_deadline_missed(writer_, snapshot);
 			flag = true;
 		}
 	}
 	if (OFFERED_DEADLINE_MISSED_STATUS & pub_->get_status_mask()) {
 		if (nullptr != pub_->get_listener()) {
-			const_cast<PublisherListener*>(pub_->get_listener())->on_offered_deadline_missed(writer_, offeredDeadlineMissedStatus_);
+			const_cast<PublisherListener*>(pub_->get_listener())->on_offered_deadline_missed(writer_, snapshot);
 			flag = true;
 		}
 	}
 	if (OFFERED_DEADLINE_MISSED_STATUS & participant_->get_status_mask()) {
 		if (nullptr != participant_->get_listener()) {
-			const_cast<DomainParticipantListener*>(participant_->get_listener())->on_offered_deadline_missed(writer_, offeredDeadlineMissedStatus_);
+			const_cast<DomainParticipantListener*>(participant_->get_listener())->on_offered_deadline_missed(writer_, snapshot);
 			flag = true;
 		}
 	}
 	if (flag) {
-		offeredDeadlineMissedStatus_.total_count_change = 0;
+        std::lock_guard<std::mutex> consumed(mtx_);
+        // A callback may itself have consumed the change count.
+        if (offeredDeadlineMissedStatus_.total_count_change >= snapshot.total_count_change)
+            offeredDeadlineMissedStatus_.total_count_change -= snapshot.total_count_change;
 	}
 	SetStatus(OFFERED_DEADLINE_MISSED_STATUS, true);
 	return RETCODE_OK;
@@ -499,32 +506,39 @@ ReturnCode_t DataReaderStatusManager::UpdateRequestedDeadlineMissedStatus(const 
 	if (ENTITYKIND_USER_READER_NO_KEY != guid.entityId.entityKind  && ENTITYKIND_USER_READER_WITH_KEY != guid.entityId.entityKind)
 		return  RETCODE_OK;
 
-	std::lock_guard<std::mutex> lock(mtx_);
+	std::unique_lock<std::mutex> lock(mtx_);
 
 	reqDeadlineMissedStatus_.total_count++;
 	reqDeadlineMissedStatus_.total_count_change++;
 	reqDeadlineMissedStatus_.last_instance_handle = handle;
+    // Publish the status before calling application code. Listeners can query
+    // or reconfigure this endpoint without reentering the status mutex.
+    const auto snapshot = reqDeadlineMissedStatus_;
+    lock.unlock();
 	bool flag = false;
 	if (REQUESTED_DEADLINE_MISSED_STATUS & reader_->get_status_mask()) {
 		if (nullptr != reader_->get_listener()) {
-			const_cast<DataReaderListener*>(reader_->get_listener())->on_requested_deadline_missed(reader_, reqDeadlineMissedStatus_);
+			const_cast<DataReaderListener*>(reader_->get_listener())->on_requested_deadline_missed(reader_, snapshot);
 			flag = true;
 		}
 	}
 	if (REQUESTED_DEADLINE_MISSED_STATUS & sub_->get_status_mask()) {
 		if (nullptr != sub_->get_listener()) {
-			const_cast<SubscriberListener*>(sub_->get_listener())->on_requested_deadline_missed(reader_, reqDeadlineMissedStatus_);
+			const_cast<SubscriberListener*>(sub_->get_listener())->on_requested_deadline_missed(reader_, snapshot);
 			flag = true;
 		}
 	}
 	if (REQUESTED_DEADLINE_MISSED_STATUS & participant_->get_status_mask()) {
 		if (nullptr != participant_->get_listener()) {
-			const_cast<DomainParticipantListener*>(participant_->get_listener())->on_requested_deadline_missed(reader_, reqDeadlineMissedStatus_);
+			const_cast<DomainParticipantListener*>(participant_->get_listener())->on_requested_deadline_missed(reader_, snapshot);
 			flag = true;
 		}
 	}
 	if (flag) {
-		reqDeadlineMissedStatus_.total_count_change = 0;
+        std::lock_guard<std::mutex> consumed(mtx_);
+        // A callback may itself have consumed the change count.
+        if (reqDeadlineMissedStatus_.total_count_change >= snapshot.total_count_change)
+            reqDeadlineMissedStatus_.total_count_change -= snapshot.total_count_change;
 	}
 	SetStatus(REQUESTED_DEADLINE_MISSED_STATUS, true);
 	return RETCODE_OK;

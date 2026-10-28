@@ -15,6 +15,7 @@
 #include "type/basictype.h"
 #include "qos/qos.h"
 #include "rtps/discovery/discoverydata.h"
+#include "rtps/discovery/datasharingendpoint.h"
 #ifdef DDSSECURITY
 #include "security/participantgenericmessage.h"
 #include "security/participantmessagedata.h"
@@ -23,6 +24,8 @@
 TRAVODDS_NAMESPACE_BEGIN
 
 enum ParameterId : uint16_t {
+	// TravoDDS vendor extension; older peers ignore it and retain RTPS.
+	PID_TRAVO_DATA_SHARING                   = 0x80e1,
 	/* rtps v2.5 Table 9.18*/
 	PID_PAD                                 = 0x0000,
 	PID_SENTINEL                            = 0x0001,
@@ -492,6 +495,15 @@ inline void Parameter<bool>::writerMsg(octet* msg)
 {
 	*msg = static_cast<octet>(parameter_);
 	memset(msg + 1, 0, 3);
+}
+template <>
+inline uint16_t Parameter<DataSharingEndpointInfo>::size() {
+	return static_cast<uint16_t>(EncodeDataSharing(parameter_).size());
+}
+template <>
+inline void Parameter<DataSharingEndpointInfo>::writerMsg(octet* msg) {
+	const auto bytes = EncodeDataSharing(parameter_);
+	if (!bytes.empty()) memcpy(msg, bytes.data(), bytes.size());
 }
 //std::string
 template <>

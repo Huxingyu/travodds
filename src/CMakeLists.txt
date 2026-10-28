@@ -72,6 +72,7 @@ configure_file(
 
 #创建库
 add_library(${LIB_TARGET_NAME} ${${PROJECT_NAME}_source_files})
+target_compile_features(${LIB_TARGET_NAME} PUBLIC cxx_std_17)
 
 set_target_properties(${LIB_TARGET_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}

@@ -13,6 +13,7 @@
 #define TRAVODDS_RTPS_DISCOVERY_BUILTINTOPICDATA_H
 
 #include "qos/qos.h"
+#include "type/datasharingendpointinfo.h"
 #ifdef DDSSECURITY
 //#include "rtps/basictypertps.h"
 #include "security/securitycommon.h"
@@ -57,6 +58,7 @@ struct TopicBuiltinTopicData {
 };
 
 struct PublicationBuiltinTopicData {
+	DataSharingEndpointInfo data_sharing;
 	BuiltinTopicKey_t 			key;
 	BuiltinTopicKey_t 			participant_key;
 	std::string 				topic_name;
@@ -86,6 +88,7 @@ struct PublicationBuiltinTopicData {
 };
 
 struct SubscriptionBuiltinTopicData {
+	DataSharingEndpointInfo data_sharing;
 	BuiltinTopicKey_t 			key;
 	BuiltinTopicKey_t 			participant_key;
 	std::string 				topic_name;

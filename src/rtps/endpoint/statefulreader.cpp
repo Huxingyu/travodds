@@ -28,11 +28,13 @@ StatefulReader::StatefulReader(const DataReaderQos& qos, const GUID_t& guid, con
 
 StatefulReader::~StatefulReader()
 {
+    StopDataSharing();
 	if (lastNewCacheTimer_) {
 		lastNewCacheTimer_->Exit();
 	}
 	
-	WriterProxyMap writerProxys = matchedWriters_;
+	WriterProxyMap writerProxys;
+    { std::lock_guard<std::mutex> proxies(proxiesMutex_); writerProxys = matchedWriters_; }
 
 	for (auto & writerProxy : writerProxys) {
 		MatchedWriterRemove(writerProxy.second);
@@ -43,7 +45,10 @@ StatefulReader::~StatefulReader()
 
 void StatefulReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerProxy)
 {
+    {
+        std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	matchedWriters_[writerProxy->GetGuid()] = writerProxy;
+    }
 	/* wangyi */
 	Duration_t duration = TIME_INFINITE;
 	if (qos_.liveliness.lease_duration < duration) {
@@ -60,6 +65,8 @@ void StatefulReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerProxy)
 
 void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProxy)
 {
+    {
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
 	/* wangyi */
 	Duration_t duration = TIME_INFINITE;
 	if (qos_.liveliness.lease_duration < duration) {
@@ -74,11 +81,17 @@ void StatefulReader::MatchedWriterRemove(std::shared_ptr<WriterProxy> writerProx
 	}
 	/* wangyi 删除旧数据 */
 	readerCache_->RemoveRemoteWriter(writerProxy->GetGuid());
+    {
+        std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	matchedWriters_.erase(writerProxy->GetGuid());
+    }
+    }
+    StopDataSharing(writerProxy->GetGuid());
 }
 
 std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGuid)
 {
+    std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	if (0 == matchedWriters_.count(writerGuid)) {
 		TRAVODDS_LOG(LOG_DEBUG, "writerGuid not exist");
 		return nullptr;
@@ -89,6 +102,7 @@ std::shared_ptr<WriterProxy> StatefulReader::MatchedWriterLookup(GUID_t writerGu
 
 bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 {
+    std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	if (0 == matchedWriters_.count(writerGuid)) {
 		//AGILOG(AGILOG_ERROR, "writerGuid not exist");
 		return false;
@@ -98,7 +112,7 @@ bool StatefulReader::MatchedWriterIsMatched(GUID_t writerGuid)
 
 ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data)
 {
-	std::lock_guard<std::mutex> guard(dataMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	CacheSerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId};
@@ -120,10 +134,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 	dataFlags.nonStandardPayloadFlag = dataMsg.header.flags & SubMessageFlag::NON_STANDARD_PAYLOAD_FLAG;
 
 	std::shared_ptr<WriterProxy> proxy = nullptr;
-	auto itor = matchedWriters_.find(guid);
-	if (itor != matchedWriters_.end()) {
-		proxy = itor->second;
-	}
+	proxy = MatchedWriterLookup(guid);
 	if (nullptr == proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
@@ -159,7 +170,7 @@ ReturnCode_t StatefulReader::ReceiveDataMessage(const Receive_t&  headerMsg, con
 
 ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data)
 {
-	std::lock_guard<std::mutex> guard(dataMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	InstanceHandle_t pubHandle = HANDLE_NIL;
@@ -177,10 +188,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 	memcpy(pubHandle.keyHash.value, &guid, MIG_RTPS_KEY_HASH_MAX_LENGTH);
 	
 	std::shared_ptr<WriterProxy> proxy = nullptr;
-	auto itor = matchedWriters_.find(guid);
-	if (itor != matchedWriters_.end()) {
-		proxy = itor->second;
-	}
+	proxy = MatchedWriterLookup(guid);
 	if (nullptr == proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "proxy = nullptr");
 		return RETCODE_ERROR;
@@ -231,7 +239,7 @@ ReturnCode_t StatefulReader::ReceiveDataFragMessage(const Receive_t&  headerMsg,
 }
 ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInfo, const HeartBeatSubMessage_t& heartMsg)
 {
-	std::lock_guard<std::mutex> guard(hbMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	GUID_t guid(headerInfo.sourceGuidPrefix, heartMsg.writerId);
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 	HeartbeatMsgFlag_t flags;
@@ -240,12 +248,11 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 	flags.livelinessFlag = heartMsg.header.flags & SubMessageFlag::LIVELINESS_FLAG;
 	flags.groupInfoFlag = heartMsg.header.flags & SubMessageFlag::HB_GROUPINFO_FLAG;
 
-	auto itor = matchedWriters_.find(guid);
-	if (matchedWriters_.end() == itor) {
+	proxy = MatchedWriterLookup(guid);
+	if (!proxy) {
 		//AGILOG(AGILOG_ERROR, "no match writer");
 		return RETCODE_ERROR;
 	}
-	proxy = itor->second;
 	if (!proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
@@ -320,16 +327,15 @@ ReturnCode_t StatefulReader::ReceiveHeartbeatMessage(const Receive_t&  headerInf
 
 ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInfo, const HeartBeatFragSubMessage_t& heartFragMsg)
 {
-	std::lock_guard<std::mutex> guard(hbMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	GUID_t guid(headerInfo.sourceGuidPrefix, heartFragMsg.writerId);
 	std::shared_ptr<WriterProxy> proxy = nullptr;
 
-	auto itor = matchedWriters_.find(guid);
-	if (matchedWriters_.end() == itor) {
+	proxy = MatchedWriterLookup(guid);
+	if (!proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "no match writer exist");
 		return RETCODE_ERROR;
 	}
-	proxy = itor->second;
 	if (!proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr");
 		return RETCODE_ERROR;
@@ -361,7 +367,7 @@ ReturnCode_t StatefulReader::ReceiveHeartFragMessage(const Receive_t&  headerInf
 
 ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, const GapSubMessage_t& gapInfo)
 {
-	std::lock_guard<std::mutex> guard(gapMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	if (BEST_EFFORT_RELIABILITY_QOS == qos_.reliability.kind) {
 		return RETCODE_OK;
 	}
@@ -381,12 +387,11 @@ ReturnCode_t StatefulReader::ReceiveGapMessage(const Receive_t&  headerInfo, con
 
 
 	GUID_t guid(headerInfo.sourceGuidPrefix, gapInfo.writerId);
-	auto itor = matchedWriters_.find(guid);
-	if (matchedWriters_.end() == itor) {
+	auto proxy = MatchedWriterLookup(guid);
+	if (!proxy) {
 		//AGILOG(AGILOG_ERROR, "no match writer")
 		return RETCODE_ERROR;
 	}
-	std::shared_ptr<WriterProxy> proxy = itor->second;
 	if (nullptr == proxy) {
 		TRAVODDS_LOG(LOG_ERROR, "match writer is nullptr")
 		return RETCODE_ERROR;
@@ -470,7 +475,6 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 #endif // DDSSECURITY
 
 		if(datareader_ ) {
-			datareader_->SetLastinstanceHandle(cache);
 			if (datareader_->ValidateFilterData(cache->serializedBuffer)) {
 				cache = proxy->GetSubmitCache();
 				continue;
@@ -478,6 +482,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		}
 
 		ret = AddChanges(cache);
+		if (ret == RETCODE_LIFESPAN_TIMEOUT) { cache = proxy->GetSubmitCache(); continue; }
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
 			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -502,6 +507,7 @@ ReturnCode_t StatefulReader::Notify(std::shared_ptr<WriterProxy> proxy)
 		if (RETCODE_OK != ret && datareader_) {
 			datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 		}
+        if (ret == RETCODE_OK && datareader_) datareader_->SetLastinstanceHandle(cache);
 
 		//TODO 提交数据 
 		if (readerListener_) {
@@ -860,35 +866,36 @@ ReturnCode_t StatefulReader::SendNackFragMessage(std::shared_ptr<WriterProxy> wr
 
 }
 void StatefulReader::SetQos(const DataReaderQos& qos) {
-	if (qos.time_based_filter.minimum_separation != qos_.time_based_filter.minimum_separation) {
-		readerCache_->RsetAllTimeBasedFilte();
-		if (qos.time_based_filter.minimum_separation == Duration_t(TIME_ZERO)) {
-			lastNewCacheTimer_.reset();
-		} else {
-			if (lastNewCacheTimer_) {
-				lastNewCacheTimer_->UpdatePeriod(Conversion::ToMilliSecondsInt64(qos.time_based_filter.minimum_separation));
-			} else{
-				lastNewCacheTimer_ = TimerManager::CreateTimer(
-					qos.time_based_filter.minimum_separation,
-					[&]() {this->TimerExpired(); },
-					"lastNewCacheTimer");
-			}
-		}
-	}
-	qos_ = qos;
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
+    if (qos.time_based_filter.minimum_separation != qos_.time_based_filter.minimum_separation) {
+        readerCache_->RsetAllTimeBasedFilte();
+        if (qos.time_based_filter.minimum_separation == Duration_t(TIME_ZERO)) {
+            if (lastNewCacheTimer_) lastNewCacheTimer_->Stop();
+        } else if (lastNewCacheTimer_) lastNewCacheTimer_->UpdatePeriod(qos.time_based_filter.minimum_separation);
+        else lastNewCacheTimer_ = TimerManager::CreateTimer(qos.time_based_filter.minimum_separation,
+            [this] { TimerExpired(); }, "lastNewCacheTimer");
+    }
+    Reader::SetQos(qos);
 }
 
 void StatefulReader::TimerExpired()
 {
+    std::unique_lock<std::recursive_mutex> ingress(dataMutex_);
+    if (!datareader_ || qos_.time_based_filter.minimum_separation == Duration_t(TIME_ZERO)) return;
 	std::shared_ptr<CacheChange> cache = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
 		std::chrono::steady_clock::time_point nextTime;
-		readerCache_->SetNextTimeBasedFilte(lastInstance_, cache);
-		readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime);
-		auto period = nextTime - std::chrono::steady_clock::now();
-		lastNewCacheTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
-	}
+        if (!readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime)) { lastNewCacheTimer_->Stop(); return; }
+        if (nextTime > std::chrono::steady_clock::now()) {
+            lastNewCacheTimer_->UpdatePeriod(std::max<int64_t>(1, std::chrono::ceil<std::chrono::milliseconds>(nextTime - std::chrono::steady_clock::now()).count()));
+            return;
+        }
+        readerCache_->SetNextTimeBasedFilte(lastInstance_, cache);
+        if (readerCache_->GetNextTimeBasedFilte(lastInstance_, nextTime))
+            lastNewCacheTimer_->UpdatePeriod(std::max<int64_t>(1, std::chrono::ceil<std::chrono::milliseconds>(nextTime - std::chrono::steady_clock::now()).count()));
+        else lastNewCacheTimer_->Stop();
+    }
 	if (cache == nullptr) {
 		return;
 	}
@@ -896,15 +903,13 @@ void StatefulReader::TimerExpired()
 	GUID_t wirterguid = cache->writerGuid;
 
 	std::shared_ptr<WriterProxy> proxy = nullptr;
-	auto itor = matchedWriters_.find(wirterguid);
-	if (itor != matchedWriters_.end()) {
-		proxy = itor->second;
-	}
+	proxy = MatchedWriterLookup(wirterguid);
 	if (nullptr == proxy) {
 		return;
 	}
 
 	ReturnCode_t ret = AddChanges(cache);
+	if (ret == RETCODE_LIFESPAN_TIMEOUT) return;
 
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -923,12 +928,17 @@ void StatefulReader::TimerExpired()
 		datareader_->OnSampleRejected(cache->instanceHandle, (SampleRejectedStatusKind)ret);
 	}
 
-	//TODO 提交数据 
-	if (readerListener_) {
-		readerListener_->on_data_available(cache);
+    if (ret == RETCODE_OK && datareader_) datareader_->SetLastinstanceHandle(cache);
+    auto* dcps = datareader_;
+    auto* internal = readerListener_;
+    // Timer exit is drained before DCPS disconnect; no ingress/scheduling lock
+    // is held across application code, including callbacks that change QoS.
+    ingress.unlock();
+	if (internal) {
+		internal->on_data_available(cache);
 	}
-	else if (datareader_) {
-		datareader_->OnDataAvaible();
+	else if (dcps) {
+		dcps->OnDataAvaible();
 	}
 }
 
@@ -974,3 +984,11 @@ int StatefulReader::EncodeSubMsgBuffer(std::shared_ptr<WriterProxy> writerProxy,
 	return 0;
 }
 #endif // DDSSECURITY
+
+ReturnCode_t StatefulReader::SubmitDataChange(std::shared_ptr<CacheChange> cache) {
+    auto proxy = MatchedWriterLookup(cache->writerGuid);
+    if (!proxy) return RETCODE_ERROR;
+    AssertWriterLiveliness(cache->writerGuid);
+    const auto result = proxy->AddReliableDataCache(cache, qos_.durability.kind);
+    return result == RETCODE_OK ? Notify(proxy) : result;
+}

@@ -19,8 +19,11 @@
 #include "dcps/base/retcode.h"
 #include "dcps/topic/typesupport.h"
 #include "common/memory/memorypool.h"
+#include "common/memory/payloadbuffer.h"
 #include <atomic>
 #include <condition_variable>
+#include <stdexcept>
+#include <functional>
 TRAVODDS_NAMESPACE_BEGIN
 
 class Writer;
@@ -103,9 +106,28 @@ public:
 	ParameterList_t inlineQos;
 	/* CacheChange的相关状态  */
 	SerializedBuffer* serializedBuffer;
+	// Process-local aliasing owner pins a mapped native sample (including its
+	// Reader registration). No shared-memory address is transmitted by RTPS.
+	std::shared_ptr<void> nativePayload;
+	NativeTypeInfo nativeType;
+    std::set<GUID_t> nativeReaders;
+    std::function<bool(const GUID_t&)> nativeReaderActive;
+    bool UsesDataSharing(const GUID_t& reader) const {
+        return nativeReaderActive ? nativeReaderActive(reader) : nativeReaders.count(reader) != 0;
+    }
+    std::function<ReturnCode_t(CacheChange&)> nativeCommit;
+    std::function<ReturnCode_t(CacheChange&)> serializeNative;
+    bool nativeCommitted = false;
+    std::mutex serializationMutex;
+    ReturnCode_t EnsureSerializedPayload() {
+        std::lock_guard<std::mutex> lock(serializationMutex);
+        if (serializedBuffer) return RETCODE_OK;
+        return serializeNative ? serializeNative(*this) : RETCODE_ERROR;
+    }
 	/* 此处 view_state,instance_state ,sample_rank, generation_rank, absolute_generation_rank字段无效 */
 	SampleInfo sampleInfo;
 	Time_t sourceTimespace;
+    std::chrono::system_clock::time_point expiresAt = std::chrono::system_clock::time_point::max();
 
 	/* 分片数据 */
 	/* 每个分片大小 */
@@ -126,15 +148,20 @@ public:
 	/**
 	 * @brief 构造函数。
 	 */
-	CacheChange() : kind(ALIVE), 
+	// A chain's payload buffers must all originate from this pool. Buffer
+	// descriptors themselves remain process-local and are deleted below.
+	explicit CacheChange(std::shared_ptr<IPayloadPool> payloadPool = MemoryPool::GetInstance()) : kind(ALIVE),
 		sequenceNumber(SEQUENCENUMBER_INVALID), 
 		serializedBuffer(nullptr), 
 		sourceTimespace(TIME_INVALID), 
 		fraqmentSize(0),
 		dataSize(0), 
 		fragmentTatolNum(0),
-        memoryPool(MemoryPool::GetInstance())
+        payloadPool_(payloadPool)
 	{
+		if (!payloadPool_) {
+			throw std::invalid_argument("CacheChange requires a payload pool");
+		}
 	}
 
 	/**
@@ -145,18 +172,10 @@ public:
 			delete it.second;
 		}
 		fragmentBufferMap.clear();
-		while(nullptr != serializedBuffer) {
-
-			SerializedBuffer* del = serializedBuffer;
-			serializedBuffer = serializedBuffer->next;
-			if (del->origin_buffer) {
-				memoryPool->releaseBuffer(del->origin_buffer);
-			}
-			delete del;
-		}
+		PayloadBufferDeleter{payloadPool_}(serializedBuffer);
 	}
 private:	
-	std::shared_ptr<MemoryPool> memoryPool;
+	std::shared_ptr<IPayloadPool> payloadPool_;
 };
 
 class CacheChangeVector {
@@ -182,6 +201,8 @@ public:
 
 	std::vector<std::shared_ptr<CacheChange>> cacheChanges;
 	std::shared_ptr<SerializedBuffer> keyBuffer;
+	// Writer-side instance snapshot; plain layouts need no payload CDR here.
+	std::shared_ptr<void> nativeKey;
 
 	/* 实例再创或新创后，未被读过 */
 	ViewStateKind viewState = ViewStateKind::NEW_VIEW_STATE;
@@ -193,7 +214,8 @@ public:
 	/* 代表实例因为没有写入者而被处理后重新变为存活状态的次数 */
 	int32_t 					noWritersGenerationCount = 0;
 
-	std::chrono::steady_clock::time_point nextDeadline;
+    // An instance is not monitored until a sample arms its deadline.
+	std::chrono::steady_clock::time_point nextDeadline = std::chrono::steady_clock::time_point::max();
 	/* guid  OwnershipStrength*/
 	std::map<GUID_t, int32_t> aliveWriter;
 	std::pair<GUID_t, int32_t> maxOwnershipStrength;
@@ -202,6 +224,9 @@ public:
 	/* 最新数据, cache未添加 */
 	std::shared_ptr<CacheChange> lastCache;
 
+    // Monotonic state transition identity: a purge never acts on an old task.
+    std::chrono::steady_clock::time_point stateChanged = std::chrono::steady_clock::now();
+    bool deadlineActive = false;
 	int32_t maxSamples;
 };
 
@@ -224,6 +249,12 @@ public:
 	 * @return 获取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	bool IsFull();
+    bool MaintainReader(const ReaderDataLifecycleQosPolicy& policy,
+        std::vector<InstanceHandle_t>& removed,
+        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now());
+    void PurgeExpired();
+    void MarkDeadlineActive(const InstanceHandle_t& handle, bool alive = true);
+	void CommitSamples(const std::vector<std::shared_ptr<CacheChange>>& changes, bool take);
 
 	/**
 	 * @brief 添加发送报文请求。
@@ -289,7 +320,7 @@ public:
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, int32_t maxSamples,InstanceHandle_t handle,
-		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake = false);
+		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouleTake = false, bool preview = false);
 
 	/**
 	 * @brief 判断键值是否已注册。
@@ -309,6 +340,10 @@ public:
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_OUT_OF_RESOURCES
 	 */
 	ReturnCode_t AddKeyHistory(const InstanceHandle_t& handle, SerializedBuffer*& instace);
+	ReturnCode_t RegisterKey(const InstanceHandle_t& handle,
+		const std::shared_ptr<SerializedBuffer>& serialized, const std::shared_ptr<void>& native);
+	std::shared_ptr<void> GetNativeKey(const InstanceHandle_t& handle);
+	std::shared_ptr<SerializedBuffer> GetSerializedKey(const InstanceHandle_t& handle);
 
 	/**
 	 * @brief 从键值管理容器中删除对应的键值及其实例。
@@ -396,7 +431,13 @@ public:
 	 * @param [in] handle       通信实例句柄。
 	 * @param [in] nextDeadline 新的下一个截止日期。
 	 */
-	void SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout = false);
+    // Never creates a registration. time_point::max() suspends monitoring.
+	bool SetNextDeadline(const InstanceHandle_t& handle, const std::chrono::steady_clock::time_point& nextDeadline, bool timeout = false);
+
+    // An ALIVE sample refreshes its deadline. A lifecycle control only
+    // suspends an inactive instance; another live Writer keeps its deadline.
+    bool UpdateReaderDeadline(const InstanceHandle_t& handle, ChangeKind_t kind,
+        const std::chrono::steady_clock::time_point& nextDeadline);
 
 	/**
 	 * @brief 重新设置所有实例句柄handle对应的截止时间。

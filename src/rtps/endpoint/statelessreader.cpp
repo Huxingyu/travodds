@@ -19,7 +19,9 @@ StatelessReader::StatelessReader(const DataReaderQos & qos, const GUID_t & guid,
 
 StatelessReader::~StatelessReader()
 {
-	WriterProxyMap writerProxys = matchWriters_;
+    StopDataSharing();
+	WriterProxyMap writerProxys;
+    { std::lock_guard<std::mutex> proxies(proxiesMutex_); writerProxys = matchWriters_; }
 
 	for (auto & writerProxy : writerProxys) {
 		MatchedWriterRemove(writerProxy.first);
@@ -30,7 +32,7 @@ StatelessReader::~StatelessReader()
 
 ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, const DataSubMessage_t& dataMsg, const SerializedPayload& data)
 {
-	std::lock_guard<std::mutex> guard(dataMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	ChangeKind_t kind = ALIVE;
 	CacheSerializedBuffer* buffer = nullptr;
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
@@ -118,11 +120,23 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 	cache->related_sample_identity = dataMsg.related_sample_identity;
 	cache->sequenceNumber = dataMsg.writerSN;
 
+    return SubmitDataChange(cache);
+}
+
+ReturnCode_t StatelessReader::SubmitDataChange(std::shared_ptr<CacheChange> cache)
+{
+    const auto guid = cache->writerGuid;
+    if (datareader_ && (guid.entityId.entityKind == ENTITYKIND_USER_WRITER_NO_KEY || guid.entityId.entityKind == ENTITYKIND_USER_WRITER_WITH_KEY)) {
+        auto proxy = MatchedWriterLookup(guid);
+        if (!proxy) return RETCODE_ERROR;
+        if (cache->sequenceNumber <= proxy->lastMaxRecvSeq) return RETCODE_OK;
+    }
 	//QOS处理
 	//TODO
 	if (datareader_ && (ENTITYKIND_USER_WRITER_NO_KEY == guid.entityId.entityKind || ENTITYKIND_USER_WRITER_WITH_KEY == guid.entityId.entityKind)) {
-		datareader_->SetLastinstanceHandle(cache);
-		SequenceNumber_t& last =  matchWriters_[guid]->lastMaxRecvSeq;
+		auto proxy = MatchedWriterLookup(guid);
+        if (!proxy) return RETCODE_ERROR;
+        SequenceNumber_t& last = proxy->lastMaxRecvSeq;
 		int32_t lostcount = 0;
 		if (last < cache->sequenceNumber) {
 			lostcount = cache->sequenceNumber - last - 1;
@@ -142,6 +156,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 		
 	ReturnCode_t ret = AddChanges(cache);
+	if (ret == RETCODE_LIFESPAN_TIMEOUT) return ret;
 
 	if (ret == RETCODE_TIME_BASED_FILTER) {
 		//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -165,6 +180,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 		if (!datareader_->CheckLifespan(cache)) {
 			return RETCODE_LIFESPAN_TIMEOUT;
 		}
+        if (ret == RETCODE_OK) datareader_->SetLastinstanceHandle(cache);
 		datareader_->OnDataAvaible();
 	}
 	
@@ -173,7 +189,7 @@ ReturnCode_t StatelessReader::ReceiveDataMessage(const Receive_t&  headerMsg, co
 
 ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg, const DataFragSubMessage_t& dataMsg, const SerializedPayload& data)
 {
-	std::lock_guard<std::mutex> guard(dataMutex_);
+	std::lock_guard<std::recursive_mutex> guard(dataMutex_);
 	/* wangyi 更新存活性 */
 	GUID_t guid = { headerMsg.sourceGuidPrefix, dataMsg.writerId };
 	AssertWriterLiveliness(guid);
@@ -306,9 +322,10 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
         }
 #endif // DDSSECURITY
 		if (datareader_ &&(ENTITYKIND_USER_WRITER_NO_KEY == guid.entityId.entityKind || ENTITYKIND_USER_WRITER_WITH_KEY == guid.entityId.entityKind)) {
-			datareader_->SetLastinstanceHandle(dataFragCache);
 
-			SequenceNumber_t& last = matchWriters_[guid]->lastMaxRecvSeq;
+			auto proxy = MatchedWriterLookup(guid);
+            if (!proxy) return RETCODE_ERROR;
+            SequenceNumber_t& last = proxy->lastMaxRecvSeq;
 			int32_t lostcount = 0;
 			if (last < dataFragCache->sequenceNumber) {
 				lostcount = dataFragCache->sequenceNumber - last - 1;
@@ -323,6 +340,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 		}
 
 		ReturnCode_t ret = AddChanges(dataFragCache);
+		if (ret == RETCODE_LIFESPAN_TIMEOUT) return ret;
 
 		if (ret == RETCODE_TIME_BASED_FILTER) {
 			//wangyi time_based_filter 过滤判断,未到达数据提交时间，过滤数据。
@@ -346,6 +364,7 @@ ReturnCode_t StatelessReader::ReceiveDataFragMessage(const Receive_t&  headerMsg
 			if (!datareader_->CheckLifespan(dataFragCache)) {
 				return RETCODE_LIFESPAN_TIMEOUT;
 			}
+            if (ret == RETCODE_OK) datareader_->SetLastinstanceHandle(dataFragCache);
 			datareader_->OnDataAvaible();
 		}
 	}
@@ -379,7 +398,10 @@ ReturnCode_t StatelessReader::ReceiveGapMessage(const Receive_t&  headerInfo, co
 
 void StatelessReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerData)
 {
+    {
+        std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	matchWriters_[writerData->GetGuid()] = writerData;
+    }
 	/* wangyi */
 	Duration_t duration = TIME_INFINITE;
 	if (qos_.liveliness.lease_duration < duration) {
@@ -400,6 +422,7 @@ void StatelessReader::MatchedWriterAdd(std::shared_ptr<WriterProxy> writerData)
 
 bool StatelessReader::MatchedWriterIsMatched(GUID_t writerGuid)
 {
+    std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	if (0 == matchWriters_.count(writerGuid)) {
 		return false;
 	}
@@ -409,6 +432,8 @@ bool StatelessReader::MatchedWriterIsMatched(GUID_t writerGuid)
 
 void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 {
+    {
+    std::lock_guard<std::recursive_mutex> ingress(dataMutex_);
 	/* wangyi */
 	Duration_t duration = TIME_INFINITE;
 	if (qos_.liveliness.lease_duration < duration) {
@@ -423,11 +448,17 @@ void StatelessReader::MatchedWriterRemove(GUID_t writerGuid)
 	}
 	/* wangyi 删除旧数据 */
 	readerCache_->RemoveRemoteWriter(writerGuid);
+    {
+        std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	matchWriters_.erase(writerGuid);
+    }
+    }
+    StopDataSharing(writerGuid);
 }
 
 std::shared_ptr<WriterProxy> StatelessReader::MatchedWriterLookup(GUID_t writerGuid)
 {
+    std::lock_guard<std::mutex> proxies(proxiesMutex_);
 	auto itor = matchWriters_.find(writerGuid);
 	if (itor == matchWriters_.end()) {
 		TRAVODDS_LOG(LOG_ERROR, "writerGuid not match");

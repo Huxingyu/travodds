@@ -15,6 +15,7 @@
 #include "dcps/topic/topic.h"
 #include "dcps/listener/datawriterlistener.h"
 #include "type/builtintopicdata.h"
+#include "dcps/publish/sampleloan.h"
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -29,6 +30,9 @@ public:
      * @brief 析构函数。
      */
     virtual ~DataWriter() = default;
+    virtual ReturnCode_t loan_sample(SampleLoan&) { return RETCODE_UNSUPPORTED; }
+    virtual ReturnCode_t discard_loan(SampleLoan&) { return RETCODE_UNSUPPORTED; }
+    virtual ReturnCode_t write(SampleLoan&, const InstanceHandle_t&) { return RETCODE_UNSUPPORTED; }
     /**
      * @brief 为此DataWriter设置DataWriterQos。
      *

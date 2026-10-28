@@ -165,6 +165,8 @@ public:
         TopicQos& qos);
 
 private:
+    static bool parseDataSharingQosPolicy(XMLElement* element, DataSharingQosPolicy& qos);
+    static bool parsePayloadPoolQosPolicy(XMLElement* element, PayloadPoolQosPolicy& qos);
     /** @brief key: library_name + "::" profile_name + "::" qos_name */
     std::map<std::string, DomainParticipantFactoryQos> m_participantFactoryQosMap;
     std::map<std::string, DomainParticipantQos> m_participantQosMap;

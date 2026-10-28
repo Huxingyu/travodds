@@ -40,6 +40,17 @@ void StatelessWriter::MatchedReaderAdd(const DiscoveredReaderData &subData)
 	readerLocator->SetHistoryCache(writerCache_);
 	readerLocators_[subData.remoteReaderGuid] = readerLocator;
 	transportGroup_.AddLocator(subData.remoteReaderGuid.prefix, subData.unicastLocatorList);
+    if (qos_.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS &&
+        subData.ddsSubscriptionData.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS) {
+        auto sequence = writerCache_->GetSeqNumMin();
+        const auto last = writerCache_->GetSeqNumMax();
+        for (; sequence != SEQUENCENUMBER_UNKNOWN && sequence <= last; sequence++) {
+            auto change = writerCache_->GetChange(sequence);
+            if (!change || (change->nativePayload && change->UsesDataSharing(subData.remoteReaderGuid))) continue;
+            if (change->nativePayload && change->EnsureSerializedPayload() != RETCODE_OK) continue;
+            DeliveryDataToReader(change, qos_.reliability.max_blocking_time, &subData.remoteReaderGuid);
+        }
+    }
 }
 
 #ifdef DDSSECURITY
@@ -228,6 +239,7 @@ void StatelessWriter::ReaderLocatorRemove(const GUID_t& guid)
 		return;
 	}
 	readerLocators_.erase(itor);
+    RemoveDataSharingReader(guid);
 	transportGroup_.DecreaseLocator(guid.prefix);
 
 }
@@ -240,6 +252,25 @@ void StatelessWriter::UnsentChangesReset()
 }
 
 ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, const Duration_t& timeOut)
+{
+    if (!change) return RETCODE_BAD_PARAMETER;
+    std::lock_guard<std::mutex> lock(readerLocatorsMutex_);
+    // Packet headers are encoded in the cache's headroom. Initial delivery,
+    // periodic SPDP resend and discovery replay must not mutate/send it at once.
+    if (!change->nativePayload) return DeliveryDataToReader(change, timeOut, nullptr);
+    ReturnCode_t result = RETCODE_OK;
+    for (const auto& reader : readerLocators_) {
+        if (change->UsesDataSharing(reader.first)) continue;
+        const auto serialized = change->EnsureSerializedPayload();
+        if (serialized != RETCODE_OK) return serialized;
+        const auto sent = DeliveryDataToReader(change, timeOut, &reader.first);
+        if (sent != RETCODE_OK) result = sent;
+    }
+    return result;
+}
+
+ReturnCode_t StatelessWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> change,
+        const Duration_t& timeOut, const GUID_t* target)
 {
 	/* wnagyi  */
 	Duration_t duration = TIME_INFINITE;
@@ -277,9 +308,10 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 	std::vector<LocatorVec> dstLocators;
 	std::set<GuidPrefix_t> prefixs;
 	for (auto& it : readerMulticastLocators_) {
-		dstLocators.push_back(LocatorSeq{ it.first });
+		if (!target || it.second.count(*target)) dstLocators.push_back(LocatorSeq{ it.first });
 	}
 	for (auto& readerlocator : readerLocators_) {
+        if (target && readerlocator.first != *target) continue;
 		if (!change->filterReaders_.empty() && change->filterReaders_.find(readerlocator.first) != change->filterReaders_.end()) {
 			continue;
 		}
@@ -309,7 +341,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
-		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
+		dataFragSubMessage.readerId = target ? target->entityId : ENTITYID_UNKNOWN;
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = change->sequenceNumber;
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
@@ -341,6 +373,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 			ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 			ints.timestamp = change->sourceTimespace;
 			MessageProcessor::EncapsulateINFOTSMessageNow(*buffer, shift, ints);
+			if (target != nullptr) {
+			    InfoDestinationSubMessage_t destination;
+			    destination.guidPrefix = target->prefix;
+			    destination.header.flags = DEFAULT_ENDIAN;
+			    MessageProcessor::EncapsulateINFODSTMessage(*buffer, shift, destination);
+			}
 	
 #ifdef DDSSECURITY
 			//加密子消息
@@ -474,7 +512,7 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		dataSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
 		dataSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
-		dataSubMessage.readerId = ENTITYID_UNKNOWN;
+		dataSubMessage.readerId = target ? target->entityId : ENTITYID_UNKNOWN;
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;
 
@@ -498,6 +536,12 @@ ReturnCode_t StatelessWriter::DeliveryData(std::shared_ptr<CacheChange> change, 
 		ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 		ints.timestamp = change->sourceTimespace;
 		MessageProcessor::EncapsulateINFOTSMessageNow(*change->serializedBuffer, shift, ints);
+		if (target != nullptr) {
+		    InfoDestinationSubMessage_t destination;
+		    destination.guidPrefix = target->prefix;
+		    destination.header.flags = DEFAULT_ENDIAN;
+		    MessageProcessor::EncapsulateINFODSTMessage(*change->serializedBuffer, shift, destination);
+		}
 #ifdef DDSSECURITY
         // srcBuffer指向被加密子消息
         SerializedBuffer srcBuffer;

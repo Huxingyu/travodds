@@ -88,67 +88,109 @@ TEST(StatusConditionTest, StatusCondition_INCONSISTENT_TOPIC_STATUS)
 
 TEST(StatusConditionTest, StatusCondition_OFFERED_DEADLINE_MISSED_STATUS)
 {
-	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
-	DomainParticipant* par_w = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_w->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_w = par_w->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-
-	DataWriterQos qos;
-	qos.deadline.period = { 2, 0 };
-	DataWriter* dw = par_w->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datawriter(top_w, qos, nullptr, OFFERED_DEADLINE_MISSED_STATUS);
-
-
-	StatusCondition& sc_w = dw->get_statuscondition();
-	WaitSet ws;
-
-	EXPECT_EQ(ws.attach_condition(sc_w), RETCODE_OK);
-	ConditionSeq active_conditions;
-	EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
-
-	EXPECT_EQ(active_conditions.size(), 1);
-	EXPECT_EQ(active_conditions[0], &sc_w);
-
-	OfferedDeadlineMissedStatus status;
-
-	dw->get_offered_deadline_missed_status(status);
-
-	EXPECT_EQ(status.total_count, 1);
-	EXPECT_EQ(status.total_count_change, 1);
-	EXPECT_EQ(status.last_instance_handle, HANDLE_NIL);
-	par_w->delete_contained_entities();
-	TheParticipantFactory->delete_participant(par_w);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    auto cleanup = [](DomainParticipant* p) {
+        p->delete_contained_entities();
+        TheParticipantFactory->delete_participant(p);
+    };
+    std::unique_ptr<DomainParticipant, decltype(cleanup)> participant(
+        TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE), cleanup);
+    ASSERT_NE(participant, nullptr);
+    participant->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = participant->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataWriterQos qos;
+    qos.deadline.period = {2, 0};
+    DataWriter* writer = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datawriter(topic, qos, nullptr, OFFERED_DEADLINE_MISSED_STATUS);
+    ASSERT_NE(writer, nullptr);
+    StatusCondition& condition = writer->get_statuscondition();
+    WaitSet waitset;
+    ASSERT_EQ(waitset.attach_condition(condition), RETCODE_OK);
+    ConditionSeq active;
+    // An endpoint with no written instance has no missed sample deadline.
+    EXPECT_EQ(waitset.wait(active, {2, 200000000}), RETCODE_TIMEOUT);
+    EXPECT_TRUE(active.empty());
+    OfferedDeadlineMissedStatus status;
+    ASSERT_EQ(writer->get_offered_deadline_missed_status(status), RETCODE_OK);
+    EXPECT_EQ(status.total_count, 0);
+    TestModule::BasicData data{};
+    data.id = 1;
+    data.name = "deadline";
+    ASSERT_EQ(writer->write(&data, HANDLE_NIL), RETCODE_OK);
+    ASSERT_EQ(waitset.wait(active, {10, 0}), RETCODE_OK);
+    ASSERT_EQ(active.size(), 1u);
+    EXPECT_EQ(active[0], &condition);
+    ASSERT_EQ(writer->get_offered_deadline_missed_status(status), RETCODE_OK);
+    EXPECT_EQ(status.total_count, 1);
+    EXPECT_EQ(status.total_count_change, 1);
+    EXPECT_EQ(status.last_instance_handle, HANDLE_NIL);
+    EXPECT_EQ(waitset.detach_condition(condition), RETCODE_OK);
 }
 
 TEST(StatusConditionTest, StatusCondition_REQUESTED_DEADLINE_MISSED_STATUS)
 {
-	const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
-	DomainParticipant* par_r = TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	par_r->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
-	Topic* top_r = par_r->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
-	DataReaderQos qos;
-	qos.deadline.period = { 2, 0 };
-	DataReader* dr = par_r->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
-		create_datareader(top_r, qos, nullptr, REQUESTED_DEADLINE_MISSED_STATUS);
-
-	StatusCondition& sc_r = dr->get_statuscondition();
-	WaitSet ws;
-
-	EXPECT_EQ(ws.attach_condition(sc_r), RETCODE_OK);
-	ConditionSeq active_conditions;
-	EXPECT_EQ(ws.wait(active_conditions, { 10,0 }), RETCODE_OK);
-
-	EXPECT_EQ(active_conditions.size(), 1);
-	EXPECT_EQ(active_conditions[0], &sc_r);
-
-	RequestedDeadlineMissedStatus status;
-	dr->get_requested_deadline_missed_status(status);
-
-	EXPECT_EQ(status.total_count, 1);
-	EXPECT_EQ(status.total_count_change, 1);
-	EXPECT_EQ(status.last_instance_handle, HANDLE_NIL);
-	par_r->delete_contained_entities();
-	TheParticipantFactory->delete_participant(par_r);
+    const char* type_name = TestModule::BasicDataTypeSupport::get_instance()->get_typename();
+    auto cleanup = [](DomainParticipant* p) {
+        p->delete_contained_entities();
+        TheParticipantFactory->delete_participant(p);
+    };
+    std::unique_ptr<DomainParticipant, decltype(cleanup)> participant(
+        TheParticipantFactory->create_participant(0, PARTICIPANT_QOS_DEFAULT, nullptr, STATUS_MASK_NONE), cleanup);
+    ASSERT_NE(participant, nullptr);
+    participant->registe_type(type_name, TestModule::BasicDataTypeSupport::get_instance());
+    Topic* topic = participant->create_topic("StatusConditionTest", type_name, TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+    DataReaderQos rq;
+    rq.deadline.period = {2, 0};
+    DataReader* reader = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datareader(topic, rq, nullptr, REQUESTED_DEADLINE_MISSED_STATUS);
+    ASSERT_NE(reader, nullptr);
+    StatusCondition& condition = reader->get_statuscondition();
+    WaitSet waitset;
+    ASSERT_EQ(waitset.attach_condition(condition), RETCODE_OK);
+    ConditionSeq active;
+    EXPECT_EQ(waitset.wait(active, {2, 200000000}), RETCODE_TIMEOUT);
+    EXPECT_TRUE(active.empty());
+    RequestedDeadlineMissedStatus status;
+    ASSERT_EQ(reader->get_requested_deadline_missed_status(status), RETCODE_OK);
+    EXPECT_EQ(status.total_count, 0);
+    DataWriterQos wq;
+    wq.deadline.period = rq.deadline.period;
+    DataWriter* writer = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE)->
+        create_datawriter(topic, wq, nullptr, STATUS_MASK_NONE);
+    ASSERT_NE(writer, nullptr);
+    auto limit = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    InstanceHandleSeq matched;
+    do {
+        reader->get_matched_publications(matched);
+        if (!matched.empty()) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    } while (std::chrono::steady_clock::now() < limit);
+    ASSERT_EQ(matched.size(), 1u);
+    TestModule::BasicData data{};
+    data.id = 1;
+    data.name = "deadline";
+    ASSERT_EQ(writer->write(&data, HANDLE_NIL), RETCODE_OK);
+    TestModule::BasicData received{};
+    SampleInfo info;
+    ReturnCode_t result;
+    limit = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    do {
+        result = reader->take_next_sample(&received, info);
+        if (result != RETCODE_NO_DATA) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    } while (std::chrono::steady_clock::now() < limit);
+    ASSERT_EQ(result, RETCODE_OK);
+    EXPECT_TRUE(info.valid_data);
+    EXPECT_EQ(received.id, 1);
+    EXPECT_EQ(received.name, "deadline");
+    ASSERT_EQ(waitset.wait(active, {10, 0}), RETCODE_OK);
+    ASSERT_EQ(active.size(), 1u);
+    EXPECT_EQ(active[0], &condition);
+    ASSERT_EQ(reader->get_requested_deadline_missed_status(status), RETCODE_OK);
+    EXPECT_EQ(status.total_count, 1);
+    EXPECT_EQ(status.total_count_change, 1);
+    EXPECT_EQ(status.last_instance_handle, HANDLE_NIL);
+    EXPECT_EQ(waitset.detach_condition(condition), RETCODE_OK);
 }
 
 TEST(StatusConditionTest, StatusCondition_INCOMPATIBLE_QOS_STATUS) {

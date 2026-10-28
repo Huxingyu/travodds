@@ -17,6 +17,11 @@
 #include "dcps/base/retcode.h"
 #include "dcps/base/status.h"
 #include "cdr/travoddscdr.h"
+#include "type/nativetypeinfo.h"
+#include <cstddef>
+#include <limits>
+#include <new>
+#include <type_traits>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -31,8 +36,13 @@ class DynamicType;
 
 typedef SequenceData<SerializedBuffer> SerializedBufferSeq;
 
+
 class DDS_DLL TypeSupport {
 public:
+	virtual ~TypeSupport() = default;
+	// Legacy/generated supports remain conservative until explicitly opted in.
+	virtual NativeTypeInfo get_native_type_info() const { return {}; }
+	virtual bool construct_native_sample(void*) const { return false; }
 	/**
 	 * @brief 创建样本的函数。
 	 * @return void* 指向新创建的数据类型的指针。
@@ -129,6 +139,29 @@ public:
 		// 如果第一个字节是1，说明是小端
 		return byte[0];
 	}
+};
+
+// Implement serializers/key operations in a derived support as usual. The
+// application supplies a versioned layout ID, and must ensure pointer-free T.
+template<typename T>
+class NativeTypeSupport : public TypeSupport {
+public:
+	explicit NativeTypeSupport(std::string layoutId) : layout_id_(std::move(layoutId)) {
+		static_assert(std::is_standard_layout<T>::value && std::is_trivially_copyable<T>::value &&
+			std::is_trivially_destructible<T>::value && std::is_nothrow_default_constructible<T>::value,
+			"Native samples must have a trivial, fixed, noexcept constructible layout");
+		static_assert(sizeof(T) <= std::numeric_limits<uint32_t>::max(), "Native sample too large");
+	}
+	NativeTypeInfo get_native_type_info() const override {
+		return {true, true, uint32_t(sizeof(T)), uint32_t(alignof(T)), layout_id_};
+	}
+	bool construct_native_sample(void* storage) const override {
+		if (!storage || reinterpret_cast<uintptr_t>(storage) % alignof(T)) return false;
+		new (storage) T{};
+		return true;
+	}
+private:
+	std::string layout_id_;
 };
 TRAVODDS_NAMESPACE_END
 

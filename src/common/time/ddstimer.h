@@ -19,6 +19,9 @@
 #include <condition_variable>
 #include <iostream>
 #include <atomic>
+#include <thread>
+#include <mutex>
+#include <memory>
 
 TRAVODDS_NAMESPACE_BEGIN
 
@@ -104,7 +107,7 @@ public:
 	 *
 	 * @return 下一次定时函数执行的时间。
 	 */
-	std::chrono::steady_clock GetNextTime();
+	std::chrono::steady_clock::time_point GetNextTime();
 
 	/**
 	 * @brief 开始定时器。
@@ -156,31 +159,11 @@ public:
 	 */
 	bool UpdatePeriod(int64_t period);
 private:
-	std::string name_;
-
-	/* 下一次触发的时间 */
-	std::chrono::steady_clock::time_point nextTime_;
-
-	/* 定时器的时间间隔 */
-	std::chrono::milliseconds period_;
-
-	/* 定时器的执行的回调函数 */
-	TimerCallBack callback_;
-
-	std::atomic_bool run_;
-
-	std::atomic_bool exit_;
-
-	std::atomic_bool restart_;
-	
-	std::condition_variable_any cva_;
-
-	std::shared_ptr<std::thread> thread_ = nullptr;
-
-	/* 定时器的种类 */
-	TimerType type_;
-
-	std::mutex mutex_;
+    struct Runtime;
+    std::shared_ptr<Runtime> runtime_;
+    std::mutex threadMutex_;
+    std::thread thread_;
+    static void RunRuntime(const std::shared_ptr<Runtime>& runtime);
 };
 
 TRAVODDS_NAMESPACE_END

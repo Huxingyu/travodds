@@ -149,7 +149,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据1：正确的数据，应该匹配过滤条件 ======
     {
-        TestModule::FilterableData data1;
+        TestModule::FilterableData data1{};
         // 条件1: shortField > 10 AND longField < 1000
         data1.shortField = 50;      // > 10
         data1.longField = 500;      // < 1000
@@ -175,7 +175,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据2：正确的数据，从不同路径匹配过滤条件 ======
     {
-        TestModule::FilterableData data2;
+        TestModule::FilterableData data2{};
         // 条件1: shortField > 10 AND longField < 1000
         data2.shortField = 100;     // > 10
         data2.longField = 800;      // < 1000
@@ -199,7 +199,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据3：错误数据 - floatField不符合BETWEEN条件 ======
     {
-        TestModule::FilterableData data3;
+        TestModule::FilterableData data3{};
         // 条件1: shortField > 10 AND longField < 1000
         data3.shortField = 5;      // > 10
         data3.longField = 1500;      // < 1000
@@ -219,7 +219,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据4：错误数据 - 字符串条件都不满足 ======
     {
-        TestModule::FilterableData data4;
+        TestModule::FilterableData data4{};
         // 条件1: shortField > 10 AND longField < 1000
         data4.shortField = 50;      // > 10
         data4.longField = 500;      // < 1000
@@ -241,7 +241,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据5：错误数据 - 条件4排除 ======
     {
-        TestModule::FilterableData data5;
+        TestModule::FilterableData data5{};
         // 条件1: shortField > 10 AND longField < 1000
         data5.shortField = 50;      // > 10
         data5.longField = 500;      // < 1000
@@ -265,7 +265,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest1) {
 
     // ====== 数据6：错误数据 - enumField为VALUE_E被NOT排除 ======
     {
-        TestModule::FilterableData data6;
+        TestModule::FilterableData data6{};
         // 条件1: shortField > 10 AND longField < 1000
         data6.shortField = 50;      // > 10
         data6.longField = 500;      // < 1000
@@ -391,7 +391,7 @@ AND (byteArray[0] < ulArray[0])\
     std::vector<TestModule::FilterableData> datas;
     // ====== 数据1：完全匹配所有条件 ======
     {
-        TestModule::FilterableData data1;
+        TestModule::FilterableData data1{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)
         data1.longArray[0] = 20;    // > 10，满足第一个OR条件
@@ -424,7 +424,7 @@ AND (byteArray[0] < ulArray[0])\
 
     // ====== 数据2：通过OR的其他路径匹配 ======
     {
-        TestModule::FilterableData data2;
+        TestModule::FilterableData data2{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)
         data2.longArray[0] = 5;     // <= 10，不满足
@@ -448,7 +448,7 @@ AND (byteArray[0] < ulArray[0])\
 
     // ====== 数据3：错误数据 - 条件1的OR都不满足 ======
     {
-        TestModule::FilterableData data3;
+        TestModule::FilterableData data3{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)  - 都不满足
         data3.longArray[0] = 10;    // 错误：= 10，不是 >
@@ -470,7 +470,7 @@ AND (byteArray[0] < ulArray[0])\
 
     // ====== 数据4：错误数据 - 条件2的OR都不满足 ======
     {
-        TestModule::FilterableData data4;
+        TestModule::FilterableData data4{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)
         data4.longArray[0] = 15;    // > 10，满足
@@ -493,7 +493,7 @@ AND (byteArray[0] < ulArray[0])\
 
     // ====== 数据5：错误数据 - 条件3的AND不满足（第一个条件失败） ======
     {
-        TestModule::FilterableData data5;
+        TestModule::FilterableData data5{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)
         data5.longArray[0] = 20;    // > 10，满足
@@ -515,7 +515,7 @@ AND (byteArray[0] < ulArray[0])\
 
     // ====== 数据6：错误数据 - 条件3的AND不满足（第二个条件失败） ======
     {
-        TestModule::FilterableData data6;
+        TestModule::FilterableData data6{};
 
         // 条件1: (longArray[0] > 10 OR doubleArray[0] < 0.0)
         data6.longArray[0] = 20;    // > 10，满足
@@ -610,7 +610,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据1：完全匹配所有条件（每个OR的第一个条件） ======
     {
-        TestModule::FilterableData data1;
+        TestModule::FilterableData data1{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data1.shortField = 1;        // = 1
@@ -636,7 +636,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据2：通过OR的其他路径匹配 ======
     {
-        TestModule::FilterableData data2;
+        TestModule::FilterableData data2{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data2.shortField = 0;        // ≠ 1
@@ -666,7 +666,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据3：混合路径匹配 ======
     {
-        TestModule::FilterableData data3;
+        TestModule::FilterableData data3{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data3.longField = 3;         // = 3，满足第三个OR条件
@@ -691,7 +691,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据4：所有条件都走最后一个OR选项 ======
     {
-        TestModule::FilterableData data4;
+        TestModule::FilterableData data4{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data4.ulongField = 4;        // = 4，满足最后一个OR条件
@@ -716,7 +716,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据5：错误数据 - 条件1的OR都不满足 ======
     {
-        TestModule::FilterableData data5;
+        TestModule::FilterableData data5{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data5.shortField = 10;       // ≠ 1
@@ -736,7 +736,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据6：错误数据 - 条件2的OR都不满足 ======
     {
-        TestModule::FilterableData data6;
+        TestModule::FilterableData data6{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data6.shortField = 1;        // = 1
@@ -758,7 +758,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据7：错误数据 - 条件3的OR都不满足 ======
     {
-        TestModule::FilterableData data7;
+        TestModule::FilterableData data7{};
 
         // 条件1: (shortField = 1 OR ushortField = 2 OR longField = 3 OR ulongField = 4)
         data7.shortField = 1;        // = 1
@@ -780,7 +780,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据8：错误数据 - 条件4的OR都不满足 ======
     {
-        TestModule::FilterableData data8;
+        TestModule::FilterableData data8{};
 
         // 条件1-3满足
         data8.shortField = 1;        // = 1
@@ -800,7 +800,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据9：错误数据 - 条件5的OR都不满足 ======
     {
-        TestModule::FilterableData data9;
+        TestModule::FilterableData data9{};
 
         // 条件1-4满足
         data9.shortField = 1;        // = 1
@@ -819,7 +819,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
     // ====== 数据10：错误数据 - 条件6的OR都不满足 ======
     {
-        TestModule::FilterableData data10;
+        TestModule::FilterableData data10{};
 
         // 条件1-5满足
         data10.shortField = 1;        // = 1
@@ -919,7 +919,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
      std::vector<TestModule::FilterableData> datas;
      // ====== 数据1：完全匹配所有条件 ======
      {
-         TestModule::FilterableData data1;
+         TestModule::FilterableData data1{};
          data1.shortField = 15;
          data1.ushortField = 20;
          data1.longField = 100;
@@ -933,7 +933,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
      // ====== 数据2：另一组匹配条件 ======
      {
-         TestModule::FilterableData data2;
+         TestModule::FilterableData data2{};
          data2.shortField = 10;
          data2.ushortField = 0;
          data2.longField = 29;
@@ -946,7 +946,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
      // ====== 数据3：错误数据 - shortField不符合 >=10 ======
      {
-         TestModule::FilterableData data3;
+         TestModule::FilterableData data3{};
          data3.shortField = 9;
          data3.ushortField = 20;
          data3.longField = 100;
@@ -959,7 +959,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
      // ====== 数据4：错误数据 - ushortField不符合 <=20 ======
      {
-         TestModule::FilterableData data4;
+         TestModule::FilterableData data4{};
          data4.shortField = 15;
          data4.ushortField = 21;
 
@@ -973,7 +973,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
      // ====== 数据5：错误数据 - longField不符合 <>30（等于30） ======
      {
-         TestModule::FilterableData data5;
+         TestModule::FilterableData data5{};
          data5.shortField = 15;
          data5.ushortField = 20;
          data5.longField = 30;
@@ -987,7 +987,7 @@ TEST(ContentFilteredTopicTest, ContentFilteredTopic_fuctest3) {
 
      // ====== 数据6：错误数据 - enumField不是VALUE_B ======
      {
-         TestModule::FilterableData data6;
+         TestModule::FilterableData data6{};
          data6.shortField = 15;
          data6.ushortField = 20;
          data6.longField = 100;

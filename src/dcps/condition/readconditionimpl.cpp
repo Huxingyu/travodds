@@ -14,10 +14,9 @@ ReadConditionImpl::~ReadConditionImpl()
 
 bool ReadConditionImpl::get_trigger_value() const
 {
-    SampleCounters counters = dataReader_->GetSampleCounters();
-    if (!counters.change.load()) {
-        return false;
-    }
+    // Conditions are level-triggered. Inspecting one condition must neither
+    // consume an event nor hide data from another condition/WaitSet.
+    SampleCounters counters = dataReader_->GetSampleCounters(false);
     SampleStateMask smapleStates = (counters.sampleRead ? READ_SAMPLE_STATE : 0) | 
         (counters.sampleNotRead ? NOT_READ_SAMPLE_STATE : 0);
     ViewStateMask viewStates = (counters.viewNew ? NEW_VIEW_STATE : 0) | 

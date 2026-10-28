@@ -83,6 +83,7 @@ ParameterList::ParameterList(const DiscoveredWriterData& data, const EndiannessK
 	: msgEndian_(endian)
 {
 	const PublicationBuiltinTopicData& pubData = data.ddsPublicationData;
+	if (pubData.data_sharing.valid(true)) AddParameter(PID_TRAVO_DATA_SHARING, pubData.data_sharing);
 	//PID_USER_DATA : UserDataQosPolicy
 	if (!pubData.user_data.value.empty()) {
 		AddParameter(ParameterId::PID_USER_DATA, pubData.user_data);
@@ -161,6 +162,7 @@ ParameterList::ParameterList(const DiscoveredReaderData& data, const EndiannessK
 	: msgEndian_(endian)
 {
 	const SubscriptionBuiltinTopicData& subData = data.ddsSubscriptionData;
+	if (subData.data_sharing.valid(false)) AddParameter(PID_TRAVO_DATA_SHARING, subData.data_sharing);
 	//PID_USER_DATA : UserDataQosPolicy
 	if (!subData.user_data.value.empty()) {
 		AddParameter(ParameterId::PID_USER_DATA, subData.user_data);
@@ -322,6 +324,9 @@ void ParameterList::GetDiscoveredData(SPDPdiscoveredParticipantData& data)
 void ParameterList::GetDiscoveredData(DiscoveredWriterData& data)
 {
 	PublicationBuiltinTopicData& pubData = data.ddsPublicationData;
+	pubData.data_sharing = {};
+	GetParameter(PID_TRAVO_DATA_SHARING, pubData.data_sharing);
+	if (!pubData.data_sharing.valid(true)) pubData.data_sharing = {};
 	//PID_USER_DATA : UserDataQosPolicy
 	GetParameter(ParameterId::PID_USER_DATA, pubData.user_data);
 	//PID_TOPIC_NAME : string
@@ -378,6 +383,9 @@ void ParameterList::GetDiscoveredData(DiscoveredWriterData& data)
 void ParameterList::GetDiscoveredData(DiscoveredReaderData& data)
 {
 	SubscriptionBuiltinTopicData& subData = data.ddsSubscriptionData;
+	subData.data_sharing = {};
+	GetParameter(PID_TRAVO_DATA_SHARING, subData.data_sharing);
+	if (!subData.data_sharing.valid(false)) subData.data_sharing = {};
 	//PID_USER_DATA : UserDataQosPolicy
 	GetParameter(ParameterId::PID_USER_DATA, subData.user_data);
 	//PID_TOPIC_NAME : string
@@ -622,14 +630,32 @@ void ParameterList::LoadMessage(const octet* msg, const uint32_t& length)
 {
 	uint32_t offset = 0;
 	bool sentinel = true;
+	bool invalidDataSharing = false;
 	while (offset < length && sentinel) {
+		if (!msg || length - offset < 4) {
+			parameterList_.erase(PID_TRAVO_DATA_SHARING);
+			return;
+		}
 		uint16_t pid; 
 		uint16_t len;
 		ReadUInt16(msg + offset, pid);
 		ReadUInt16(msg + offset + 2, len);
 		
 		offset += 4;
+		if (len > length - offset) {
+			parameterList_.erase(PID_TRAVO_DATA_SHARING);
+			return;
+		}
 		switch (static_cast<ParameterId>(pid)) {
+		case ParameterId::PID_TRAVO_DATA_SHARING: {
+			DataSharingEndpointInfo info;
+			if (invalidDataSharing || parameterList_.count(PID_TRAVO_DATA_SHARING) ||
+				!DecodeDataSharing(msg + offset, len, info)) {
+				invalidDataSharing = true;
+				parameterList_.erase(PID_TRAVO_DATA_SHARING);
+			} else AddParameter(PID_TRAVO_DATA_SHARING, info);
+			break;
+		}
 		case ParameterId::PID_PAD: {
 			break;
 		}

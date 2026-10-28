@@ -125,6 +125,8 @@ public:
 #endif // DDSSECURITY
 
 private:
+    ReturnCode_t DeliveryDataToReader(std::shared_ptr<CacheChange> change, const Duration_t& timeOut,
+        const GUID_t* target);
 
 	Duration_t resendDataPeriod_;
 

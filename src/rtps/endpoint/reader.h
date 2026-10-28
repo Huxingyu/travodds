@@ -25,6 +25,7 @@ public:
 };
 
 class DataReaderImpl;
+struct DiscoveredWriterData;
 /**
  * Reader类,管理从其匹配的Writer接收数据。
  * 需要使用来自RTPS层Participant的CreateReader函数创建。
@@ -42,6 +43,21 @@ public:
 	 * @brief 析构函数。
 	 */
 	virtual ~Reader();
+
+    // Serialize application selection/materialization/commit; ingress may continue.
+    std::recursive_mutex sampleAccessMutex;
+    // Uses this Reader's configured directory; discovery never supplies paths.
+    bool StartDataSharing(const std::shared_ptr<Reader>& self, const DiscoveredWriterData& writer);
+    bool DataSharingSessionChanged(const DiscoveredWriterData& writer);
+    void StopDataSharing(const GUID_t& writer);
+    void StopDataSharing();
+    void StartMaintenance(const std::shared_ptr<Reader>& self);
+    void MaintainHistory();
+#if defined(__linux__)
+    ReturnCode_t ReceiveNativeSample(const GUID_t& writer, const NativeTypeInfo& type,
+        class SharedReadLoan&& loan);
+#endif
+    virtual ReturnCode_t SubmitDataChange(std::shared_ptr<CacheChange>) { return RETCODE_UNSUPPORTED; }
 
 	/**
 	 * @brief 处理传入的DATA消息。
@@ -115,7 +131,7 @@ public:
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t ReadOrTake(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples,
-		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
+		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false, bool preview = false);
 
 	/**
 	 * @brief 读取所有的实例的数据。
@@ -133,7 +149,7 @@ public:
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t ReadOrTakeInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
-		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
+		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false, bool preview = false);
 
 	/**
 	 * @brief 从列表中获取大于handle的实例句柄，
@@ -152,7 +168,7 @@ public:
 	 * @return 读取成功返回RETCODE_OK，否则返回RETCODE_ERROR。
 	 */
 	ReturnCode_t ReadOrTakeNextInstance(std::vector<std::shared_ptr<CacheChange>>& dataValues, SampleInfoSeq& sampleInfos, uint32_t maxSamples, InstanceHandle_t handle,
-		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false);
+		SampleStateMask sampleStates, ViewStateMask viewStates, InstanceStateMask instanceStates, bool shouldTake = false, bool preview = false);
 
 	/**
 	 * @brief 获取下一个实例句柄 。
@@ -226,6 +242,10 @@ public:
 	 */
 	void SetRelatedDataReader(DataReaderImpl* reader);
 
+    // Hold the ingress barrier until the DCPS status callback has returned.
+    // A retained RTPS Reader alone does not keep its DCPS owner alive.
+    void NotifySubscriptionMatched(InstanceHandle_t handle, bool add = true);
+
 	/**
 	 * @brief 获取DataReader Qos配置信息。
 	 *
@@ -288,14 +308,19 @@ protected:
 
 	/* wangyi 最新的样本 */
 	std::shared_ptr<Timer> lastNewCacheTimer_;
+    std::shared_ptr<Timer> maintenanceTimer_;
 	InstanceHandle_t lastInstance_;
 	mutable std::mutex lastInstanceMtx_;
 
 	/* 报文处理锁 */
-	std::mutex dataMutex_;
+	std::recursive_mutex dataMutex_;
 	std::mutex hbMutex_;
 	std::mutex gapMutex_;
 
+    struct NativeConnection;
+    std::mutex nativeConnectionsMutex_;
+    std::map<GUID_t, std::shared_ptr<NativeConnection>> nativeConnections_;
+    bool nativeStopping_ = false;
 	friend class DataReaderImpl;
 };
 

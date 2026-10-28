@@ -13,7 +13,5 @@ int32_t main(int argc, char** argv)
     //testing::GTEST_FLAG(filter) = "QoSTest.*";
 
     // 运行所有测试
-    RUN_ALL_TESTS();
-
-    return 0;
+    return RUN_ALL_TESTS();
 }

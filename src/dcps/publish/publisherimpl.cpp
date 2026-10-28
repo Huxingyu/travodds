@@ -7,6 +7,7 @@
 #include "dcps/topic/typesupport.h"
 #include "rtps/discovery/discovery.h"
 #include "common/log/logger.h"
+#include <exception>
 
 USING_TRAVODDS_NAMESPACE;
 PublisherImpl::PublisherImpl(PublisherQos qos, PublisherListener* listener, StatusMask mask, DomainParticipantImpl* participant)
@@ -109,7 +110,13 @@ DataWriter* PublisherImpl::create_datawriter(Topic* topic, const DataWriterQos& 
 #endif // DDSSECURITY
 
 	DataWriter* datawriter = nullptr;
-	std::unique_ptr<DataWriterImpl> datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
+	std::unique_ptr<DataWriterImpl> datawriterPtr;
+	try {
+		datawriterPtr = std::make_unique<DataWriterImpl>(topic, qosT, listener, mask, this, typeSupport);
+	} catch (const std::exception& error) {
+		TRAVODDS_LOG(LOG_ERROR, "create_datawriter allocation/configuration failed: %s", error.what());
+		return nullptr;
+	}
 
 	if (!datawriterPtr.get()) {
 		TRAVODDS_LOG(LOG_ERROR, "create datawriter Err");

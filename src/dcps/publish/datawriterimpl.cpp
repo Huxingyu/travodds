@@ -1,10 +1,14 @@
 #include "dcps/publish/datawriterimpl.h"
+#include "dcps/publish/sampleloan_state.h"
 #include "dcps/publish/publisherimpl.h"
 #include "dcps/topic/topicimpl.h"
 #include "dcps/topic/typesupport.h"
 #include "dcps/domain/domainparticipantimpl.h"
 #include "qos/qospolicycheck.h"
 #include "common/memory/memorypool.h"
+#include "common/memory/topicpayloadpool.h"
+#include <limits>
+#include <new>
 #include "common/time/ddstimer.h"
 #include "dcps/base/statusmanager.h"
 #include "rtps/endpoint/writer.h"
@@ -12,6 +16,7 @@
 #include "rtps/builtin/liveliness/livelinessmanager.h"
 #include "rtps/endpoint/statefulwriter.h"
 #include "rtps/discovery/discovery.h"
+#include "rtps/discovery/datasharingendpoint.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
 #ifdef DDSSECURITY
@@ -26,6 +31,20 @@
 using namespace std::chrono;
 USING_TRAVODDS_NAMESPACE
 
+namespace {
+std::shared_ptr<IPayloadPool> writerPayloadPool(Topic* topic, PublisherImpl* publisher,
+        const PayloadPoolQosPolicy& qos) {
+	PayloadPoolConfig config;
+	config.policy = qos.policy;
+	config.payload_size = qos.payload_size;
+	config.max_payloads = qos.max_payloads;
+	config.initial_payloads = qos.initial_payloads;
+	config.alignment = qos.alignment;
+	return TopicPayloadPoolRegistry::instance().getOrCreate(
+		{publisher->get_participant()->get_domain_id(), topic->get_name(), topic->get_type_name()}, config);
+}
+}
+
 DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWriterListener* listener, StatusMask mask, PublisherImpl* pub, TypeSupport* typeSupport)
 	: DomainEntityImpl(mask), topic_(dynamic_cast<TopicImpl*>(topic)),
 	  qos_(qos), listener_(listener), pub_(pub),
@@ -33,6 +52,7 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 	  deadlineTimer_(nullptr),
 	  lifespanTimer_(nullptr),
 	  memoryPool_(MemoryPool::GetInstance()),
+	  payloadPool_(writerPayloadPool(topic, pub, qos.payload_pool)),
 	  typeSupport_(typeSupport)
 {
 	topic_->Reference();
@@ -89,6 +109,10 @@ DataWriterImpl::DataWriterImpl(Topic* topic, const DataWriterQos& qos, DataWrite
 
 DataWriterImpl::~DataWriterImpl()
 {
+    { std::lock_guard<std::mutex> schedule(lastInstanceMtx_); timersClosing_ = true; }
+#if defined(__linux__)
+	if (nativePool_) nativePool_->closeWriter();
+#endif
 	if (deadlineTimer_) {
 		deadlineTimer_->Exit();
 	}
@@ -130,8 +154,107 @@ DataWriterImpl::~DataWriterImpl()
 }
 
 
+ReturnCode_t DataWriterImpl::PrepareDataSharing()
+{
+	if (qos_.data_sharing.kind == OFF_DATA_SHARING_QOS) return RETCODE_UNSUPPORTED;
+#if defined(__linux__)
+	try {
+#ifdef DDSSECURITY
+		auto* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
+		if (dp && dp->enableDDSSec_) return RETCODE_UNSUPPORTED;
+#endif
+		const auto type = typeSupport_->get_native_type_info();
+		if (!type.loanable()) return RETCODE_UNSUPPORTED;
+		std::lock_guard<std::mutex> lock(loanMutex_);
+		if (nativePool_) return RETCODE_OK;
+		// Discovery metadata is immutable after enable. AUTO fallback cannot
+		// silently begin advertising a new segment during a later Loan call.
+		if (enable_) return RETCODE_UNSUPPORTED;
+		auto capability = LocalDataSharingInfo(qos_.data_sharing, type);
+		if (!capability.valid(false)) return RETCODE_UNSUPPORTED;
+		if (!nativePool_) {
+			SharedPoolConfig config;
+			config.payload_size = type.size;
+			config.alignment = std::max(uint32_t(64), type.alignment);
+			config.slots = qos_.data_sharing.max_samples;
+			config.max_readers = qos_.data_sharing.max_readers;
+			config.max_segment_bytes = qos_.data_sharing.max_segment_bytes;
+			nativePool_ = SharedPayloadPool::create(Conversion::ToGuid(handle_), config,
+				qos_.data_sharing.shared_memory_directory);
+		}
+		const auto& descriptor = nativePool_->descriptor();
+		capability.session_high = descriptor.session.high;
+		capability.session_low = descriptor.session.low;
+		capability.segment_bytes = descriptor.segment_bytes;
+		capability.slots = descriptor.config.slots;
+		capability.max_readers = descriptor.config.max_readers;
+		builtinData_.data_sharing = std::move(capability);
+#ifdef DDSSECURITY
+		builtinSecureData_.data_sharing = builtinData_.data_sharing;
+#endif
+		return RETCODE_OK;
+	} catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+	catch (const std::invalid_argument&) { return RETCODE_INCONSISTENT_POLICY; }
+	catch (const std::exception&) { return RETCODE_ERROR; }
+#else
+	return RETCODE_UNSUPPORTED;
+#endif
+}
+
+ReturnCode_t DataWriterImpl::loan_sample(SampleLoan& loan)
+{
+	if (!enable_) return RETCODE_NOT_ENABLED;
+	if (loan) return RETCODE_PRECONDITION_NOT_MET;
+#if defined(__linux__)
+	try {
+		const auto prepared = PrepareDataSharing();
+		if (prepared != RETCODE_OK) return prepared;
+		const auto type = typeSupport_->get_native_type_info();
+		std::lock_guard<std::mutex> lock(loanMutex_);
+		auto state = std::make_shared<SampleLoan::State>();
+		state->writer = loanIdentity_;
+		state->pool = nativePool_;
+		char* buffer = nullptr;
+		const auto result = nativePool_->loan(type.size, state->token, buffer);
+		if (result == SharedPoolResult::EXHAUSTED) return RETCODE_OUT_OF_RESOURCES;
+		if (result != SharedPoolResult::OK) return RETCODE_ERROR;
+		state->data = buffer;
+		if (!typeSupport_->construct_native_sample(buffer)) return RETCODE_ERROR;
+		loan.state_ = std::move(state);
+		return RETCODE_OK;
+	} catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+	catch (const std::invalid_argument&) { return RETCODE_BAD_PARAMETER; }
+	catch (const std::exception&) { return RETCODE_ERROR; }
+#else
+	return RETCODE_UNSUPPORTED;
+#endif
+}
+
+ReturnCode_t DataWriterImpl::discard_loan(SampleLoan& loan)
+{
+	if (!loan.state_ || loan.state_->writer != loanIdentity_) return RETCODE_PRECONDITION_NOT_MET;
+	loan.reset();
+	return RETCODE_OK;
+}
+
+ReturnCode_t DataWriterImpl::write(SampleLoan& loan, const InstanceHandle_t& handle)
+{
+	if (!enable_) return RETCODE_NOT_ENABLED;
+	if (!loan.state_ || loan.state_->writer != loanIdentity_) return RETCODE_PRECONDITION_NOT_MET;
+    Time_t timestamp;
+    DomainParticipant::get_current_time(timestamp);
+    SampleIdentity identity;
+    const auto result = WriteSample(loan.data(), handle, timestamp, identity, {}, loan.state_);
+	if (result == RETCODE_OK) loan.reset();
+	return result;
+}
+
 ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
 {
+    std::unique_lock<std::mutex> writes(writeMutex_);
+    std::unique_lock<std::mutex> loans(loanMutex_);
+    std::unique_lock<std::mutex> schedule(lastInstanceMtx_);
+
     DataWriterQos defaultQos;
     pub_->get_default_datawriter_qos(defaultQos);
     const DataWriterQos& qosTemp = (&qos == &DATAWRITER_QOS_DEFAULT) ? defaultQos : qos;
@@ -165,7 +288,8 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
                 );
 			}
 		} else if(qosTemp.deadline.period == Duration_t(TIME_INFINITE)) {
-			deadlineTimer_.reset();
+			if (deadlineTimer_) deadlineTimer_->Stop();
+            if (history_) history_->UpAllDeadline(std::chrono::steady_clock::time_point::max());
 		}
 
 		/* wangyi Lifespan 重置 */
@@ -183,19 +307,46 @@ ReturnCode_t DataWriterImpl::set_qos(const DataWriterQos& qos)
 				);
 			}
 		} else if(qosTemp.lifespan.duration == Duration_t(TIME_INFINITE)) {
-			lifespanTimer_.reset();
+			if (lifespanTimer_) lifespanTimer_->Stop();
 		}
 	}
 
-	qos_ = qosTemp;
+    qos_.deadline = qosTemp.deadline;
+    qos_.lifespan = qosTemp.lifespan;
+    qos_.latency_budget = qosTemp.latency_budget;
+    qos_.transport_priority = qosTemp.transport_priority;
+    qos_.ownership_strength = qosTemp.ownership_strength;
+    qos_.writer_data_lifecycle = qosTemp.writer_data_lifecycle;
+    qos_.user_data = qosTemp.user_data;
+    qos_.property = qosTemp.property;
 
-	writer_->SetQos(qosTemp);
+	if (writer_) writer_->SetQos(qosTemp);
 
+    builtinData_.deadline = qosTemp.deadline;
+    builtinData_.latency_budget = qosTemp.latency_budget;
+    builtinData_.user_data = qosTemp.user_data;
+    builtinData_.lifespan = qosTemp.lifespan;
+    builtinData_.ownership_strength = qosTemp.ownership_strength;
+    const auto advertisement = builtinData_;
+    const bool advertise = enable_;
+    schedule.unlock();
+    loans.unlock(); writes.unlock();
+#ifndef DDSSECURITY
+    if (advertise) {
+        auto* domain = dynamic_cast<DomainParticipantImpl*>(const_cast<DomainParticipant*>(pub_->get_participant()));
+        if (domain && domain->GetDiscovery()) {
+            DiscoveredWriterData update;
+            update.ddsPublicationData = advertisement;
+            domain->GetDiscovery()->WritePublicationData(update);
+        }
+    }
+#endif
     return RETCODE_OK;
 }
 
 ReturnCode_t DataWriterImpl::get_qos(DataWriterQos& qos) const
 {
+	std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
 	qos = qos_;
     return RETCODE_OK;
 }
@@ -227,50 +378,10 @@ InstanceHandle_t DataWriterImpl::register_instance(const void* const instance_da
 
 InstanceHandle_t DataWriterImpl::register_instance_w_timestamp(const void* const instance_data, const Time_t& source_timestamp)
 {
-	if (enable_ == false){
-		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
-		return HANDLE_NIL;
-	}
-
-    InstanceHandle_t handle;
-	if (source_timestamp.sec < 0 ) {
-		return HANDLE_NIL;
-	}
-
-	//InstanceHandle_t instance_handle;
-	if (!typeSupport_->has_key()) {
-		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
-		return HANDLE_NIL;
-	}
-	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
-	SerializedBuffer *buffer = new SerializedBuffer;
-	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
-	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
-	buffer->buffer = buffer->origin_buffer;
-	
-	CdrSerializer cdr(buffer);
-	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
-
-	/* 生成key */
-	MakeKey(instance_data, handle, true);
-
-	if (!history_->IsKeyRegistered(handle)) {
-		if (RETCODE_OK != history_->AddKeyHistory(handle, buffer)) {
-			memoryPool_->releaseBuffer(buffer->origin_buffer);
-			/* 注册失败，释放空间 */
-			delete buffer;
-			buffer = nullptr;
-			handle = HANDLE_NIL;
-			TRAVODDS_LOG(LOG_ERROR, "AddKeyHistory Error");
-		}
-		
-	} else {
-		memoryPool_->releaseBuffer(buffer->origin_buffer);
-		delete buffer;
-		buffer = nullptr;
-	}
-
-	return handle;
+    std::lock_guard<std::mutex> lock(writeMutex_);
+    if (!enable_) return HANDLE_NIL;
+    InstanceHandle_t handle = HANDLE_NIL;
+    return RegistInstance(instance_data, source_timestamp, handle) == RETCODE_OK ? handle : HANDLE_NIL;
 }
 
 ReturnCode_t DataWriterImpl::unregister_instance(const void* const instance_data, const InstanceHandle_t& handle)
@@ -292,45 +403,30 @@ ReturnCode_t DataWriterImpl::unregister_instance_w_timestamp(const void* const i
 
 ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
-	if (enable_ == false) {
-		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
-		return RETCODE_NOT_ENABLED;
-	}
-	if (!typeSupport_->has_key()) {
-		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
-		return RETCODE_ILLEGAL_OPERATION;
-	}
-
-	SerializedBuffer* cacheData = history_->get_key_value(handle);
-	if (nullptr == cacheData) {
-		TRAVODDS_LOG(LOG_ERROR, "cacheData is nullptr");
-		return RETCODE_BAD_PARAMETER;
-	}
-	CdrDeserializer cdr(cacheData);
-	int32_t ret = typeSupport_->deserialize_data(key_holder, &cdr, DEFAULT_ENDIAN);
-	if (0 != ret) {
-		TRAVODDS_LOG(LOG_ERROR, "deserialize_data Error[%d]", ret);
-		return RETCODE_ERROR; 
-	}
-	return RETCODE_OK;
+    std::lock_guard<std::mutex> lock(writeMutex_);
+    if (!enable_) return RETCODE_NOT_ENABLED;
+    if (!typeSupport_->has_key()) return RETCODE_ILLEGAL_OPERATION;
+    if (!key_holder || handle == HANDLE_NIL) return RETCODE_BAD_PARAMETER;
+    if (auto native = history_->GetNativeKey(handle)) {
+        return typeSupport_->copy_data(key_holder, native.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
+    }
+    auto data = history_->GetSerializedKey(handle);
+    if (!data) return RETCODE_BAD_PARAMETER;
+    // Deserialization advances the descriptor. Keep the registered snapshot
+    // reusable, and retain its owner until the local view has been consumed.
+    SerializedBuffer view = *data;
+    view.reader_position = 0;
+    CdrDeserializer cdr(&view);
+    return typeSupport_->deserialize_data(key_holder, &cdr, DEFAULT_ENDIAN) == 0 ? RETCODE_OK : RETCODE_ERROR;
 }
 
 InstanceHandle_t DataWriterImpl::lookup_instance(const void* const instance) const
 {
-	if (enable_ == false) {
-		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enable");
-		return HANDLE_NIL;
-	}
-	InstanceHandle_t handle = HANDLE_NIL;
-
-	if (typeSupport_->has_key()) {
-		if (MakeKey(instance, handle, true)) {
-			if (!history_->IsInstancePresent(handle)) {
-				handle = HANDLE_NIL;
-			} 
-		}
-	}
-	return handle;
+    std::lock_guard<std::mutex> lock(writeMutex_);
+    if (!enable_ || !instance || !typeSupport_->has_key()) return HANDLE_NIL;
+    InstanceHandle_t handle = HANDLE_NIL;
+    if (MakeKey(instance, handle, true) != RETCODE_OK || !history_->IsKeyRegistered(handle)) return HANDLE_NIL;
+    return handle;
 }
 
 ReturnCode_t DataWriterImpl::write(const void* const instance_data, const InstanceHandle_t& handle)
@@ -356,9 +452,20 @@ ReturnCode_t DataWriterImpl::write_w_timestamp(const void* const instance_data, 
 
 ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const void* const instance_data, const InstanceHandle_t& handle, const Time_t& source_timestamp, SampleIdentity& sample_identity, const SampleIdentity& related_sample_identity)
 {
+    return WriteSample(instance_data, handle, source_timestamp, sample_identity, related_sample_identity);
+}
+
+ReturnCode_t DataWriterImpl::WriteSample(const void* const instance_data, const InstanceHandle_t& handle,
+        const Time_t& source_timestamp, SampleIdentity& sample_identity,
+        const SampleIdentity& related_sample_identity, const std::shared_ptr<SampleLoan::State>& native)
+{
+    std::lock_guard<std::mutex> writeLock(writeMutex_);
 	if (enable_ == false) {
 		TRAVODDS_LOG(LOG_WARNING, "DataWriter not enabled");
 		return RETCODE_NOT_ENABLED;
+	}
+	if (!instance_data) {
+		return RETCODE_BAD_PARAMETER;
 	}
 	ReturnCode_t ret = RETCODE_ERROR;
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
@@ -377,7 +484,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 
 	if (typeSupport_->has_key())
 	{
-		MakeKey(instance_data, instanceHandle, true);
+        ret = MakeKey(instance_data, instanceHandle, true);
+        if (ret != RETCODE_OK) return ret;
 
 		if (HANDLE_NIL != handle && !history_->IsKeyRegistered(handle)) {
 			TRAVODDS_LOG(LOG_ERROR, "handle invalid");
@@ -391,9 +499,9 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 
 		if (HANDLE_NIL == handle) {
 
-			instanceHandle = register_instance_w_timestamp(instance_data, source_timestamp);
+            ret = RegistInstance(instance_data, source_timestamp, instanceHandle);
 
-			if (HANDLE_NIL == instanceHandle) {
+            if (ret != RETCODE_OK) {
 				/* 注册失败 可能是因为max_instance的值达到 */
 				TRAVODDS_LOG(LOG_ERROR, "RegistInstance Err ret= %d", ret);
 				return ret;
@@ -406,18 +514,102 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		lineQos.push_back(param);
 	}
 
+#if defined(__linux__)
+    // SQL filters still require the ordinary CDR path.
+    if (nativePool_ && readerFilters_.empty()) {
+        const auto targets = writer_->SelectDataSharingReaders(nativePool_->registeredReaders());
+        const bool retainNative = qos_.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS;
+        if (!targets.empty() || retainNative) {
+            auto reservation = native;
+            SampleLoan copied;
+            if (!reservation) {
+                auto result = loan_sample(copied);
+                if (result == RETCODE_OUT_OF_RESOURCES &&
+                    (qos_.history.kind == KEEP_LAST_HISTORY_QOS || qos_.reliability.kind == BEST_EFFORT_RELIABILITY_QOS) &&
+                    history_->IsFull(instanceHandle)) {
+                    history_->RemoveOldestChangeByInstance(instanceHandle);
+                    result = loan_sample(copied);
+                }
+                if (result != RETCODE_OK && qos_.data_sharing.kind == ON_DATA_SHARING_QOS) return result;
+                if (result == RETCODE_OK) {
+                    reservation = copied.state_;
+                    std::memcpy(reservation->data, instance_data, typeSupport_->get_native_type_info().size);
+                }
+            }
+            if (reservation) {
+                auto cache = writer_->NewChange(ALIVE, nullptr, instanceHandle, source_timestamp, sample_identity, payloadPool_);
+                cache->nativePayload = std::shared_ptr<void>(reservation, reservation->data);
+                cache->nativeType = typeSupport_->get_native_type_info();
+                cache->nativeReaders.insert(targets.begin(), targets.end());
+                cache->nativeReaderActive = [pool = reservation->pool, targets, retainNative](const GUID_t& reader) {
+                    const bool initial = std::find(targets.begin(), targets.end(), reader) != targets.end();
+                    if (!initial && !retainNative) return false;
+                    // A late registration can skip CDR only when it requested
+                    // replay. VOLATILE registrations have no historical pin.
+                    const auto registered = pool->registeredReaders(!initial);
+                    return std::find(registered.begin(), registered.end(), reader) != registered.end();
+                };
+                cache->inlineQos = lineQos;
+                cache->related_sample_identity = related_sample_identity;
+                SharedSampleMetadata metadata;
+                metadata.source_seconds = source_timestamp.sec;
+                metadata.source_nanoseconds = source_timestamp.nanosec;
+                std::memcpy(metadata.instance, instanceHandle.keyHash.value, 16);
+                std::memcpy(metadata.related_writer, related_sample_identity.writer_handle.keyHash.value, 16);
+                metadata.related_sequence = (uint64_t(uint32_t(related_sample_identity.sequence_number.high)) << 32) |
+                    related_sample_identity.sequence_number.low;
+                cache->nativeCommit = [reservation, targets, metadata, retainNative](CacheChange& change) {
+                    const uint64_t sequence = (uint64_t(uint32_t(change.sequenceNumber.high)) << 32) | change.sequenceNumber.low;
+                    const auto result = reservation->pool->publish(reservation->token, change.nativeType.size, sequence, metadata, retainNative ? nullptr : &targets);
+                    return result == SharedPoolResult::OK ? RETCODE_OK : RETCODE_ERROR;
+                };
+                cache->serializeNative = [reservation, type = typeSupport_, pool = payloadPool_](CacheChange& change) {
+                    const uint32_t size = type->get_serialized_data_size(reservation->data, 0);
+                    SerializedBuffer* buffer = nullptr;
+                    const auto result = CreateSerializedPayload(pool, size, buffer);
+                    if (result != RETCODE_OK) return result;
+                    PayloadBufferPtr owner(buffer, PayloadBufferDeleter{pool});
+                    CdrSerializer cdr(buffer);
+                    if (type->serialize_data(reservation->data, &cdr, DEFAULT_ENDIAN) != 0) return RETCODE_ERROR;
+                    buffer->buffer -= CDR_ENDIANNESS_LEN;
+                    buffer->buffer_size += CDR_ENDIANNESS_LEN;
+                    change.dataSize = size;
+                    change.fragmentTatolNum = size / DATAMESSAGE_LIMIT + (size % DATAMESSAGE_LIMIT != 0);
+                    change.fraqmentSize = DATAMESSAGE_LIMIT;
+                    change.serializedBuffer = owner.release();
+                    return RETCODE_OK;
+                };
+                if (writer_->HasRtpsReaders(targets)) {
+                    const auto serialized = cache->EnsureSerializedPayload();
+                    if (serialized != RETCODE_OK) return serialized;
+                }
+                const auto accepted = writer_->AddNewCachce(cache);
+                if (accepted == RETCODE_OK) {
+                    try { AfterWrite(instanceHandle); }
+                    catch (...) { TRAVODDS_LOG(LOG_WARNING, "DataSharing accepted sample; QoS timer update failed"); }
+                }
+                return accepted;
+            }
+        }
+    }
+#else
+    (void)native;
+#endif
+
 	uint32_t size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
 
 	SerializedBuffer* bufferHeader = nullptr;
 	ret = CreateSerializedBuffer(bufferHeader, size);
 	if (RETCODE_OK != ret) {
-		DeleteSerializedBuffer(bufferHeader);
 		TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 		return ret;
 	}
 
+	PayloadBufferPtr payloadOwner(bufferHeader, PayloadBufferDeleter{payloadPool_});
 	CdrSerializer cdr(bufferHeader);
-	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
+	if (typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN) != 0) {
+		return RETCODE_ERROR;
+	}
 	std::set<GUID_t> filterReaders;
 	if (!readerFilters_.empty()) {
 
@@ -441,6 +633,8 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 	//SerializedBuffer* encodeBuffer = new SerializedBuffer;
 	SerializedBuffer* encodeBuffer = nullptr;
 	SerializedBuffer* encodeBufferHeader = nullptr;
+	PayloadBufferPtr encodedOwner(nullptr, PayloadBufferDeleter{payloadPool_});
+	PayloadBufferPtr encodedParts(nullptr, PayloadBufferDeleter{payloadPool_});
 	DomainParticipantImpl* dp = dynamic_cast<DomainParticipantImpl*>(pub_->get_participant());
 	if (!dp) {
 		TRAVODDS_LOG(LOG_ERROR, "Writer can not get_participant from Publisher", ret);
@@ -467,10 +661,11 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		int encodeSize = totalLen * 10 + 500;
 		ret = CreateSerializedBuffer(encodeBuffer, encodeSize);
 		if (RETCODE_OK != ret) {
-			DeleteSerializedBuffer(encodeBuffer);
 			TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 			return ret;
 		}
+
+		encodedOwner.reset(encodeBuffer);
 
 		if (!cryptoTransPtr->encode_serialized_payload(
 			encodeBuffer,
@@ -489,7 +684,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 				secExce.code,
 				secExce.minor_code,
 				secExce.message);
-			DeleteSerializedBuffer(encodeBuffer);
 			return RETCODE_ERROR;
 		}
 		size = encodeBuffer->buffer_size - 4; //size为减去长为CDR_ENDIANNESS_LEN的端序信息
@@ -519,7 +713,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 			//curEncodeSubBuffer->buffer_size = curEncodeSubBufferSize;
 			ret = CreateSerializedBuffer(curEncodeSubBuffer, curEncodeSubBufferSize); //创建当前部分buffer
 			if (RETCODE_OK != ret) {
-				DeleteSerializedBuffer(curEncodeSubBuffer);
 				TRAVODDS_LOG(LOG_ERROR, "CreateSerializedBuffer Err ret= %d", ret);
 				return ret;
 			}
@@ -528,6 +721,7 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 			encodeBufferShift += curEncodeSubBufferSize; //更新偏移值encodeBufferShift
 			if (i == 0) { //如果当前部分buffer是第一个
 				encodeBufferHeader = curEncodeSubBuffer;
+				encodedParts.reset(encodeBufferHeader);
 				preEncodeSubBuffer = curEncodeSubBuffer;
 			}
 			else {
@@ -537,17 +731,20 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		}
 
 		//delete[]encodeBuffer->buffer;
-		DeleteSerializedBuffer(encodeBuffer);
+		encodedOwner.reset();
 	}
 	std::shared_ptr<CacheChange> cacheChange;
 	if (statistic_.secAttributes.is_payload_protected) {
-		cacheChange = writer_->NewChange(ALIVE, encodeBufferHeader, instanceHandle, source_timestamp);
+		cacheChange = writer_->NewChange(ALIVE, encodeBufferHeader, instanceHandle, source_timestamp, payloadPool_);
+		encodedParts.release();
 	}
 	else {
-		cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp);
+		cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp, payloadPool_);
+		payloadOwner.release();
 	}
 #else
-	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp, sample_identity);
+	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(ALIVE, bufferHeader, instanceHandle, source_timestamp, sample_identity, payloadPool_);
+	payloadOwner.release();
 #endif // DDSSECURITY
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "cacheChange ret= %d", ret);
@@ -572,14 +769,23 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		return ret;
 	}
 
+    AfterWrite(instanceHandle);
+    return ret;
+}
+
+void DataWriterImpl::AfterWrite(const InstanceHandle_t& handle)
+{
+    std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
+    if (timersClosing_) return;
+    history_->MarkDeadlineActive(handle);
 	if (qos_.deadline.period != Duration_t(TIME_INFINITE)) {
-		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
 		std::chrono::steady_clock::time_point nextTime =
-			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
+			std::chrono::steady_clock::now() + std::chrono::nanoseconds(qos_.deadline.period.ToNs());
 		history_->SetNextDeadline(handle, nextTime);
-		history_->GetNextDeadline(lastInstance_, nextTime);
-		auto period = nextTime - std::chrono::steady_clock::now();
-		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
+        if (history_->GetNextDeadline(lastInstance_, nextTime)) {
+            const auto delay = std::chrono::ceil<std::chrono::milliseconds>(nextTime - std::chrono::steady_clock::now()).count();
+            deadlineTimer_->UpdatePeriod(std::max<int64_t>(1, delay));
+        }
 	}
 
 	/* wangyi lifespan qos */
@@ -588,7 +794,6 @@ ReturnCode_t DataWriterImpl::write_w_timestamp_related_sample_identity(const voi
 		lifespanTimer_->UpdatePeriod(qos_.lifespan.duration.ToNs() * 1e-6);
 		lifespanTimer_->ReStart();
 	}
-	return ret;
 }
 
 ReturnCode_t DataWriterImpl::dispose(const void* const instance_data, const InstanceHandle_t& handle)
@@ -609,6 +814,7 @@ ReturnCode_t DataWriterImpl::dispose_w_timestamp(const void* const data, const I
 }
 ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const InstanceHandle_t& handle, const Time_t& timespace, bool dispose)
 {
+    std::lock_guard<std::mutex> lock(writeMutex_);
 	ReturnCode_t ret = RETCODE_ERROR;
 	InstanceHandle_t instanceHandle = HANDLE_NIL;
 	SerializedBuffer *buffer = nullptr;
@@ -625,7 +831,13 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 		TRAVODDS_LOG(LOG_ERROR, "timespace.sec[%d] < 0", timespace.sec);
 		return RETCODE_BAD_PARAMETER;
 	}
-	ret = MakeKey(data, instanceHandle, true);
+    if (!data) {
+        if (handle == HANDLE_NIL || !history_->IsKeyRegistered(handle)) return RETCODE_BAD_PARAMETER;
+        instanceHandle = handle;
+        ret = RETCODE_OK;
+    } else {
+        ret = MakeKey(data, instanceHandle, true);
+    }
 	if (RETCODE_OK != ret) {
 		TRAVODDS_LOG(LOG_ERROR, "handle bad parameter")
 		return RETCODE_BAD_PARAMETER;
@@ -642,6 +854,8 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 		TRAVODDS_LOG(LOG_ERROR, "handle not met");
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
+
+    if (!history_->IsKeyRegistered(instanceHandle)) return RETCODE_PRECONDITION_NOT_MET;
 
 	if (dispose) {
 		kind = NOT_ALIVE_DISPOSED;
@@ -664,14 +878,14 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 	statueParam.value.assign(status, status + sizeof(StatusInfo_t));
 
 
-	buffer = new SerializedBuffer;
-	buffer->buffer_size = 0;
-	if (!memoryPool_->getBuffer(buffer->buffer_size + BUFF_SHIFT * 2, buffer->origin_buffer)) {
-		TRAVODDS_LOG(LOG_ERROR, "getBuffer error size[%d]", buffer->buffer_size);
-		return ret;
+	PayloadBufferPtr payloadOwner(new (std::nothrow) SerializedBuffer, PayloadBufferDeleter{payloadPool_});
+	if (!payloadOwner || !payloadPool_->getBuffer(BUFF_SHIFT * 2, payloadOwner->origin_buffer)) {
+		return RETCODE_APPLY_MEM_ERR;
 	}
+	buffer = payloadOwner.get();
 	buffer->buffer = buffer->origin_buffer + BUFF_SHIFT;
-	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(kind, buffer, instanceHandle, timespace);
+	std::shared_ptr<CacheChange> cacheChange = writer_->NewChange(kind, buffer, instanceHandle, timespace, payloadPool_);
+	payloadOwner.release();
 	if (nullptr == cacheChange) {
 		TRAVODDS_LOG(LOG_ERROR, "NewChange Err");
 		return RETCODE_ERROR;
@@ -686,7 +900,12 @@ ReturnCode_t DataWriterImpl::UnRegisteOrDispose(const void* const data, const In
 	if (!dispose) {
 		/* 在发送 */
 		writer_->RemoveCacheByHandle(instanceHandle);
-	}
+        std::lock_guard<std::mutex> deadlines(lastInstanceMtx_);
+        history_->DeleteKeyHistory(instanceHandle);
+	} else {
+        std::lock_guard<std::mutex> deadlines(lastInstanceMtx_);
+        history_->SetNextDeadline(instanceHandle, std::chrono::steady_clock::time_point::max());
+    }
 
 	return ret;
 }
@@ -791,6 +1010,11 @@ ReturnCode_t DataWriterImpl::enable()
 		return RETCODE_ERROR;
 	}
 
+	const auto sharing = PrepareDataSharing();
+	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS && sharing != RETCODE_OK) return sharing;
+	if (qos_.data_sharing.kind == AUTO_DATA_SHARING_QOS && sharing != RETCODE_OK &&
+		sharing != RETCODE_UNSUPPORTED)
+		TRAVODDS_LOG(LOG_WARNING, "DataSharing unavailable (%d); retaining RTPS", sharing);
 
 	FlowControllerConfig flowContropllerConfig;
 	flowContropllerConfig.kind = (FlowControllerKind)qos_.flow_controller_config.kind;
@@ -862,8 +1086,9 @@ void DataWriterImpl::OnPublicationMatched(InstanceHandle_t& handle, const bool& 
 
 }
 
-const PublicationBuiltinTopicData& DataWriterImpl::GetBuiltinTopicData()
+PublicationBuiltinTopicData DataWriterImpl::GetBuiltinTopicData()
 {
+    std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
 	return builtinData_;
 }
 #ifdef DDSSECURITY
@@ -888,20 +1113,14 @@ void DataWriterImpl::SetRelatedWriter(std::shared_ptr<Writer> writer)
 }
 
 
-bool DataWriterImpl::MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const
+ReturnCode_t DataWriterImpl::MakeKey(const void* const data, InstanceHandle_t& handle, bool forceMd5) const
 {
-	static_cast<void>(forceMd5);
-	SerializedBuffer buffer;
-	buffer.buffer_size = typeSupport_->get_serialized_data_size((void*)data, 0);
-	memoryPool_->getBuffer(buffer.buffer_size, buffer.origin_buffer);
-	buffer.buffer = buffer.origin_buffer;
-
-	CdrSerializer cdr(&buffer);
-	bool ret = typeSupport_->get_instancehandle((void*)data, &cdr, handle, true);
-
-	memoryPool_->releaseBuffer(buffer.origin_buffer);
-
-	return ret;
+    handle = HANDLE_NIL;
+    if (!data) return RETCODE_BAD_PARAMETER;
+    try {
+        return typeSupport_->MakeKey(data, handle, forceMd5) == 0 ? RETCODE_OK : RETCODE_BAD_PARAMETER;
+    } catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+    catch (const std::exception&) { return RETCODE_ERROR; }
 }
 
 
@@ -910,19 +1129,27 @@ void DataWriterImpl::DeadlineTimeout()
 	InstanceHandle_t instance;
 	{
 		std::lock_guard<std::mutex> lock(lastInstanceMtx_);
-		instance = lastInstance_;
-		std::chrono::steady_clock::time_point nextTime =
-			std::chrono::steady_clock::now() + std::chrono::milliseconds(Conversion::ToMilliSecondsInt64(qos_.deadline.period));
-		history_->SetNextDeadline(lastInstance_, nextTime);
-		history_->GetNextDeadline(lastInstance_, nextTime);
-		auto period = nextTime - std::chrono::steady_clock::now();
-		deadlineTimer_->UpdatePeriod(std::chrono::duration_cast<std::chrono::milliseconds>(period).count());
+        if (timersClosing_ || !deadlineTimer_ || qos_.deadline.period == Duration_t(TIME_INFINITE)) return;
+        std::chrono::steady_clock::time_point due;
+        if (!history_->GetNextDeadline(instance, due)) return;
+        const auto now = std::chrono::steady_clock::now();
+        const bool expired = due <= now;
+        if (expired && !history_->SetNextDeadline(instance,
+                now + std::chrono::nanoseconds(qos_.deadline.period.ToNs()))) return;
+        if (history_->GetNextDeadline(lastInstance_, due)) {
+            const auto delay = std::chrono::ceil<std::chrono::milliseconds>(due - std::chrono::steady_clock::now()).count();
+            deadlineTimer_->UpdatePeriod(std::max<int64_t>(1, delay));
+        }
+        if (!expired) return; // A write can supersede an already queued wakeup.
 	}
+    // Listeners may write/unregister; do not hold the scheduling mutex here.
 	statusMgr_->UpdateOfferedDeadlineMissedStatus(instance);
 }
 
 bool DataWriterImpl::LifespanTimeout()
 {
+    std::lock_guard<std::mutex> schedule(lastInstanceMtx_);
+    if (timersClosing_ || !writer_ || !lifespanTimer_ || qos_.lifespan.duration == Duration_t(TIME_INFINITE)) return false;
 	Duration_t currentTime;
 	Duration_t::now(currentTime);
 	std::shared_ptr<CacheChange> earliestChange = writer_->GetWriterCache()->GetMinSourceTimespace();
@@ -948,49 +1175,36 @@ bool DataWriterImpl::LifespanTimeout()
 
 ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, const Time_t& source_timestamp, InstanceHandle_t& handle)
 {
-	
-	if (source_timestamp.sec < 0) {
-		TRAVODDS_LOG(LOG_ERROR, "source_timestamp.sec[%d] < 0", source_timestamp.sec);
-		return RETCODE_BAD_PARAMETER;
-	}
-
-	//InstanceHandle_t instance_handle;
-	if (!typeSupport_->has_key()) {
-		TRAVODDS_LOG(LOG_ERROR, "Topic is NO_KEY, operation not permitted");
-		return RETCODE_BAD_PARAMETER;
-	}
-	// void* data, CdrSerializer* cdr, InstanceHandle_t& iHandle, bool forceMd5
-	SerializedBuffer *buffer = new SerializedBuffer;
-	buffer->buffer_size = typeSupport_->get_serialized_data_size((void*)instance_data, 0);
-	memoryPool_->getBuffer(buffer->buffer_size, buffer->origin_buffer);
-	buffer->buffer = buffer->origin_buffer;
-
-	CdrSerializer cdr(buffer);
-	typeSupport_->serialize_data((void*)instance_data, &cdr, DEFAULT_ENDIAN);
-
-	/* 生成key */
-	MakeKey(instance_data, handle, true);
-
-	if (!history_->IsKeyRegistered(handle)) {
-		ReturnCode_t ret = history_->AddKeyHistory(handle, buffer);
-		if (RETCODE_OK != ret) {
-			memoryPool_->releaseBuffer(buffer->origin_buffer);
-			/* 注册失败，释放空间 */
-			delete buffer;
-			buffer = nullptr;
-			handle = HANDLE_NIL;
-			TRAVODDS_LOG(LOG_ERROR, "AddKeyHistory Err ret = %d",ret);
-			return ret;
-		}
-
-	}
-	else {
-		memoryPool_->releaseBuffer(buffer->origin_buffer);
-		delete buffer;
-		buffer = nullptr;
-	}
-
-	return RETCODE_OK;
+    handle = HANDLE_NIL;
+    if (!instance_data || source_timestamp.sec < 0) return RETCODE_BAD_PARAMETER;
+    if (!typeSupport_->has_key()) return RETCODE_ILLEGAL_OPERATION;
+    auto result = MakeKey(instance_data, handle, true);
+    if (result != RETCODE_OK) return result;
+    if (history_->IsKeyRegistered(handle)) return RETCODE_OK;
+    try {
+        std::shared_ptr<void> native;
+        std::shared_ptr<SerializedBuffer> serialized;
+#if defined(__linux__)
+        if (nativePool_) {
+            const auto info = typeSupport_->get_native_type_info();
+            const auto alignment = std::align_val_t(std::max(info.alignment, uint32_t(alignof(std::max_align_t))));
+            native = std::shared_ptr<void>(::operator new(info.size, alignment),
+                [alignment](void* p) { ::operator delete(p, alignment); });
+            if (!typeSupport_->construct_native_sample(native.get())) return RETCODE_ERROR;
+            std::memcpy(native.get(), instance_data, info.size);
+        } else
+#endif
+        {
+            serialized = std::shared_ptr<SerializedBuffer>(new SerializedBuffer, PayloadBufferDeleter{memoryPool_});
+            serialized->buffer_size = typeSupport_->get_serialized_data_size(const_cast<void*>(instance_data), 0);
+            if (!memoryPool_->getBuffer(serialized->buffer_size, serialized->origin_buffer)) return RETCODE_OUT_OF_RESOURCES;
+            serialized->buffer = serialized->origin_buffer;
+            CdrSerializer cdr(serialized.get());
+            if (typeSupport_->serialize_data(const_cast<void*>(instance_data), &cdr, DEFAULT_ENDIAN) != 0) return RETCODE_ERROR;
+        }
+        return history_->RegisterKey(handle, serialized, native);
+    } catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+    catch (const std::exception&) { return RETCODE_ERROR; }
 }
 ReturnCode_t DataWriterImpl::UpdateLivelinessLostStatus()
 {
@@ -999,64 +1213,11 @@ ReturnCode_t DataWriterImpl::UpdateLivelinessLostStatus()
 }
 
 
-ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer* &bufferHeader, uint32_t dataLen)
+ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer*& bufferHeader, uint32_t dataLen)
 {
-	SerializedBuffer* buffer = nullptr;
-	/* 长度 + CDR_ENDIANNESS_LEN 为 CDR 标识的长度 */
-	dataLen += CDR_ENDIANNESS_LEN;
-	bool first = true;
-	do {
-		SerializedBuffer* nextBuffer = new SerializedBuffer();
-			
-		if (dataLen > DATAMESSAGE_LIMIT) {
-			nextBuffer->buffer_size = DATAMESSAGE_LIMIT;
-			dataLen -= DATAMESSAGE_LIMIT;
-		}
-		else {
-			nextBuffer->buffer_size = dataLen;
-			dataLen -= dataLen;
-		}
-		
-		if (!memoryPool_->getBuffer(nextBuffer->buffer_size + 2 * BUFF_SHIFT, nextBuffer->origin_buffer)) {
-			return RETCODE_APPLY_MEM_ERR;
-		}
-		nextBuffer->buffer = nextBuffer->origin_buffer + BUFF_SHIFT;
-
-		if (first) {
-			buffer = nextBuffer;
-			bufferHeader = buffer;
-
-			memset(buffer->buffer, 0, CDR_ENDIANNESS_LEN);
-			buffer->buffer[1] = DEFAULT_ENDIAN;
-
-			buffer->buffer += CDR_ENDIANNESS_LEN;
-			buffer->buffer_size -= CDR_ENDIANNESS_LEN;
-			first = false;
-		}
-		else {
-			buffer->next = nextBuffer;
-			buffer = nextBuffer;
-		}
-
-	} while (dataLen != 0);
-
-	return RETCODE_OK;
+	return CreateSerializedPayload(payloadPool_, dataLen, bufferHeader);
 }
 
-
-ReturnCode_t DataWriterImpl::DeleteSerializedBuffer(SerializedBuffer* buffer)
-{
-	if (!buffer) {
-		// TRAVODDS_LOG(LOG_ERROR, "buffer is nullptr");
-		return RETCODE_ERROR;
-	}
-
-	DeleteSerializedBuffer(buffer->next);
-
-	memoryPool_->releaseBuffer(buffer->origin_buffer);
-
-	return RETCODE_OK;
-}
 
 bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
 {

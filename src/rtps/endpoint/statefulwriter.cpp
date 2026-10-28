@@ -222,6 +222,7 @@ void StatefulWriter::MatchedReaderRemove(std::shared_ptr<ReaderProxy> readerProx
 	std::lock_guard<std::mutex> lock(readerPorxyMutex_);
 
 	matchedReaders_.erase(readerProxy->GetGuid());
+    RemoveDataSharingReader(readerProxy->GetGuid());
 
 	transportGroup_.DecreaseLocator(readerProxy->GetGuid().prefix);
 
@@ -423,6 +424,19 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 	if (nullptr == change || 0 == readerProxys.size()) {
 		return RETCODE_OK;
 	}
+    if (change->nativePayload) {
+        if (readerProxys.size() > 1) {
+            ReturnCode_t result = RETCODE_OK;
+            for (const auto& reader : readerProxys) {
+                const auto sent = DeliveryDataToReader(change, {reader}, timeOut);
+                if (sent != RETCODE_OK) result = sent;
+            }
+            return result;
+        }
+        if (change->UsesDataSharing(readerProxys.front()->GetGuid())) return RETCODE_OK;
+        const auto serialized = change->EnsureSerializedPayload();
+        if (serialized != RETCODE_OK) return serialized;
+    }
 	DataSubMessage_t dataSubMessage;
 	SerializedBuffer* buffer = change->serializedBuffer;
 
@@ -470,7 +484,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = 0;
 		dataFragSubMessage.extraFlags[1] = 0;
-		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
+		dataFragSubMessage.readerId = change->nativePayload ? readerProxys.front()->GetGuid().entityId : ENTITYID_UNKNOWN;
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = change->sequenceNumber;
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
@@ -500,6 +514,12 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 			ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 			ints.timestamp = change->sourceTimespace;
 			MessageProcessor::EncapsulateINFOTSMessageNow(*buffer, shift, ints);
+			if (change->nativePayload) {
+			    InfoDestinationSubMessage_t destination;
+			    destination.guidPrefix = readerProxys.front()->GetGuid().prefix;
+			    destination.header.flags = DEFAULT_ENDIAN;
+			    MessageProcessor::EncapsulateINFODSTMessage(*buffer, shift, destination);
+			}
 
 #ifdef DDSSECURITY
 			// encodeBuffer为子消息缓冲区
@@ -646,7 +666,7 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		dataSubMessage.octetsToInlineQos = OCTETS_TO_INLINEQOS_LEN;
 		dataSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
-		dataSubMessage.readerId = ENTITYID_UNKNOWN;
+		dataSubMessage.readerId = change->nativePayload ? readerProxys.front()->GetGuid().entityId : ENTITYID_UNKNOWN;
 		dataSubMessage.writerId = guid_.entityId;
 		dataSubMessage.writerSN = change->sequenceNumber;
 
@@ -670,6 +690,12 @@ ReturnCode_t StatefulWriter::DeliveryDataToReader(std::shared_ptr<CacheChange> c
 		ints.header.flags = IS_LITTLE_ENDIAN ? SubMessageFlag::ENDIANNESS_FLAG : SubMessageFlag::NONE_FLAG;
 		ints.timestamp = change->sourceTimespace;
 		MessageProcessor::EncapsulateINFOTSMessageNow(*change->serializedBuffer, shift, ints);
+		if (change->nativePayload) {
+		    InfoDestinationSubMessage_t destination;
+		    destination.guidPrefix = readerProxys.front()->GetGuid().prefix;
+		    destination.header.flags = DEFAULT_ENDIAN;
+		    MessageProcessor::EncapsulateINFODSTMessage(*change->serializedBuffer, shift, destination);
+		}
 	
 #ifdef DDSSECURITY
 		SerializedBuffer srcBuffer;
@@ -1380,6 +1406,11 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 	std::shared_ptr<CacheChange> cache =  writerCache_->GetChange(datafrag.writerSN);
 	if (cache) {
 
+        if (cache->nativePayload) {
+            if (cache->UsesDataSharing(readerProxy->GetGuid())) return RETCODE_OK;
+            const auto serialized = cache->EnsureSerializedPayload();
+            if (serialized != RETCODE_OK) return serialized;
+        }
 		DataFragSubMessage_t dataFragSubMessage;
 
 		if (0 != cache->inlineQos.size()) {
@@ -1393,7 +1424,7 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 		dataFragSubMessage.octetsToInlineQos = DATA_FRAG_OCTETS_TO_INLINEQOS_LEN;
 		dataFragSubMessage.extraFlags[0] = SubMessageFlag::NONE_FLAG;
 		dataFragSubMessage.extraFlags[1] = SubMessageFlag::NONE_FLAG;
-		dataFragSubMessage.readerId = ENTITYID_UNKNOWN;
+		dataFragSubMessage.readerId = cache->nativePayload ? readerProxy->GetGuid().entityId : ENTITYID_UNKNOWN;
 		dataFragSubMessage.writerId = guid_.entityId;
 		dataFragSubMessage.writerSN = cache->sequenceNumber;
 		dataFragSubMessage.dataFrag.fragmentStartingNum = 0;
@@ -1430,7 +1461,13 @@ ReturnCode_t StatefulWriter::ReSendDataFrag(std::shared_ptr<ReaderProxy> readerP
 				dataFragSubMessage.dataFrag.sampleSize = cache->dataSize;
 				MessageProcessor::EncapsulateDataFragMessage(*buffer, shift, dataFragSubMessage);
 				
-				MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
+				if (cache->nativePayload) {
+                    InfoDestinationSubMessage_t destination;
+                    destination.guidPrefix = readerProxy->GetGuid().prefix;
+                    destination.header.flags = DEFAULT_ENDIAN;
+                    MessageProcessor::EncapsulateINFODSTMessage(*buffer, shift, destination);
+                }
+                MessageProcessor::EncapsulateMessageHeader(*buffer, shift, guid_.prefix);
 				participant_->FlowRateLimitedMessageSend(dstLocators, buffer->buffer - shift, buffer->buffer_size + shift, TIME_INFINITE);
 
 				fragSendCount++;
