@@ -17,6 +17,7 @@
 #include <thread>
 #include <queue>
 #include <mutex>
+#include <atomic>
 #include <condition_variable>
 #include <fstream>
 #include <string>
@@ -55,13 +56,15 @@ private:
     std::thread logThread;
     std::queue<LogRecord> logQueue;
     std::mutex queueMutex;
+    // Serialize thread ownership without holding queueMutex while joining.
+    std::mutex lifecycleMutex;
     std::condition_variable condition;
     bool running;
     std::ofstream logFile;
     std::string currentLogFileName;
     size_t currentFileSize;
-    uint32_t consoleMask;
-    uint32_t fileMask;
+    std::atomic<uint32_t> consoleMask;
+    std::atomic<uint32_t> fileMask;
     static const size_t MAX_FILE_SIZE = 1024 * 1024; // 1MB
     std::string getProcessName() {
 #ifdef _WIN32
@@ -202,9 +205,10 @@ private:
     }
 
     void processLogs() {
-        while (running) {
+        for (;;) {
             std::unique_lock<std::mutex> lock(queueMutex);
             condition.wait(lock, [this] { return !logQueue.empty() || !running; });
+            if (!running && logQueue.empty()) break;
 
             while (!logQueue.empty()) {
                 LogRecord record = logQueue.front();
@@ -243,25 +247,31 @@ public:
     }
 
     void start() {
+        std::lock_guard<std::mutex> lifecycle(lifecycleMutex);
+        std::lock_guard<std::mutex> queue(queueMutex);
         if (!running) {
             running = true;
-            logThread = std::thread(&AsyncLogger::processLogs, this);
+            try {
+                logThread = std::thread(&AsyncLogger::processLogs, this);
+            } catch (...) {
+                running = false;
+                throw;
+            }
         }
     }
 
     void stop() {
-        if (running) {
-            {
-                std::lock_guard<std::mutex> lock(queueMutex);
-                running = false;
-            }
-            condition.notify_all();
-            if (logThread.joinable()) {
-                logThread.join();
-            }
-            if (logFile.is_open()) {
-                logFile.close();
-            }
+        std::lock_guard<std::mutex> lifecycle(lifecycleMutex);
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            running = false;
+        }
+        condition.notify_all();
+        if (logThread.joinable()) {
+            logThread.join();
+        }
+        if (logFile.is_open()) {
+            logFile.close();
         }
     }
 
