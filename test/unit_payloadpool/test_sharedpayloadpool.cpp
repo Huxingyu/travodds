@@ -876,6 +876,74 @@ TEST(SharedPoolRing, FinalEvenEpochRetiresMutationButPreservesCommittedReadsAndA
     EXPECT_EQ(stats.history_samples, 2u);
 }
 
+TEST(SharedPoolRing, UnrelatedBusyHistoryNodeDoesNotBlockDeliveryOrStatistics) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 1));
+    auto reader = pool->registerReader(GUID_UNKNOWN, false);
+    ASSERT_TRUE(reader);
+
+    SharedSampleToken consumedToken;
+    char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), consumedToken, bytes), SharedPoolResult::OK);
+    fill(bytes, 1);
+    ASSERT_EQ(pool->publish(consumedToken, sizeof(Sample), 1), SharedPoolResult::OK);
+    SharedReadLoan consumed;
+    ASSERT_EQ(reader->waitNext(0, 0ms, consumed), SharedPoolResult::OK);
+    ASSERT_TRUE(valid(consumed, 1));
+    consumed.reset();
+    ASSERT_TRUE(pool->releaseWriter(consumedToken));
+
+    SharedSampleToken pendingToken;
+    ASSERT_EQ(pool->loan(sizeof(Sample), pendingToken, bytes), SharedPoolResult::OK);
+    fill(bytes, 2);
+    ASSERT_EQ(pool->publish(pendingToken, sizeof(Sample), 2), SharedPoolResult::OK);
+
+    Mapping mapped(pool->descriptor());
+    auto& unrelated = mapped.slot(consumedToken.slot);
+    ASSERT_EQ(__atomic_load_n(&mapped.header->history_head, __ATOMIC_SEQ_CST), consumedToken.slot);
+    ASSERT_EQ(__atomic_load_n(&unrelated.writer_held, __ATOMIC_SEQ_CST), 0u);
+    ASSERT_EQ(__atomic_load_n(&unrelated.pending, __ATOMIC_SEQ_CST), 0u);
+    ASSERT_EQ(__atomic_load_n(&unrelated.loaned, __ATOMIC_SEQ_CST), 0u);
+    const auto originalGate = __atomic_load_n(&unrelated.gate, __ATOMIC_SEQ_CST);
+    ASSERT_EQ(originalGate, uint64_t(PUBLISHED));
+    const auto epoch = __atomic_load_n(&mapped.header->history_epoch, __ATOMIC_SEQ_CST);
+    ASSERT_EQ(epoch & 1, 0u);
+
+    SharedReadLoan received;
+    {
+        struct RestoreGate {
+            uint64_t& gate;
+            uint64_t value;
+            ~RestoreGate() { __atomic_store_n(&gate, value, __ATOMIC_SEQ_CST); }
+        } restore{unrelated.gate, originalGate};
+        // Keep the published phase while saturating the representable short
+        // operation count. Any unnecessary lease acquisition now fails
+        // deterministically. This is a boundary probe of read-only traversal,
+        // not a substitute for diagnosing the real low-count contention.
+        const auto busyGate = std::numeric_limits<uint64_t>::max() - 1;
+        __atomic_store_n(&unrelated.gate, busyGate, __ATOMIC_SEQ_CST);
+
+        SharedPoolStats stats;
+        const auto statisticsResult = pool->statistics(stats);
+        EXPECT_EQ(statisticsResult, SharedPoolResult::OK);
+        if (statisticsResult == SharedPoolResult::OK) {
+            EXPECT_EQ(stats.free_slots, 1u);
+            EXPECT_EQ(stats.history_samples, 2u);
+            EXPECT_EQ(stats.history_first_sequence, 1u);
+            EXPECT_EQ(stats.history_last_sequence, 2u);
+        }
+        EXPECT_EQ(__atomic_load_n(&unrelated.gate, __ATOMIC_SEQ_CST), busyGate);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->history_epoch, __ATOMIC_SEQ_CST), epoch);
+
+        const auto receivedResult = reader->waitNext(1, 0ms, received);
+        EXPECT_EQ(receivedResult, SharedPoolResult::OK);
+        if (receivedResult == SharedPoolResult::OK) EXPECT_TRUE(valid(received, 2));
+        EXPECT_EQ(__atomic_load_n(&unrelated.gate, __ATOMIC_SEQ_CST), busyGate);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->history_epoch, __ATOMIC_SEQ_CST), epoch);
+    }
+    received.reset();
+    EXPECT_TRUE(pool->releaseWriter(pendingToken));
+}
+
 TEST(SharedPoolRing, StableMalformedRootsLinksStatesCountsAndOrderAreRejectedInsteadOfScanned) {
     for (uint32_t damage = 0; damage < 9; ++damage) {
         SCOPED_TRACE(damage);

@@ -402,7 +402,7 @@ struct SharedPayloadPool::Impl {
         store(current.history_next, NO_SLOT);
         return true;
     }
-    template<class Visit> HistorySnapshot historySnapshot(Visit visit) {
+    template<class Visit> HistorySnapshot historySnapshot(bool protectSlots, Visit visit) {
         const auto epoch = load(header->history_epoch);
         if (epoch & 1) return HistorySnapshot::RETRY;
         const auto completed = [&](bool valid) {
@@ -420,7 +420,12 @@ struct SharedPayloadPool::Impl {
             if (index >= header->prefix.slots) return completed(false);
             auto& current = slot(index);
             SlotLease lease;
-            if (!lease.acquire(current) || load(current.history_linked) != 1 ||
+            // Pure snapshots read only atomic metadata and validate the epoch.
+            // Leasing every node would temporarily occupy otherwise reusable
+            // storage and make a concurrent zero-timeout loan report exhaustion.
+            // Replay adds pending pins, so its visitor still needs a lease.
+            if ((protectSlots && !lease.acquire(current)) ||
+                    (load(current.gate) & PHASE_MASK) != PUBLISHED || load(current.history_linked) != 1 ||
                     load(current.history_previous) != previous) return completed(false);
             const auto sequence = load(current.sequence);
             if (!sequence || sequence <= previousSequence) return completed(false);
@@ -536,7 +541,7 @@ struct SharedPayloadPool::Impl {
         if (load(header->publishing)) { store(reader.ready, uint32_t(0)); return false; }
         const auto watermark = load(header->last_sequence);
         if (load(reader.replay)) {
-            const auto snapshot = historySnapshot([&](uint32_t, Slot& current) {
+            const auto snapshot = historySnapshot(true, [&](uint32_t, Slot& current) {
                 if (load(current.writer_held) && load(current.sequence) <= watermark) {
                     __atomic_fetch_or(&current.pending, bit(index), __ATOMIC_ACQ_REL);
                     if (!load(reader.accepting))
@@ -952,7 +957,7 @@ SharedPoolResult SharedPayloadPool::waitNext(const std::shared_ptr<SharedPoolRea
             // The normal delivery path follows the shared published ring.
             // Only an in-progress/changed epoch permits the conservative
             // physical scan below; a stable malformed ring is an error.
-            const auto snapshot = impl.historySnapshot([&](uint32_t index, Slot& current) {
+            const auto snapshot = impl.historySnapshot(false, [&](uint32_t index, Slot& current) {
                 const auto candidate = load(current.sequence);
                 if (selected == descriptor_.config.slots && (load(current.pending) & mask) &&
                         candidate > after && candidate <= watermark) {
@@ -966,6 +971,9 @@ SharedPoolResult SharedPayloadPool::waitNext(const std::shared_ptr<SharedPoolRea
                 generation = 0;
                 for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
                     auto& current = impl.slot(i);
+                    // An unselected node must not acquire a short pin either:
+                    // this fallback can race the reserving Writer's odd epoch.
+                    if (!(load(current.pending) & mask)) continue;
                     SlotLease lease;
                     if (!lease.acquire(current)) {
                         // An earlier pending sample may be in reserve's
@@ -1086,7 +1094,7 @@ SharedPoolResult SharedPayloadPool::statistics(SharedPoolStats& stats) {
     stats.ring_head = pinnedPosition ? oldestPosition : stats.ring_tail;
     uint32_t historySamples = 0;
     uint64_t firstSequence = 0, lastSequence = 0;
-    const auto snapshot = impl.historySnapshot([&](uint32_t, Slot& current) {
+    const auto snapshot = impl.historySnapshot(false, [&](uint32_t, Slot& current) {
         const auto sequence = load(current.sequence);
         if (!historySamples) firstSequence = sequence;
         ++historySamples;
