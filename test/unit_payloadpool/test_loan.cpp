@@ -143,7 +143,15 @@ protected:
         participant = TheParticipantFactory->create_participant(138, qos, nullptr, STATUS_MASK_NONE);
         ASSERT_NE(participant, nullptr);
         ASSERT_EQ(participant->registe_type(type.get_typename(), &type), RETCODE_OK);
-        topic = participant->create_topic("native-loan", type.get_typename(), TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
+        std::string topicName = "native-loan";
+        if (std::string(testing::UnitTest::GetInstance()->current_test_info()->name()) ==
+                "LiveCapabilityDiscoveryAcrossExecPreservesRtpsFallback") {
+            // Delayed discovery from earlier fixtures shares the domain/type.
+            // Give this exec pair its own topic, and pass it to the child.
+            const auto* peerTopic = getenv("TRAVODDS_TEST_DISCOVERY_TOPIC");
+            topicName = peerTopic ? peerTopic : "native-loan-discovery-" + std::to_string(getpid());
+        }
+        topic = participant->create_topic(topicName.c_str(), type.get_typename(), TOPIC_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
         ASSERT_NE(topic, nullptr);
         publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
         subscriber = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, STATUS_MASK_NONE);
@@ -623,6 +631,15 @@ TEST_F(LoanIntegration, UsesConfiguredDirectoryAndRemovesOwnedSegmentOnDeletion)
 }
 
 TEST_F(LoanIntegration, LiveCapabilityDiscoveryAcrossExecPreservesRtpsFallback) {
+    const auto handleHex = [](const InstanceHandle_t& handle) {
+        const char digits[] = "0123456789abcdef";
+        std::string text;
+        for (auto byte : handle.keyHash.value) {
+            text += digits[byte >> 4];
+            text += digits[byte & 15];
+        }
+        return text;
+    };
     if (getenv("TRAVODDS_TEST_DISCOVERY_CHILD")) {
         // Drop the fixture's Writer so the only discoverable publication is
         // in the other process, never a local-match shortcut.
@@ -642,6 +659,11 @@ TEST_F(LoanIntegration, LiveCapabilityDiscoveryAcrossExecPreservesRtpsFallback) 
             std::this_thread::sleep_for(10ms);
         }
         ASSERT_EQ(handles.size(), 1u);
+        // Check the intended live peer before its data lookup. An unrelated
+        // match is not evidence of this parent's capability advertisement.
+        const auto* expected = getenv("TRAVODDS_TEST_DISCOVERY_WRITER");
+        ASSERT_NE(expected, nullptr);
+        ASSERT_EQ(handleHex(handles[0]), expected);
         PublicationBuiltinTopicData remote;
         ASSERT_EQ(reader->get_matched_publication_data(remote, handles[0]), RETCODE_OK);
         ASSERT_TRUE(remote.data_sharing.valid(true));
@@ -664,6 +686,8 @@ TEST_F(LoanIntegration, LiveCapabilityDiscoveryAcrossExecPreservesRtpsFallback) 
     std::vector<std::string> environment;
     for (auto** p = environ; *p; ++p) environment.emplace_back(*p);
     environment.emplace_back("TRAVODDS_TEST_DISCOVERY_CHILD=1");
+    environment.emplace_back("TRAVODDS_TEST_DISCOVERY_TOPIC=" + std::string(topic->get_name()));
+    environment.emplace_back("TRAVODDS_TEST_DISCOVERY_WRITER=" + handleHex(writer->get_instance_handle()));
     std::vector<char*> env;
     for (auto& entry : environment) env.push_back(entry.data());
     env.push_back(nullptr);

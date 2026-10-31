@@ -16,6 +16,7 @@ add_executable(payloadpool_test test_payloadpool.cpp test_topicpayloadpool.cpp t
     test_native_initialization.cpp
     test_native_payload_writes.cpp
     test_reader_payloadpool.cpp
+    test_reader_binding.cpp
     test_datasharingqos.cpp
     test_datasharingdiscovery.cpp
     test_receiversocket.cpp
@@ -37,7 +38,7 @@ include(GoogleTest)
 gtest_discover_tests(payloadpool_test)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    foreach(progress_target native_initialization native_payload_writes reader_payloadpool)
+    foreach(progress_target native_initialization native_payload_writes reader_payloadpool reader_binding)
         add_executable(${progress_target}_test test_${progress_target}.cpp)
         target_include_directories(${progress_target}_test PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/../../src"

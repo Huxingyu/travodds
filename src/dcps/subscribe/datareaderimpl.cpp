@@ -1042,7 +1042,7 @@ ReturnCode_t DataReaderImpl::enable()
 	//	"dr.lifespan"
 	//);
 
-    SetRelatedReader(readerPtr);
+    // CreateReader binds the DCPS owner before publishing the Reader.
     readerPtr->StartMaintenance(readerPtr);
 	domainParticipant->GetRelatedParticipant()->AddLocalReader(readerPtr);
 	enable_ = true;
@@ -1087,6 +1087,9 @@ uint64_t DataReaderImpl::get_unread_count()
 
 void DataReaderImpl::SetRelatedReader(std::shared_ptr<Reader> reader)
 {
+    // A repeated bind of the published endpoint must not rewrite identity
+    // while discovery reads it. Initial binding still precedes publication.
+    if (reader && reader_ == reader) return;
 	reader_ = reader;
 	reader->SetRelatedDataReader(this);
 	handle_ = Conversion::ToInstanceHandle(reader->GetGuid());

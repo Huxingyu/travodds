@@ -533,9 +533,17 @@ ReturnCode_t DataWriterImpl::WriteSample(const void* const instance_data, const 
 		lineQos.push_back(param);
 	}
 
+    // Discovery changes the filter registry independently of the write lane.
+    // Keep one owning snapshot for this sample, and release the registry lock
+    // before calling TypeSupport, SQL validation or the RTPS Writer.
+    decltype(readerFilters_) readerFilters;
+    {
+        std::lock_guard<std::mutex> filters(lastInstanceMtx_);
+        readerFilters = readerFilters_;
+    }
 #if defined(__linux__)
     // SQL filters still require the ordinary CDR path.
-    if (nativePool_ && readerFilters_.empty()) {
+    if (nativePool_ && readerFilters.empty()) {
         const auto targets = writer_->SelectDataSharingReaders(nativePool_->registeredReaders());
         const bool retainNative = qos_.durability.kind == TRANSIENT_LOCAL_DURABILITY_QOS;
         if (!targets.empty() || retainNative) {
@@ -630,14 +638,14 @@ ReturnCode_t DataWriterImpl::WriteSample(const void* const instance_data, const 
 		return RETCODE_ERROR;
 	}
 	std::set<GUID_t> filterReaders;
-	if (!readerFilters_.empty()) {
+	if (!readerFilters.empty()) {
 
 		// 使用DynamicDataFactory创建数据容器
 		DynamicData* dyn_data = DynamicDataFactory::get_instance().create_data(*typeSupport_->get_dynamictype());
 		DynamicDataTypeSupport typeSupport(typeSupport_->get_dynamictype());
 		CdrDeserializer dycdr(bufferHeader);
 		typeSupport.deserialize_data(dyn_data, &dycdr, DEFAULT_ENDIAN);
-		for (auto& it : readerFilters_) {
+		for (auto& it : readerFilters) {
 			if (it.second->Validate(dyn_data)) {
 				filterReaders.insert(it.first);
 			}
@@ -1242,26 +1250,38 @@ ReturnCode_t DataWriterImpl::CreateSerializedBuffer(SerializedBuffer*& bufferHea
 bool DataWriterImpl::AddReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
 {
 	using namespace DDSSQL;
-	auto filter = readerFilters_.emplace(readerGuid, std::make_shared<DDSSQLFilter>(typeSupport_->get_dynamictype()));
-	assert(filter.second);
-	ReturnCode_t ret = RETCODE_ERROR;
-	if (filter.second) { 
-		ret = filter.first->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
-	}
-	return ret == RETCODE_OK ? true : false;
+    {
+        std::lock_guard<std::mutex> filters(lastInstanceMtx_);
+        const bool duplicate = readerFilters_.find(readerGuid) != readerFilters_.end();
+        assert(!duplicate);
+        if (duplicate) return false;
+    }
+    auto value = std::make_shared<DDSSQLFilter>(typeSupport_->get_dynamictype());
+    if (value->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters) != RETCODE_OK)
+        return false;
+    // A write snapshot must never see a filter before its SQL root exists.
+    std::lock_guard<std::mutex> filters(lastInstanceMtx_);
+    const auto inserted = readerFilters_.emplace(readerGuid, std::move(value));
+    assert(inserted.second);
+    return inserted.second;
 }
 
 void DataWriterImpl::UpdateReaderFilter(const GUID_t& readerGuid, const ContentFilterProperty_t& filterInfo)
 {
 	using namespace DDSSQL;
-	auto it = readerFilters_.find(readerGuid);
-	if (it != readerFilters_.end()) {
-		it->second->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
-	}
+    std::shared_ptr<DDSSQLFilter> filter;
+    {
+        std::lock_guard<std::mutex> filters(lastInstanceMtx_);
+        const auto it = readerFilters_.find(readerGuid);
+        if (it != readerFilters_.end()) filter = it->second;
+    }
+    // DDSSQLFilter serializes InputSQL and Validate with its own mutex.
+    if (filter) filter->InputSQL(filterInfo.filterExpression, filterInfo.expressionParameters);
 }
 
 void DataWriterImpl::RemoveReaderFilter(const GUID_t& readerGuid)
 {
+    std::lock_guard<std::mutex> filters(lastInstanceMtx_);
 	readerFilters_.erase(readerGuid);
 }
 
