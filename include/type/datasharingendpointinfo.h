@@ -10,11 +10,11 @@ TRAVODDS_NAMESPACE_BEGIN
 // RTPS. This is a candidate capability, not proof of a mapped/registered Reader.
 // No peer-controlled filesystem path is advertised or opened.
 struct DDS_DLL DataSharingEndpointInfo {
-    // Version 4 requires layout v6, key-only snapshots and sample construction
-    // without payload initialization. Older versions retain RTPS: v1 used the
-    // metadata mutex on the data plane; v2 could retain a full sample as a key;
-    // v3 could initialize every payload byte when borrowing a Writer sample.
-    static constexpr uint32_t CURRENT_VERSION = 4;
+    // Version 5 requires the layout v7 publication-history ring, key-only
+    // snapshots and construction without payload initialization. Older peers
+    // retain RTPS: v1 used a data-plane metadata mutex; v2 could retain a full
+    // sample as a key; v3 initialized payload; v4 had no publication ring.
+    static constexpr uint32_t CURRENT_VERSION = 5;
     uint32_t version = 0;
     DataSharingQosPolicyKind kind = OFF_DATA_SHARING_QOS;
     NativeTypeInfo type;

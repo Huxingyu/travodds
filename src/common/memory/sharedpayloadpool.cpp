@@ -19,6 +19,7 @@
 #include <sys/file.h>
 #include <sys/random.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <system_error>
 
@@ -44,7 +45,9 @@ Layout layout(const SharedPoolConfig& c) {
     l.slots = rounded(sizeof(Header), alignof(Slot));
     const uint64_t payload = uint64_t(l.slots) + uint64_t(c.slots) * sizeof(Slot);
     if (payload > std::numeric_limits<size_t>::max()) throw std::invalid_argument("Shared metadata overflow");
-    l.payload = rounded(size_t(payload), c.alignment);
+    // Every Reader maps the whole payload region read-only while keeping
+    // control metadata writable. Separate their pages even for small T.
+    l.payload = rounded(size_t(payload), size_t(page));
     l.stride = rounded(c.payload_size, c.alignment);
     const uint64_t total = uint64_t(l.payload) + uint64_t(l.stride) * c.slots;
     if (total > c.max_segment_bytes || total > std::numeric_limits<size_t>::max() || total > uint64_t(std::numeric_limits<off_t>::max())) {
@@ -192,12 +195,35 @@ void slotPhase(Slot& slot, uint32_t phase) {
 struct Publication {
     Header* header;
     bool held;
-    explicit Publication(Header* h) : header(h), held(false) {
+    explicit Publication(Header* h, bool acquire = true) : header(h), held(false) {
         uint32_t expected = 0;
-        held = cas(header->publishing, expected, uint32_t(1));
+        held = acquire && cas(header->publishing, expected, uint32_t(1));
     }
     ~Publication() { if (held) store(header->publishing, uint32_t(0)); }
 };
+// Only the holder of Publication may construct an active mutation. Epochs
+// protect shared links, not application payload; all link accesses are atomic.
+// The last even value retires structural mutation instead of wrapping to an
+// old snapshot identity. Existing samples and Loan returns remain usable.
+struct HistoryMutation {
+    Header* header;
+    uint64_t completed_epoch = 0;
+    SharedPoolResult result = SharedPoolResult::OK;
+    bool active = false;
+    HistoryMutation(Header* h, bool begin = true) : header(h) {
+        if (!begin) return;
+        const auto epoch = load(header->history_epoch);
+        if (epoch >= UINT64_MAX - 1) result = SharedPoolResult::EXHAUSTED;
+        else if (epoch & 1) result = SharedPoolResult::CORRUPT;
+        else {
+            completed_epoch = epoch + 2;
+            store(header->history_epoch, epoch + 1);
+            active = true;
+        }
+    }
+    ~HistoryMutation() { if (active) store(header->history_epoch, completed_epoch); }
+};
+enum class HistorySnapshot { STABLE, RETRY, CORRUPT };
 void notify(Header* header) noexcept {
     __atomic_add_fetch(&header->changed, 1u, __ATOMIC_RELEASE);
     syscall(SYS_futex, &header->changed, FUTEX_WAKE, INT_MAX, nullptr, nullptr, 0);
@@ -322,6 +348,89 @@ struct SharedPayloadPool::Impl {
         return reinterpret_cast<Slot*>(static_cast<char*>(mapping) + memory.slots)[index];
     }
     char* payload(uint32_t index) const { return static_cast<char*>(mapping) + memory.payload + memory.stride * index; }
+    bool appendHistory(uint32_t index) {
+        auto& current = slot(index);
+        const auto count = load(header->history_count);
+        const auto head = load(header->history_head), tail = load(header->history_tail);
+        if (load(current.history_linked) || count >= header->prefix.slots) return false;
+        if (!count) {
+            if (head != NO_SLOT || tail != NO_SLOT) return false;
+            store(current.history_previous, index);
+            store(current.history_next, index);
+            store(current.history_linked, uint32_t(1));
+            store(header->history_head, index);
+            store(header->history_tail, index);
+        } else {
+            if (head >= header->prefix.slots || tail >= header->prefix.slots ||
+                    load(slot(head).history_linked) != 1 || load(slot(tail).history_linked) != 1 ||
+                    load(slot(head).history_previous) != tail || load(slot(tail).history_next) != head) return false;
+            store(current.history_previous, tail);
+            store(current.history_next, head);
+            store(current.history_linked, uint32_t(1));
+            store(slot(tail).history_next, index);
+            store(slot(head).history_previous, index);
+            store(header->history_tail, index);
+        }
+        store(header->history_count, count + 1);
+        return true;
+    }
+    bool unlinkHistory(uint32_t index) {
+        auto& current = slot(index);
+        if (!load(current.history_linked)) return true;
+        const auto count = load(header->history_count);
+        const auto head = load(header->history_head), tail = load(header->history_tail);
+        const auto previous = load(current.history_previous), next = load(current.history_next);
+        if (!count || count > header->prefix.slots || load(current.history_linked) != 1 ||
+                head >= header->prefix.slots || tail >= header->prefix.slots) return false;
+        if (count == 1) {
+            if (head != index || tail != index || previous != index || next != index) return false;
+            store(header->history_head, NO_SLOT);
+            store(header->history_tail, NO_SLOT);
+        } else {
+            if (previous >= header->prefix.slots || next >= header->prefix.slots ||
+                    previous == index || next == index ||
+                    load(slot(previous).history_linked) != 1 || load(slot(next).history_linked) != 1 ||
+                    load(slot(previous).history_next) != index || load(slot(next).history_previous) != index) return false;
+            store(slot(previous).history_next, next);
+            store(slot(next).history_previous, previous);
+            if (head == index) store(header->history_head, next);
+            if (tail == index) store(header->history_tail, previous);
+        }
+        store(header->history_count, count - 1);
+        store(current.history_linked, uint32_t(0));
+        store(current.history_previous, NO_SLOT);
+        store(current.history_next, NO_SLOT);
+        return true;
+    }
+    template<class Visit> HistorySnapshot historySnapshot(Visit visit) {
+        const auto epoch = load(header->history_epoch);
+        if (epoch & 1) return HistorySnapshot::RETRY;
+        const auto completed = [&](bool valid) {
+            if (load(header->history_epoch) != epoch) return HistorySnapshot::RETRY;
+            return valid ? HistorySnapshot::STABLE : HistorySnapshot::CORRUPT;
+        };
+        const auto count = load(header->history_count);
+        const auto head = load(header->history_head), tail = load(header->history_tail);
+        if (count > header->prefix.slots) return completed(false);
+        if (!count) return completed(head == NO_SLOT && tail == NO_SLOT);
+        if (head >= header->prefix.slots || tail >= header->prefix.slots) return completed(false);
+        auto index = head, previous = tail;
+        uint64_t previousSequence = 0;
+        for (uint32_t visited = 0; visited < count; ++visited) {
+            if (index >= header->prefix.slots) return completed(false);
+            auto& current = slot(index);
+            SlotLease lease;
+            if (!lease.acquire(current) || load(current.history_linked) != 1 ||
+                    load(current.history_previous) != previous) return completed(false);
+            const auto sequence = load(current.sequence);
+            if (!sequence || sequence <= previousSequence) return completed(false);
+            visit(index, current);
+            previousSequence = sequence;
+            previous = index;
+            index = load(current.history_next);
+        }
+        return completed(index == head && previous == tail);
+    }
     bool tokenMatches(const SharedSampleToken& token) const {
         return token.session == header->prefix.session && token.slot < header->prefix.slots &&
             token.generation && load(slot(token.slot).generation) == token.generation;
@@ -426,14 +535,18 @@ struct SharedPayloadPool::Impl {
         // for that old publisher or hold the metadata mutex on this path.
         if (load(header->publishing)) { store(reader.ready, uint32_t(0)); return false; }
         const auto watermark = load(header->last_sequence);
-        if (load(reader.replay)) for (uint32_t i = 0; i < header->prefix.slots; ++i) {
-            auto& current = slot(i);
-            SlotLease lease;
-            if (!lease.acquire(current)) continue;
-            if (load(current.writer_held) && load(current.sequence) <= watermark) {
-                __atomic_fetch_or(&current.pending, bit(index), __ATOMIC_ACQ_REL);
-                if (!load(reader.accepting))
-                    __atomic_fetch_and(&current.pending, ~bit(index), __ATOMIC_ACQ_REL);
+        if (load(reader.replay)) {
+            const auto snapshot = historySnapshot([&](uint32_t, Slot& current) {
+                if (load(current.writer_held) && load(current.sequence) <= watermark) {
+                    __atomic_fetch_or(&current.pending, bit(index), __ATOMIC_ACQ_REL);
+                    if (!load(reader.accepting))
+                        __atomic_fetch_and(&current.pending, ~bit(index), __ATOMIC_ACQ_REL);
+                }
+            });
+            if (snapshot != HistorySnapshot::STABLE) {
+                store(reader.ready, uint32_t(0));
+                if (snapshot == HistorySnapshot::CORRUPT) poison();
+                return false;
             }
         }
         store(reader.ready, uint32_t(1));
@@ -493,7 +606,12 @@ std::shared_ptr<SharedPayloadPool> SharedPayloadPool::create(const GUID_t& write
     if (!rc) rc = pthread_mutex_init(&h->mutex, &ma);
     pthread_mutexattr_destroy(&ma);
     syscheck(rc, "Initialize shared robust mutex");
-    for (uint32_t i = 0; i < config.slots; ++i) new (&impl.slot(i)) Slot{};
+    for (uint32_t i = 0; i < config.slots; ++i) {
+        auto* current = new (&impl.slot(i)) Slot{};
+        current->history_previous = NO_SLOT;
+        current->history_next = NO_SLOT;
+    }
+    h->history_head = h->history_tail = NO_SLOT;
     auto& p = h->prefix;
     p.version = VERSION;
     p.header_bytes = sizeof(Header);
@@ -571,6 +689,11 @@ std::shared_ptr<SharedPayloadPool> SharedPayloadPool::open(const SharedPoolDescr
     impl.mapDevice(memory.bytes);
     impl.header = static_cast<Header*>(impl.mapping);
     if (std::memcmp(&p, &impl.header->prefix, sizeof(p))) throw std::invalid_argument("Shared header changed during mapping");
+    // A Reader needs writable registration/pin metadata, but never a writable
+    // native payload. File-backed MAP_SHARED pages still alias Writer storage;
+    // page protection prevents accidental stores through this entire mapping.
+    if (mprotect(static_cast<char*>(impl.mapping) + memory.payload,
+            memory.bytes - memory.payload, PROT_READ)) syscheck(errno, "Protect Reader payload pages");
     impl.device = status.st_dev;
     impl.inode = status.st_ino;
     impl.initialized = true;
@@ -611,20 +734,49 @@ SharedPoolResult SharedPayloadPool::loan(uint32_t size, SharedSampleToken& token
         const auto observed = load(impl.header->changed);
         const auto health = impl.health();
         if (health != SharedPoolResult::OK) return health;
-        const auto start = __atomic_fetch_add(&impl.header->next_slot, uint32_t(1), __ATOMIC_RELAXED);
+        const auto start = load(impl.header->ring_tail);
+        if (start == UINT64_MAX || load(impl.header->history_epoch) >= UINT64_MAX - 1)
+            return SharedPoolResult::EXHAUSTED;
+        bool retryReservation = false;
         for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
-            const auto index = uint32_t((uint64_t(start) + i) % descriptor_.config.slots);
+            // UINT64_MAX is the exhausted cursor, never an issued position.
+            if (uint64_t(i) >= UINT64_MAX - start) break;
+            const auto position = start + i;
+            const auto index = uint32_t(position % descriptor_.config.slots);
             auto& current = impl.slot(index);
             // Do not freeze a slot carrying any unread delivery: a scanner
             // must never temporarily skip an earlier pending sequence.
             if (!unpinned(current)) continue;
+            const bool linked = load(current.history_linked) != 0;
+            Publication publication(impl.header, linked);
+            if (linked && !publication.held) continue;
+            // A linked cell must become unstable before it becomes FROZEN.
+            // Thus a stable even snapshot can reject a malformed state rather
+            // than silently hiding it with a fallback scan.
+            HistoryMutation mutation(impl.header, linked);
+            if (mutation.result != SharedPoolResult::OK) return mutation.result;
             auto gate = load(current.gate);
             if ((gate & ~PHASE_MASK) || (gate & PHASE_MASK) == FROZEN || !cas(current.gate, gate, FROZEN)) continue;
             if (!unpinned(current) || load(current.generation) == UINT64_MAX) {
                 store(current.gate, gate); continue;
             }
+            // A publisher may have linked a previously unlinked candidate
+            // before its freeze. Retry through the structural mutation lane.
+            if (!linked && load(current.history_linked)) {
+                store(current.gate, gate); retryReservation = true; break;
+            }
+            auto expected = start;
+            if (!cas(impl.header->ring_tail, expected, position + 1)) {
+                store(current.gate, gate); retryReservation = true; break;
+            }
+            if (linked && !impl.unlinkHistory(index)) {
+                store(current.gate, gate);
+                impl.poison();
+                return SharedPoolResult::CORRUPT;
+            }
             const auto generation = load(current.generation) + 1;
             store(current.generation, generation);
+            store(current.ring_position, position);
             store(current.writer_held, uint32_t(1));
             store(current.pending, uint64_t(0));
             store(current.loaned, uint64_t(0));
@@ -637,6 +789,7 @@ SharedPoolResult SharedPayloadPool::loan(uint32_t size, SharedSampleToken& token
             return SharedPoolResult::OK;
         }
         if (Clock::now() >= deadline) return timeout.count() ? SharedPoolResult::TIMEOUT : SharedPoolResult::EXHAUSTED;
+        if (retryReservation) continue;
         sleepUntil(impl.header, observed, nextWake(deadline));
     }
 }
@@ -657,6 +810,14 @@ SharedPoolResult SharedPayloadPool::publish(const SharedSampleToken& token, uint
     if (!lease.acquire(current, true) || !impl.tokenMatches(token) ||
             (load(current.gate) & PHASE_MASK) != WRITING || !load(current.writer_held) || size > current.size ||
             sequence <= load(impl.header->last_sequence)) return SharedPoolResult::INVALID;
+    HistoryMutation mutation(impl.header);
+    if (mutation.result != SharedPoolResult::OK) return mutation.result;
+    // Every possible rejection precedes append's first link store. Once the
+    // slot is appended, the remainder of commit cannot fail or copy payload.
+    if (!impl.appendHistory(token.slot)) {
+        impl.poison();
+        return SharedPoolResult::CORRUPT;
+    }
     ReaderLease registrations[MAX_READERS];
     uint64_t pending = 0;
     for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
@@ -739,7 +900,7 @@ std::shared_ptr<SharedPoolReader> SharedPayloadPool::registerReader(const GUID_t
         memcpy(r.guid, &guid, 16);
         store(r.gate, READER_OPEN);
         reader->registered_ = true;
-        if (replay) impl.finishRegistration(i);
+        if (replay && !impl.finishRegistration(i) && load(impl.header->poisoned)) return nullptr;
         return reader;
     }
     return nullptr;
@@ -777,6 +938,7 @@ SharedPoolResult SharedPayloadPool::waitNext(const std::shared_ptr<SharedPoolRea
         }
         if (!load(registration.accepting)) return SharedPoolResult::CLOSED;
         const bool ready = impl.finishRegistration(reader->index_);
+        if (load(impl.header->poisoned)) return SharedPoolResult::CORRUPT;
         // A close observed before this snapshot makes its final watermark
         // visible. If close happens after the scan, rescan before reporting
         // CLOSED so its last pending publications are drained.
@@ -786,20 +948,38 @@ SharedPoolResult SharedPayloadPool::waitNext(const std::shared_ptr<SharedPoolRea
         uint64_t sequence = UINT64_MAX, generation = 0;
         const auto mask = bit(reader->index_);
         bool retryScan = false;
-        if (ready) for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
-            auto& current = impl.slot(i);
-            SlotLease lease;
-            if (!lease.acquire(current)) {
-                // A reserve precheck can precede replay adding a pin. Its
-                // frozen/recheck window must not hide an earlier pending
-                // sample from this ordered scan. Do not wait on that gate.
-                if (load(current.pending) & mask) retryScan = true;
-                continue;
-            }
-            const auto candidate = load(current.sequence);
-            if ((load(current.pending) & mask) && candidate > after && candidate <= watermark &&
-                    (selected == descriptor_.config.slots || candidate < sequence)) {
-                selected = i; sequence = candidate; generation = load(current.generation);
+        if (ready) {
+            // The normal delivery path follows the shared published ring.
+            // Only an in-progress/changed epoch permits the conservative
+            // physical scan below; a stable malformed ring is an error.
+            const auto snapshot = impl.historySnapshot([&](uint32_t index, Slot& current) {
+                const auto candidate = load(current.sequence);
+                if (selected == descriptor_.config.slots && (load(current.pending) & mask) &&
+                        candidate > after && candidate <= watermark) {
+                    selected = index; sequence = candidate; generation = load(current.generation);
+                }
+            });
+            if (snapshot == HistorySnapshot::CORRUPT) return SharedPoolResult::CORRUPT;
+            if (snapshot == HistorySnapshot::RETRY) {
+                selected = descriptor_.config.slots;
+                sequence = UINT64_MAX;
+                generation = 0;
+                for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
+                    auto& current = impl.slot(i);
+                    SlotLease lease;
+                    if (!lease.acquire(current)) {
+                        // An earlier pending sample may be in reserve's
+                        // frozen/recheck window. Never skip it or wait on
+                        // the stopped mutator's gate.
+                        if (load(current.pending) & mask) retryScan = true;
+                        continue;
+                    }
+                    const auto candidate = load(current.sequence);
+                    if ((load(current.pending) & mask) && candidate > after && candidate <= watermark &&
+                            (selected == descriptor_.config.slots || candidate < sequence)) {
+                        selected = i; sequence = candidate; generation = load(current.generation);
+                    }
+                }
             }
         }
         if (!retryScan && selected != descriptor_.config.slots) {
@@ -886,6 +1066,8 @@ SharedPoolResult SharedPayloadPool::statistics(SharedPoolStats& stats) {
     impl.reapReaders();
     if (load(impl.header->poisoned)) return SharedPoolResult::CORRUPT;
     stats.writer_alive = load(impl.header->alive) != 0;
+    uint64_t oldestPosition = UINT64_MAX;
+    bool pinnedPosition = false;
     for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
         const auto& current = impl.slot(i);
         const bool free = unpinned(current);
@@ -895,10 +1077,31 @@ SharedPoolResult SharedPayloadPool::statistics(SharedPoolStats& stats) {
         stats.published_slots += !free && phase == PUBLISHED;
         stats.pending_references += __builtin_popcountll(load(current.pending));
         stats.loan_references += __builtin_popcountll(load(current.loaned));
+        if (!free) {
+            oldestPosition = std::min(oldestPosition, load(current.ring_position));
+            pinnedPosition = true;
+        }
+    }
+    stats.ring_tail = load(impl.header->ring_tail);
+    stats.ring_head = pinnedPosition ? oldestPosition : stats.ring_tail;
+    uint32_t historySamples = 0;
+    uint64_t firstSequence = 0, lastSequence = 0;
+    const auto snapshot = impl.historySnapshot([&](uint32_t, Slot& current) {
+        const auto sequence = load(current.sequence);
+        if (!historySamples) firstSequence = sequence;
+        ++historySamples;
+        lastSequence = sequence;
+    });
+    if (snapshot == HistorySnapshot::CORRUPT) return SharedPoolResult::CORRUPT;
+    if (snapshot == HistorySnapshot::STABLE) {
+        stats.history_samples = historySamples;
+        stats.history_first_sequence = firstSequence;
+        stats.history_last_sequence = lastSequence;
     }
     for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
         if (load(impl.header->readers[i].active)) {
             impl.finishRegistration(i);
+            if (load(impl.header->poisoned)) return SharedPoolResult::CORRUPT;
             ++stats.readers;
         }
     }

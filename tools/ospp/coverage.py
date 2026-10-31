@@ -99,7 +99,9 @@ def main():
         raise RuntimeError('Changed production translation units missing from coverage: ' + repr(missing))
     for name, lines in sorted(changed.items()):
         executable = sorted(lines.intersection(counts[name]))
-        uncovered = [line for line in executable if counts[name][line] == 0]
+        # GCC may infer a negative line count from inconsistent profile arcs.
+        # Such a value is not evidence that the line executed.
+        uncovered = [line for line in executable if counts[name][line] <= 0]
         details[name] = {
             "added_lines": len(lines), "executable_added_lines": len(executable),
             "covered_added_lines": len(executable) - len(uncovered),

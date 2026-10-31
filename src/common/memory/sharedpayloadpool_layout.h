@@ -8,8 +8,9 @@
 TRAVODDS_NAMESPACE_BEGIN
 namespace shared_pool_detail {
 constexpr uint64_t MAGIC = 0x545241564f445331ull;
-constexpr uint32_t VERSION = 6;
+constexpr uint32_t VERSION = 7;
 constexpr uint32_t MAX_READERS = 64;
+constexpr uint32_t NO_SLOT = UINT32_MAX;
 enum SlotState : uint32_t { FREE, WRITING, PUBLISHED };
 struct ProcessIdentity { int64_t pid; uint64_t start; };
 struct Prefix {
@@ -35,9 +36,14 @@ struct Header {
     Prefix prefix;
     pthread_mutex_t mutex;
     alignas(4) uint32_t changed;
-    uint32_t alive, poisoned, next_slot, reserved;
-    uint64_t last_sequence;
-    uint32_t publishing, reserved2;
+    uint32_t alive, poisoned, history_head, history_tail;
+    // Absolute next reservation position; position % slots is its physical
+    // cell. Positions never wrap, even when a pinned cell must be skipped.
+    uint64_t ring_tail, last_sequence;
+    // Even epochs describe a complete published-history ring. A mutator
+    // holds publishing and exposes an odd epoch until every link is ready.
+    uint64_t history_epoch;
+    uint32_t publishing, history_count;
     ReaderRecord readers[MAX_READERS];
 };
 struct alignas(64) Slot {
@@ -45,8 +51,12 @@ struct alignas(64) Slot {
     // Higher bits count short operations, independently of persistent pins.
     // generation remains a full 64-bit value and never wraps.
     uint64_t gate;
-    uint64_t generation, sequence, pending, loaned;
+    uint64_t generation, ring_position, sequence, pending, loaned;
     uint32_t size, state, writer_held, reserved;
+    // Published samples form one shared circular doubly-linked history in
+    // successful DDS publication order. Unsubmitted/cancelled Loans are not
+    // members. These fields are accessed with interprocess atomic operations.
+    uint32_t history_previous, history_next, history_linked, reserved2;
     SharedSampleMetadata metadata;
 };
 

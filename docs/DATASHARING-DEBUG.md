@@ -1,6 +1,6 @@
 # DataSharing 调试与验证
 
-本手册针对 Linux 同主机固定布局 DataSharing。API 见 [DATASHARING-API.md](DATASHARING-API.md)，配置见 [DATASHARING-QOS.md](DATASHARING-QOS.md)，有限示例见 [README](../example/cpp/data_sharing/README.md)。本轮 v4/no-init 与 Reader 普通池补全已通过当前验收，结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md) 及 [需求矩阵](DATASHARING-ACCEPTANCE.md)；10/30 v3 与更早数字属于历史冻结源码。
+本手册针对 Linux 同主机固定布局 DataSharing。API 见 [DATASHARING-API.md](DATASHARING-API.md)，配置见 [DATASHARING-QOS.md](DATASHARING-QOS.md)，有限示例见 [README](../example/cpp/data_sharing/README.md)。本轮 v7/v5 的真实发布历史环与只读载荷保护已完成本轮验证，设计见 [本轮说明](DATASHARING-RING.md)，最终状态见 [需求矩阵](DATASHARING-ACCEPTANCE.md)；前轮 529 项、93.936% 等结果和更早数字均属于各自历史冻结源码。
 
 ## 从可复现示例开始
 
@@ -16,7 +16,7 @@ python3 tools/ospp/datasharing_examples.py \
 ## 判断实际数据路径
 
 1. 确认两端 domain、topic、类型名、可靠性和其他匹配 QoS 相容。`get_matched_subscriptions`/`get_matched_publications` 只能证明 DDS 匹配。
-2. 确认类型声明 bounded/plain、非零大小、合法对齐、相同版本化布局 ID，并显式满足 supports_native_uninitialized_sample。布局内不得含跨进程无效的指针或动态容器；带键类型还需有效 NativeKeyInfo 和 capture/restore。两端均需 discovery v4，v1/v2/v3 只走 RTPS。手写声明不是 IDL 自动适配，HelloWorld 无界 string 回退正确；DDS matched 不代表实际 DS 注册 ready。
+2. 确认类型声明 bounded/plain、非零大小、合法对齐、相同版本化布局 ID，并显式满足 supports_native_uninitialized_sample。布局内不得含跨进程无效的指针或动态容器；带键类型还需有效 NativeKeyInfo 和 capture/restore。两端均需 discovery v5/共享布局 v7，v1/v2/v3/v4 只走 RTPS。手写声明不是 IDL 自动适配，HelloWorld 无界 string 回退正确；DDS matched 不代表实际 DS 注册 ready。
 3. 确认两端处于相同主机、PID namespace 和可访问的共享文件系统。容器间仅使用相同目录字符串不代表访问同一个共享段。
 4. 确认 Reader 映射预算足够，目录可访问，Writer 的槽位和 Reader 注册容量未耗尽。
 5. 在隔离的测试中检查原生借用及完整载荷序列化计数。有限示例在 OFF Reader 创建之前禁用完整载荷 CDR，并验证一次真实 Reader Loan，以确认共享路径已经建立。
@@ -89,7 +89,7 @@ artifacts/local-loan/build-unit_payloadpool/payloadpool_test \
 
 ### 重启与通知排查
 
-本轮共享布局为 6、发现能力为 4；旧布局在访问共享同步对象前拒绝，旧发现 v1/v2/v3 保留 RTPS。v4 表示同时执行无初始化及强制 key-only 准入，隔离旧 v3 的清零语义。通知先采样原子代次再检查谓词，以单调时钟期限等待 Linux futex，取样和归还不持管理 mutex；控制锁被占用时新注册可能等待，已有数据面可继续。固定槽位轮转扫描不等于 FIFO 环形队列，仍借用的槽位不会被覆盖。
+本轮共享布局为 7、发现能力为 5；旧布局在访问共享同步对象前拒绝，旧发现 v1/v2/v3/v4 保留 RTPS。v5 在无初始化和 key-only 门控上绑定真实发布历史环与载荷页边界。通知先采样原子代次再检查谓词，以单调时钟期限等待 Linux futex，取样和归还不持管理 mutex；控制锁被占用时新注册可能等待，已有数据面不因该 mutex 等待。正常 Reader/replay 沿闭合历史环，epoch 奇数或变化时才允许保守扫描，稳定坏链返回 CORRUPT；仍借用的载荷不被覆盖。Reader 载荷页生产只读，应用不得修改 Loan 样本；Writer Loan 仍可直接填写。独立取证在生产只读保护之上使用 PROT_NONE 和 seccomp，范围见 [设计说明](DATASHARING-RING.md)。
 
 管理锁持有者死亡，或已确认死亡的 Reader 登记仍有无法安全归属的短操作计数，都会使 session CORRUPT，需重建端点。死亡登记无短操作时由维护核实 PID/start identity 后回收 pin；不能按超时强减计数。已有 Loan 保留旧映射和字节。DDS discovery lease 可能暂存旧匹配，与共享池 pin 生命周期分开。
 
@@ -98,4 +98,4 @@ artifacts/local-loan/build-unit_payloadpool/payloadpool_test \
 Reader max_instances 满时，默认无限 autopurge 保留的已知键仍占容量，即使样本已 take 或 Loan 已归还。按业务实例数配置预算，或删除重建 Reader；需要有限回收时显式配置reader_data_lifecycle；其状态转移计时、实例预算释放及Loan保活见QoS手册。
 
 
-2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。
+当前严格补全轮采用共享布局 v7 / discovery v5，新增真实发布历史环与 Reader 全载荷只读映射，已完成本轮验证，设计和实际证据见 [环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 321 项冻结输入对应 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项，原始范围保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)；这些数字不能作为本轮新源码通过结果。[10/30 报告](DATASHARING-STRICT-20261030.md) 继续保留更早 v3 的历史。LSan 未启用，历史 WaitSet 崩溃根因仍未知。

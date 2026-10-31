@@ -1,6 +1,6 @@
 # DataSharing / Loan API（当前实现）
 
-> 本轮实现采用 Boost.Interprocess、共享布局 v6、发现能力 v4，Reader 普通池与无初始化改动已通过当前验收。完整范围和证据见 [10/31 报告](DATASHARING-PROGRESS-20261031.md) 与 [需求矩阵](DATASHARING-ACCEPTANCE.md)。下文各旧日期、discovery v2/v3 的数字仅保留历史含义。
+> 本轮实现采用 Boost.Interprocess、共享布局 v7、发现能力 v5，真实发布历史环与 Reader 载荷只读保护已完成本轮验证，见 [环形历史与载荷写入说明](DATASHARING-RING.md)。v6/v4 的 529 项、93.936% 等前轮结果及更早版本数字只证明各自冻结源码，不能证明本轮。最终状态以 [需求矩阵](DATASHARING-ACCEPTANCE.md) 为准。
 
 当前实现已接通 Linux 上固定布局类型的自动共享发布/接收。共享能力与实际映射注册兼容的 Reader 从共享段收样；混合匹配中的其他 Reader 继续使用定向 RTPS。纯共享路径可跳过两端完整载荷序列化/反序列化。零载荷复制限定 Writer Loan → 空输出序列的 Reader Loan；普通裸指针 write 会复制样本，预分配输出也复制。带键类型只有在 Writer 与 Reader 两端的 TypeSupport 均提供有效 key-only 元数据并实现下述钩子时才可进入 native。原生路径不再保留完整样本键快照回退；不满足契约的类型保留 CDR/RTPS。键字段和控制元数据仍会复制，“零载荷复制”不表示系统中没有任何字节复制。存在 SQL Reader 过滤器时继续走 CDR。键哈希仍通过 TypeSupport 的键操作计算，Ubuntu 验证范围见需求矩阵。配置见 [QoS 手册](DATASHARING-QOS.md)。
 
@@ -65,7 +65,7 @@ if (rc == RETCODE_OK) {
 
 当批次全部为布局兼容的有效原生缓存时，空输出序列借用其真实映射地址；数据与 SampleInfo 绑定同一个批次 pin。普通 RTPS 数据、混合批次和无有效数据的控制样本返回自有对象。`SequenceData<T>(capacity)` 预分配输出会请求复制；单样本 read/take 也复制，原生样本复制不经过反序列化。
 
-本轮为普通 RTPS Reader 增加 payload_pool 配置和 history 准入拷贝：完整 CDR 分片链事务性转入本地 Topic 池，native SharedReadLoan 保持旁路，transport 整包及独立 CDR 键快照仍归原池。五个普通池参数不可变，活动 domain/topic/type 池配置必须一致；真实接收、耗尽回滚与缓存保活已包含在 19 项 Reader 回归，普通及两个检查版均通过，详见 [普通池手册](PAYLOADPOOL-QOS.md)。
+普通 RTPS Reader 的 payload_pool 配置控制 history 准入拷贝：完整 CDR 分片链事务性转入本地 Topic 池，native SharedReadLoan 保持旁路，transport 整包及独立 CDR 键快照仍归原池。五个普通池参数不可变，活动 domain/topic/type 池配置必须一致；前轮 19 项 Reader 回归已覆盖真实接收、耗尽回滚与缓存保活，本轮新源码需重新验证，详见 [普通池手册](PAYLOADPOOL-QOS.md)。
 
 Reader 在发现兼容 Writer 后，以本地目录配置及对端 GUID/会话推导文件名，验证共享段并注册自身 GUID。独立监听线程通过原子代次与 Linux futex 等待共享通知，生成持有 SharedReadLoan 的原生缓存，再交给现有可靠性代理与 history。可靠和尽力模式、同参与者内的 ON/OFF Reader 混用均有独立 exec 进程测试。
 
@@ -78,11 +78,13 @@ Reader 在发现兼容 Writer 后，以本地目录配置及对端 GUID/会话�
 
 所有这些序列操作都要求应用避免并发修改同一个序列对象。Writer Loan 并发借出/取消已有测试；原生跨进程存储的崩溃/代次协议见设计文档。
 
-此次扩展改变了 TypeSupport/DataWriter 的虚函数接口及序列对象布局，无初始化及 key-only 钩子均影响 TypeSupport 二进制 ABI。库、应用及自定义 TypeSupport 子类必须一起重新编译，不能仅替换动态库后继续使用旧二进制；保守默认实现保留旧类型的 CDR/RTPS 源码兼容。NativeKeyInfo 的具体大小/对齐仍是本地元数据；发现能力 v4 隔离旧 v1/v2/v3 原生语义，共享布局保持 v6。
+此次扩展改变了 TypeSupport/DataWriter 的虚函数接口及序列对象布局，无初始化及 key-only 钩子均影响 TypeSupport 二进制 ABI。库、应用及自定义 TypeSupport 子类必须一起重新编译，不能仅替换动态库后继续使用旧二进制；保守默认实现保留旧类型的 CDR/RTPS 源码兼容。NativeKeyInfo 的具体大小/对齐仍是本地元数据；当前 discovery v5 隔离旧 v1/v2/v3/v4 原生语义，共享布局 v7 包含真实发布历史环。
+
+原生 Reader Loan 指向生产只读载荷页，修改样本会被内核拒绝；Reader 的注册和 pin 元数据仍可写。Writer Loan 保持可写，应用直接填写后发布。环按成功 publish 的 DDS 序列排序，与 loan 借出先后无关；取消未发布 Loan 不加入历史，仍被应用持有的 Reader Loan 不随历史淘汰失效。页对齐、预算和独立 PROT_NONE 取证范围见 [设计说明](DATASHARING-RING.md)。
 
 ## 验证与覆盖率
 
-生产验证入口为 `tools/ospp/production_lockfree_verify.py`。本轮 v4/no-init 与 Reader 普通池的 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项 focused 均通过，最终审计及便携证据搬迁复核完成；10/30 的 500 项、9 次示例、93.920% 和两版 focused 各 57 项保留 discovery v3 历史含义。当前三轮完整命令显式使用 768 MiB 编译限额，见 [10/31 报告](DATASHARING-PROGRESS-20261031.md#当前三轮完整复现命令) 和 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
+生产验证入口为 `tools/ospp/production_lockfree_verify.py`，新载荷证据由 `tools/ospp/native_payload_writes.py` 绑定实际 XML/log；本轮 v7/v5 已完成验证，结果为 542 项普通回归、两个检查版各 99 项、9 次示例及 94.132% 覆盖率。前轮 v6/v4 的 529 项、9 次示例、93.936% 和两版 focused 各 86 项，以及 10/30 v3 的旧数字均保留历史含义。新运行采用 768 MiB 编译限额、单线程和独立 build 目录，环/页保护设计见 [本轮说明](DATASHARING-RING.md)，结果以 [验收矩阵](DATASHARING-ACCEPTANCE.md) 为准。
 
 以下是 2026-10-28 完整检查流程的复现命令，测试数量和结果属于当时的冻结版本。新运行使用新的输出目录，所有编译保持单线程：
 
@@ -118,7 +120,7 @@ python3 tools/ospp/coverage.py --source . \
 
 带键原生类型与无键类型采用相同的布局约束。TypeSupport 的 `MakeKey` 必须只根据键字段稳定生成实例句柄，成功返回 0；键字段可以使用键序列化与 MD5，而纯共享的 `serialize_data` / `deserialize_data` 调用次数为 0。dispose/unregister 通过 RTPS inline key/status 通知，不能据此声称不发送网络控制消息。
 
-- 带键类型进入 native 必须实现下列 TypeSupport 钩子并声明有效 NativeKeyInfo。capture 只能读取键字段，restore 只能修改目标的键字段。元数据和表示在 TypeSupport 生命周期内保持稳定，快照必须是无指针、无需构造/析构的独立字节，不能保留样本地址。具体键表示无需在对端共享，但 Writer 与 Reader 各自在准入时校验它；只有同时满足无初始化与键契约的 discovery v4 端点可以选择 DS，旧 v1/v2/v3 对端保留 RTPS。
+- 带键类型进入 native 必须实现下列 TypeSupport 钩子并声明有效 NativeKeyInfo。capture 只能读取键字段，restore 只能修改目标的键字段。元数据和表示在 TypeSupport 生命周期内保持稳定，快照必须是无指针、无需构造/析构的独立字节，不能保留样本地址。具体键表示无需在对端共享，但 Writer 与 Reader 各自在准入时校验它；当前还要求 discovery v5 和共享布局 v7 兼容，旧 v1/v2/v3/v4 对端保留 RTPS。
 
 ```cpp
 virtual NativeKeyInfo get_native_key_info() const;
@@ -187,4 +189,4 @@ Reader有限autopurge删除实例身份后，旧句柄的get_key_value返回BAD_
 调度及Timer同步、deadline listener查询状态/修改QoS/注销的当前回归已加入验收。上文“尚未验证”段落保留为历史范围描述，当前结果见DATASHARING-ACCEPTANCE.md；未运行的检查器不会由ASan代替。
 
 
-2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。
+当前严格补全轮采用共享布局 v7 / discovery v5，新增真实发布历史环与 Reader 全载荷只读映射，已完成本轮验证，设计和实际证据见 [环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 321 项冻结输入对应 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项，原始范围保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)；这些数字不能作为本轮新源码通过结果。[10/30 报告](DATASHARING-STRICT-20261030.md) 继续保留更早 v3 的历史。LSan 未启用，历史 WaitSet 崩溃根因仍未知。

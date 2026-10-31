@@ -15,6 +15,7 @@
 #include <limits>
 #include <poll.h>
 #include <signal.h>
+#include <sstream>
 #include <stdexcept>
 #include <system_error>
 #include <sys/mman.h>
@@ -75,6 +76,19 @@ struct Mapping {
         return reinterpret_cast<Slot*>(reinterpret_cast<char*>(header) + offset)[index];
     }
 };
+std::string mappingPermissions(const void* pointer) {
+    const auto address = reinterpret_cast<uintptr_t>(pointer);
+    std::ifstream maps("/proc/self/maps");
+    std::string line;
+    while (std::getline(maps, line)) {
+        std::istringstream fields(line);
+        uintptr_t begin = 0, end = 0; char separator = 0;
+        std::string permissions;
+        if ((fields >> std::hex >> begin >> separator >> end >> permissions) &&
+                separator == '-' && address >= begin && address < end) return permissions;
+    }
+    return {};
+}
 struct Wire {
     char path[512]{};
     unsigned char writer[16]{};
@@ -95,9 +109,9 @@ Wire wire(const SharedPoolDescriptor& d, char* payload = nullptr) {
     w.config = d.config;
     w.bytes = d.segment_bytes;
     if (payload) {
-        size_t offset = (sizeof(Header) + alignof(Slot) - 1) & ~(alignof(Slot) - 1);
-        offset += sizeof(Slot) * d.config.slots;
-        offset = (offset + d.config.alignment - 1) & ~(size_t(d.config.alignment) - 1);
+        const auto stride = (size_t(d.config.payload_size) + d.config.alignment - 1) &
+            ~(size_t(d.config.alignment) - 1);
+        const auto offset = d.segment_bytes - stride * d.config.slots;
         w.writer_payload = reinterpret_cast<uintptr_t>(payload);
         w.writer_base = w.writer_payload - offset;
     }
@@ -227,6 +241,24 @@ public:
     }
 };
 int childMain(const std::string& mode, int fd) {
+    if (mode == "illegal-reader-write") {
+        Wire w;
+        if (!transfer(fd, &w, sizeof(w), false)) return 71;
+        auto pool = SharedPayloadPool::open(descriptor(w));
+        auto reader = pool->registerReader();
+        if (!reader || !sendByte(fd, 'R')) return 72;
+        SharedReadLoan loan;
+        if (reader->waitNext(0, 2s, loan) != SharedPoolResult::OK || !valid(loan) || !sendByte(fd, 'L')) return 73;
+        if (!expectByte(fd, 'W')) return 74;
+        const rlimit noCore{0, 0};
+        if (setrlimit(RLIMIT_CORE, &noCore)) return 75;
+        struct sigaction action{};
+        action.sa_handler = SIG_DFL;
+        sigemptyset(&action.sa_mask);
+        if (sigaction(SIGSEGV, &action, nullptr) || sigaction(SIGBUS, &action, nullptr)) return 76;
+        *const_cast<volatile char*>(loan.data()) = char(0x7f);
+        return 77; // A Reader payload store must be rejected by the kernel.
+    }
     if (mode == "leased-reader") {
         Wire w;
         if (!transfer(fd, &w, sizeof(w), false)) return 61;
@@ -626,6 +658,8 @@ TEST(SharedPool, FrozenRecheckWindowNeverSkipsAnEarlierPendingSequenceOrItsDeadl
     auto& first = mapped.slot(tokens[0].slot);
     // Models reserve prechecking zero pins, then replay adding a pin before
     // its gate CAS: reserve must briefly freeze, recheck and restore this slot.
+    const auto epoch = __atomic_load_n(&mapped.header->history_epoch, __ATOMIC_ACQUIRE);
+    __atomic_store_n(&mapped.header->history_epoch, epoch + 1, __ATOMIC_RELEASE);
     __atomic_store_n(&first.gate, uint64_t(3), __ATOMIC_RELEASE);
     SharedReadLoan loan;
     const auto started = std::chrono::steady_clock::now();
@@ -633,11 +667,275 @@ TEST(SharedPool, FrozenRecheckWindowNeverSkipsAnEarlierPendingSequenceOrItsDeadl
     EXPECT_FALSE(loan);
     EXPECT_LT(std::chrono::steady_clock::now() - started, 100ms);
     __atomic_store_n(&first.gate, uint64_t(PUBLISHED), __ATOMIC_RELEASE);
+    __atomic_store_n(&mapped.header->history_epoch, epoch + 2, __ATOMIC_RELEASE);
     ASSERT_EQ(reader->waitNext(0, 0ms, loan), SharedPoolResult::OK);
     EXPECT_TRUE(valid(loan, 1));
     loan.reset();
     ASSERT_EQ(reader->waitNext(1, 0ms, loan), SharedPoolResult::OK);
     EXPECT_TRUE(valid(loan, 2));
+}
+
+TEST(SharedPoolRing, PublishedHistoryIsClosedAndFollowsPublicationRatherThanReservationOrder) {
+    auto pool = SharedPayloadPool::create(guid(), config(4));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    Mapping mapped(pool->descriptor());
+    EXPECT_EQ(mapped.header->history_head, NO_SLOT);
+    EXPECT_EQ(mapped.header->history_tail, NO_SLOT);
+    EXPECT_EQ(mapped.header->history_count, 0u);
+    SharedSampleToken tokens[4];
+    char* bytes[4]{};
+    for (uint32_t i = 0; i < 4; ++i) {
+        ASSERT_EQ(pool->loan(sizeof(Sample), tokens[i], bytes[i]), SharedPoolResult::OK);
+        EXPECT_EQ(mapped.slot(tokens[i].slot).ring_position, uint64_t(i));
+    }
+    ASSERT_TRUE(pool->releaseWriter(tokens[1])); // Cancelled Loan never joins history.
+    const uint32_t order[] = {2, 0, 3};
+    for (uint32_t i = 0; i < 3; ++i) {
+        fill(bytes[order[i]], i + 1);
+        ASSERT_EQ(pool->publish(tokens[order[i]], sizeof(Sample), i + 1), SharedPoolResult::OK);
+    }
+    ASSERT_EQ(mapped.header->history_count, 3u);
+    EXPECT_EQ(mapped.header->history_head, tokens[2].slot);
+    EXPECT_EQ(mapped.header->history_tail, tokens[3].slot);
+    for (uint32_t i = 0; i < 3; ++i) {
+        const auto& current = mapped.slot(tokens[order[i]].slot);
+        EXPECT_EQ(current.history_linked, 1u);
+        EXPECT_EQ(current.history_previous, tokens[order[(i + 2) % 3]].slot);
+        EXPECT_EQ(current.history_next, tokens[order[(i + 1) % 3]].slot);
+    }
+    EXPECT_EQ(mapped.slot(tokens[1].slot).history_linked, 0u);
+    auto replay = pool->registerReader(GUID_UNKNOWN, true);
+    ASSERT_TRUE(replay);
+    for (uint64_t sequence = 1; sequence <= 3; ++sequence) {
+        SharedReadLoan normal, retained;
+        ASSERT_EQ(reader->waitNext(sequence - 1, 0ms, normal), SharedPoolResult::OK);
+        ASSERT_EQ(replay->waitNext(sequence - 1, 0ms, retained), SharedPoolResult::OK);
+        EXPECT_TRUE(valid(normal, sequence));
+        EXPECT_TRUE(valid(retained, sequence));
+        EXPECT_EQ(normal.token().slot, tokens[order[sequence - 1]].slot);
+    }
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.history_samples, 3u);
+    EXPECT_EQ(stats.history_first_sequence, 1u);
+    EXPECT_EQ(stats.history_last_sequence, 3u);
+    for (auto index : order) EXPECT_TRUE(pool->releaseWriter(tokens[index]));
+}
+
+TEST(SharedPoolRing, SlowLoanSurvivesManyWrapsWhileOtherCellsAdvanceAndCancelledHolesAreReused) {
+    auto pool = SharedPayloadPool::create(guid(), config(3));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    Mapping mapped(pool->descriptor());
+    SharedSampleToken first; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), first, bytes), SharedPoolResult::OK);
+    fill(bytes, 1);
+    ASSERT_EQ(pool->publish(first, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(first));
+    SharedReadLoan slow;
+    ASSERT_EQ(reader->waitNext(0, 0ms, slow), SharedPoolResult::OK);
+    uint64_t previousPosition = 0;
+    for (uint64_t sequence = 2; sequence <= 40; ++sequence) {
+        // Every fifth reservation is cancelled, leaving a hole in published history.
+        if (sequence % 5 == 0) {
+            SharedSampleToken cancelled;
+            ASSERT_EQ(pool->loan(sizeof(Sample), cancelled, bytes), SharedPoolResult::OK);
+            EXPECT_NE(cancelled.slot, first.slot);
+            ASSERT_TRUE(pool->releaseWriter(cancelled));
+        }
+        SharedSampleToken token;
+        ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+        const auto position = mapped.slot(token.slot).ring_position;
+        EXPECT_GT(position, previousPosition);
+        EXPECT_EQ(token.slot, position % 3);
+        EXPECT_NE(token.slot, first.slot);
+        previousPosition = position;
+        fill(bytes, sequence);
+        ASSERT_EQ(pool->publish(token, sizeof(Sample), sequence), SharedPoolResult::OK);
+        ASSERT_TRUE(pool->releaseWriter(token));
+        SharedReadLoan current;
+        ASSERT_EQ(reader->waitNext(sequence - 1, 0ms, current), SharedPoolResult::OK);
+        EXPECT_TRUE(valid(current, sequence));
+        EXPECT_TRUE(valid(slow, 1));
+    }
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.ring_head, 0u);
+    EXPECT_GT(stats.ring_tail, 6u);
+    EXPECT_EQ(stats.history_first_sequence, 1u);
+    EXPECT_EQ(stats.history_last_sequence, 40u);
+    EXPECT_GE(stats.history_samples, 2u);
+    EXPECT_LE(stats.history_samples, 3u);
+    slow.reset();
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.ring_head, stats.ring_tail);
+    EXPECT_EQ(stats.free_slots, 3u);
+}
+
+TEST(SharedPoolRing, ConcurrentFreshReservationsClaimDistinctAbsolutePositionsWithoutLostCapacity) {
+    auto pool = SharedPayloadPool::create(guid(), config(4));
+    std::array<SharedSampleToken, 4> tokens;
+    std::array<SharedPoolResult, 4> results;
+    std::array<std::thread, 4> workers;
+    std::atomic<uint32_t> waiting{0};
+    std::atomic<bool> start{false};
+    for (size_t i = 0; i < workers.size(); ++i) workers[i] = std::thread([&, i] {
+        waiting.fetch_add(1);
+        while (!start.load()) std::this_thread::yield();
+        char* bytes = nullptr;
+        results[i] = pool->loan(sizeof(Sample), tokens[i], bytes, 500ms);
+    });
+    while (waiting.load() != workers.size()) std::this_thread::yield();
+    start = true;
+    for (auto& worker : workers) worker.join();
+    Mapping mapped(pool->descriptor());
+    bool seen[4]{};
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        ASSERT_EQ(results[i], SharedPoolResult::OK);
+        ASSERT_LT(tokens[i].slot, 4u);
+        EXPECT_FALSE(seen[tokens[i].slot]);
+        seen[tokens[i].slot] = true;
+        const auto position = mapped.slot(tokens[i].slot).ring_position;
+        EXPECT_EQ(position % 4, tokens[i].slot);
+        for (size_t previous = 0; previous < i; ++previous)
+            EXPECT_NE(position, mapped.slot(tokens[previous].slot).ring_position);
+    }
+    EXPECT_GE(mapped.header->ring_tail, 4u);
+    EXPECT_EQ(mapped.header->history_count, 0u);
+    for (const auto& token : tokens) EXPECT_TRUE(pool->releaseWriter(token));
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.free_slots, 4u);
+    EXPECT_EQ(stats.ring_head, stats.ring_tail);
+}
+
+TEST(SharedPoolRing, ReservationPositionExhaustionNeverWrapsOrInvalidatesOutstandingLoans) {
+    auto pool = SharedPayloadPool::create(guid(), config());
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    Mapping mapped(pool->descriptor());
+    SharedSampleToken token; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+    fill(bytes, 1);
+    ASSERT_EQ(pool->publish(token, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(token));
+    SharedReadLoan old;
+    ASSERT_EQ(reader->waitNext(0, 0ms, old), SharedPoolResult::OK);
+    __atomic_store_n(&mapped.header->ring_tail, UINT64_MAX - 1, __ATOMIC_RELEASE);
+    SharedSampleToken extra;
+    EXPECT_EQ(pool->loan(sizeof(Sample), extra, bytes), SharedPoolResult::EXHAUSTED);
+    EXPECT_TRUE(valid(old, 1));
+    old.reset();
+    ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+    EXPECT_EQ(mapped.slot(token.slot).ring_position, UINT64_MAX - 1);
+    EXPECT_EQ(mapped.header->ring_tail, UINT64_MAX);
+    fill(bytes, 2);
+    ASSERT_EQ(pool->publish(token, sizeof(Sample), 2), SharedPoolResult::OK);
+    SharedReadLoan last;
+    ASSERT_EQ(reader->waitNext(1, 0ms, last), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(token));
+    EXPECT_EQ(pool->loan(sizeof(Sample), extra, bytes, 1ms), SharedPoolResult::EXHAUSTED);
+    EXPECT_TRUE(valid(last, 2));
+    last.reset();
+    EXPECT_EQ(pool->loan(sizeof(Sample), extra, bytes), SharedPoolResult::EXHAUSTED);
+    EXPECT_EQ(mapped.header->ring_tail, UINT64_MAX);
+}
+
+TEST(SharedPoolRing, FinalEvenEpochRetiresMutationButPreservesCommittedReadsAndAllReturns) {
+    auto pool = SharedPayloadPool::create(guid(), config(3));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    Mapping mapped(pool->descriptor());
+    SharedSampleToken tokens[3];
+    char* bytes[3]{};
+    for (uint32_t i = 0; i < 3; ++i) {
+        ASSERT_EQ(pool->loan(sizeof(Sample), tokens[i], bytes[i]), SharedPoolResult::OK);
+        fill(bytes[i], i + 1);
+    }
+    ASSERT_EQ(pool->publish(tokens[0], sizeof(Sample), 1), SharedPoolResult::OK);
+    SharedReadLoan old;
+    ASSERT_EQ(reader->waitNext(0, 0ms, old), SharedPoolResult::OK);
+    __atomic_store_n(&mapped.header->history_epoch, UINT64_MAX - 3, __ATOMIC_RELEASE);
+    ASSERT_EQ(pool->publish(tokens[1], sizeof(Sample), 2), SharedPoolResult::OK);
+    EXPECT_EQ(mapped.header->history_epoch, UINT64_MAX - 1);
+    EXPECT_EQ(pool->publish(tokens[2], sizeof(Sample), 3), SharedPoolResult::EXHAUSTED);
+    EXPECT_EQ(mapped.header->history_count, 2u);
+    EXPECT_EQ(mapped.slot(tokens[2].slot).history_linked, 0u);
+    SharedReadLoan last;
+    ASSERT_EQ(reader->waitNext(1, 0ms, last), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(old, 1));
+    EXPECT_TRUE(valid(last, 2));
+    for (const auto& token : tokens) EXPECT_TRUE(pool->releaseWriter(token));
+    old.reset(); last.reset();
+    SharedSampleToken extra; char* unused = nullptr;
+    EXPECT_EQ(pool->loan(sizeof(Sample), extra, unused), SharedPoolResult::EXHAUSTED);
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.free_slots, 3u);
+    EXPECT_EQ(stats.history_samples, 2u);
+}
+
+TEST(SharedPoolRing, StableMalformedRootsLinksStatesCountsAndOrderAreRejectedInsteadOfScanned) {
+    for (uint32_t damage = 0; damage < 9; ++damage) {
+        SCOPED_TRACE(damage);
+        auto pool = SharedPayloadPool::create(guid(), config(2));
+        auto reader = pool->registerReader();
+        ASSERT_TRUE(reader);
+        SharedSampleToken tokens[2];
+        for (uint32_t i = 0; i < 2; ++i) {
+            char* bytes = nullptr;
+            ASSERT_EQ(pool->loan(sizeof(Sample), tokens[i], bytes), SharedPoolResult::OK);
+            fill(bytes, i + 1);
+            ASSERT_EQ(pool->publish(tokens[i], sizeof(Sample), i + 1), SharedPoolResult::OK);
+        }
+        Mapping mapped(pool->descriptor());
+        switch (damage) {
+        case 0: mapped.header->history_head = NO_SLOT; break;
+        case 1: mapped.header->history_tail = NO_SLOT; break;
+        case 2: mapped.header->history_count = 3; break;
+        case 3: mapped.slot(tokens[0].slot).history_next = NO_SLOT; break;
+        case 4: mapped.slot(tokens[1].slot).history_previous = NO_SLOT; break;
+        case 5: mapped.slot(tokens[0].slot).gate = 3; break;
+        case 6: mapped.slot(tokens[1].slot).sequence = 1; break;
+        case 7: mapped.slot(tokens[0].slot).history_linked = 0; break;
+        case 8: mapped.header->history_count = 0; break;
+        }
+        SharedReadLoan loan;
+        EXPECT_EQ(reader->waitNext(0, 0ms, loan), SharedPoolResult::CORRUPT);
+        EXPECT_FALSE(loan);
+        SharedPoolStats stats;
+        EXPECT_EQ(pool->statistics(stats), SharedPoolResult::CORRUPT);
+        EXPECT_FALSE(pool->registerReader(GUID_UNKNOWN, true));
+        EXPECT_EQ(mapped.header->poisoned, 1u);
+    }
+}
+
+TEST(SharedPoolRing, InterruptedOddEpochDrainsCommittedSamplesWithoutDereferencingPartialLinks) {
+    auto pool = SharedPayloadPool::create(guid(), config(2));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    for (uint64_t sequence = 1; sequence <= 2; ++sequence) {
+        SharedSampleToken token; char* bytes = nullptr;
+        ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+        fill(bytes, sequence);
+        ASSERT_EQ(pool->publish(token, sizeof(Sample), sequence), SharedPoolResult::OK);
+    }
+    Mapping mapped(pool->descriptor());
+    __atomic_add_fetch(&mapped.header->history_epoch, uint64_t(1), __ATOMIC_ACQ_REL);
+    mapped.header->history_head = NO_SLOT;
+    mapped.header->history_tail = NO_SLOT;
+    for (uint32_t i = 0; i < 2; ++i) mapped.slot(i).history_next = NO_SLOT;
+    // A dead/stopped mutator can leave partial links. Committed watermarked
+    // samples remain readable via the bounded fallback, including after close.
+    pool->closeWriter();
+    for (uint64_t sequence = 1; sequence <= 2; ++sequence) {
+        SharedReadLoan loan;
+        ASSERT_EQ(reader->waitNext(sequence - 1, 0ms, loan), SharedPoolResult::OK);
+        EXPECT_TRUE(valid(loan, sequence));
+    }
+    SharedReadLoan empty;
+    EXPECT_EQ(reader->waitNext(2, 0ms, empty), SharedPoolResult::CLOSED);
 }
 
 TEST(SharedPool, LocalDirectoryAndDiscoveredIdentityDeriveExactSegmentPath) {
@@ -1296,6 +1594,67 @@ TEST(SharedPoolProcesses, SignalDeliveredToWaitingReaderDoesNotLoseNextPublicati
     ASSERT_TRUE(sendByte(child.fd, 'D'));
     ASSERT_TRUE(expectByte(child.fd, 'D'));
     EXPECT_EQ(child.waitStatus(), 0);
+}
+
+TEST(SharedPoolProtection, OpenKeepsControlMetadataWritableAndEveryPayloadPageReadOnly) {
+    auto c = config(80);
+    c.payload_size = 64;
+    auto writer = SharedPayloadPool::create(guid(), c);
+    auto attachment = SharedPayloadPool::open(writer->descriptor());
+    auto reader = attachment->registerReader();
+    ASSERT_TRUE(reader);
+    SharedSampleToken token; char* bytes = nullptr;
+    ASSERT_EQ(writer->loan(sizeof(uint64_t), token, bytes), SharedPoolResult::OK);
+    const uint64_t original = 0x12345678abcdef09ULL;
+    std::memcpy(bytes, &original, sizeof(original));
+    ASSERT_EQ(writer->publish(token, sizeof(original), 1), SharedPoolResult::OK);
+    SharedReadLoan loan;
+    ASSERT_EQ(reader->waitNext(0, 0ms, loan), SharedPoolResult::OK);
+    uint64_t received = 0;
+    std::memcpy(&received, loan.data(), sizeof(received));
+    EXPECT_EQ(received, original);
+    const auto payloadBytes = size_t(c.payload_size) * c.slots;
+    const auto payloadOffset = writer->descriptor().segment_bytes - payloadBytes;
+    const auto page = size_t(sysconf(_SC_PAGESIZE));
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(loan.data()) % page, 0u);
+    EXPECT_EQ(mappingPermissions(bytes), "rw-s");
+    EXPECT_EQ(mappingPermissions(loan.data() - payloadOffset), "rw-s");
+    for (size_t offset = 0; offset < payloadBytes; offset += page)
+        EXPECT_EQ(mappingPermissions(loan.data() + offset), "r--s");
+    EXPECT_EQ(mappingPermissions(loan.data() + payloadBytes - 1), "r--s");
+    EXPECT_TRUE(reader->returnLoan(loan)); // Its control metadata is still writable.
+    EXPECT_TRUE(writer->releaseWriter(token));
+}
+
+TEST(SharedPoolProtection, IndependentExecReaderPayloadStoreFaultsAndItsLoanIsReapedAfterDeath) {
+    auto writer = SharedPayloadPool::create(guid(), config());
+    SharedSampleToken token; char* bytes = nullptr;
+    ASSERT_EQ(writer->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+    fill(bytes);
+    Child child("illegal-reader-write");
+    auto w = wire(writer->descriptor(), bytes);
+    ASSERT_TRUE(transfer(child.fd, &w, sizeof(w), true));
+    ASSERT_TRUE(expectByte(child.fd, 'R'));
+    ASSERT_EQ(writer->publish(token, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(expectByte(child.fd, 'L'));
+    SharedPoolStats stats;
+    ASSERT_EQ(writer->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.loan_references, 1u);
+    ASSERT_TRUE(sendByte(child.fd, 'W'));
+    const auto status = child.waitStatus();
+    ASSERT_GE(status, 0);
+    ASSERT_TRUE(WIFSIGNALED(status));
+    EXPECT_EQ(WTERMSIG(status), SIGSEGV);
+    EXPECT_EQ(reinterpret_cast<const Sample*>(bytes)->index, 17u);
+    ASSERT_TRUE(writer->releaseWriter(token));
+    ASSERT_EQ(writer->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.readers, 0u);
+    EXPECT_EQ(stats.loan_references, 0u);
+    EXPECT_EQ(stats.free_slots, 1u);
+    SharedSampleToken next; char* replacement = nullptr;
+    ASSERT_EQ(writer->loan(sizeof(Sample), next, replacement), SharedPoolResult::OK);
+    EXPECT_GT(next.generation, token.generation);
+    EXPECT_TRUE(writer->releaseWriter(next));
 }
 
 TEST(SharedPoolProcesses, ExecReaderMapsAtDifferentAddressAndPinsTheSameNativeSample) {

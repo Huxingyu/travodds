@@ -1,6 +1,6 @@
 # 有限运行的 DataSharing 示例
 
-三个示例仅使用公开 DDS API，运行在 Linux 同一主机上，每次启动一个发布进程和独立 exec 订阅进程，完成固定条数后自行退出。无需 GPU、外部服务、账号或密钥。当前共享布局 v6、发现能力 v4，强制无初始化及带键 key-only 准入；库、示例与 TypeSupport 必须一起重新编译。本轮三个示例各 3 轮、共 9 次实际通过，并与 529 项普通回归、两版 focused 各 86 项及最终审计绑定同一源码；结果与完整复现命令见 [10/31 报告](../../../docs/DATASHARING-PROGRESS-20261031.md) 和 [验收矩阵](../../../docs/DATASHARING-ACCEPTANCE.md)。[10/30 v3 报告](../../../docs/DATASHARING-STRICT-20261030.md) 继续保留历史，不能替代当前结果。
+三个示例仅使用公开 DDS API，运行在 Linux 同一主机上，每次启动一个发布进程和独立 exec 订阅进程，完成固定条数后自行退出。无需 GPU、外部服务、账号或密钥。当前共享布局 v7、发现能力 v5，保留无初始化与带键 key-only 门控，并增加真实发布历史环及 Reader 全载荷只读映射；库、示例与 TypeSupport 必须一起重新编译。本轮实现已完成本轮验证，结果及设计见 [环与载荷说明](../../../docs/DATASHARING-RING.md)，实际结果以 [验收矩阵](../../../docs/DATASHARING-ACCEPTANCE.md) 为准。前轮 v6/v4 的 529 项、9 次示例、93.936% 与两版 focused 各 86 项，以及 [10/30 v3 报告](../../../docs/DATASHARING-STRICT-20261030.md) 均保留各自历史含义，不能替代本轮结果。
 
 | 可执行文件 | 演示内容 | 每轮预期检查 |
 |---|---|---|
@@ -38,7 +38,9 @@ python3 tools/ospp/datasharing_examples.py \
 
 ## API 流程与配置
 
-`sample.h/.cpp` 提供 64 字节、64 字节对齐、无指针的固定布局样本，显式声明版本化布局 ID。布局、大小、对齐和字段含义在所有进程中必须一致；不能把含指针、string、vector 的普通对象直接放进共享段。带键类型单独实现键哈希，并显式实现 get_native_key_info/capture_native_key/restore_native_key：只保存 8 字节键，不复制 64 字节样本。键查询只修改输出的键，非键字段保持原值。示例 Writer 和 Reader 的 TypeSupport 均实现这些强制钩子。这些声明是手写实现，仓库没有任意 IDL 自动 native 适配生成器；HelloWorld 无界 string 正常使用 CDR/RTPS。无初始化资格需要显式满足，借出的字段不保证为零；应用须在 write 前填写全部将被读取的字段。两端分别校验有效 NativeKeyInfo，只有 discovery v4 同契约端点才能进入 DS；键表示仍是本地元数据，具体快照字节无需通过发现传输。缺失/非法元数据时 ON enable 返回 UNSUPPORTED，AUTO 不广告 DS 且保留普通 CDR/RTPS，loan_sample 返回 UNSUPPORTED。捕获/还原失败直接报错，不会复制完整样本兜底。键和 RTPS 控制元数据仍有复制，零调用计数仅针对完整载荷 CDR，不代表没有任何字节复制。
+`sample.h/.cpp` 提供 64 字节、64 字节对齐、无指针的固定布局样本，显式声明版本化布局 ID。布局、大小、对齐和字段含义在所有进程中必须一致；不能把含指针、string、vector 的普通对象直接放进共享段。带键类型单独实现键哈希，并显式实现 get_native_key_info/capture_native_key/restore_native_key：只保存 8 字节键，不复制 64 字节样本。键查询只修改输出的键，非键字段保持原值。示例 Writer 和 Reader 的 TypeSupport 均实现这些强制钩子。这些声明是手写实现，仓库没有任意 IDL 自动 native 适配生成器；HelloWorld 无界 string 正常使用 CDR/RTPS。无初始化资格需要显式满足，借出的字段不保证为零；应用须在 write 前填写全部将被读取的字段。两端分别校验有效 NativeKeyInfo，当前只有 discovery v5/布局 v7 兼容端点才能进入 DS；键表示仍是本地元数据，具体快照字节无需通过发现传输。缺失/非法元数据时 ON enable 返回 UNSUPPORTED，AUTO 不广告 DS 且保留普通 CDR/RTPS，loan_sample 返回 UNSUPPORTED。捕获/还原失败直接报错，不会复制完整样本兜底。键和 RTPS 控制元数据仍有复制，零调用计数仅针对完整载荷 CDR，不代表没有任何字节复制。
+
+Writer 直接填写可写 Loan 后发布；Reader 用 const 引用访问借出的生产只读载荷，不能修改该地址。真实历史环按 publish 顺序链接，借出顺序可不同，环元数据变化不搬运样本。示例仍需本轮重跑；独立保护测试另外使用整页样本、PROT_NONE 与 seccomp 检查框架载荷访问，不把其保护窗口当作应用 API。
 
 `demo.cpp` 创建 Domain 146、包含启动 PID 的唯一 Topic，并通过 QoS 向两个进程传入同一个私有 `/dev/shm/travodds-demo-*` 目录。Writer 使用 ON、16 槽、4 Reader 上限、1 MiB 段预算、可靠传输和 history depth 4；Reader 也限制 1 MiB 映射预算。实际共享段小于该预算。示例禁用旧 SHM transport，发现和普通载荷回退使用 UDP。
 

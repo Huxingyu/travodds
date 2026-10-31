@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--focus-test', action='append', default=[], metavar='[FIXTURE.]NAME',
                         help='additional LoanIntegration or NativeReaderIntegration focused cases')
     parser.add_argument('--baseline', default='489067108405b27afbd369245542f5e88d457f18')
-    parser.add_argument('--compiler-memory-mib', type=int, default=512,
+    parser.add_argument('--compiler-memory-mib', type=int, default=768,
                         help='Compiler-only address-space cap; runtime shadow mappings remain unlimited')
     parser.add_argument('--trim-build-cache', action='store_true',
                         help='Discard recorded rebuildable objects after each completed build stage')
@@ -55,7 +55,8 @@ def main():
                     for p in (source / directory).rglob('*')
                     if p.is_file() and p.suffix in ('.h', '.hpp', '.cpp', '.txt'))
     inputs += [source / 'CMakeLists.txt', Path(__file__).resolve(),
-               source / 'tools/ospp/coverage.py', source / 'tools/ospp/datasharing_examples.py']
+               source / 'tools/ospp/coverage.py', source / 'tools/ospp/datasharing_examples.py',
+               source / 'tools/ospp/native_payload_writes.py']
     record = {'source': str(source), 'mode': args.mode, 'scope': args.scope,
               'started_utc': datetime.now(timezone.utc).isoformat(),
               'nice': os.getpriority(os.PRIO_PROCESS, 0),
@@ -144,7 +145,9 @@ def main():
         gcc_gc = ' --param=ggc-min-expand=15 --param=ggc-min-heapsize=16384'
         flags = '-O1 -g0 -DNDEBUG'
         if args.mode == 'coverage':
-            flags = '-O0 -g0 -DNDEBUG --coverage'
+            # DDS exercises concurrent paths. Atomic profile updates avoid
+            # lost arc increments and impossible negative inferred counts.
+            flags = '-O0 -g0 -DNDEBUG --coverage -fprofile-update=atomic'
         flags += gcc_gc
         if args.mode in ('asan', 'tsan'):
             flags += ' -fno-omit-frame-pointer -fsanitize=' + (
@@ -179,7 +182,8 @@ def main():
             targets.append('payloadpool_test')
         if args.scope == 'focused':
             targets += ['gtest_main', 'native_key_admission_test',
-                        'native_initialization_test', 'reader_payloadpool_test']
+                        'native_initialization_test', 'native_payload_writes_test',
+                        'reader_payloadpool_test']
         run('build-tests', ['cmake', '--build', tests, '--parallel', '1', '--target', *targets], True, args.compile_timeout)
         trim_cache('tests')
         prefix = ['setarch', platform.machine(), '-R'] if args.mode == 'tsan' else []
@@ -234,6 +238,15 @@ def main():
             if int(attributes['tests']) == 0 or any(int(attributes.get(k, 0))
                     for k in ('failures', 'errors', 'disabled')):
                 raise RuntimeError(target + ' has failures, disabled tests or empty coverage')
+        if args.scope in ('integration', 'focused'):
+            guard_target = 'payloadpool_test' if args.scope == 'integration' else 'native_payload_writes_test'
+            proof = output / 'native-payload-writes.json'
+            run('verify-native-payload-writes', ['python3', source / 'tools/ospp/native_payload_writes.py',
+                '--xml', output / (guard_target + '.xml'),
+                '--log', output / (guard_target + '.log'), '--output', proof])
+            record['native_payload_writes'] = json.loads(proof.read_text())
+            if record['native_payload_writes'].get('passed') is not True:
+                raise RuntimeError('Native payload write proof is incomplete')
         if args.core:
             core = build / 'core'
             run('configure-core', ['cmake', '-S', source / 'test/unit_inside', '-B', core,

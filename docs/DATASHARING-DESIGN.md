@@ -1,6 +1,6 @@
 # DataSharing 与 Loan 设计
 
-本文按本轮实现更新：共享布局 v6、发现能力 v4，Reader 普通池及 native 无初始化改动已通过当前验收。结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)，官方交付对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)，数据面既有协议见 [历史生产报告](DATASHARING-PRODUCTION-20261030.md)。零完整载荷复制限定显式兼容的 Writer Loan → Reader Loan 分支；普通裸指针 write 和预分配输出仍复制，无初始化需要单独满足类型契约。
+本文按本轮实现更新：共享布局 v7、发现能力 v5，实际发布历史环及 Reader 载荷只读映射已实现，当前串行验证结果见 [环设计与验证](DATASHARING-RING.md)。官方交付对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)，v6/v4 的历史冻结结果见 [10/31 前轮报告](DATASHARING-PROGRESS-20261031.md)，数据面既有协议见 [历史生产报告](DATASHARING-PRODUCTION-20261030.md)。零完整载荷复制限定显式兼容的 Writer Loan → Reader Loan 分支；普通裸指针 write 和预分配输出仍复制，无初始化需要单独满足类型契约。
 
 ## 当前分配与归还路径
 
@@ -12,7 +12,7 @@
 
 Reader 的反序列化读取临时持有 `shared_ptr<CacheChange>`。`take` 从历史中移除可读取样本；它不直接释放复制出来的 `SerializedBuffer::origin_buffer`。当所有历史、临时读取及其他持有者均释放缓存时，才由缓存归还原池。RTPS 接收的 `CacheSerializedBuffer` 也可能只借用 `originMessage` 的空间而没有 `origin_buffer`；该路径依靠消息的强引用保活。
 
-Reader 普通载荷池接入是本轮补全项：计划在 AddChanges/history 准入边界将完整 CDR 分片链事务性转入 Reader 配置的 Topic 池，失败归还已分配分片并拒绝准入；配置相同的同 domain/topic/type Reader/Writer 复用池。transport 接收整包与独立 CDR key snapshot 保留原池，不计 history Topic 预算；native SharedReadLoan 保留原映射，不复制到普通池。该路径尚待本轮真实 RTPS/分片与生命周期回归，不能用旧 Writer 普通池结果证明 Reader 已接入。
+Reader 普通载荷池已在 AddChanges/history 准入边界将完整 CDR 分片链事务性转入 Reader 配置的 Topic 池，失败归还已分配分片并拒绝准入；配置相同的同 domain/topic/type Reader/Writer 复用池。transport 接收整包与独立 CDR key snapshot 保留原池，不计 history Topic 预算；native SharedReadLoan 保留原映射，不复制到普通池。该路径已有真实 RTPS/分片与生命周期回归，并纳入本轮完整模块验证；其分配和复制语义与 native 借用分支分别记录。
 
 ## 四种普通池策略
 
@@ -33,9 +33,9 @@ Reader 普通载荷池接入是本轮补全项：计划在 AddChanges/history �
 
 `SharedPayloadPool` 使用 `travodds_ds_<Writer GUID>_<128 位随机会话>.shm` 文件，默认目录 `/dev/shm`，创建权限 0600。文件保存 magic、协议版本、布局长度、pthread ABI 大小、Writer GUID、会话、PID 命名空间、进程启动身份、样本大小/对齐、槽位数以及运行状态。创建使用 InterprocessType 中的 Boost 设备与初始化文件锁，并在 Boost mapped_region 映射前通过 `posix_fallocate` 预留实际存储，空间不足时抛出异常。映射前检查文件类型、属主、权限、长度、布局与会话；不对未验证的内容执行共享锁操作。
 
-每个槽位包含独立的 64 位代次、序列号、有效长度、Writer 持有状态，以及每个 Reader 的未读与借用位图，最多 64 个 Reader。槽位从 FREE 到 WRITING，再到 PUBLISHED；只有 Writer 引用、未读投递和所有 Reader Loan 都释放后才能回到 FREE。样本代次、Reader 注册代次不会回绕；达到上限后停止复用相应槽位或注册项。序列号必须严格递增。
+每个槽位包含独立的 64 位代次、序列号、有效长度、Writer 持有状态，以及每个 Reader 的未读与借用位图，最多 64 个 Reader。槽位从 FREE 到 WRITING，再到 PUBLISHED；只有 Writer 引用、未读投递和所有 Reader Loan 都释放，且短操作 gate 为空时，才允许冻结并复用槽位；载荷不需先清零。样本代次、Reader 注册代次不会回绕；达到上限后停止复用相应槽位或注册项。序列号必须严格递增。
 
-分配采用固定槽位池的轮转扫描：递增起点后按模槽位数扫描可复用项。它不是依靠 head/tail 保证 FIFO 的环形队列，起点轮转也不表示按顺序覆盖最旧样本；仍有 Writer/pending/Reader Loan pin 的槽位不能复用。
+共享段同时保存不回绕的 64 位预留位置和实际发布历史闭环。预留从 ring_tail 按模槽位数查找未被 pin 的节点，成功 CAS 后推进至实际选中位置的后继。成功发布按实际序列号追加到 history_head/history_tail 双链闭环，取消的未发布 Loan 不进入历史；Reader 正常读取与回放沿发布环遍历。复用旧节点前先在奇数 epoch 中摘链，所有 Writer/pending/Reader Loan pin 释放后才允许复用。稳定坏环返回 CORRUPT，仅并发或中断造成的不稳定 epoch 允许保守扫描。完整事务和极值行为见 [环说明](DATASHARING-RING.md)。
 
 发布顺序为：取得可写槽位 → 开始对象寿命但不初始化载荷 → 应用填写所有将被读取的字段 → 发布槽位身份 → 通知 Reader。借出不保证零初值。Reader 必须在获取发布同步之后访问样本；通知只是唤醒提示，不能作为唯一的数据队列，也不能因为通知合并而漏读样本。
 
@@ -145,4 +145,4 @@ Reader序列API采用preview→materialize→commit，缓存身份而非全局�
 TBF定时提交在完成history事务和deadline推进后释放ingress，再调用应用listener。DCPS Reader析构先在锁外Exit并等待该Timer，之后解除关联；closing状态拒绝新的set_qos，避免回调释放锁后的对象寿命空窗。DATA_AVAILABLE状态先更新再交给listener，回调内take可以正确清除状态，不会被回调返回后的旧置位覆盖。
 
 
-2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。
+前轮 2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。该历史版本的 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 前轮报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。

@@ -1,6 +1,6 @@
 # DataSharing 配置与发现能力（当前实现）
 
-本文按本轮共享布局 v6、发现能力 v4 实现更新；Reader 普通池和 native 无初始化改动已通过当前验收，结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)，官方交付与历史边界见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
+本文按本轮共享布局 v7、发现能力 v5 实现更新；真实发布历史环与 Reader 全载荷只读映射已完成本轮验证，见 [环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 529 项与 93.936% 等数字不代表本轮新源码通过，最终结果见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
 
 C++ QoS、XML、Writer 共享池分配、SEDP 能力、Reader 实际映射注册与每对端点的传输选择已接入。有键与无键固定布局类型可以自动走共享路径；同一个 Writer 可以同时发送给共享 Reader 和 RTPS Reader。`ON` 要求本地准备成功；本轮对端不兼容、未注册或 Reader 映射失败仍保留 RTPS，映射异常会记录日志。ON 的契约为本地准备严格、对端不可用回退；兼容对端的暂时失败自动重试。
 
@@ -67,9 +67,11 @@ Writer/Reader 支持相同节点。省略字段沿用默认值或基 profile；�
 
 ## 发现扩展与回退边界
 
-SEDP 使用 TravoDDS 自定义 PID `0x80e1`。本轮有能力的 Writer/Reader 使用发现版本 4，携带原生布局 ID/大小/对齐、共享组、Linux boot ID 与 PID namespace 身份。Writer 另外发送随机会话、段字节数与槽位/Reader 数；不发送或接受任意远端文件路径。
+SEDP 使用 TravoDDS 自定义 PID `0x80e1`。本轮有能力的 Writer/Reader 使用发现版本 5，携带原生布局 ID/大小/对齐、共享组、Linux boot ID 与 PID namespace 身份。Writer 另外发送随机会话、段字节数与槽位/Reader 数；不发送或接受任意远端文件路径。
 
-能力正文采用固定大端格式，与外层 ParameterList 的字节序无关；整体最多 1024 字节，布局 ID 最多 256 字节，共享组最多 32 个。解码按边界验证后分配，拒绝重复能力、未知版本、截断、错误角色和非零尾部填充。缺少扩展、发现能力 v1/v2/v3 或未知版本时不能启用 native，保留 RTPS。v4 同时表示无初始化能力及强制带键 key-only 准入，隔离仍可能清零完整载荷的旧 v3 对端。
+能力正文采用固定大端格式，与外层 ParameterList 的字节序无关；整体最多 1024 字节，布局 ID 最多 256 字节，共享组最多 32 个。解码按边界验证后分配，拒绝重复能力、未知版本、截断、错误角色和非零尾部填充。缺少扩展、发现能力 v1/v2/v3/v4 或未知版本时不能启用 native，保留 RTPS。v5 绑定布局 v7 的发布历史环与载荷页边界，同时保留无初始化及强制带键 key-only 准入；本轮隔离回归尚待执行。
+
+共享段预算包含 Header、Slot、页对齐填充和所有载荷 stride。v7 载荷起点按宿主页对齐；仅该填充最多增加 page_size-1 字节，新增环控制字段另按实际结构大小计入 segment_bytes。超过 max_segment_bytes 拒绝创建，不因 Reader 只读映射省略对应预算。Reader 的全部载荷页为 PROT_READ、控制页仍为 RW；Writer 映射仍为 RW，详见 [布局与保护](DATASHARING-RING.md#只写一次的软件命题与独立证据)。
 
 `compatible_with` 要求 Writer/Reader 角色、版本、类型布局、同主机/同 PID namespace 和共享组交集全部成立。结果仅是候选；后续实际 open 还必须通过共享池已有的文件属主/权限、会话、GUID、长度、pthread ABI、进程身份等校验，并完成 Reader 注册和重放 ready 握手，才可切换传输。只有 ready 的兼容 Reader 才会被选为该样本的 DDS 共享目标。能力广告本身不代表已打开共享段，也不能当作安全认证。启用 DDS Security 时不准备原生共享路径。
 
@@ -85,7 +87,7 @@ TypeSupport/DataWriter 虚表、QoS、BuiltinTopicData 和序列布局均有变�
 - 双方均为 TRANSIENT_LOCAL 时允许注册时重放 Writer 仍持有的共享槽位。Writer 无 Reader 预发布、可靠/尽力独立进程晚加入、混合晚加入及 VOLATILE 排除旧数据已有测试；BEST_EFFORT 不提供丢包重发保证。
 
 
-普通序列化载荷池由本地 payload_pool 配置；本轮新增 DataReaderQos/XML 接入，Writer 既有配置保留。配置兼容的同 domain/topic/type 端点复用池，Reader 在 history 准入边界转入普通 CDR 分片，native Loan 旁路；19 项 Reader 回归已在普通与两个检查版中通过。四种策略、容量、对齐及 XML 写法见 [普通池配置手册](PAYLOADPOOL-QOS.md)。data_sharing.max_samples 约束共享槽位，payload_pool.max_payloads 约束普通 history CDR 分片块，transport 整包与独立 CDR key snapshot 不计后者预算。
+普通序列化载荷池由本地 payload_pool 配置，DataReaderQos/XML 与 Writer 配置均保留。配置兼容的同 domain/topic/type 端点复用池，Reader 在 history 准入边界转入普通 CDR 分片，native Loan 旁路；前轮 19 项 Reader 回归的通过只证明 v6/v4，本轮需重验。四种策略、容量、对齐及 XML 写法见 [普通池配置手册](PAYLOADPOOL-QOS.md)。data_sharing.max_samples 约束共享槽位，payload_pool.max_payloads 约束普通 history CDR 分片块，transport 整包与独立 CDR key snapshot 不计后者预算。
 
 带键注册与 Reader 键查询额外保留独立本地键快照；native 仅存声明的键字节，不存在全样本快照兼容分支。Writer 与 Reader 两端必须各自满足 key-only 契约才能广告 DS；具体键表示仍是本地元数据，捕获/还原失败不会回退完整样本复制。CDR 类型继续使用其原有序列化快照。键和控制元数据仍有复制，不承诺任何字节都不复制。详见 [API 手册](DATASHARING-API.md#带键实例与本地快照)。它不占共享槽位，也不计入段预算；配置大量实例时需要另外预算内存。
 
@@ -105,4 +107,4 @@ lifespan使用Writer源时间，进入history前检查、读取前及维护期�
 KEEP_LAST普通write在槽位耗尽且同实例history已满时先释放待替换history引用，再尝试预留。应用Writer Loan、未读Reader及Reader Loan独立固定槽位；仍被固定时ON返回OUT_OF_RESOURCES，AUTO普通write回退CDR。KEEP_ALL不会为了新写入提前淘汰保留历史，容量需包含在途与应用借用预算。不能借此增加段槽位或覆盖未归还Loan。不同键共用总槽位预算，不会为新键淘汰其他实例历史。
 
 
-2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。
+当前严格补全轮采用共享布局 v7 / discovery v5，新增真实发布历史环与 Reader 全载荷只读映射，已完成本轮验证，设计和实际证据见 [环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 321 项冻结输入对应 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项，原始范围保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)；这些数字不能作为本轮新源码通过结果。[10/30 报告](DATASHARING-STRICT-20261030.md) 继续保留更早 v3 的历史。LSan 未启用，历史 WaitSet 崩溃根因仍未知。

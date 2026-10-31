@@ -64,6 +64,15 @@ struct SharedPoolStats {
     uint64_t pending_references = 0;
     uint64_t loan_references = 0;
     bool writer_alive = false;
+    // Observational reservation bounds, not one linearizable transaction.
+    // Head is the minimum still-pinned position, or tail when none is seen.
+    // A slow pin can keep head behind several physical wraps; holes do not
+    // consume extra slots or prevent another free cell from being reserved.
+    uint64_t ring_head = 0;
+    uint64_t ring_tail = 0;
+    uint32_t history_samples = 0;
+    uint64_t history_first_sequence = 0;
+    uint64_t history_last_sequence = 0;
 };
 
 class SharedPayloadPool;
@@ -124,8 +133,9 @@ private:
     friend class SharedReadLoan;
 };
 
-// Linux implementation: a preallocated native-layout Writer segment, mapped
-// independently by Readers. No C++ pointers/containers are stored in the file.
+// Linux implementation: a preallocated native-layout Writer segment with a
+// shared circular published history and monotonic reservation positions.
+// Readers map it independently. No C++ pointers/containers live in the file.
 class SharedPayloadPool : public IPayloadPool, public std::enable_shared_from_this<SharedPayloadPool> {
 public:
     static std::shared_ptr<SharedPayloadPool> create(const GUID_t& writer,
