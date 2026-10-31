@@ -944,6 +944,85 @@ TEST(SharedPoolRing, UnrelatedBusyHistoryNodeDoesNotBlockDeliveryOrStatistics) {
     EXPECT_TRUE(pool->releaseWriter(pendingToken));
 }
 
+TEST(SharedPoolRing, ReplaySkipsUnretainedBusyHistoryButProtectsRetainedPins) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 1));
+    SharedSampleToken retired, retained;
+    char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), retired, bytes), SharedPoolResult::OK);
+    fill(bytes, 1);
+    ASSERT_EQ(pool->publish(retired, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(retired));
+    ASSERT_EQ(pool->loan(sizeof(Sample), retained, bytes), SharedPoolResult::OK);
+    fill(bytes, 2);
+    ASSERT_EQ(pool->publish(retained, sizeof(Sample), 2), SharedPoolResult::OK);
+
+    Mapping mapped(pool->descriptor());
+    auto& unrelated = mapped.slot(retired.slot);
+    std::shared_ptr<SharedPoolReader> replay;
+    {
+        struct RestoreGate {
+            uint64_t& gate;
+            ~RestoreGate() { __atomic_store_n(&gate, uint64_t(PUBLISHED), __ATOMIC_SEQ_CST); }
+        } restore{unrelated.gate};
+        // A saturated short-operation count makes any unnecessary lease
+        // deterministic, without timing a registration against a Writer.
+        __atomic_store_n(&unrelated.gate, UINT64_MAX - 1, __ATOMIC_SEQ_CST);
+        replay = pool->registerReader(GUID_UNKNOWN, true);
+        EXPECT_TRUE(replay);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->poisoned, __ATOMIC_SEQ_CST), 0u);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->readers[0].ready, __ATOMIC_SEQ_CST), 1u);
+        EXPECT_EQ(__atomic_load_n(&unrelated.pending, __ATOMIC_SEQ_CST), 0u);
+        EXPECT_EQ(__atomic_load_n(&unrelated.gate, __ATOMIC_SEQ_CST), UINT64_MAX - 1);
+        EXPECT_EQ(__atomic_load_n(&mapped.slot(retained.slot).pending, __ATOMIC_SEQ_CST), 1u);
+    }
+    ASSERT_TRUE(replay);
+    ASSERT_TRUE(pool->releaseWriter(retained));
+    // The replay pin, rather than the Writer's history pin, now protects 2.
+    SharedSampleToken writable;
+    ASSERT_EQ(pool->loan(sizeof(Sample), writable, bytes), SharedPoolResult::OK);
+    EXPECT_EQ(writable.slot, retired.slot);
+    fill(bytes, 3);
+    SharedReadLoan received;
+    ASSERT_EQ(replay->waitNext(0, 0ms, received), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(received, 2));
+    EXPECT_TRUE(pool->releaseWriter(writable));
+}
+
+TEST(SharedPoolRing, ReplayDefersBusyRetainedNodeWithoutAddingAnUnprotectedPin) {
+    auto pool = SharedPayloadPool::create(guid(), config(1, 1));
+    SharedSampleToken retained;
+    char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), retained, bytes), SharedPoolResult::OK);
+    fill(bytes, 7);
+    ASSERT_EQ(pool->publish(retained, sizeof(Sample), 7), SharedPoolResult::OK);
+    Mapping mapped(pool->descriptor());
+    auto& slot = mapped.slot(retained.slot);
+    std::shared_ptr<SharedPoolReader> replay;
+    {
+        struct RestoreGate {
+            uint64_t& gate;
+            ~RestoreGate() { __atomic_store_n(&gate, uint64_t(PUBLISHED), __ATOMIC_SEQ_CST); }
+        } restore{slot.gate};
+        __atomic_store_n(&slot.gate, UINT64_MAX - 1, __ATOMIC_SEQ_CST);
+        replay = pool->registerReader(GUID_UNKNOWN, true);
+        EXPECT_TRUE(replay);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->poisoned, __ATOMIC_SEQ_CST), 0u);
+        EXPECT_EQ(__atomic_load_n(&mapped.header->readers[0].ready, __ATOMIC_SEQ_CST), 0u);
+        EXPECT_EQ(__atomic_load_n(&slot.pending, __ATOMIC_SEQ_CST), 0u);
+        EXPECT_EQ(__atomic_load_n(&slot.gate, __ATOMIC_SEQ_CST), UINT64_MAX - 1);
+    }
+    ASSERT_TRUE(replay);
+    SharedReadLoan received;
+    ASSERT_EQ(replay->waitNext(0, 0ms, received), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(retained));
+    EXPECT_TRUE(valid(received, 7));
+    SharedSampleToken unavailable;
+    EXPECT_EQ(pool->loan(sizeof(Sample), unavailable, bytes), SharedPoolResult::EXHAUSTED);
+    received.reset();
+    ASSERT_EQ(pool->loan(sizeof(Sample), unavailable, bytes), SharedPoolResult::OK);
+    EXPECT_TRUE(pool->releaseWriter(unavailable));
+}
+
 TEST(SharedPoolRing, StableMalformedRootsLinksStatesCountsAndOrderAreRejectedInsteadOfScanned) {
     for (uint32_t damage = 0; damage < 9; ++damage) {
         SCOPED_TRACE(damage);
