@@ -252,12 +252,17 @@ void Spdp::on_data_available(std::shared_ptr<CacheChange> change)
 
 int Spdp::GetParticipantData(BuiltinTopicKey_t& key, SPDPdiscoveredParticipantData& data)
 {
-	if (0 == remoteParticipantData_.count(key)) {
+	// mutex_ guards only the remote participant maps. SEDP calls this with a
+	// Reader lock held, so no code may call out of Spdp while holding mutex_.
+	std::lock_guard<std::mutex> lock(mutex_);
+
+	const auto itor = remoteParticipantData_.find(key);
+	if (remoteParticipantData_.end() == itor) {
 		TRAVODDS_LOG(LOG_ERROR, "key not exist");
 		return RETCODE_ERROR;
 	}
 
-	data = remoteParticipantData_[key];
+	data = itor->second;
 	return RETCODE_OK;
 }
 
@@ -598,7 +603,17 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 	}
 #endif
 	//TODO 新增节点 添加代理
-	if (0 == remoteParticipantData_.count(data.ddsParticipantData.key)) {
+	bool newParticipant = false;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		newParticipant = 0 == remoteParticipantData_.count(data.ddsParticipantData.key);
+		if (!newParticipant) {
+			Time_t currentTime;
+			DomainParticipantImpl::get_current_time(currentTime);
+			remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
+		}
+	}
+	if (newParticipant) {
 #ifdef DDSSECURITY
 		// 安全下先不进行Subscription、Publication匹配
 		discovery_->AddPartProxy(data);
@@ -606,12 +621,6 @@ void Spdp::ReceiveSPDPdiscoveredParticipantData(SPDPdiscoveredParticipantData& d
 		// 没有安全下直接实体匹配
 		discovery_->AddProxy(data);
 #endif // DDSSECURITY
-	}
-	else
-	{
-		Time_t currentTime;
-		DomainParticipantImpl::get_current_time(currentTime);
-		remoteParticipantStatus_[data.ddsParticipantData.key].recvTime = Conversion::ToSecondsDouble(currentTime);
 	}
 #ifdef DDSSECURITY
 	//判断是否为已知节点，如果是发现新的DP 则进入验证远端，发起握手流程
@@ -937,18 +946,21 @@ void Spdp::AddSpdpProxy(const SPDPdiscoveredParticipantData& data)
 
 void Spdp::RemoveSpdpProxy(const GUID_t& guid)
 {
-	std::lock_guard<std::mutex> lock(mutex_);
-
 	BuiltinTopicKey_t key = Conversion::ToBuiltinTopicKey(guid);
 
-	if (0 == remoteParticipantStatus_.count(key)) {
-		//TRAVODDS_LOG(LOG_DEBUG, "guid not exist");
-		return;
-	}
-		
+	{
+		// Release before the Participant calls below take Reader/Writer locks;
+		// SEDP takes those first and then mutex_ in GetParticipantData.
+		std::lock_guard<std::mutex> lock(mutex_);
 
-	remoteParticipantStatus_.erase(key);
-	remoteParticipantData_.erase(key);
+		if (0 == remoteParticipantStatus_.count(key)) {
+			//TRAVODDS_LOG(LOG_DEBUG, "guid not exist");
+			return;
+		}
+
+		remoteParticipantStatus_.erase(key);
+		remoteParticipantData_.erase(key);
+	}
 
 	//printf("SPDP: after remove remote participant %zu ", remoteParticipantData_.size());
 	//for (int i = 0; i < 16; i++) {
