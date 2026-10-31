@@ -134,6 +134,10 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 	MaintainHistory();
 	if (!cache) return RETCODE_BAD_PARAMETER;
 	if (datareader_ && !datareader_->CheckLifespan(cache)) return RETCODE_LIFESPAN_TIMEOUT;
+    if (datareader_) {
+        const auto result = datareader_->PrepareSerializedPayload(cache);
+        if (result != RETCODE_OK) return result;
+    }
 	/* 判断是否有key  */
 	std::map<InstanceHandle_t, CacheChangeVector>::iterator vitOut;
 	SerializedBuffer* buffer = nullptr;

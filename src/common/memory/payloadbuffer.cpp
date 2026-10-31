@@ -2,10 +2,36 @@
 #include "common/memory/payloadbuffer.h"
 #include "rtps/basictypertps.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <new>
 
 TRAVODDS_NAMESPACE_BEGIN
+
+ReturnCode_t CloneSerializedPayload(const std::shared_ptr<IPayloadPool>& pool,
+        const SerializedBuffer* source, SerializedBuffer*& bufferHeader)
+{
+    bufferHeader = nullptr;
+    if (!pool || !source) return RETCODE_BAD_PARAMETER;
+    PayloadBufferPtr chain(nullptr, PayloadBufferDeleter{pool});
+    SerializedBuffer* tail = nullptr;
+    for (; source; source = source->next) {
+        if (!source->buffer || !source->buffer_size) return RETCODE_BAD_PARAMETER;
+        PayloadBufferPtr part(new (std::nothrow) SerializedBuffer, PayloadBufferDeleter{pool});
+        if (!part || !pool->getBuffer(source->buffer_size, part->origin_buffer))
+            return RETCODE_APPLY_MEM_ERR;
+        part->buffer = part->origin_buffer;
+        part->buffer_size = source->buffer_size;
+        part->writer_position = source->buffer_size;
+        std::memcpy(part->buffer, source->buffer, source->buffer_size);
+        auto* current = part.get();
+        if (tail) tail->next = part.release();
+        else chain = std::move(part);
+        tail = current;
+    }
+    bufferHeader = chain.release();
+    return RETCODE_OK;
+}
 
 ReturnCode_t CreateSerializedPayload(const std::shared_ptr<IPayloadPool>& pool,
         uint32_t dataLen, SerializedBuffer*& bufferHeader)

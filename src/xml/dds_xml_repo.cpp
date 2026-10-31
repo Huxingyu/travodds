@@ -794,12 +794,16 @@ bool DDSXMLRepo::parseDataWriterQos(XMLElement* element, DataWriterQos& qos) {
 
 bool DDSXMLRepo::parseDataReaderQos(XMLElement* element, DataReaderQos& qos) {
     bool sharingSeen = false;
+    bool poolSeen = false;
     // 遍历子节点
     for (XMLElement* child = element->FirstChildElement(); child; child = child->NextSiblingElement()) {
         const char* nodeName = child->Name();
         if (strcmp(nodeName, "data_sharing") == 0) {
             if (sharingSeen || !parseDataSharingQosPolicy(child, qos.data_sharing)) return false;
             sharingSeen = true;
+        } else if (strcmp(nodeName, "payload_pool") == 0) {
+            if (poolSeen || !parsePayloadPoolQosPolicy(child, qos.payload_pool)) return false;
+            poolSeen = true;
         } else if (strcmp(nodeName, "durability") == 0) {
             bool ret = parseDurabilityQosPolicy(child, qos.durability);
             if (!ret) {

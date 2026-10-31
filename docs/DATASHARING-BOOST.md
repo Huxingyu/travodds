@@ -4,7 +4,7 @@
 
 可配置的其他目录使用 Boost 1.88 的 `ipcdetail::file_wrapper` 设备与同一个 `mapped_region`。该设备也是 Boost managed_mapped_file 所用的底层设备，负责创建、打开、调整大小、关闭与删除。仓库原 Boost 子集缺少此头文件，现按官方 boost-1.88.0 原文补入，保留 Boost License，下载来源及 SHA256 在 `artifacts/boost-migration/boost-file-wrapper-origin.json`。这是版本固定的 Boost 内部接口依赖；升级 Boost 时必须一起核验。不会把全局 Boost 共享目录改掉影响旧 SHM。
 
-选择比较：`managed_shared_memory` 适用于段内动态对象和 offset_ptr 容器，但其 segment manager/分配器带额外元数据与内部锁，进程异常时无法据名称推断修复语义。当前环形槽位已有静态预算和偏移，采用设备加 mapped_region 无需段内分配。所有共享字节仍由 Header、Slot 及按原生对齐取整的载荷组成，不保存普通指针；Boost 对象只存在进程本地。预算为实际文件大小，无隐藏 managed allocator 开销；最大对齐为页尺寸。当前共享布局为 v6，先校验前缀/版本/大小/会话/权限/PID namespace，再访问共享锁，拒绝历史版本。
+选择比较：`managed_shared_memory` 适用于段内动态对象和 offset_ptr 容器，但其 segment manager/分配器带额外元数据与内部锁，进程异常时无法据名称推断修复语义。当前固定槽位池已有静态预算和偏移，采用设备加 mapped_region 无需段内分配。槽位以轮转起点扫描可复用项，不是 FIFO 环形队列；仍被 Writer/pending/Reader Loan pin 固定的项不能覆盖。所有共享字节仍由 Header、Slot 及按原生对齐取整的载荷组成，不保存普通指针；Boost 对象只存在进程本地。预算为实际文件大小，无隐藏 managed allocator 开销；最大对齐为页尺寸。当前共享布局为 v6，先校验前缀/版本/大小/会话/权限/PID namespace，再访问共享锁，拒绝历史版本。
 
 POSIX 辅助调用仅用于目录 fd、flock 初始化屏障、fstat/pread 身份与权限校验、posix_fallocate 实际空间预留、随机会话、进程身份和同步。它们不是共享段创建/映射后端。目录先以 O_NOFOLLOW 固定；配置目录设备通过 /proc/self/fd 的路径交给 Boost，打开后验证名字仍为同一个普通文件，拒绝符号链接。关闭/孤儿清理仅删除匹配 inode 的确切会话。
 
@@ -14,7 +14,7 @@ POSIX 辅助调用仅用于目录 fd、flock 初始化屏障、fstat/pread 身�
 
 既有 InterprocessType::robust_mutex 仅探测 PID，未取得底层 mutex 就可能返回成功，且没有 EOWNERDEAD 事务处理，故不用于新共享池。无锁通知和 pthread robust 元数据锁与 Boost 映射职责分开。
 
-迁移阶段历史验收入口为 `artifacts/completion-20261028/`，迁移前快照在 `artifacts/boost-migration/pre-boost/`。布局 v6 / discovery v2 的前阶段证据在 `artifacts/production-lockfree-20261030/`，可选 key-only 阶段的 484 项及 93.839% 见 [同日历史报告](DATASHARING-COMPLETION-20261030.md)。当前共享布局仍为 v6，发现能力升到 v3，带键 native 强制有效 key-only 元数据并移除原生全样本快照回退；新证据使用 `artifacts/strict-native-20261030/`，进度见 [严格准入报告](DATASHARING-STRICT-20261030.md)，官方对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。每个结果只证明其冻结源码对应版本，旧覆盖率和性能不能代替当前测量。
+迁移阶段历史验收入口为 `artifacts/completion-20261028/`，迁移前快照在 `artifacts/boost-migration/pre-boost/`。布局 v6 / discovery v2 的前阶段证据在 `artifacts/production-lockfree-20261030/`，可选 key-only 阶段的 484 项及 93.839% 见 [同日历史报告](DATASHARING-COMPLETION-20261030.md)。10/30 共享布局 v6 / discovery v3 阶段强制带键 key-only，证据保留于 `artifacts/strict-native-20261030/`；10/31 discovery v4 与无初始化准入已通过当前验收，结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)，官方对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。每个结果只证明其冻结源码对应版本，旧覆盖率和性能不能代替当前测量。
 
 
 补入头文件的可移植来源记录（不依赖本机artifacts）：
@@ -25,4 +25,4 @@ POSIX 辅助调用仅用于目录 fd、flock 初始化屏障、fstat/pread 身�
 - 本地文件：`thirdparty/boost/interprocess/detail/file_wrapper.hpp`，保留上游Boost许可证。
 
 
-当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。
+2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。

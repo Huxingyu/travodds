@@ -42,6 +42,11 @@ public:
 	virtual ~TypeSupport() = default;
 	// Legacy/generated supports remain conservative until explicitly opted in.
 	virtual NativeTypeInfo get_native_type_info() const { return {}; }
+	// A separate, explicit construction contract: native reservation may begin
+	// the sample's lifetime, but must not initialize or write its payload bytes.
+	// Layout metadata alone does not imply this capability. Custom supports
+	// opting in must uphold it in construct_native_sample on every reuse.
+	virtual bool supports_native_uninitialized_sample() const { return false; }
 	virtual bool construct_native_sample(void*) const { return false; }
 	// Explicit opt-in for keyed native Loan paths. Metadata and representation
 	// must remain stable for this support's lifetime. Snapshot storage is raw,
@@ -55,7 +60,8 @@ public:
 	virtual bool capture_native_key(void*, const void*) const { return false; }
 	virtual bool restore_native_key(void*, const void*) const { return false; }
 	bool supports_native_data_sharing(const NativeTypeInfo& type) {
-		return type.loanable() && (!has_key() || get_native_key_info().valid_for(type));
+		return type.loanable() && supports_native_uninitialized_sample() &&
+			(!has_key() || get_native_key_info().valid_for(type));
 	}
 	/**
 	 * @brief 创建样本的函数。
@@ -157,22 +163,34 @@ public:
 
 // Implement serializers/key operations in a derived support as usual. The
 // application supplies a versioned layout ID, and must ensure pointer-free T.
+// Nontrivial default construction remains usable for CDR, but is not eligible
+// for native borrowing because it can write the payload before the user does.
 template<typename T>
 class NativeTypeSupport : public TypeSupport {
 public:
 	explicit NativeTypeSupport(std::string layoutId) : layout_id_(std::move(layoutId)) {
 		static_assert(std::is_standard_layout<T>::value && std::is_trivially_copyable<T>::value &&
 			std::is_trivially_destructible<T>::value && std::is_nothrow_default_constructible<T>::value,
-			"Native samples must have a trivial, fixed, noexcept constructible layout");
+			"Samples need a fixed trivially copyable layout and noexcept default construction");
 		static_assert(sizeof(T) <= std::numeric_limits<uint32_t>::max(), "Native sample too large");
 	}
 	NativeTypeInfo get_native_type_info() const override {
 		return {true, true, uint32_t(sizeof(T)), uint32_t(alignof(T)), layout_id_};
 	}
+	bool supports_native_uninitialized_sample() const override {
+		// Keep supports with user constructors/default member initializers
+		// source-compatible for CDR. They must not enter the strict native path.
+		return std::is_trivially_default_constructible<T>::value;
+	}
 	bool construct_native_sample(void* storage) const override {
-		if (!storage || reinterpret_cast<uintptr_t>(storage) % alignof(T)) return false;
-		new (storage) T{};
-		return true;
+		if constexpr (std::is_trivially_default_constructible<T>::value) {
+			if (!storage || reinterpret_cast<uintptr_t>(storage) % alignof(T)) return false;
+			// Default-initialization starts lifetime without zeroing or copying
+			// storage. The application must fill the fields before publishing.
+			new (storage) T;
+			return true;
+		}
+		return false;
 	}
 private:
 	std::string layout_id_;

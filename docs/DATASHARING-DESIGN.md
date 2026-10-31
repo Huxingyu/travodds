@@ -1,6 +1,6 @@
 # DataSharing 与 Loan 设计
 
-本文描述普通载荷池、Linux 共享池、Loan、QoS/XML、发现和自动共享调度，按生产共享布局 v6、发现能力 v3 更新。严格 native 准入及新验证进度见 [严格准入报告](DATASHARING-STRICT-20261030.md)，官方交付对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)，数据面进展和故障契约见 [生产后端报告](DATASHARING-PRODUCTION-20261030.md)。零载荷复制范围是显式兼容的固定布局类型从 Writer Loan 到 Reader Loan；普通裸指针 write 和预分配输出仍复制。
+本文按本轮实现更新：共享布局 v6、发现能力 v4，Reader 普通池及 native 无初始化改动已通过当前验收。结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)，官方交付对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)，数据面既有协议见 [历史生产报告](DATASHARING-PRODUCTION-20261030.md)。零完整载荷复制限定显式兼容的 Writer Loan → Reader Loan 分支；普通裸指针 write 和预分配输出仍复制，无初始化需要单独满足类型契约。
 
 ## 当前分配与归还路径
 
@@ -11,6 +11,8 @@
 普通 CDR 注册快照及内置发现报文仍有独立的旧池路径；原生实例快照使用独立的对齐键存储，带键类型只有声明有效 NativeKeyInfo 并承诺 capture/restore 钩子契约才能启用 native；原生完整样本快照回退已移除，旧类型保留 CDR/RTPS。键哈希由 TypeSupport::MakeKey 计算。不能将这些指针交给 Topic 池回收，也不能将 Topic 池的指针交给全局 `MemoryPool`。Writer 的注销、dispose 控制缓存与正常用户缓存采用相同的显式原池参数。
 
 Reader 的反序列化读取临时持有 `shared_ptr<CacheChange>`。`take` 从历史中移除可读取样本；它不直接释放复制出来的 `SerializedBuffer::origin_buffer`。当所有历史、临时读取及其他持有者均释放缓存时，才由缓存归还原池。RTPS 接收的 `CacheSerializedBuffer` 也可能只借用 `originMessage` 的空间而没有 `origin_buffer`；该路径依靠消息的强引用保活。
+
+Reader 普通载荷池接入是本轮补全项：计划在 AddChanges/history 准入边界将完整 CDR 分片链事务性转入 Reader 配置的 Topic 池，失败归还已分配分片并拒绝准入；配置相同的同 domain/topic/type Reader/Writer 复用池。transport 接收整包与独立 CDR key snapshot 保留原池，不计 history Topic 预算；native SharedReadLoan 保留原映射，不复制到普通池。该路径尚待本轮真实 RTPS/分片与生命周期回归，不能用旧 Writer 普通池结果证明 Reader 已接入。
 
 ## 四种普通池策略
 
@@ -33,7 +35,9 @@ Reader 的反序列化读取临时持有 `shared_ptr<CacheChange>`。`take` 从�
 
 每个槽位包含独立的 64 位代次、序列号、有效长度、Writer 持有状态，以及每个 Reader 的未读与借用位图，最多 64 个 Reader。槽位从 FREE 到 WRITING，再到 PUBLISHED；只有 Writer 引用、未读投递和所有 Reader Loan 都释放后才能回到 FREE。样本代次、Reader 注册代次不会回绕；达到上限后停止复用相应槽位或注册项。序列号必须严格递增。
 
-发布顺序为：取得可写槽位 → 初始化/填写样本 → 完成写入 → 发布槽位身份 → 通知 Reader。Reader 必须在获取发布同步之后访问样本；通知只是唤醒提示，不能作为唯一的数据队列，也不能因为通知合并而漏读样本。
+分配采用固定槽位池的轮转扫描：递增起点后按模槽位数扫描可复用项。它不是依靠 head/tail 保证 FIFO 的环形队列，起点轮转也不表示按顺序覆盖最旧样本；仍有 Writer/pending/Reader Loan pin 的槽位不能复用。
+
+发布顺序为：取得可写槽位 → 开始对象寿命但不初始化载荷 → 应用填写所有将被读取的字段 → 发布槽位身份 → 通知 Reader。借出不保证零初值。Reader 必须在获取发布同步之后访问样本；通知只是唤醒提示，不能作为唯一的数据队列，也不能因为通知合并而漏读样本。
 
 Reader 需要有独立注册代次，防止 Reader 退出重启后错误归还上一个会话的样本。多个 Reader 的引用互相独立。慢 Reader 持有 Loan 时，Writer 根据池容量和可靠性策略等待或报资源不足，不能覆盖尚在读取的数据。
 
@@ -59,7 +63,7 @@ Writer 正常关闭会标记 CLOSED、释放 Writer 引用并解绑当前文件�
 
 ## 类型能力与 Loan 接口
 
-既有 TypeSupport 的 `get_native_type_info()` 默认返回无能力，`construct_native_sample` 默认失败。`NativeTypeInfo` 区分 bounded/plain，携带大小、对齐与版本化布局 ID。`NativeTypeSupport<T>` 要求标准布局、可平凡复制/析构且默认构造 noexcept；显式在借出的存储上执行 placement-new。应用仍必须保证 T 的字段不含进程内指针，不能仅凭编译期 trivial 属性证明指针无关性。`supports_native_data_sharing(info)` 还统一检查带键类型的 NativeKeyInfo；缺失或非法时 ON enable 返回 UNSUPPORTED，AUTO 不广告 DS 并保留普通 CDR/RTPS，loan_sample 不可用。含 string、vector 的类型保持普通序列化路径。
+TypeSupport 的 `get_native_type_info()` 默认返回无布局能力，`supports_native_uninitialized_sample()` 默认 false，`construct_native_sample` 默认失败。NativeTypeInfo 区分 bounded/plain，携带大小、对齐与版本化布局 ID。NativeTypeSupport<T> 对标准布局、可平凡复制/析构类型仅在 trivially default constructible 时默认允许 native，并用 placement new(storage) T 开始对象寿命，不使用 T{}；其他旧类型仍可编译并使用 CDR。统一门控还检查带键 NativeKeyInfo；缺失无初始化资格或键元数据非法时 ON 拒绝，AUTO 不广告 DS 并保留 CDR/RTPS。应用仍须保证无进程内指针，发布前填写所有可能被读取的字段。仓库没有 IDL 自动 native 适配生成器，示例声明与键钩子为手写；HelloWorld 无界 string 和普通 string/vector 类型走 CDR。
 
 Writer 的 `SampleLoan` 是不可复制、可移动的句柄，内部绑定独立 Writer 身份、共享池、会话、槽位和代次。`loan_sample(SampleLoan&)` 创建记录，`write(SampleLoan&, handle)` 成功后消费记录，返回错误时保留以便重试；`discard_loan` 或句柄析构取消未提交的借用。错误 Writer、空/已消费句柄及重复提交/取消返回 PRECONDITION_NOT_MET。没有暴露无法验证 ABA 的裸地址 Loan 提交接口。
 
@@ -88,7 +92,7 @@ Writer 在原有 history 容量检查和插入之后调用共享发布，再交�
 
 Reader 每个已匹配共享 Writer 有独立线程与运行状态。运行状态持有共享注册，线程通过 weak_ptr 获取 Reader；停止先关闭新/未读投递，随后在不持有 ingress、匹配或连接映射锁时 join。自身线程的最后一次析构使用 detach，运行状态继续保活；Reader 应用 Loan 的存储与监听线程相互独立。数据、分片、heartbeat、GAP 以及原生提交使用同一 Reader ingress 锁，避免并发操作 WriterProxy 状态。匹配表使用独立短锁，获取 shared_ptr 后释放；liveliness 回调查询匹配时不等待 ingress，也不在持有匹配表锁时调用 liveliness manager。
 
-共享布局版本为 6，包含原子 slot/registration gate、完整 64 位代次、Reader GUID/接受及 ready 状态、replay 标志、样本元信息与 futex 通知代次。发现能力版本为 3，旧 v1/v2 和未知版本不能选择 native；v3 隔离仍允许带键全样本快照的旧端点。建立共享路径前的不兼容保留 RTPS。已经损坏的 native session 需要新会话，不能把协议降级等同于任意运行时错误都透明恢复。
+共享布局版本为 6，包含原子 slot/registration gate、完整 64 位代次、Reader GUID/接受及 ready 状态、replay 标志、样本元信息与 futex 通知代次。本轮发现能力版本为 4，以隔离仍可能清零借出载荷的 v3 对端；v1/v2/v3 和未知版本都不选择 native。v4 同时要求无初始化与强制 key-only 准入。建立共享路径前的不兼容保留 RTPS。已经损坏的 native session 需要新会话，不能把协议降级等同于任意运行时错误都透明恢复。
 
 ## 验收证据
 
@@ -141,4 +145,4 @@ Reader序列API采用preview→materialize→commit，缓存身份而非全局�
 TBF定时提交在完成history事务和deadline推进后释放ingress，再调用应用listener。DCPS Reader析构先在锁外Exit并等待该Timer，之后解除关联；closing状态拒绝新的set_qos，避免回调释放锁后的对象寿命空窗。DATA_AVAILABLE状态先更新再交给listener，回调内take可以正确清除状态，不会被回调返回后的旧置位覆盖。
 
 
-当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。
+2026-10-31 共享布局 v6 / discovery v4 的 Reader 普通 Topic 池与 native 无初始化契约已补齐。当前 321 项冻结输入对应 529 项普通回归、9 次有限示例、93.936% 新增生产可执行行覆盖率，ASan/UBSan 与 TSan focused 各 86 项通过；最终审计及主包/历史附包搬迁复核通过，原始范围、哈希和复现命令见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。[10/30 报告](DATASHARING-STRICT-20261030.md) 的 500 项、93.920%、9 次示例及两版 focused 各 57 项仅证明当日 discovery v3 冻结源码。LSan 未启用，历史 WaitSet 崩溃根因仍未知，当前通过不作根因归属证明。

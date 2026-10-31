@@ -41,6 +41,13 @@ using namespace std::chrono_literals;
 
 namespace {
 struct alignas(64) NativeSample { uint64_t index; uint64_t values[7]; };
+void initializeNativeSample(NativeSample& sample, uint64_t index, uint64_t lastValue = 0) {
+    // Writer Loans preserve the slot bytes; applications initialize all fields
+    // that either native Readers or the CDR fallback may read.
+    sample.index = index;
+    for (unsigned i = 0; i < 6; ++i) sample.values[i] = 0;
+    sample.values[6] = lastValue;
+}
 class NativeSupport : public NativeTypeSupport<NativeSample> {
 public:
     NativeSupport() : NativeTypeSupport("ospp.NativeSample.v1.u64x8.align64") {}
@@ -412,7 +419,7 @@ TEST_F(LoanIntegration, KeyedLifespanExpiryAndUnregisterDoNotInvalidateOrPrematu
     SampleLoan writable;
     ASSERT_EQ(writer->loan_sample(writable), RETCODE_OK);
     auto* value = static_cast<NativeSample*>(writable.data());
-    value->index = 73; value->values[6] = 7399;
+    initializeNativeSample(*value, 73, 7399);
     const auto handle = writer->register_instance(value);
     ASSERT_NE(handle, HANDLE_NIL);
     ASSERT_EQ(writer->write(writable, handle), RETCODE_OK);
@@ -906,7 +913,7 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
             SampleLoan loan;
             ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
             auto* sample = static_cast<NativeSample*>(loan.data());
-            sample->index = index; sample->values[6] = index + 79;
+            initializeNativeSample(*sample, index, index + 79);
             ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
         }
     }
@@ -980,7 +987,7 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
             SampleLoan loan;
             ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
             auto* sample = static_cast<NativeSample*>(loan.data());
-            sample->index = index; sample->values[6] = index + 79;
+            initializeNativeSample(*sample, index, index + 79);
             ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
             EXPECT_FALSE(loan);
         }
@@ -1229,7 +1236,7 @@ TEST_F(LoanIntegration, KeyedNativeCaptureFailurePreservesLoanAndRollsBackRegist
     SampleLoan loan;
     ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
     auto* source = static_cast<NativeSample*>(loan.data());
-    source->index = 371; source->values[6] = 9876;
+    initializeNativeSample(*source, 371, 9876);
     type.failSerialize = type.failDeserialize = true;
     // Compact snapshots never construct/copy a complete NativeSample.
     type.failConstruct = true;
@@ -1510,7 +1517,6 @@ TEST_F(LoanIntegration, WriterLoanCapacityMoveWrongWriterAndAutomaticCancellatio
         ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
         EXPECT_TRUE(pointers.insert(loan.data()).second);
         EXPECT_EQ(reinterpret_cast<uintptr_t>(loan.data()) % alignof(NativeSample), 0u);
-        EXPECT_EQ(static_cast<NativeSample*>(loan.data())->index, 0u);
     }
     SampleLoan extra;
     EXPECT_EQ(writer->loan_sample(extra), RETCODE_OUT_OF_RESOURCES);
@@ -1530,7 +1536,7 @@ TEST_F(LoanIntegration, FailedWriteKeepsLoanAndSuccessfulRtpsFallbackConsumesIt)
     SampleLoan loan;
     ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
     auto* sample = static_cast<NativeSample*>(loan.data());
-    sample->index = 37;
+    initializeNativeSample(*sample, 37);
     type.failSerialize = true;
     EXPECT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_ERROR);
     ASSERT_TRUE(loan);
@@ -2413,7 +2419,8 @@ void LoanIntegration::RunMultiEndpointExec(bool reliable, bool crashReader, bool
             for (size_t w = 0; w < writers.size(); ++w) {
                 SampleLoan loan; ASSERT_EQ(writers[w]->loan_sample(loan), RETCODE_OK);
                 auto* value = static_cast<NativeSample*>(loan.data());
-                value->index = (w + 1) * 1000 + i; value->values[6] = value->index + 79;
+                const uint64_t index = (w + 1) * 1000 + i;
+                initializeNativeSample(*value, index, index + 79);
                 ASSERT_EQ(writers[w]->write(loan, HANDLE_NIL), RETCODE_OK);
             }
             ASSERT_TRUE(mappingPhase(sockets[0], 'A', false));
@@ -2512,8 +2519,10 @@ void LoanIntegration::RunWriterCrashExec(bool reliable) {
         ASSERT_EQ(endpoint->SelectDataSharingReaders(pool->registeredReaders()).size(), 1u);
         type.failSerialize = true;
         SampleLoan loan; ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
-        auto* sample = static_cast<NativeSample*>(loan.data()); sample->index = std::stoull(getenv("TRAVODDS_WRITERCRASH_INDEX"));
-        sample->values[6] = sample->index + 79; ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
+        auto* sample = static_cast<NativeSample*>(loan.data());
+        const auto index = std::stoull(getenv("TRAVODDS_WRITERCRASH_INDEX"));
+        initializeNativeSample(*sample, index, index + 79);
+        ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
         EXPECT_EQ(type.serializeCalls, 0); ASSERT_TRUE(mappingPhase(fd, 'F', true));
         ASSERT_TRUE(mappingPhase(fd, 'H', false)); ASSERT_TRUE(mappingPhase(fd, 'K', true));
         ASSERT_TRUE(mappingPhase(fd, 'D', false)); // Parent deliberately kills this exact Writer process.
@@ -3283,7 +3292,7 @@ TEST_F(LoanIntegration, MappingNewSessionCancelsOldRetryAndDuplicateStartKeepsRe
     ASSERT_EQ(stats.readers, 1u);
     ASSERT_EQ(selected(), 1u); // Both discovery directions precede the no-CDR phase.
     ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
-    static_cast<NativeSample*>(loan.data())->index = 72;
+    initializeNativeSample(*static_cast<NativeSample*>(loan.data()), 72);
     ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
     SequenceData<NativeSample> data; SampleInfoSeq infos;
     ReturnCode_t result;

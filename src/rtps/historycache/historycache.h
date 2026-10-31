@@ -164,6 +164,22 @@ public:
 		}
 	}
 
+    // Reader admission may replace a transport-backed chain with independently
+    // owned topic payloads. Commit only after the entire clone succeeds, and
+    // return the original chain through its original owner. Retaining the pool
+    // here also lets a taken CacheChange outlive its Reader/Writer entities.
+    ReturnCode_t CopySerializedPayloadTo(const std::shared_ptr<IPayloadPool>& pool) {
+        if (!pool) return RETCODE_BAD_PARAMETER;
+        if (!serializedBuffer || payloadPool_ == pool) return RETCODE_OK;
+        SerializedBuffer* replacement = nullptr;
+        const auto result = CloneSerializedPayload(pool, serializedBuffer, replacement);
+        if (result != RETCODE_OK) return result;
+        PayloadBufferPtr previous(serializedBuffer, PayloadBufferDeleter{payloadPool_});
+        serializedBuffer = replacement;
+        payloadPool_ = pool;
+        return RETCODE_OK;
+    }
+
 	/**
 	 * @brief 析构函数。
 	 */

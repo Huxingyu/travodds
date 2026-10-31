@@ -34,5 +34,11 @@ using PayloadBufferPtr = std::unique_ptr<SerializedBuffer, PayloadBufferDeleter>
 ReturnCode_t CreateSerializedPayload(const std::shared_ptr<IPayloadPool>& pool,
     uint32_t dataLen, SerializedBuffer*& bufferHeader);
 
+// Copy a complete received CDR chain, including its encapsulation. Each source
+// fragment gets independent storage; no transport-message owner is retained.
+// Failure leaves output null and returns every allocation made so far.
+ReturnCode_t CloneSerializedPayload(const std::shared_ptr<IPayloadPool>& pool,
+    const SerializedBuffer* source, SerializedBuffer*& bufferHeader);
+
 TRAVODDS_NAMESPACE_END
 #endif

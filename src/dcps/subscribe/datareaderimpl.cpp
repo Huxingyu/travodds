@@ -14,6 +14,7 @@
 #include "rtps/discovery/discovery.h"
 #include "qos/qospolicycheck.h"
 #include "common/memory/memorypool.h"
+#include "common/memory/topicpayloadpool.h"
 #include "common/time/ddstimer.h"
 #include "common/timeconversion.h"
 #include "common/log/logger.h"
@@ -42,10 +43,20 @@ ReturnCode_t DataReaderImpl::CopySample(void* destination, const std::shared_ptr
 		return typeSupport_->copy_data(destination, change->nativePayload.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
 	}
 	if (!change->serializedBuffer) return RETCODE_ERROR;
-	SerializedBuffer buffer = *change->serializedBuffer;
-	const bool littleEndian = GetEndianess(&buffer);
-	CdrDeserializer cdr(&buffer, littleEndian);
-	return typeSupport_->deserialize_data(destination, &cdr, littleEndian) == 0 ? RETCODE_OK : RETCODE_ERROR;
+    try {
+        // CDR advances every fragment's cursor. Keep all views local so read,
+        // repeated read and a later take cannot consume the history's chain.
+        std::vector<SerializedBuffer> views;
+        for (auto* part = change->serializedBuffer; part; part = part->next) views.push_back(*part);
+        for (size_t i = 0; i < views.size(); ++i) {
+            views[i].reader_position = 0;
+            views[i].next = i + 1 < views.size() ? &views[i + 1] : nullptr;
+        }
+        if (views[0].buffer_size < CDR_ENDIANNESS_LEN) return RETCODE_ERROR;
+        const bool littleEndian = GetEndianess(&views[0]);
+        CdrDeserializer cdr(&views[0], littleEndian);
+        return typeSupport_->deserialize_data(destination, &cdr, littleEndian) == 0 ? RETCODE_OK : RETCODE_ERROR;
+    } catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
 }
 
 ReturnCode_t DataReaderImpl::MaterializeSamples(DataSeq& values, SampleInfoSeq& infos,
@@ -769,6 +780,22 @@ ReturnCode_t DataReaderImpl::CreateInstanceKey(const std::shared_ptr<CacheChange
     catch (const std::exception&) { return RETCODE_ERROR; }
 }
 
+ReturnCode_t DataReaderImpl::PrepareSerializedPayload(const std::shared_ptr<CacheChange>& change)
+{
+    if (!change) return RETCODE_BAD_PARAMETER;
+    // Builtin discovery receives retain their transport ownership. Native
+    // SharedReadLoan aliases keep the shared segment pinned without a CDR copy.
+    if (!payloadPool_ || change->nativePayload) return RETCODE_OK;
+    // RTPS lifecycle messages can contain only inline QoS/key hash. Receive
+    // paths still create an empty descriptor, which owns no CDR allocation.
+    const auto* data = change->serializedBuffer;
+    if (change->kind != ALIVE && data && !data->buffer_size && !data->next)
+        return RETCODE_OK;
+    try { return change->CopySerializedPayloadTo(payloadPool_); }
+    catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
+    catch (const std::exception&) { return RETCODE_ERROR; }
+}
+
 ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandle_t& handle)
 {
     if (!enable_) return RETCODE_NOT_ENABLED;
@@ -937,6 +964,13 @@ ReturnCode_t DataReaderImpl::enable()
 	if (!sub_->IsEnable()) {
 		return RETCODE_PRECONDITION_NOT_MET;
 	}
+    // Admission stages a complete payload before evicting KEEP_LAST history.
+    // Even the minimum one-fragment samples need depth + 1 slots for progress.
+    // Reject this provably impossible local configuration instead of creating
+    // a Reader which permanently stops replacing its own full history.
+    if (qos_.history.kind == KEEP_LAST_HISTORY_QOS &&
+        qos_.payload_pool.max_payloads <= static_cast<uint32_t>(qos_.history.depth))
+        return RETCODE_INCONSISTENT_POLICY;
 	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS) {
 #if defined(__linux__)
 		if (!typeSupport_->supports_native_data_sharing(typeSupport_->get_native_type_info())) return RETCODE_UNSUPPORTED;
@@ -967,6 +1001,22 @@ ReturnCode_t DataReaderImpl::enable()
 #ifdef DDSSECURITY
 	builtinSecureData_.data_sharing = builtinData_.data_sharing;
 #endif
+    try {
+        const auto& policy = qos_.payload_pool;
+        PayloadPoolConfig config;
+        config.policy = policy.policy;
+        config.payload_size = policy.payload_size;
+        config.max_payloads = policy.max_payloads;
+        config.initial_payloads = policy.initial_payloads;
+        config.alignment = policy.alignment;
+        // A filtered Topic uses its related wire Topic. MultiTopic has its own
+        // result identity even when no wire topic name is advertised.
+        const std::string poolTopicName = builtinData_.topic_name.empty()
+            ? topic_->get_name() : builtinData_.topic_name;
+        payloadPool_ = TopicPayloadPoolRegistry::instance().getOrCreate({
+            domainParticipant->get_domain_id(), poolTopicName, topic_->get_type_name()}, config);
+    } catch (const std::invalid_argument&) { return RETCODE_INCONSISTENT_POLICY; }
+    catch (const std::bad_alloc&) { return RETCODE_OUT_OF_RESOURCES; }
 	std::shared_ptr<Reader> readerPtr = domainParticipant->GetRelatedParticipant()->CreateReader(this, qos_, Conversion::ToGuid(handle_), typeSupport_->has_key());
 	if (!readerPtr.get()) {
 		return RETCODE_ERROR;

@@ -28,6 +28,7 @@ class Reader;
 class SubscriberImpl;
 class TopicDescriptionImpl;
 class TypeSupport;
+class IPayloadPool;
 class DataReaderStatusManager;
 class Timer;
 class ReadConditionImpl;
@@ -769,6 +770,8 @@ public:
 	ReturnCode_t OnDataAvaible();
 	ReturnCode_t CreateInstanceKey(const std::shared_ptr<CacheChange>& change,
 		std::shared_ptr<SerializedBuffer>& serialized, std::shared_ptr<void>& native);
+	// Called only after RTPS payload extraction/reassembly, before history admission.
+	ReturnCode_t PrepareSerializedPayload(const std::shared_ptr<CacheChange>& change);
 
 	/**
 	 * @brief 更新样本丢失状态。
@@ -951,6 +954,7 @@ private:
 	std::vector<std::shared_ptr<QueryConditionImpl>> querycdts_;
 	TopicDescriptionImpl* topic_ = nullptr;
 	DataReaderQos qos_;
+	std::shared_ptr<IPayloadPool> payloadPool_;
 	DataReaderListener* listener_ = nullptr;
 	std::shared_ptr<Reader> reader_ = nullptr;
 	SubscriberImpl* sub_ = nullptr;

@@ -138,6 +138,7 @@ ReturnCode_t QosPolicyCheck::CheckQos(const DataWriterQos& qos)
 
 ReturnCode_t QosPolicyCheck::CheckQos(const DataReaderQos& qos)
 {
+    if (!qos.payload_pool.valid()) return RETCODE_INCONSISTENT_POLICY;
     auto validDelay = [](const Duration_t& d) {
         return d == Duration_t(TIME_INFINITE) || (d.sec >= 0 && d.nanosec < 1000000000u);
     };
@@ -260,6 +261,7 @@ bool QosPolicyCheck::CanQosBeUpdated(const DataWriterQos& curQos, const DataWrit
 bool QosPolicyCheck::CanQosBeUpdated(const DataReaderQos& curQos, const DataReaderQos& tagQos)
 {
 	return curQos.data_sharing == tagQos.data_sharing &&
+		   curQos.payload_pool == tagQos.payload_pool &&
 		   ConsistebcyCheckDurabilityQos(curQos.durability, tagQos.durability) &&
 		   ConsistebcyCheckOwnershipQos(curQos.ownership, tagQos.ownership) &&
 		   ConsistebcyCheckLivelinessQos(curQos.liveliness, tagQos.liveliness) &&

@@ -447,6 +447,7 @@ struct PublisherQos {
 
 struct DataReaderQos {
 	DataSharingQosPolicy          data_sharing;
+	PayloadPoolQosPolicy          payload_pool;
 	DurabilityQosPolicy           durability;
 	DeadlineQosPolicy             deadline;
 	LatencyBudgetQosPolicy        latency_budget;

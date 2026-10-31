@@ -1,41 +1,37 @@
 # 需求、实现与验收映射
 
-本页按官方项目 261760062 的八项交付对应当前严格生产实现：共享布局 v6、发现能力 v3，带键 native 强制有效 key-only 元数据，并移除原生全样本键快照回退。新增生产行覆盖率固定比较基线为 `489067108405b27afbd369245542f5e88d457f18`，最低 70%。验证平台为 Ubuntu **或** openEuler，本轮采用 Ubuntu。当前 `artifacts/strict-native-20261030/coverage-complete/` 已验证 500 项回归、9 次示例执行和 93.920% 新增行覆盖率；本轮独立完整插桩 ASan/UBSan 与 TSan focused 各 57 项通过，最终汇总审计通过。
+本页按官方项目 261760062 的八项交付核对 2026-10-31 验收状态。共享布局保持 v6，发现能力为 v4；Reader 普通载荷池与借出不初始化完整载荷两项缺口已补齐，并在本轮 **529/529 普通回归、9 次有限示例及 93.936% 新增生产可执行行覆盖率**中通过，独立 **ASan/UBSan 与 TSan 各 86/86 项 focused 通过**。最终审计与两份便携证据的搬迁复核通过，**八项交付按下表限定范围完成**。当前冻结身份和原始结果见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。
 
 官方描述的“DataSharingNotification（无锁通知）”及第 3 项“实现跨进程通知机制”没有要求整个 DDS write 路径无锁。共享数据面的预留、发布、借用/归还和 ready 注册快照不获取跨进程管理 mutex；注册/维护、DDS 本地 Writer/history/发现表锁和 futex 系统调用仍存在，不宣称全路径形式化 lock-free 或 wait-free。
 
-| 官方交付 | 当前实现入口与范围 | 当前严格版本验收状态 |
+| 官方交付 | 当前实现入口与范围 | 本轮验收状态 |
 |---|---|---|
-| 1. 实现 PayloadPool 接口 | `payloadpool*`、`topicpayloadpool*`、`payloadbuffer*`：接口、四策略、Topic 注册、原池归属、分片失败回滚 | 当前 216 项 payloadpool/Loan 模块测试通过，包含 `TopicPoolPolicyTest.*`、`TopicPoolRegistry.*`、`PoolIntegration.*`、`TakePoolIntegration.*` |
-| 2. 实现 DataSharing 共享段管理 | `sharedpayloadpool*`：Boost 映射、布局 v6、运行时预算、64 Reader、64 位代次、pin、关闭/死亡及孤儿检查 | 本轮共享池 37/37 通过，见 `coverage-complete/sharedpayloadpool_test.xml` |
-| 3. 实现跨进程通知机制 | 32 位原子代次/futex、Reader listener；先采样代次再检查谓词，关闭后重扫最终水位 | 本轮共享池及真实 DDS 控制锁暂停回归通过；不要求整个 DDS write 无锁 |
-| 4. 实现 DDS 层 Loan API | Writer loan/write/discard、Reader read/take/return、独立映射所有权与删除保活 | 本轮 216 项模块测试验证容量、失败保留、配对归还和删除后的 Loan |
-| 5. Read/Write 旁路及 RTPS 降级 | TypeSupport 统一原生准入，带键必须有效 NativeKeyInfo；discovery v3 排除 v1/v2；原生捕获/查询无全样本回退 | 13 项准入回归及旧协议隔离、失败关闭、纯共享/混合 RTPS 回归通过；native 端点对遵循完整载荷无复制契约 |
-| 6. 新增 DataSharingQosPolicy | AUTO/ON/OFF、目录/预算、API/XML、映射/注册重试；缺失/非法键能力时 ON 拒绝，AUTO 不广告 DS 并保留 CDR/RTPS | 本轮缺失/非法键能力的 Writer/Reader ON/AUTO 门控及原有 QoS/XML 回归通过 |
-| 7. 新代码覆盖率 ≥70% 与 Loan/QoS 示例 | `coverage.py` 合并新增生产可执行行和模板；三个有限独立 exec 示例 | **93.920%（2765/2944）≥70%，140 个翻译单元；三个示例各 3 轮，共 9 次执行通过。** 见 `coverage-complete/{coverage,examples}/summary.json` |
-| 8. 设计及 API/QoS/错误/调试文档 | 当前手册及 README 按 v6/v3、强制键契约和明确失败边界更新 | [严格准入报告](DATASHARING-STRICT-20261030.md) 记录当前结果、319 输入身份及库哈希；历史报告单独标记 |
+| 1. 实现 PayloadPool 接口 | 四策略、Writer/ReaderQos/XML、普通 RTPS history 完整分片链事务性转入 Topic 池；native SharedReadLoan 保持旁路 | **通过。** 19 项 Reader 回归在普通、ASan/UBSan 及 TSan 中通过，包含真实接收/分片、共享/隔离/冲突、耗尽回滚、MultiTopic 及删除后缓存寿命；普通项均包含在正式模块 245 项内 |
+| 2. 实现 DataSharing 共享段管理 | Boost 映射、布局 v6、固定槽位轮转扫描、64 Reader、64 位代次、pin、关闭/死亡及孤儿检查 | **通过。** 共享池 37 项、模块 245 项与核心 247 项普通回归通过，共享池 37 项在 ASan/UBSan 和 TSan 中通过。轮转扫描不是 FIFO 环形队列，也不覆盖被 pin 的槽位 |
+| 3. 实现跨进程通知机制 | 32 位原子代次/futex、Reader listener；先采样代次再检查谓词，关闭后重扫最终水位 | **通过。** 共享池普通及两个检查版回归通过，1 项真实 DDS 控制锁暂停进展和 3 项键/失败回归在 ASan/UBSan 与 TSan 中通过；不要求整个 DDS write 无锁 |
+| 4. 实现 DDS 层 Loan API | Writer loan/write/discard、Reader read/take/return、独立映射所有权与删除保活；借出按新的无初始化契约处理 | **通过。** 正式模块中的 Loan 行为通过，10 项 no-init 在普通及两个检查版中通过，包括逐字节哨兵与槽位复用。应用必须先填写所有将被读取的字段 |
+| 5. Read/Write 旁路及 RTPS 降级 | 强制 key-only 门控保留；supports_native_uninitialized_sample 准入、placement new T、discovery v4 隔离 v1/v2/v3 | **通过。** 无初始化、类型门控、旧协议隔离和 RTPS 降级普通回归已运行，无初始化/key-admission/DDS focused 在两个检查版通过。没有 IDL 自动 native 适配生成器 |
+| 6. 新增 DataSharingQosPolicy | AUTO/ON/OFF、目录/预算、API/XML、映射/注册重试；无 native 资格时 ON 拒绝，AUTO 保留 CDR/RTPS | **通过。** 配置/发现、v4/no-init 门控及 Reader payload_pool 普通回归通过，Reader/no-init focused 在两个检查版通过 |
+| 7. 新代码覆盖率 ≥70% 与 Loan/QoS 示例 | 固定基线 489067108405b27afbd369245542f5e88d457f18；Ubuntu 或 openEuler，三个有限独立 exec 示例 | **本轮通过。** coverage-release2 覆盖率 2835/3018 = 93.936%，142 个翻译单元，变更生产翻译单元无漏采集；loan/keyed/mixed 各 3 轮，共 9 次通过 |
+| 8. 设计及 API/QoS/错误/调试文档 | 手册按 v6/v4、新类型契约和实际边界更新；小型证据相对索引、打包工具及三轮完整复现命令 | **完成。** 最终审计 passed=true；当前主包 3 个成功 run/1 个源码身份，历史补充包 4 个失败 run/两套诊断/3 个旧身份，搬迁复核均通过。入口和包哈希见 [10/31 报告](DATASHARING-PROGRESS-20261031.md#便携证据与复现) |
 
-严格零载荷复制是指：对符合类型契约、实际选中 native 的端点对，Writer Loan → Reader Loan 分支不复制完整用户载荷；键、索引、地址数组和控制元数据仍可复制，不承诺任何字节都不复制。普通裸指针 write、预分配输出和对其他 RTPS 端点的序列化不属于这个原生借用分支。“plain/bounded”要求固定无指针布局，不等于任意有界 C++ 容器均可共享。
+零完整载荷复制限定符合类型契约且实际选中 native 的 Writer Loan → Reader Loan 分支；普通裸指针 write、预分配输出和 RTPS 序列化仍可复制。无初始化是另一个必须独立验证的条件：借出不保证零初值，应用必须填写所有将由 Reader、键钩子或回退序列化器读取的字段。键、索引、地址数组和控制元数据仍可复制，不承诺任何字节都不复制。
 
-Writer/Reader 各自通过 `supports_native_data_sharing(info)` 校验原生资格；带键类型只有 NativeKeyInfo 合法才可广告 DS。元数据声明是实现 capture/restore 的契约，不在 enable 用假样本探测；实际钩子 false/标准异常失败关闭，不退回原生全样本 memcpy/copy_data。v3 隔离仍容许旧全样本快照的 v2 对端。TypeSupport 二进制 ABI 已变，库、应用及子类必须一起重编译。
+Writer/Reader 均通过统一 TypeSupport 门控校验布局、无初始化资格及带键 key-only 元数据。NativeTypeSupport 的默认无初始化资格依赖 trivially default constructible；不满足者仍可编译使用 CDR，ON 拒绝 native，AUTO 回退。手写 TypeSupport 可以显式声明符合契约的固定布局；仓库没有任意 IDL 到 native 的自动适配生成器，HelloWorld 无界 string 保留 CDR/RTPS。“plain/bounded”也不等于任意有界 C++ 容器均可共享。
 
-## 当前证据状态与复现
+## 当前证据与执行约束
 
-当前证据根为 `/home/ubuntu/project/travodds/artifacts/strict-native-20261030/`。`coverage-complete/results.json` 的 passed=true：共享池 37 + payloadpool/Loan 216 + 核心 247 = **500/500 通过，失败/错误/禁用均为 0**；三个示例各 3 轮，共 9 次执行通过；新增生产可执行行覆盖率 **93.920%（2765/2944，140 个翻译单元）**。本次 `asan-final/results.json` 与 `tsan-final/results.json` 均为 passed=true：各自完整插桩生产库、GTest、测试驱动，**每版 37 项共享池 + 13 项准入 + 3 项 ThreadPool + 4 项 DDS/key-only = 57/57 通过**，失败/错误/禁用/跳过均为 0。三模式 319 项源码/构建输入相同，具体库与结果 SHA-256 见 [严格报告](DATASHARING-STRICT-20261030.md)。
+本轮 321 项输入已冻结，canonical SHA-256 为 `6ef3367ca3902a456b5ea5a59881f7190582fedac7fc4be78fbb85bc0d81cead`。当前 coverage-release2/results.json 为 passed=true，14 个命令均退出 0，共享池 37 + 模块 245 + 核心 247 = **529/529 通过**；正式模块包含 Reader 19 项和无初始化 10 项。三个有限示例各 3 轮、共 9 次通过，新增生产可执行行覆盖率 2835/3018 = **93.936%**，142 个翻译单元，普通结果完成于 `2026-10-31T05:56:30.721745Z`。asan-final/results.json 和 tsan-final/results.json 均为 passed=true，各 11 个命令退出 0，独立 **ASan/UBSan 与 TSan 各 37 + 16 + 10 + 19 + 4 = 86/86 项 focused 通过**，分别完成于 `2026-10-31T06:05:25.171427Z` 与 `2026-10-31T06:10:00.062875Z`；本轮 TSan 无 race 报告。LSan 未启用（ASAN_OPTIONS=detect_leaks=0），没有泄漏结论。最终审计于 `2026-10-31T06:10:27.599189Z` 记录 passed=true，核对三模式同一源码、每模式 68 个安装头、16 个私有链接程序、插桩与资源记录、覆盖率和共享文件/程序清理。原始结果及十一项产物哈希见 [10/31 报告](DATASHARING-PROGRESS-20261031.md#当前证据与最终审计)；当前主包和历史附包已生成并搬迁复核。三轮包含 768 MiB 限额的完整命令见 [当前复现命令](DATASHARING-PROGRESS-20261031.md#当前三轮完整复现命令)。
 
-[最终汇总审计](/home/ubuntu/project/travodds/artifacts/strict-native-20261030/final-verification.json) passed=true，SHA-256 为 `332eebdc40807039d394aec610fd71723137fa85172cfbef4b70535875c51d81`。审计核验源输入、三模式逐项测试、每模式 68 个安装头文件、共 12 个程序的私有库链接、生产库/GTest 插桩及覆盖率/示例原始绑定；审计时无共享段或活动测试程序残留。
+当前 VM 按用户授权使用 nice 19、ionice best-effort 7、单线程及编译子进程 768 MiB 地址空间限制推进。三轮构建失败均保留：coverage-final 库构建超时 124，coverage-verified 测试编译触及 512 MiB 上限退出 2，coverage-final768 新增 Reader 测试 GetEndianess 未声明导致编译退出 2；三轮均未运行正式测试。随后两次诊断仅修测试，完整模块诊断为 243/244，修正契约后新增 28 项定向通过；不据此计为正式通过。首次归档/清空 111 个 gcda 后的正式 coverage-release 共享池 37、模块 244 通过，核心 246/247，仅 MultiTopic Reader 池身份兼容性失败，整轮失败已保留。最小生产修复并新增 1 项 Reader 回归后，再次归档/清空 137 个 gcda，使用新冻结身份运行上述 coverage-release2 成功结果；四次失败和两次诊断保留原始状态，单独进入历史补充包。临时 256 MiB swap 已在无编译时安全关闭并删除，原 /swap.img 保持，清理记录 passed=true。实际用例、精确选择器及成功/失败退出必须与本轮 XML 和原始记录绑定，focused 不代表完整 DDS 套件，未执行 LSan 就没有泄漏结论。
 
-首轮 `coverage-final` 的 ThreadPool 关闭丢唤醒及第二轮 `coverage-verified` 的 Ownership 测试等待缺陷均保留失败证据；修复后先归档/重置 135 个 gcda，再生成当前完整结果。ThreadPool 三项回归和修正后的 Ownership 用例均已包含在当前通过版本中；定向重复 20 轮只是附加证据，不算新增测试数量。
+原始 JSON/XML/log 与 source_sha256 已用 [package_evidence.py](../tools/ospp/package_evidence.py) 打成便携小包，相对索引和独立复核不依赖原机器路径。[当前主包索引](../../../artifacts/portable-evidence-20261031/native-v4-final-review/README.md) 收集三个实际成功 run 和单独暂存的审计元数据，恰有 3 个 passed=true、1 个当前源码身份，打包与搬迁后复核均以 --require-source-match 通过；[历史补充包索引](../../../artifacts/portable-evidence-20261031/native-v4-history-review/README.md) 保留四次失败和两套诊断，三个旧身份如实报告 changed/missing。大库和构建缓存不包含在包中，重跑需从匹配源码重建；便携复核不会重新执行测试或原机器完整审计。命令与包内范围见 [10/31 报告](DATASHARING-PROGRESS-20261031.md#便携证据与复现)。
 
-```bash
-python3 tools/ospp/production_lockfree_verify.py \
-  --output /absolute/new-strict-evidence \
-  --build-dir /absolute/strict-build \
-  --mode coverage --core --examples 3 \
-  --baseline 489067108405b27afbd369245542f5e88d457f18
-```
+## 10/30 discovery v3 历史快照
 
-ASan/UBSan 与 TSan 分别使用新 build/output，选择 `--mode asan --scope focused`、`--mode tsan --scope focused`，通过 `--focus-test` 显式加入本轮门控用例。TSan 实际运行需记录 `setarch x86_64 -R`；focused 只证明实际执行的范围，不代表全部 DDS 集成均在检查器下通过。LSan 无泄漏结论仍为空缺。
+[10/30 严格报告](DATASHARING-STRICT-20261030.md) 绑定 checkpoint 570b779 对应的 319 项冻结输入：共享池 37 + payloadpool/Loan 216 + 核心 247 = 500 项通过，三个有限示例共 9 次执行，新增行覆盖率 2765/2944（93.920%），独立 ASan/UBSan 与 TSan focused 各 57 项通过。它们只证明当时已运行的范围，没有证明本轮 Reader Topic 池或无初始化语义。最终历史审计 SHA-256 为 332eebdc40807039d394aec610fd71723137fa85172cfbef4b70535875c51d81；原始数据保持不改写。
+
+首轮 ThreadPool 关闭丢唤醒与第二轮 Ownership 测试等待缺陷均保留失败记录；修复后旧完整回归通过，其定向 20 轮只是附加证据，不算新增独立测试。历史性能见 [性能手册](DATASHARING-PERFORMANCE.md)，不能外推到本轮源码。
 
 ## 同日 discovery v2 历史快照
 

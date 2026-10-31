@@ -15,9 +15,14 @@ enum class PayloadMemoryPolicy {
     DYNAMIC_REUSABLE
 };
 
-// Local allocation policy, shared by Writers on the same domain/topic/type.
+// Local allocation policy, shared by Readers/Writers on the same domain/topic/type.
 // Counts refer to serialized fragments, rather than DDS samples. This policy
 // is independent of the native DataSharing slot budget and is not advertised.
+// Reader history owns extracted CDR payloads; transport packets and independent
+// instance-key snapshots retain their own allocation/lifetime boundaries.
+// Budget for all shared Writer/Reader histories, retained cache/Loan owners and
+// an incoming payload. KEEP_LAST Readers reject max_payloads <= history.depth,
+// since even one-fragment samples cannot stage a replacement in that budget.
 struct PayloadPoolQosPolicy {
     PayloadMemoryPolicy policy = PayloadMemoryPolicy::DYNAMIC_REUSABLE;
     uint32_t payload_size = 0;

@@ -1,6 +1,6 @@
 # DataSharing / Loan 历史验收状态（2026-10-28）
 
-> 本页为布局 v5 的冻结验收与阶段历史，“当前”“完成”仅指当日版本。布局 v6、发现能力 v3 与强制 key-only 准入后的当前实现和新验证进度见 [当前需求矩阵](DATASHARING-ACCEPTANCE.md) 和 [严格准入报告](DATASHARING-STRICT-20261030.md)。旧测试、示例和覆盖率不能替代当前版本结果。
+> 本页为布局 v5 的冻结验收与阶段历史，“当前”“完成”仅指当日版本。布局 v6、发现能力 v4 与无初始化/key-only 准入的当前验收结果见 [当前需求矩阵](DATASHARING-ACCEPTANCE.md) 和 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。旧测试、示例和覆盖率不能替代当前版本结果。
 
 实现与本机验收完成：review三项修复、自动映射/注册重试、有限Reader实例回收、统一源时间/lifespan和Timer/QoS同步；验收中另定位修复并发首次日志terminate和SPDP发送缓冲竞争。
 

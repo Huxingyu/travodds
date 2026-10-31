@@ -42,6 +42,7 @@ TEST(DataSharingDiscovery, MatchingRequiresCommonHostNamespaceTypeAndDomain) {
     incompatible([](auto& i) { i.version = 0; });
     incompatible([](auto& i) { i.version = 1; });
     incompatible([](auto& i) { i.version = 2; });
+    incompatible([](auto& i) { i.version = 3; });
     incompatible([](auto& i) { i.version = DataSharingEndpointInfo::CURRENT_VERSION + 1; });
     incompatible([](auto& i) { i.kind = OFF_DATA_SHARING_QOS; });
     incompatible([](auto& i) { i.type.plain = false; });
@@ -115,12 +116,13 @@ TEST(DataSharingDiscovery, CodecRoundTripsAndRejectsTruncationOversizedOrInvalid
 TEST(DataSharingDiscovery, PreviousProtocolsNeverEnableStrictNativeDelivery) {
     for (auto info : {readerInfo(), writerInfo()}) {
         const bool writer = info.segment_bytes != 0;
-        ASSERT_EQ(info.version, 3u);
+        ASSERT_EQ(info.version, 4u);
         const auto current = EncodeDataSharing(info);
         ASSERT_FALSE(current.empty());
-        for (uint32_t previous : {1u, 2u}) {
+        for (uint32_t previous : {1u, 2u, 3u}) {
             // Canonical big-endian words begin with magic and protocol.
-            // v2 has the same fields but cannot promise key-only snapshots.
+            // v2 cannot promise key-only snapshots; v3 can initialize the
+            // complete sample before handing its storage to the application.
             auto bytes = current;
             bytes[7] = previous;
             DataSharingEndpointInfo parsed = info;

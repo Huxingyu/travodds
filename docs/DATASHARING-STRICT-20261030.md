@@ -1,5 +1,7 @@
 # DataSharing 严格原生准入与验证（2026-10-30）
 
+> 历史冻结报告：以下“当前”“本次”和通过数字仅指 2026-10-30 的共享布局 v6 / discovery v3 源码。10/31 正在补齐 Reader 普通载荷池和 native 无初始化准入（discovery v4），本报告不能证明这两项已完成；最新状态见 [10/31 报告](DATASHARING-PROGRESS-20261031.md) 与 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
+
 本轮将带键 key-only 从应用可选优化改为 native 准入条件：缺失或非法键元数据的类型不再进入 DataSharing，原生键快照的全样本 memcpy/copy_data 回退移除。共享布局保持 **v6**，发现能力升为 **v3**，防止仍允许旧带键全样本快照的 v2 对端加入严格 DS。对所有符合类型契约并实际选择 native 的端点对，库在 Writer Loan → Reader Loan 分支中都不复制完整用户载荷；键字段、索引、序列地址和控制元数据仍可复制，不作“任何字节都不复制”的承诺。
 
 本报告对应工作树 `/home/ubuntu/project/travodds/.worktrees/datasharing-progress`、分支 `work/datasharing-progress`。新证据根为 `/home/ubuntu/project/travodds/artifacts/strict-native-20261030/`。首轮 `coverage-final` 因核心测试挂起失败，第二轮 `coverage-verified` 因既有 Ownership 用例的等待缺陷失败；最终当前入口 `coverage-complete/results.json` 已通过：**500/500 回归、三个示例各 3 轮共 9 次执行、新增生产可执行行覆盖率 93.920%（2765/2944，140 个翻译单元）**。本次 ASan/UBSan 与 TSan 独立完整插桩的 focused 检查版**各 57/57 通过**，最终汇总审计通过。此前 [可选 key-only 报告](DATASHARING-COMPLETION-20261030.md) 的 484 项、93.839%、ASan/UBSan 与 TSan 各 41 项及其汇总审计仅证明 discovery v2 冻结版本，不作为当前通过证据。官方八项对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
@@ -69,7 +71,7 @@ ASan/UBSan 本次 focused XML 记录时间为 `2026-10-30T21:55:15.875` 至 `21:
 
 TSan 本次 focused XML 记录时间为 `2026-10-30T21:59:19.491` 至 `21:59:22.424`（UTC+8），同样实际完成 37 + 16 + 4 项；提取的 DDS/key-only 驱动与 ASan 哈希相同。两版共享池测试身份与 coverage 一致，准入/ThreadPool 16 项及 DDS/key-only 4 项均属于当前完整模块回归的子集。
 
-[最终汇总审计](/home/ubuntu/project/travodds/artifacts/strict-native-20261030/final-verification.json) 生成于 `2026-10-30T13:59:31.206143Z`，其 [审计脚本](/home/ubuntu/project/travodds/artifacts/strict-native-20261030/final-audit.py) 无需重建或重跑测试：独立核对三模式相同的 319 项输入、68 个安装头文件/模式、500/57/57 个逐项完成测试，以及共 12 个程序链接各自私有库；同时检查生产库与静态 GTest archives 的 sanitizer 符号、覆盖率汇总/源码绑定及 9 次示例独立结果/原始 DS_RESULT 绑定。审计时 git diff --check 通过、共享段及活动测试程序均为空。该汇总仅证明记录的范围，LSan 未执行与历史 WaitSet 未归因限制保留。
+`final-verification.json` 生成于 `2026-10-30T13:59:31.206143Z`，其 `final-audit.py` 无需重建或重跑测试：独立核对三模式相同的 319 项输入、68 个安装头文件/模式、500/57/57 个逐项完成测试，以及共 12 个程序链接各自私有库；同时检查生产库与静态 GTest archives 的 sanitizer 符号、覆盖率汇总/源码绑定及 9 次示例独立结果/原始 DS_RESULT 绑定。审计时 git diff --check 通过、共享段及活动测试程序均为空。该汇总仅证明记录的范围，LSan 未执行与历史 WaitSet 未归因限制保留。
 
 | 当前产物（相对本报告证据根） | SHA-256 |
 |---|---|

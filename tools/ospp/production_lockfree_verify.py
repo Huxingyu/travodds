@@ -14,6 +14,7 @@ import shlex
 import subprocess
 import time
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 
 def digest(path):
@@ -32,7 +33,15 @@ def main():
     parser.add_argument('--focus-test', action='append', default=[], metavar='[FIXTURE.]NAME',
                         help='additional LoanIntegration or NativeReaderIntegration focused cases')
     parser.add_argument('--baseline', default='489067108405b27afbd369245542f5e88d457f18')
+    parser.add_argument('--compiler-memory-mib', type=int, default=512,
+                        help='Compiler-only address-space cap; runtime shadow mappings remain unlimited')
+    parser.add_argument('--trim-build-cache', action='store_true',
+                        help='Discard recorded rebuildable objects after each completed build stage')
+    parser.add_argument('--compile-timeout', type=int, default=7200,
+                        help='Per-stage compile timeout, allowing low-priority serial builds')
     args = parser.parse_args()
+    if args.compiler_memory_mib < 256:
+        parser.error('The compiler memory limit must be at least 256 MiB')
     source = Path(__file__).resolve().parents[2]
     output, build = args.output.resolve(), args.build_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -48,7 +57,9 @@ def main():
     inputs += [source / 'CMakeLists.txt', Path(__file__).resolve(),
                source / 'tools/ospp/coverage.py', source / 'tools/ospp/datasharing_examples.py']
     record = {'source': str(source), 'mode': args.mode, 'scope': args.scope,
-              'jobs': 1, 'compiler_memory_mib': 768, 'commands': [],
+              'started_utc': datetime.now(timezone.utc).isoformat(),
+              'nice': os.getpriority(os.PRIO_PROCESS, 0),
+              'jobs': 1, 'compiler_memory_mib': args.compiler_memory_mib, 'commands': [],
               'focus_tests': args.focus_test, 'examples_rounds': args.examples,
               'source_sha256': {str(p.relative_to(source)): digest(p) for p in inputs}}
     (output / 'harness.py').write_bytes(Path(__file__).read_bytes())
@@ -65,9 +76,50 @@ def main():
     def save():
         (output / 'results.json').write_text(json.dumps(record, indent=2) + '\n')
 
+    def trim_cache(stage):
+        if not args.trim_build_cache:
+            return
+        paths = sorted(p for p in build.rglob('*.o') if 'CMakeFiles' in p.parts)
+        installed = build / 'install/lib/libtravodds.so.1.1.0'
+        duplicate = build / 'library/src/libtravodds.so.1.1.0'
+        if installed.is_file() and duplicate.is_file():
+            if digest(installed) != digest(duplicate) or installed.stat().st_ino == duplicate.stat().st_ino:
+                raise RuntimeError('Unexpected library identity while trimming build cache')
+            paths.append(duplicate)
+        entries = [{'path': str(p), 'bytes': p.stat().st_size, 'sha256': digest(p)} for p in paths]
+        # Coverage notes/data, installed libraries, binaries and GTest archives
+        # remain intact. Save hashes before removing any reproducible cache.
+        (output / (stage + '-cache.json')).write_text(json.dumps(entries, indent=2) + '\n')
+        for p in paths:
+            p.unlink()
+        record.setdefault('trimmed_cache', {})[stage] = {
+            'files': len(entries), 'bytes': sum(p['bytes'] for p in entries)}
+        save()
+
     def limits():
-        resource.setrlimit(resource.RLIMIT_AS, (768 * 1024 * 1024,) * 2)
-        os.nice(10)
+        resource.setrlimit(resource.RLIMIT_AS, (args.compiler_memory_mib * 1024 * 1024,) * 2)
+        os.nice(19)
+        # If another workload consumes the remaining memory, prefer failing
+        # this bounded compiler over evicting an interactive user process.
+        try:
+            Path('/proc/self/oom_score_adj').write_text('500')
+        except OSError:
+            pass
+
+    def completed_tests(xml):
+        root = ET.parse(xml).getroot()
+        attributes = root.attrib
+        cases = list(root.iter('testcase'))
+        if not cases or int(attributes['tests']) != len(cases) or any(
+                int(attributes.get(k, 0)) for k in ('failures', 'errors', 'disabled', 'skipped')):
+            raise RuntimeError('Failed, skipped, disabled or empty test suite: ' + str(xml))
+        identities = {(case.attrib['classname'], case.attrib['name']) for case in cases}
+        if len(identities) != len(cases) or any(
+                case.attrib.get('status') != 'run' or case.attrib.get('result') != 'completed' or
+                any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped'))
+                for case in cases):
+            raise RuntimeError('Incomplete or duplicate test results: ' + str(xml))
+        return attributes
 
     def run(name, command, compiling=False, seconds=300):
         if compiling and shutil.disk_usage(output).free < 500 * 1024 * 1024:
@@ -87,9 +139,13 @@ def main():
             raise RuntimeError(name + ' failed; see retained log')
 
     try:
+        # Aggressive GCC collection trades compile time for a smaller live
+        # heap on the shared 2 GiB VM. It does not change program semantics.
+        gcc_gc = ' --param=ggc-min-expand=15 --param=ggc-min-heapsize=16384'
         flags = '-O1 -g0 -DNDEBUG'
         if args.mode == 'coverage':
             flags = '-O0 -g0 -DNDEBUG --coverage'
+        flags += gcc_gc
         if args.mode in ('asan', 'tsan'):
             flags += ' -fno-omit-frame-pointer -fsanitize=' + (
                 'address,undefined' if args.mode == 'asan' else 'thread')
@@ -99,10 +155,11 @@ def main():
             cmake_flags += ['-DCMAKE_EXE_LINKER_FLAGS=-no-pie']
         run('configure-library', ['cmake', '-S', source, '-B', build / 'library',
             '-DCMAKE_INSTALL_PREFIX=' + str(install), *cmake_flags], True)
-        run('build-library', ['cmake', '--build', build / 'library', '--parallel', '1'], True, 1800)
+        run('build-library', ['cmake', '--build', build / 'library', '--parallel', '1'], True, args.compile_timeout)
         run('install-library', ['cmake', '--install', build / 'library'])
         library = install / 'lib/libtravodds.so.1.1.0'
         record['library'] = {'path': str(library), 'sha256': digest(library)}
+        trim_cache('library')
         tests = build / 'tests'
         test_flags = list(cmake_flags)
         if args.mode in ('asan', 'tsan'):
@@ -121,8 +178,10 @@ def main():
         if args.scope == 'integration':
             targets.append('payloadpool_test')
         if args.scope == 'focused':
-            targets += ['gtest_main', 'native_key_admission_test']
-        run('build-tests', ['cmake', '--build', tests, '--parallel', '1', '--target', *targets], True, 1200)
+            targets += ['gtest_main', 'native_key_admission_test',
+                        'native_initialization_test', 'reader_payloadpool_test']
+        run('build-tests', ['cmake', '--build', tests, '--parallel', '1', '--target', *targets], True, args.compile_timeout)
+        trim_cache('tests')
         prefix = ['setarch', platform.machine(), '-R'] if args.mode == 'tsan' else []
         test_targets = [target for target in targets if target != 'gtest_main']
         if args.scope == 'focused':
@@ -170,7 +229,7 @@ def main():
         for target in test_targets:
             xml = output / (target + '.xml')
             run(target, [*prefix, tests / target, '--gtest_output=xml:' + str(xml)])
-            attributes = ET.parse(xml).getroot().attrib
+            attributes = completed_tests(xml)
             record[target] = attributes
             if int(attributes['tests']) == 0 or any(int(attributes.get(k, 0))
                     for k in ('failures', 'errors', 'disabled')):
@@ -181,10 +240,11 @@ def main():
                 '-DCMAKE_PREFIX_PATH=' + str(install),
                 '-DBUILD_GMOCK=OFF', '-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST',
                 *test_flags], True)
-            run('build-core', ['cmake', '--build', core, '--parallel', '1'], True, 1200)
+            run('build-core', ['cmake', '--build', core, '--parallel', '1'], True, args.compile_timeout)
+            trim_cache('core')
             xml = output / 'core.xml'
             run('core', [*prefix, core / 'unit_test', '--gtest_output=xml:' + str(xml)], seconds=650)
-            record['core'] = ET.parse(xml).getroot().attrib
+            record['core'] = completed_tests(xml)
             if int(record['core']['tests']) == 0 or any(int(record['core'].get(k, 0))
                     for k in ('failures', 'errors', 'disabled')):
                 raise RuntimeError('Core suite failed or empty')
@@ -192,7 +252,8 @@ def main():
             examples = build / 'examples'
             run('configure-examples', ['cmake', '-S', source / 'example/cpp/data_sharing',
                 '-B', examples, '-DCMAKE_PREFIX_PATH=' + str(install), *cmake_flags], True)
-            run('build-examples', ['cmake', '--build', examples, '--parallel', '1'], True, 600)
+            run('build-examples', ['cmake', '--build', examples, '--parallel', '1'], True, args.compile_timeout)
+            trim_cache('examples')
             run('examples', ['python3', source / 'tools/ospp/datasharing_examples.py',
                 '--build', examples, '--output', output / 'examples', '--rounds', args.examples],
                 seconds=max(300, args.examples * 3 * 40))
@@ -213,6 +274,7 @@ def main():
         record['passed'], record['error'] = False, str(error)
         save()
         raise
+    record['completed_utc'] = datetime.now(timezone.utc).isoformat()
     save()
     print('Verified production backend:', output / 'results.json', flush=True)
 
