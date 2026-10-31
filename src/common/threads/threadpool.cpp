@@ -57,7 +57,10 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::shutdown()
 {
-	shutdown_ = true;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		shutdown_ = true;
+	}
 	lock_.notify_all(); // 通知，唤醒所有工作线程
 	for (uint32_t i = 0; i < threads_.size(); ++i) {
 		// 判断线程是否在等待
@@ -68,22 +71,16 @@ void ThreadPool::shutdown()
 }
 void ThreadPool::ThreadWorker()
 {
-	ThreadPoolTask task; // 定义基础函数类func
-	bool dequeued = false; // 是否正在取出队列中元素
-	while (!shutdown_) {
-		// 为线程环境加锁，互访问工作线程的休眠和唤醒
-		std::unique_lock<std::mutex> lock(mutex_);
-		// 如果任务队列为空，阻塞当前线程
-		if (queue_.Empty()) {
-			lock_.wait(lock, [this] {return shutdown_ || !queue_.Empty(); }); // 等待条件变量通知，开启线程
+	for (;;) {
+		ThreadPoolTask task;
+		{
+			std::unique_lock<std::mutex> lock(mutex_);
+			lock_.wait(lock, [this] { return shutdown_ || !queue_.Empty(); });
+			// Shutdown finishes active tasks but does not drain queued work.
+			if (shutdown_) return;
+			if (!queue_.dequeue(task)) continue;
 		}
-		// 取出任务队列中的元素
-		dequeued = queue_.dequeue(task);
-		// 如果成功取出，执行工作函数
-
-		if (dequeued) {
-			task();
-		}
+		// Tasks may submit or wait for another worker; never hold its wait lock.
+		task();
 	}
-
 }

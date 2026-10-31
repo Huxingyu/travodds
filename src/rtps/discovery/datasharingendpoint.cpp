@@ -43,7 +43,7 @@ struct Decoder {
 }
 
 bool DataSharingEndpointInfo::valid(bool writer) const {
-    if (version != 1 || (kind != AUTO_DATA_SHARING_QOS && kind != ON_DATA_SHARING_QOS) ||
+    if (version != CURRENT_VERSION || (kind != AUTO_DATA_SHARING_QOS && kind != ON_DATA_SHARING_QOS) ||
         !type.loanable() || type.alignment > 4096 || type.layout_id.size() > 256 ||
         type.layout_id.find('\0') != std::string::npos || !hostIdValid(host_id) ||
         !pid_namespace_inode || domain_ids.empty() || domain_ids.size() > 32) return false;
@@ -84,8 +84,8 @@ bool DecodeDataSharing(const uint8_t* data, size_t size, DataSharingEndpointInfo
     try {
         Decoder d{data, size};
         DataSharingEndpointInfo parsed;
-        if (d.integer(4) != 0x54524453 || d.integer(4) != 1) return false;
-        parsed.version = 1;
+        if (d.integer(4) != 0x54524453 || d.integer(4) != DataSharingEndpointInfo::CURRENT_VERSION) return false;
+        parsed.version = DataSharingEndpointInfo::CURRENT_VERSION;
         const auto kind = d.integer(4);
         if (kind > ON_DATA_SHARING_QOS) return false;
         parsed.kind = static_cast<DataSharingQosPolicyKind>(kind);
@@ -113,7 +113,8 @@ DataSharingEndpointInfo LocalDataSharingInfo(const DataSharingQosPolicy& qos, co
     std::ifstream boot("/proc/sys/kernel/random/boot_id");
     struct stat identity{};
     if (!std::getline(boot, info.host_id) || stat("/proc/self/ns/pid", &identity) != 0) return {};
-    info.version = 1; info.kind = qos.kind; info.type = type; info.domain_ids = qos.domain_ids;
+    info.version = DataSharingEndpointInfo::CURRENT_VERSION;
+    info.kind = qos.kind; info.type = type; info.domain_ids = qos.domain_ids;
     info.pid_namespace_device = uint64_t(identity.st_dev); info.pid_namespace_inode = uint64_t(identity.st_ino);
     if (!info.valid(false)) return {};
 #else

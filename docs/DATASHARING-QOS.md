@@ -1,5 +1,7 @@
 # DataSharing 配置与发现能力（当前实现）
 
+本文对应共享布局 v6、发现能力 v3；当前严格准入和新验证进度见 [严格准入报告](DATASHARING-STRICT-20261030.md)，官方交付及历史结果的边界见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
+
 C++ QoS、XML、Writer 共享池分配、SEDP 能力、Reader 实际映射注册与每对端点的传输选择已接入。有键与无键固定布局类型可以自动走共享路径；同一个 Writer 可以同时发送给共享 Reader 和 RTPS Reader。`ON` 要求本地准备成功；本轮对端不兼容、未注册或 Reader 映射失败仍保留 RTPS，映射异常会记录日志。ON 的契约为本地准备严格、对端不可用回退；兼容对端的暂时失败自动重试。
 
 ## C++ 配置
@@ -30,9 +32,9 @@ Reader 不分配 Writer 段；Reader 的目录用于推导要打开的文件，�
 
 全部字段在现有 endpoint `set_qos` 规则下不可变；值不同返回 IMMUTABLE_POLICY，保留旧配置。非法配置返回 INCONSISTENT_POLICY。默认 Writer/Reader QoS、创建、get_qos 和 XML profile 继承保留这些字段。
 
-Linux 固定布局类型的 Writer 在 enable 时创建段，参数传入真实 SharedPayloadPool。ON 类型不支持或当前平台不支持时返回 UNSUPPORTED；目录/系统调用失败返回 ERROR，超出段预算返回 INCONSISTENT_POLICY，分配失败返回 OUT_OF_RESOURCES。创建时自动 enable 失败表现为 create_datawriter 返回空指针；需要精确错误码时关闭 Publisher 的自动 enable，再显式调用 Writer::enable。
+Linux 固定布局类型的 Writer 在 enable 时创建段，参数传入真实 SharedPayloadPool。ON 类型不支持、带键类型缺失/非法 NativeKeyInfo，或当前平台不支持时返回 UNSUPPORTED；目录/系统调用失败返回 ERROR，超出段预算返回 INCONSISTENT_POLICY，分配失败返回 OUT_OF_RESOURCES。创建时自动 enable 失败表现为 create_datawriter 返回空指针；需要精确错误码时关闭 Publisher 的自动 enable，再显式调用 Writer::enable。
 
-AUTO 准备失败会记录日志并保持普通写入；此端点后续 loan_sample 返回 UNSUPPORTED，避免在 enable 后偷偷改写已发布的会话信息。OFF 的普通写入仍可用。Reader 的 ON 检查类型元数据；内容过滤 Reader 当前不支持共享，ON enable 返回 UNSUPPORTED，AUTO 不广告共享能力。实际映射/注册失败保留 RTPS。已匹配兼容端点会以25ms至1s有界退避自动重试；注册成功才切换DS。OFF、类型/host/domain不兼容不重试；CORRUPT/关闭/布局错误会话等待新会话或端点重建。
+AUTO 准备失败会记录日志并保持普通写入；此端点后续 loan_sample 返回 UNSUPPORTED，避免在 enable 后偷偷改写已发布的会话信息。OFF 的普通写入仍可用。Writer 与 Reader 均通过 supports_native_data_sharing 校验类型；带键类型的 NativeKeyInfo 必须有效，缺失/非法时 ON enable 返回 UNSUPPORTED，AUTO 正常 enable 但不广告 DS、普通 write 保留 CDR/RTPS，loan_sample 返回 UNSUPPORTED。Reader 的 ON 检查同一类型契约；内容过滤 Reader 当前不支持共享，ON enable 返回 UNSUPPORTED，AUTO 不广告共享能力。实际映射/注册失败保留 RTPS。已匹配兼容端点会以25ms至1s有界退避自动重试；实际注册完成且历史重放 ready 后才切换 DS。OFF、类型/host/domain不兼容不重试；CORRUPT/关闭/布局错误会话等待新会话或端点重建。
 
 ## XML
 
@@ -65,17 +67,17 @@ Writer/Reader 支持相同节点。省略字段沿用默认值或基 profile；�
 
 ## 发现扩展与回退边界
 
-SEDP 使用 TravoDDS 自定义 PID `0x80e1`。有能力的 Writer/Reader 发送版本 1、原生布局 ID/大小/对齐、共享组、Linux boot ID 与 PID namespace 身份。Writer 另外发送随机会话、段字节数与槽位/Reader 数；不发送或接受任意远端文件路径。
+SEDP 使用 TravoDDS 自定义 PID `0x80e1`。有能力的 Writer/Reader 发送版本 3、原生布局 ID/大小/对齐、共享组、Linux boot ID 与 PID namespace 身份。Writer 另外发送随机会话、段字节数与槽位/Reader 数；不发送或接受任意远端文件路径。
 
-能力正文采用固定大端格式，与外层 ParameterList 的字节序无关；整体最多 1024 字节，布局 ID 最多 256 字节，共享组最多 32 个。解码按边界验证后分配，拒绝重复能力、未知版本、截断、错误角色和非零尾部填充。旧端点缺少扩展时能力为空，保留 RTPS。
+能力正文采用固定大端格式，与外层 ParameterList 的字节序无关；整体最多 1024 字节，布局 ID 最多 256 字节，共享组最多 32 个。解码按边界验证后分配，拒绝重复能力、未知版本、截断、错误角色和非零尾部填充。旧端点缺少扩展、发现能力 v1/v2 或未知版本时不能启用 native，保留 RTPS。v3 端点的原生带键类型必须先通过强制 key-only 准入，避免与仍允许旧全样本快照的 v2 端点协商 DS。
 
-`compatible_with` 要求 Writer/Reader 角色、版本、类型布局、同主机/同 PID namespace 和共享组交集全部成立。结果仅是候选；后续实际 open 还必须通过共享池已有的文件属主/权限、会话、GUID、长度、pthread ABI、进程身份等校验，并完成 Reader 注册，才可切换传输。只有实际注册的兼容 Reader 才会被选为该样本的共享目标。能力广告本身不代表已打开共享段，也不能当作安全认证。启用 DDS Security 时不准备原生共享路径。
+`compatible_with` 要求 Writer/Reader 角色、版本、类型布局、同主机/同 PID namespace 和共享组交集全部成立。结果仅是候选；后续实际 open 还必须通过共享池已有的文件属主/权限、会话、GUID、长度、pthread ABI、进程身份等校验，并完成 Reader 注册和重放 ready 握手，才可切换传输。只有 ready 的兼容 Reader 才会被选为该样本的 DDS 共享目标。能力广告本身不代表已打开共享段，也不能当作安全认证。启用 DDS Security 时不准备原生共享路径。
 
 TypeSupport/DataWriter 虚表、QoS、BuiltinTopicData 和序列布局均有变动；库和应用必须一起重新编译。
 
 ## 当前调度与容量行为
 
-- 每次写入从已注册的 Reader 中选择匹配的共享目标。没有共享目标时使用原有 CDR 路径。
+- 每次写入从已注册且 ready 的 Reader 中选择匹配的共享目标。没有共享目标时使用原有 CDR 路径；TRANSIENT_LOCAL Writer 也可先保留原生历史供晚加入 Reader 重放。
 - 有共享目标时，Loan 写入直接使用该槽位；普通裸指针写入分配槽位并复制固定布局字节。带键类型使用相同的共享路径；存在 SQL Reader 过滤器时继续使用 CDR。
 - 混合匹配只生成一份 CDR，并按 Reader entity ID 定向发送，避免误投给同一参与者内的共享 Reader；DATA、DATA_FRAG 和重传均保留目标身份。
 - 原生预分配耗尽：loan_sample 返回 OUT_OF_RESOURCES；普通 ON 写入返回分配错误，AUTO 普通写入可回退 CDR。共享 listener 停止注册后，后续投递可使用 RTPS。
@@ -85,7 +87,7 @@ TypeSupport/DataWriter 虚表、QoS、BuiltinTopicData 和序列布局均有变�
 
 普通序列化载荷池由独立的 `DataWriterQos::payload_pool` 配置，四种策略、容量、对齐及 XML 写法见 [普通池配置手册](PAYLOADPOOL-QOS.md)。`data_sharing.max_samples` 约束原生共享槽位，`payload_pool.max_payloads` 约束普通 CDR 分片块，两者分别预算。
 
-带键注册与 Reader 键查询额外保留独立本地快照，详见 [API 手册](DATASHARING-API.md#带键实例与本地快照)。它不占共享槽位，也不计入段预算；配置大量实例时需要另外预算内存。
+带键注册与 Reader 键查询额外保留独立本地键快照；native 仅存声明的键字节，不存在全样本快照兼容分支。Writer 与 Reader 两端必须各自满足 key-only 契约才能广告 DS；具体键表示仍是本地元数据，捕获/还原失败不会回退完整样本复制。CDR 类型继续使用其原有序列化快照。键和控制元数据仍有复制，不承诺任何字节都不复制。详见 [API 手册](DATASHARING-API.md#带键实例与本地快照)。它不占共享槽位，也不计入段预算；配置大量实例时需要另外预算内存。
 
 ## Reader 有限生命周期与时间
 
@@ -103,4 +105,4 @@ lifespan使用Writer源时间，进入history前检查、读取前及维护期�
 KEEP_LAST普通write在槽位耗尽且同实例history已满时先释放待替换history引用，再尝试预留。应用Writer Loan、未读Reader及Reader Loan独立固定槽位；仍被固定时ON返回OUT_OF_RESOURCES，AUTO普通write回退CDR。KEEP_ALL不会为了新写入提前淘汰保留历史，容量需包含在途与应用借用预算。不能借此增加段槽位或覆盖未归还Loan。不同键共用总槽位预算，不会为新键淘汰其他实例历史。
 
 
-本轮最终验收：普通与ASan/UBSan各468/468，两版各55项×30轮及三个有限示例各30轮通过；新增生产行覆盖率94.118%（2432/2584）。独立TSan限定路径通过，LSan未运行、历史WaitSet根因未知。当前完整证据与限制以 [本轮报告](DATASHARING-COMPLETION-20261028.md) 为准，早期数字只保留历史含义。
+当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。

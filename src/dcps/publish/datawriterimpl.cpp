@@ -111,6 +111,7 @@ DataWriterImpl::~DataWriterImpl()
 {
     { std::lock_guard<std::mutex> schedule(lastInstanceMtx_); timersClosing_ = true; }
 #if defined(__linux__)
+	if (nativeMaintenanceTimer_) nativeMaintenanceTimer_->Exit();
 	if (nativePool_) nativePool_->closeWriter();
 #endif
 	if (deadlineTimer_) {
@@ -164,7 +165,7 @@ ReturnCode_t DataWriterImpl::PrepareDataSharing()
 		if (dp && dp->enableDDSSec_) return RETCODE_UNSUPPORTED;
 #endif
 		const auto type = typeSupport_->get_native_type_info();
-		if (!type.loanable()) return RETCODE_UNSUPPORTED;
+		if (!typeSupport_->supports_native_data_sharing(type)) return RETCODE_UNSUPPORTED;
 		std::lock_guard<std::mutex> lock(loanMutex_);
 		if (nativePool_) return RETCODE_OK;
 		// Discovery metadata is immutable after enable. AUTO fallback cannot
@@ -172,15 +173,29 @@ ReturnCode_t DataWriterImpl::PrepareDataSharing()
 		if (enable_) return RETCODE_UNSUPPORTED;
 		auto capability = LocalDataSharingInfo(qos_.data_sharing, type);
 		if (!capability.valid(false)) return RETCODE_UNSUPPORTED;
-		if (!nativePool_) {
+		{
 			SharedPoolConfig config;
 			config.payload_size = type.size;
 			config.alignment = std::max(uint32_t(64), type.alignment);
 			config.slots = qos_.data_sharing.max_samples;
 			config.max_readers = qos_.data_sharing.max_readers;
 			config.max_segment_bytes = qos_.data_sharing.max_segment_bytes;
-			nativePool_ = SharedPayloadPool::create(Conversion::ToGuid(handle_), config,
+			auto pool = SharedPayloadPool::create(Conversion::ToGuid(handle_), config,
 				qos_.data_sharing.shared_memory_directory);
+			// Registration, process liveness and robust-mutex recovery are
+			// management operations. The statistics try-lock must skip a busy
+			// manager; a paused Reader cannot block write() or timer shutdown.
+			auto maintenance = TimerManager::CreateTimer({0, 100u * 1000u * 1000u},
+				[weak = std::weak_ptr<SharedPayloadPool>(pool)] {
+					if (auto current = weak.lock()) {
+						SharedPoolStats stats;
+						current->statistics(stats);
+					}
+				}, "DataSharingMaintenance");
+			// Publish both owners only after creating the timer succeeds.
+			// A thread/allocation failure leaves no partially prepared pool.
+			nativePool_ = std::move(pool);
+			nativeMaintenanceTimer_ = std::move(maintenance);
 		}
 		const auto& descriptor = nativePool_->descriptor();
 		capability.session_high = descriptor.session.high;
@@ -408,7 +423,11 @@ ReturnCode_t DataWriterImpl::get_key_value(void* key_holder, const InstanceHandl
     if (!typeSupport_->has_key()) return RETCODE_ILLEGAL_OPERATION;
     if (!key_holder || handle == HANDLE_NIL) return RETCODE_BAD_PARAMETER;
     if (auto native = history_->GetNativeKey(handle)) {
-        return typeSupport_->copy_data(key_holder, native.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
+        const auto keyInfo = typeSupport_->get_native_key_info();
+        if (!keyInfo.valid_for(typeSupport_->get_native_type_info())) return RETCODE_BAD_PARAMETER;
+        try {
+            return typeSupport_->restore_native_key(key_holder, native.get()) ? RETCODE_OK : RETCODE_ERROR;
+        } catch (const std::exception&) { return RETCODE_ERROR; }
     }
     auto data = history_->GetSerializedKey(handle);
     if (!data) return RETCODE_BAD_PARAMETER;
@@ -1187,11 +1206,12 @@ ReturnCode_t DataWriterImpl::RegistInstance(const void* const instance_data, con
 #if defined(__linux__)
         if (nativePool_) {
             const auto info = typeSupport_->get_native_type_info();
-            const auto alignment = std::align_val_t(std::max(info.alignment, uint32_t(alignof(std::max_align_t))));
-            native = std::shared_ptr<void>(::operator new(info.size, alignment),
+            const auto keyInfo = typeSupport_->get_native_key_info();
+            if (!keyInfo.valid_for(info)) return RETCODE_BAD_PARAMETER;
+            const auto alignment = std::align_val_t(std::max(keyInfo.alignment, uint32_t(alignof(std::max_align_t))));
+            native = std::shared_ptr<void>(::operator new(keyInfo.size, alignment),
                 [alignment](void* p) { ::operator delete(p, alignment); });
-            if (!typeSupport_->construct_native_sample(native.get())) return RETCODE_ERROR;
-            std::memcpy(native.get(), instance_data, info.size);
+            if (!typeSupport_->capture_native_key(native.get(), instance_data)) return RETCODE_ERROR;
         } else
 #endif
         {

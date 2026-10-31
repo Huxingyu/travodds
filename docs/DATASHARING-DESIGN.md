@@ -1,6 +1,6 @@
 # DataSharing 与 Loan 设计
 
-本文描述普通载荷池、Linux 共享池、Loan、QoS/XML、发现和自动共享调度。当前有键和无键固定布局类型已经完成独立进程的共享收发；可靠/尽力以及共享/普通 Reader 混用均有端到端验证。带键生命周期、有限回收、重试和时间同步已实现；验收结果及平台限制见 [本轮报告](DATASHARING-COMPLETION-20261028.md)。
+本文描述普通载荷池、Linux 共享池、Loan、QoS/XML、发现和自动共享调度，按生产共享布局 v6、发现能力 v3 更新。严格 native 准入及新验证进度见 [严格准入报告](DATASHARING-STRICT-20261030.md)，官方交付对应关系见 [验收矩阵](DATASHARING-ACCEPTANCE.md)，数据面进展和故障契约见 [生产后端报告](DATASHARING-PRODUCTION-20261030.md)。零载荷复制范围是显式兼容的固定布局类型从 Writer Loan 到 Reader Loan；普通裸指针 write 和预分配输出仍复制。
 
 ## 当前分配与归还路径
 
@@ -8,7 +8,7 @@
 
 `PayloadBufferPtr` 在写入准备阶段独占整条链，包括进程内描述符及其载荷。失败、提前返回或序列化抛异常时，析构逐个归还载荷并删除描述符。`NewChange` 成功后才把链所有权转给 `CacheChange`，后者持有原始池直至最终释放。Writer 删除与某条缓存最终释放可以发生在不同时间，缓存不会依赖已析构的 Writer。
 
-普通 CDR 注册快照及内置发现报文仍有独立的旧池路径；原生实例快照使用独立的对齐存储，键哈希由 TypeSupport::MakeKey 计算。不能将这些指针交给 Topic 池回收，也不能将 Topic 池的指针交给全局 `MemoryPool`。Writer 的注销、dispose 控制缓存与正常用户缓存采用相同的显式原池参数。
+普通 CDR 注册快照及内置发现报文仍有独立的旧池路径；原生实例快照使用独立的对齐键存储，带键类型只有声明有效 NativeKeyInfo 并承诺 capture/restore 钩子契约才能启用 native；原生完整样本快照回退已移除，旧类型保留 CDR/RTPS。键哈希由 TypeSupport::MakeKey 计算。不能将这些指针交给 Topic 池回收，也不能将 Topic 池的指针交给全局 `MemoryPool`。Writer 的注销、dispose 控制缓存与正常用户缓存采用相同的显式原池参数。
 
 Reader 的反序列化读取临时持有 `shared_ptr<CacheChange>`。`take` 从历史中移除可读取样本；它不直接释放复制出来的 `SerializedBuffer::origin_buffer`。当所有历史、临时读取及其他持有者均释放缓存时，才由缓存归还原池。RTPS 接收的 `CacheSerializedBuffer` 也可能只借用 `originMessage` 的空间而没有 `origin_buffer`；该路径依靠消息的强引用保活。
 
@@ -37,9 +37,11 @@ Reader 的反序列化读取临时持有 `shared_ptr<CacheChange>`。`take` 从�
 
 Reader 需要有独立注册代次，防止 Reader 退出重启后错误归还上一个会话的样本。多个 Reader 的引用互相独立。慢 Reader 持有 Loan 时，Writer 根据池容量和可靠性策略等待或报资源不足，不能覆盖尚在读取的数据。
 
-跨进程同步采用 robust、process-shared pthread mutex，以及 32 位原子通知代次配合 Linux process-shared futex。等待者在元数据锁内读取代次，解锁后按单调时钟绝对期限等待，再加锁重扫队列；中间发生发布时由 EAGAIN 避免漏唤醒。内核在进程退出时移除 futex 等待者，避免被杀等待者遗留 pthread condition variable 内部锁。锁持有者崩溃时，段进入 CORRUPT 状态，停止分配与投递；不会猜测修复部分写入的元数据。已有 Loan 保留映射，仍可读取先前发布的字节。
+跨进程注册和控制维护保留 robust、process-shared pthread mutex；槽位预留、发布、Reader 借用/归还和 ready 注册快照不获取它。槽位用原子 gate 组合 phase 与短操作计数，取得 lease 后再验证独立 64 位代次；预留只有在短操作退出且 Writer/pending/Loan pin 全空时才能覆写。Reader 先建立 Loan pin 再清 pending，长期借用只占 pin，不占短操作计数。控制锁持有者暂停时，已有数据面仍可推进；新的注册仍可能等待控制锁。
 
-Reader 进程身份由 PID 和 `/proc/<pid>/stat` 启动时间共同确定，仅在确认进程已死、成为僵尸或 PID 已复用时回收其引用。无法读取的进程状态视为未知，不因超时而回收。等待最多每 100 ms 检查一次死亡状态。当前要求相同 PID 命名空间且 `/proc` 编号与调用者一致。
+通知采用 always-lock-free 的 32 位原子代次和 Linux process-shared futex。等待者先采样通知代次，再检查数据谓词，无数据时按原单调时钟期限比较等待；并发通知通过代次不符避免漏唤醒。等待后重扫，不依赖通知次数保存队列。Writer 关闭后还需重扫最终发布水位再返回 CLOSED。futex 系统调用及 DDS 本地 Writer/history/发现锁不构成整个 write 路径的形式化 lock-free 保证。
+
+Reader 进程身份由 PID 和 `/proc/<pid>/stat` 启动时间共同确定，仅在确认进程已死、成为僵尸或 PID 已复用时处理引用。无法读取的状态视为未知，不因超时回收。Writer 每 100 ms 的弱引用维护定时器及 Reader 空等待执行控制维护；统计使用 try-lock，忙返回 TIMEOUT。若死亡登记仍有无法安全归属的短操作计数，保守将 session 标为 CORRUPT，不强减计数；管理锁持有者死亡也使 session 损坏。新分配停止，旧 Loan 的映射和已发布字节继续保活，恢复需要新会话。当前要求相同 PID 命名空间且 `/proc` 编号与调用者一致。
 
 Writer 正常关闭会标记 CLOSED、释放 Writer 引用并解绑当前文件；已映射 Reader 仍可读完已发布样本，Loan 在归还前继续保活。Writer 崩溃时 Reader 等待检测关闭；`removeOrphan` 仅在确认原 Writer 已死亡后处理对应会话和 inode。新 Writer 即使 GUID 相同也使用新会话。
 
@@ -49,7 +51,7 @@ Writer 正常关闭会标记 CLOSED、释放 Writer 引用并解绑当前文件�
 - Writer 的 `loan(size, token, buffer, timeout)` 返回可写地址，`publish(token, size, sequence)` 发布，`releaseWriter(token)` 释放其引用。尚未发布的样本也通过 `releaseWriter` 取消。
 - `registerReader()` 返回独立注册，默认只接收注册之后的发布。`waitNext(afterSequence, timeout, loan)` 按序获取未读样本；`returnLoan(loan)` 或 Loan 析构归还借用；`discard(token)` 丢弃尚未借出的投递。
 - `SharedReadLoan` 只能移动，持有注册和映射。销毁 Reader 句柄不会提前释放仍被 Loan 使用的地址。错误 Reader、会话、槽位代次和重复归还会被拒绝。
-- `loan` 无等待时资源不足返回 EXHAUSTED，有等待时到期返回 TIMEOUT；`waitNext` 无可读样本到期返回 TIMEOUT。关闭返回 CLOSED，锁持有者死亡返回 CORRUPT，参数或身份不符返回 INVALID。创建/映射配置错误抛出 `invalid_argument`，系统调用失败通常抛出 `system_error`。
+- `loan` 无等待时资源不足返回 EXHAUSTED，有等待时到期返回 TIMEOUT；`waitNext` 无可读样本到期返回 TIMEOUT。同一本地 SharedPoolReader 的并发 take/discard 竞争立即返回 TIMEOUT/false，已有 Loan 归还独立进行。直接并发 publish 的发布 lane 竞争返回 EXHAUSTED，DDS Writer 本身已串行化提交。关闭返回 CLOSED，损坏 session 返回 CORRUPT，参数或身份不符返回 INVALID。创建/映射配置错误抛出 `invalid_argument`，系统调用失败通常抛出 `system_error`。
 - DataWriter 删除时显式调用 `closeWriter()`。仅丢弃一个 owner 句柄不能保证关闭，因为本进程 Reader 注册可能仍强引用该池。
 - 原始 `IPayloadPool` 地址接口仅供内部历史使用，不能识别地址复用后的旧别名；DDS Loan 必须保留 token。`SampleLoan` 已保留 token；Reader 的 `CacheChange::nativePayload` 已能通过 aliasing shared_ptr 保活 `SharedReadLoan`，QoS、发现及自动接收已接入；命名注册可按 GUID 选择发布目标，带有时间戳、实例与关联样本身份元信息。双方 TRANSIENT_LOCAL 时注册可重放仍被 Writer 持有的槽位；无 Reader 时的原生预发布与独立进程晚加入已有可靠/尽力回归。
 
@@ -57,7 +59,7 @@ Writer 正常关闭会标记 CLOSED、释放 Writer 引用并解绑当前文件�
 
 ## 类型能力与 Loan 接口
 
-既有 TypeSupport 的 `get_native_type_info()` 默认返回无能力，`construct_native_sample` 默认失败。`NativeTypeInfo` 区分 bounded/plain，携带大小、对齐与版本化布局 ID。`NativeTypeSupport<T>` 要求标准布局、可平凡复制/析构且默认构造 noexcept；显式在借出的存储上执行 placement-new。应用仍必须保证 T 的字段不含进程内指针，不能仅凭编译期 trivial 属性证明指针无关性。含 string、vector 的类型保持普通序列化路径。
+既有 TypeSupport 的 `get_native_type_info()` 默认返回无能力，`construct_native_sample` 默认失败。`NativeTypeInfo` 区分 bounded/plain，携带大小、对齐与版本化布局 ID。`NativeTypeSupport<T>` 要求标准布局、可平凡复制/析构且默认构造 noexcept；显式在借出的存储上执行 placement-new。应用仍必须保证 T 的字段不含进程内指针，不能仅凭编译期 trivial 属性证明指针无关性。`supports_native_data_sharing(info)` 还统一检查带键类型的 NativeKeyInfo；缺失或非法时 ON enable 返回 UNSUPPORTED，AUTO 不广告 DS 并保留普通 CDR/RTPS，loan_sample 不可用。含 string、vector 的类型保持普通序列化路径。
 
 Writer 的 `SampleLoan` 是不可复制、可移动的句柄，内部绑定独立 Writer 身份、共享池、会话、槽位和代次。`loan_sample(SampleLoan&)` 创建记录，`write(SampleLoan&, handle)` 成功后消费记录，返回错误时保留以便重试；`discard_loan` 或句柄析构取消未提交的借用。错误 Writer、空/已消费句柄及重复提交/取消返回 PRECONDITION_NOT_MET。没有暴露无法验证 ABA 的裸地址 Loan 提交接口。
 
@@ -86,7 +88,7 @@ Writer 在原有 history 容量检查和插入之后调用共享发布，再交�
 
 Reader 每个已匹配共享 Writer 有独立线程与运行状态。运行状态持有共享注册，线程通过 weak_ptr 获取 Reader；停止先关闭新/未读投递，随后在不持有 ingress、匹配或连接映射锁时 join。自身线程的最后一次析构使用 detach，运行状态继续保活；Reader 应用 Loan 的存储与监听线程相互独立。数据、分片、heartbeat、GAP 以及原生提交使用同一 Reader ingress 锁，避免并发操作 WriterProxy 状态。匹配表使用独立短锁，获取 shared_ptr 后释放；liveliness 回调查询匹配时不等待 ingress，也不在持有匹配表锁时调用 liveliness manager。
 
-共享布局版本为 5，包含 Reader GUID/接受状态、replay 标志、样本元信息与 futex 通知代次；旧布局在映射前拒绝，随后走 RTPS。发现扩展版本仍为 1，未改变正文编码。
+共享布局版本为 6，包含原子 slot/registration gate、完整 64 位代次、Reader GUID/接受及 ready 状态、replay 标志、样本元信息与 futex 通知代次。发现能力版本为 3，旧 v1/v2 和未知版本不能选择 native；v3 隔离仍允许带键全样本快照的旧端点。建立共享路径前的不兼容保留 RTPS。已经损坏的 native session 需要新会话，不能把协议降级等同于任意运行时错误都透明恢复。
 
 ## 验收证据
 
@@ -101,18 +103,18 @@ Reader 每个已匹配共享 Writer 有独立线程与运行状态。运行状�
 
 键哈希使用现有 TypeSupport::MakeKey，统一按 0 成功处理，失败不会继续注册或发送。Writer 的注册、写入、注销与键查询串行协调，history 的注册与快照获取使用短互斥锁及共享所有权。显式句柄必须已注册且与样本键一致；隐式注册保留资源错误码。
 
-Writer 的原生注册快照使用本地对齐内存；Reader 的原生快照从首次接受的 ALIVE 样本复制，普通快照独立复制 CDR 分片链。快照只供实例键查询，不改变跨进程共享布局，也不保持原共享槽位的引用。每次 CDR 查询复制描述符并重置各分片读游标，避免重复查询消耗保存的快照。非键字段不保证随新样本更新。
+Writer 注册与 Reader 首次接受 ALIVE 时建立独立本地键快照。原生带键类型必须提供有效 NativeKeyInfo，capture_native_key/restore_native_key 只捕获和还原键；非键字段保持调用前值。端点 enable 只验证元数据契约，不用假样本探测钩子；声明了元数据却未实现钩子时，实际操作失败关闭。缺失、非法、false 或标准异常均不触发原生全样本 memcpy/copy_data 回退。Writer 和 Reader 两端独立执行相同准入门控，discovery v3 排除容许旧全样本快照的 v2 对端。具体键表示仍属于本地元数据，不通过共享段或发现传送。键快照和索引会复制少量元数据，“零载荷复制”指完整用户载荷没有复制分支，不是任何字节都不复制。快照不保存共享槽位引用；CDR 类型仍保存独立分片链，每次查询使用独立游标。首次捕获失败时，Reader 在排序、过滤、淘汰及所有权状态变更前拒绝本条准入并回滚新建空实例，不占 max_instances；既有实例与历史保持。已有键快照还原失败不会丢弃保存的快照。详细类型契约与错误码见 [API 手册](DATASHARING-API.md#带键实例与本地快照)。
 
-带键样本与无键样本走相同的原生提交/定向混合回退路径。实例句柄已包含在共享元数据内；dispose/unregister 继续使用原有 RTPS inline key/status，Reader 沿原代理和 history 更新状态。内置发现 Reader 没有应用 TypeSupport，必须跳过实例快照逻辑。注销之后 Writer 清理该实例历史和注册快照；完整持久性控制通知与丢包重传矩阵仍待验收。
+带键样本与无键样本走相同的原生提交/定向混合回退路径。实例句柄已包含在共享元数据内；dispose/unregister 继续使用原有 RTPS inline key/status，Reader 沿原代理和 history 更新状态。内置发现 Reader 没有应用 TypeSupport，必须跳过实例快照逻辑。注销之后 Writer 清理该实例历史和注册快照；当前验证覆盖代表性的持久性和控制通知组合；任意丢包、重传与线程交错的完整矩阵未穷尽，这是验证范围限制，不另作为官方八项之外的交付要求。
 
 
 ## 历史、目标隔离与进程重启
 
-TRANSIENT_LOCAL Writer 即使尚无 Reader，也保留原生共享历史。发布在共享池锁内包含新注册的 replay Reader，避免目标快照与注册交错漏样本；VOLATILE Reader 不重放旧槽位。晚加入 OFF Reader 按需生成 CDR。BEST_EFFORT 的保留历史在匹配时定向发送一次，仍受发现顺序和丢包影响，不提供可靠重发保证。混合晚加入回归先建立原生 Reader，再创建 OFF Reader。
+TRANSIENT_LOCAL Writer 即使尚无 Reader，也保留原生共享历史。重放注册先 OPEN，历史扫描与发布水位协调完成后才置 ready；registeredReaders 只暴露 ready 登记，过渡期继续 RTPS。共享发布同时考虑 OPEN 的过渡登记，已有序号逻辑处理可能的重复。VOLATILE Reader 不重放旧槽位。晚加入 OFF Reader 按需生成 CDR。BEST_EFFORT 的保留历史在匹配时定向发送一次，仍受发现顺序和丢包影响，不提供可靠重发保证。混合晚加入回归先建立原生 Reader，再创建 OFF Reader。
 
 native 缓存回退为定向 RTPS 时，DATA、DATA_FRAG 及分片重发带 INFO_DST 的 Participant 前缀；接收端在查 Reader entityId 前检查目标前缀，UNKNOWN 保留原广播语义。Reader entityId 仅在 Participant 内唯一，不能独立作为跨 Participant 的目标身份。
 
-共享池以 PID 和启动身份回收死 Reader 的 pending/Loan pin；DDS discovery lease 对失联端点的保留是另一套生命周期。旧 Reader 仍在 lease 中时，Writer 可能为其生成 CDR；重启路径不能承诺 Writer 始终零序列化。死 Writer 的 orphan 只能在验证 GUID、session、文件身份和实际死亡后精确移除；已有 Loan 的映射保持有效。持锁进程死亡时仍安全拒绝损坏段，应用需重建端点，不承诺原池无损恢复。
+共享池控制维护以 PID 和启动身份确认死 Reader；登记无短操作时才回收 pending/Loan pin，不能确定短操作安全性时损坏会话。DDS discovery lease 对失联端点的保留是另一套生命周期。旧 Reader 仍在 lease 中时，Writer 可能为其生成 CDR；重启路径不能承诺 Writer 始终零序列化。死 Writer 的 orphan 只能在验证 GUID、session、文件身份和实际死亡后精确移除；已有 Loan 的映射保持有效。持锁进程死亡时仍安全拒绝损坏段，应用需重建端点，不承诺原池无损恢复。
 
 Reader 实例在 history 准入成功后才进入已知键索引，max_instances 不被预登记绕过。默认无限 autopurge 下，take、Writer 消失或归还 Loan 不删除已知键和键快照；重建 Reader 获得新预算。有限autopurge现按状态转移的单调时间回收实例、键快照与预算；Loan共享引用保活，回收不强制复用其物理槽位。
 
@@ -124,13 +126,13 @@ Reader 实例在 history 准入成功后才进入已知键索引，max_instances
 内置发现 Reader 的 DCPS owner 在 Participant 停止接收后销毁，沿用该生命周期。其匹配通知不能获取另一个内置 Reader 的 ingress 锁：SPDP 匹配在 Reader 表锁内运行，而 SEDP 接收先持有自身 ingress 再等待 Reader 表锁，反向加锁会死锁。受控回归同时检查内置通知不等待 ingress、用户 Reader 通知等待 ingress，以及用户 Reader 解除关联等待在途回调。
 
 
-Reader 的任意时刻 SIGKILL 可能打断共享元数据事务，因此不能保证每次都在原池上回收后继续服务。未损坏段由 `registeredReaders` 等正常操作确认进程死亡并回收引用；持锁死亡则安全拒绝新 Loan，删除并重建对应 Writer，使用新 GUID/会话和共享段恢复。故障回归分别覆盖任意时刻退出和握住真实共享 mutex 后退出，并验证两种可靠性下重建后的独立进程收发。
+Reader 的任意时刻 SIGKILL 可能遗留短操作计数或打断控制事务，不能保证原池每次都继续服务。registeredReaders 只读取 ready 快照，不做死亡探测；维护在可安全回收时清引用，否则标记 CORRUPT，应用删除并重建对应端点，以新会话恢复。已有 Loan 保留旧映射，不能为恢复容量强制覆写。
 
-共享段后端组件选择、目录兼容、无锁通知与元数据锁职责，以及 Boost 固定版本依赖见 [Boost 后端设计](DATASHARING-BOOST.md)。本页既有通过数字属于旧后端历史，当前验收以 boost-migration 目录为准。
+共享段后端组件选择、目录兼容、通知与控制锁职责，以及 Boost 固定版本依赖见 [Boost 后端设计](DATASHARING-BOOST.md)。当前实现和验收范围见需求矩阵；旧后端通过数字仅作历史记录。
 
 ## 2026-10-28 同步与失败边界
 
-映射worker以weak_ptr获取Reader，不在匹配表、ingress或连接表锁内执行open/register。初始化flock为非阻塞；退避等待可立即取消，listener等待有100ms上界。相同GUID/session重复发现保留代理序号流和单一注册，新session取消旧worker，跨匹配锁不join，旧运行状态自行退出。实际注册先于共享目标选择；RTPS与DS沿用同一WriterProxy排序/去重。损坏段不重新启用，新会话重新建立。
+映射worker以weak_ptr获取Reader，不在匹配表、ingress或连接表锁内执行open/register。初始化flock为非阻塞；退避等待可取消，listener等待按100ms维护间隔重查，实际响应还受系统调度影响。新的控制注册可能等待管理锁，不承诺端到端硬实时上界。相同GUID/session重复发现保留代理序号流和单一注册，新session取消旧worker，跨匹配锁不join，旧运行状态自行退出。实际注册先于共享目标选择；RTPS与DS沿用同一WriterProxy排序/去重。损坏段不重新启用，新会话重新建立。
 
 Reader序列API采用preview→materialize→commit，缓存身份而非全局序号作为提交依据。所有可判断的尺寸/对齐/非法输出预校验在history操作前执行；分配或反序列化失败保留未读样本，输出可能已清空。应用读取互斥序列化选择与提交，复制/反序列化不持history锁；若并发过期/KEEP_LAST淘汰，preview的shared_ptr仍固定存储，commit跳过已移除身份。
 
@@ -139,4 +141,4 @@ Reader序列API采用preview→materialize→commit，缓存身份而非全局�
 TBF定时提交在完成history事务和deadline推进后释放ingress，再调用应用listener。DCPS Reader析构先在锁外Exit并等待该Timer，之后解除关联；closing状态拒绝新的set_qos，避免回调释放锁后的对象寿命空窗。DATA_AVAILABLE状态先更新再交给listener，回调内take可以正确清除状态，不会被回调返回后的旧置位覆盖。
 
 
-本轮最终验收：普通与ASan/UBSan各468/468，两版各55项×30轮及三个有限示例各30轮通过；新增生产行覆盖率94.118%（2432/2584）。独立TSan限定路径通过，LSan未运行、历史WaitSet根因未知。当前完整证据与限制以 [本轮报告](DATASHARING-COMPLETION-20261028.md) 为准，早期数字只保留历史含义。
+当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。

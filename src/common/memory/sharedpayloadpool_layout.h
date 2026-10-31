@@ -8,7 +8,7 @@
 TRAVODDS_NAMESPACE_BEGIN
 namespace shared_pool_detail {
 constexpr uint64_t MAGIC = 0x545241564f445331ull;
-constexpr uint32_t VERSION = 5;
+constexpr uint32_t VERSION = 6;
 constexpr uint32_t MAX_READERS = 64;
 enum SlotState : uint32_t { FREE, WRITING, PUBLISHED };
 struct ProcessIdentity { int64_t pid; uint64_t start; };
@@ -24,6 +24,11 @@ struct Prefix {
 };
 struct ReaderRecord {
     ProcessIdentity process; uint64_t generation; uint32_t active; uint32_t accepting; uint32_t replay;
+    // Low two bits: OPEN(0), CLOSING(1), RETIRED(2). Higher bits count
+    // short operations. A registration cannot be reused while any old
+    // operation or application Loan still owns it.
+    uint32_t ready;
+    alignas(8) uint64_t gate;
     unsigned char guid[16];
 };
 struct Header {
@@ -32,9 +37,14 @@ struct Header {
     alignas(4) uint32_t changed;
     uint32_t alive, poisoned, next_slot, reserved;
     uint64_t last_sequence;
+    uint32_t publishing, reserved2;
     ReaderRecord readers[MAX_READERS];
 };
 struct alignas(64) Slot {
+    // Low two bits hold SlotState; 3 is the reserve-only frozen state.
+    // Higher bits count short operations, independently of persistent pins.
+    // generation remains a full 64-bit value and never wraps.
+    uint64_t gate;
     uint64_t generation, sequence, pending, loaned;
     uint32_t size, state, writer_held, reserved;
     SharedSampleMetadata metadata;

@@ -1,5 +1,7 @@
 # TravoDDS 本轮实现与交付报告（2026-10-28）
 
+> 历史报告：本页“当前”“完成”均指 2026-10-28 的布局 v5 冻结版本。后续布局 v6、发现能力 v3 及强制 key-only 准入见 [严格准入报告](DATASHARING-STRICT-20261030.md) 和 [当前验收矩阵](DATASHARING-ACCEPTANCE.md)；本页测试与覆盖率不能替代新版本验收。
+
 当前状态：实现、两版完整验收、重点重复、示例、覆盖率、性能与精确资源清理已完成，最终补丁基线可应用性与交付审计通过。没有提交、推送或创建PR。正式交付结果由 `artifacts/completion-20261028/verification.json` 审计。
 
 基线为 `489067108405b27afbd369245542f5e88d457f18`，工作分支为 `work/ospp-datasharing-bootstrap`。实现沿用 Boost.Interprocess 布局v5，保留全部先前工作区成果。构建/测试/工具输入清单SHA256为 `953cfc4395a9273ef38aa0e01463f46a83de6dfc0f04b7a17be369e2f2b78361`；文档结果不参与构建身份，交付时另做哈希。所有构建使用 `--parallel 1`，普通、检查版、覆盖率、性能在本机串行运行。

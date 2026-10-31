@@ -5,6 +5,7 @@
 #include "common/memory/payloadpool.h"
 #include "type/guid.h"
 #include <chrono>
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -115,6 +116,10 @@ private:
     uint32_t index_;
     uint64_t generation_;
     bool registered_ = false;
+    // Local to this registration object, never stored in the shared ABI.
+    // Concurrent take/discard calls fail promptly instead of overlapping the
+    // two-mask transfer. Returning an existing Loan remains independent.
+    mutable std::atomic_flag consuming_ = ATOMIC_FLAG_INIT;
     friend class SharedPayloadPool;
     friend class SharedReadLoan;
 };
@@ -143,6 +148,9 @@ public:
     std::shared_ptr<SharedPoolReader> registerReader(const GUID_t& reader = GUID_UNKNOWN, bool replay = false);
     // replayOnly selects registrations eligible for retained history.
     std::vector<GUID_t> registeredReaders(bool replayOnly = false);
+    // Performs control-plane process-death maintenance. Returns TIMEOUT when
+    // another manager holds its mutex; never waits for that manager. Counts
+    // are an observational snapshot, not one atomic transaction.
     SharedPoolResult statistics(SharedPoolStats& stats);
     // Raw IPayloadPool ownership is for internal history only. User Loan APIs
     // must retain and validate tokens, since addresses alone cannot detect ABA.

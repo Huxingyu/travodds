@@ -738,11 +738,12 @@ ReturnCode_t DataReaderImpl::CreateInstanceKey(const std::shared_ptr<CacheChange
         if (change->nativePayload) {
             const auto& info = change->nativeType;
             if (!info.loanable() || !(info == typeSupport_->get_native_type_info())) return RETCODE_BAD_PARAMETER;
-            const auto alignment = std::align_val_t(std::max(info.alignment, uint32_t(alignof(std::max_align_t))));
-            auto snapshot = std::shared_ptr<void>(::operator new(info.size, alignment),
+            const auto keyInfo = typeSupport_->get_native_key_info();
+            if (!keyInfo.valid_for(info)) return RETCODE_BAD_PARAMETER;
+            const auto alignment = std::align_val_t(std::max(keyInfo.alignment, uint32_t(alignof(std::max_align_t))));
+            auto snapshot = std::shared_ptr<void>(::operator new(keyInfo.size, alignment),
                 [alignment](void* p) { ::operator delete(p, alignment); });
-            if (!typeSupport_->construct_native_sample(snapshot.get())) return RETCODE_ERROR;
-            std::memcpy(snapshot.get(), change->nativePayload.get(), info.size);
+            if (!typeSupport_->capture_native_key(snapshot.get(), change->nativePayload.get())) return RETCODE_ERROR;
             native = std::move(snapshot);
         } else {
             const auto pool = MemoryPool::GetInstance();
@@ -774,7 +775,11 @@ ReturnCode_t DataReaderImpl::get_key_value(void* key_holder, const InstanceHandl
     if (!typeSupport_->has_key()) return RETCODE_ILLEGAL_OPERATION;
     if (!key_holder || handle == HANDLE_NIL) return RETCODE_BAD_PARAMETER;
     if (auto native = history_->GetNativeKey(handle)) {
-        return typeSupport_->copy_data(key_holder, native.get()) == 0 ? RETCODE_OK : RETCODE_ERROR;
+        const auto keyInfo = typeSupport_->get_native_key_info();
+        if (!keyInfo.valid_for(typeSupport_->get_native_type_info())) return RETCODE_BAD_PARAMETER;
+        try {
+            return typeSupport_->restore_native_key(key_holder, native.get()) ? RETCODE_OK : RETCODE_ERROR;
+        } catch (const std::exception&) { return RETCODE_ERROR; }
     }
     auto data = history_->GetSerializedKey(handle);
     if (!data) return RETCODE_BAD_PARAMETER;
@@ -934,7 +939,7 @@ ReturnCode_t DataReaderImpl::enable()
 	}
 	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS) {
 #if defined(__linux__)
-		if (!typeSupport_->get_native_type_info().loanable()) return RETCODE_UNSUPPORTED;
+		if (!typeSupport_->supports_native_data_sharing(typeSupport_->get_native_type_info())) return RETCODE_UNSUPPORTED;
 #else
 		return RETCODE_UNSUPPORTED;
 #endif
@@ -948,11 +953,13 @@ ReturnCode_t DataReaderImpl::enable()
 		return RETCODE_ERROR;
 	}
 	bool sharingAllowed = qos_.data_sharing.kind != OFF_DATA_SHARING_QOS &&
-        !dynamic_cast<ContentFilteredTopicImpl*>(topic_);
+        !dynamic_cast<ContentFilteredTopicImpl*>(topic_) &&
+        typeSupport_->supports_native_data_sharing(typeSupport_->get_native_type_info());
     if (!sharingAllowed && qos_.data_sharing.kind == ON_DATA_SHARING_QOS) return RETCODE_UNSUPPORTED;
 #ifdef DDSSECURITY
 	sharingAllowed = sharingAllowed && !domainParticipant->enableDDSSec_;
 #endif
+	builtinData_.data_sharing = {};
 	if (sharingAllowed)
 		builtinData_.data_sharing = LocalDataSharingInfo(qos_.data_sharing, typeSupport_->get_native_type_info());
 	if (qos_.data_sharing.kind == ON_DATA_SHARING_QOS && !builtinData_.data_sharing.valid(false))

@@ -123,14 +123,24 @@ public:
 		std::function<void()> warpper_func = [task]() {
 			(*task)();
 		};
-		// 队列通用安全封包函数，并压入安全队列
-		queue_.enqueue(warpper_func);
+		auto result = task->get_future();
+		{
+			// Queue availability and shutdown share the worker's wait mutex.
+			// Otherwise notification can arrive between its predicate and wait.
+			std::lock_guard<std::mutex> lock(mutex_);
+			if (shutdown_) {
+				// Internal callbacks may race participant shutdown. Reject without
+				// throwing on their thread; destroying task readies a broken promise.
+				return result;
+			}
+			queue_.enqueue(warpper_func);
+		}
 
 		// 唤醒一个等待中的线程
 		lock_.notify_one();
 
 		// 返回先前注册的任务指针
-		return task->get_future();
+		return result;
 	}
 private:
 	/* 线程池是否关闭 */

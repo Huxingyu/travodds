@@ -3,10 +3,13 @@
 #include "common/memory/sharedpayloadpool_layout.h"
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <future>
+#include <linux/futex.h>
 #include <sys/file.h>
 #include <sys/resource.h>
 #include <limits>
@@ -17,6 +20,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -127,6 +131,50 @@ bool transfer(int fd, void* buffer, size_t bytes, bool sending) {
 }
 bool sendByte(int fd, char c) { return transfer(fd, &c, 1, true); }
 bool expectByte(int fd, char expected) { char c = 0; return transfer(fd, &c, 1, false) && c == expected; }
+
+// Inspect a single-threaded exec child, rather than guessing with a sleep that
+// it has reached the operation. Its socket acknowledgement precedes the API;
+// /proc confirms it is actually parked in a futex. All these peers are single
+// threaded and the acknowledged phase has no other contended synchronization.
+bool waitForFutexWait(pid_t pid) {
+    const auto deadline = std::chrono::steady_clock::now() + 3s;
+    std::string lastChannel;
+    do {
+        std::ifstream input("/proc/" + std::to_string(pid) + "/syscall");
+        long number = -1;
+        std::string address, operation;
+        if (input >> number >> address >> operation) {
+            const auto command = std::strtoul(operation.c_str(), nullptr, 0) & FUTEX_CMD_MASK;
+            if (number == SYS_futex && (command == FUTEX_WAIT || command == FUTEX_WAIT_BITSET)) return true;
+        }
+        // Yama ptrace_scope=2 denies /proc/<child>/syscall even to its parent
+        // without CAP_SYS_PTRACE. wchan still exposes the actual kernel wait
+        // function here; require a futex wait rather than guessing from time
+        // elapsed or accepting a generic sleeping process state.
+        std::ifstream channel("/proc/" + std::to_string(pid) + "/wchan");
+        if (channel >> lastChannel && lastChannel.find("futex") != std::string::npos) return true;
+        poll(nullptr, 0, 1);
+    } while (std::chrono::steady_clock::now() < deadline);
+    fprintf(stderr, "No futex wait observed for child %ld; last wchan=%s\n", long(pid), lastChannel.c_str());
+    return false;
+}
+
+struct ContendedResult {
+    int result = -1;
+    int64_t elapsed_micros = 0;
+};
+
+volatile sig_atomic_t signalSocket = -1;
+void acknowledgeInterrupt(int) {
+    const int saved = errno;
+    const char marker = 'I';
+    if (signalSocket >= 0) {
+        const auto result = write(signalSocket, &marker, 1);
+        (void)result;
+    }
+    errno = saved;
+}
+
 class Child {
 public:
     int fd = -1;
@@ -161,9 +209,42 @@ public:
         pid = -1;
         return status;
     }
+    // New failure-injection tests never wait indefinitely for a peer to stop
+    // or exit. The parent is their watchdog; destruction kills a stuck peer.
+    int waitStatus(int flags = 0) {
+        const auto deadline = std::chrono::steady_clock::now() + 3s;
+        do {
+            int status = 0;
+            const auto result = waitpid(pid, &status, flags | WNOHANG);
+            if (result == pid) {
+                if (WIFEXITED(status) || WIFSIGNALED(status)) pid = -1;
+                return status;
+            }
+            if (result < 0 && errno != EINTR) return -1;
+            poll(nullptr, 0, 1);
+        } while (std::chrono::steady_clock::now() < deadline);
+        return -1;
+    }
 };
 int childMain(const std::string& mode, int fd) {
-    if (mode == "reader") {
+    if (mode == "leased-reader") {
+        Wire w;
+        if (!transfer(fd, &w, sizeof(w), false)) return 61;
+        auto pool = SharedPayloadPool::open(descriptor(w));
+        auto reader = pool->registerReader();
+        if (!reader || !sendByte(fd, 'R')) return 62;
+        SharedReadLoan loan;
+        if (reader->waitNext(1, 2s, loan) != SharedPoolResult::OK || !valid(loan, 29)) return 63;
+        Mapping mapping(descriptor(w));
+        // Parent owns registration zero; this independently attached child
+        // owns registration one. Inject the exact suspended operation window
+        // after both leases were entered, without a test hook in the hot path.
+        __atomic_fetch_add(&mapping.header->readers[1].gate, uint64_t(4), __ATOMIC_ACQ_REL);
+        __atomic_fetch_add(&mapping.slot(loan.token().slot).gate, uint64_t(4), __ATOMIC_ACQ_REL);
+        if (!sendByte(fd, 'K') || !expectByte(fd, 'D')) return 64;
+        return 65; // Parent must SIGKILL; graceful cleanup cannot repair it.
+    }
+    if (mode == "reader" || mode == "interruptible-reader") {
         Wire w;
         if (!transfer(fd, &w, sizeof(w), false)) return 11;
         void* reserved = MAP_FAILED;
@@ -174,6 +255,14 @@ int childMain(const std::string& mode, int fd) {
         }
         auto pool = SharedPayloadPool::open(descriptor(w));
         auto reader = pool->registerReader();
+        if (mode == "interruptible-reader") {
+            signalSocket = fd;
+            struct sigaction action{};
+            action.sa_handler = acknowledgeInterrupt;
+            sigemptyset(&action.sa_mask);
+            // Permit EINTR when the signal interrupts FUTEX_WAIT_BITSET.
+            if (sigaction(SIGUSR1, &action, nullptr)) return 16;
+        }
         if (!reader || !sendByte(fd, 'R')) return 13;
         SharedReadLoan loan;
         if (reader->waitNext(0, 2s, loan) != SharedPoolResult::OK || !valid(loan) ||
@@ -183,6 +272,62 @@ int childMain(const std::string& mode, int fd) {
         pool.reset();
         if (reserved != MAP_FAILED) munmap(reserved, w.bytes);
         return 0;
+    }
+    if (mode == "metadata-holder") {
+        Wire w;
+        if (!transfer(fd, &w, sizeof(w), false)) return 41;
+        Mapping mapping(descriptor(w));
+        for (;;) {
+            char command = 0;
+            if (!transfer(fd, &command, 1, false)) return 42;
+            if (command == 'Q') return 0;
+            if (command != 'L' || pthread_mutex_lock(&mapping.header->mutex)) return 43;
+            if (!sendByte(fd, 'L') || raise(SIGSTOP)) return 44;
+            if (!expectByte(fd, 'U') || pthread_mutex_unlock(&mapping.header->mutex) || !sendByte(fd, 'U')) return 45;
+        }
+    }
+    if (mode == "contended-api-writer") {
+        auto pool = SharedPayloadPool::create(guid(), config());
+        auto reader = pool->registerReader();
+        SharedSampleToken token; char* buffer = nullptr;
+        if (!reader || pool->loan(sizeof(Sample), token, buffer) != SharedPoolResult::OK) return 51;
+        fill(buffer);
+        auto w = wire(pool->descriptor());
+        if (!transfer(fd, &w, sizeof(w), true)) return 52;
+        for (;;) {
+            char command = 0;
+            if (!transfer(fd, &command, 1, false)) return 53;
+            if (command == 'Q') return 0;
+            if (!sendByte(fd, 'A')) return 54;
+            const auto begin = std::chrono::steady_clock::now();
+            SharedPoolResult result;
+            SharedSampleToken extra; char* bytes = nullptr;
+            SharedReadLoan loan;
+            if (command == 'P') result = pool->publish(token, sizeof(Sample), 1);
+            else if (command == 'Z') result = pool->loan(1, extra, bytes, 0ms);
+            else if (command == 'T') result = pool->loan(1, extra, bytes, 20ms);
+            else if (command == 'W') result = reader->waitNext(1, 20ms, loan);
+            else if (command == 'R') {
+                result = reader->waitNext(0, 0ms, loan);
+                if (result != SharedPoolResult::OK || !valid(loan) ||
+                    !reader->returnLoan(loan) || !pool->releaseWriter(token)) result = SharedPoolResult::INVALID;
+            } else if (command == 'N') {
+                result = pool->loan(sizeof(Sample), extra, bytes, 0ms);
+                if (result == SharedPoolResult::OK) {
+                    fill(bytes, 29);
+                    result = pool->publish(extra, sizeof(Sample), 2);
+                    if (result != SharedPoolResult::OK || !pool->releaseWriter(extra) ||
+                        reader->waitNext(1, 0ms, loan) != SharedPoolResult::OK ||
+                        !valid(loan, 29) || !reader->returnLoan(loan)) result = SharedPoolResult::INVALID;
+                }
+            }
+            else return 55;
+            ContendedResult reply;
+            reply.result = static_cast<int>(result);
+            reply.elapsed_micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - begin).count();
+            if (!transfer(fd, &reply, sizeof(reply), true)) return 56;
+        }
     }
     if (mode == "writer") {
         auto pool = SharedPayloadPool::create(guid(), config());
@@ -419,8 +564,8 @@ TEST(SharedPool, ReplayRegistrationIsVisibleAndReceivesAPublicationAfterTargetSn
     SharedSampleToken token; char* bytes = nullptr;
     ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
     fill(bytes, 87);
-    // Durable publication includes registrations created after the snapshot,
-    // under the same pool lock used by registration's historical replay scan.
+    // Durable publication includes OPEN registrations created after the
+    // target snapshot, before they become eligible to bypass RTPS.
     ASSERT_EQ(pool->publish(token, sizeof(Sample), 1), SharedPoolResult::OK);
     SharedReadLoan a, b;
     ASSERT_EQ(replay->waitNext(0, 0ms, a), SharedPoolResult::OK);
@@ -431,6 +576,68 @@ TEST(SharedPool, ReplayRegistrationIsVisibleAndReceivesAPublicationAfterTargetSn
     EXPECT_TRUE(valid(a, 87)); // Closing registration preserves an outstanding pin.
     a.reset(); b.reset();
     ASSERT_TRUE(pool->releaseWriter(token));
+}
+
+TEST(SharedPool, ReplayBecomesNativeEligibleOnlyAfterHistoryAndTransitionPublicationsArePinned) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 1));
+    SharedSampleToken first, second; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), first, bytes), SharedPoolResult::OK);
+    fill(bytes, 1);
+    ASSERT_EQ(pool->publish(first, sizeof(Sample), 1), SharedPoolResult::OK);
+    Mapping mapped(pool->descriptor());
+    // Deterministically pause the old publication lane while registration
+    // enters OPEN. This is a protocol-window injection, not a timing guess.
+    __atomic_store_n(&mapped.header->publishing, 1u, __ATOMIC_RELEASE);
+    auto id = guid(); id.entityId.entityKind = ENTITYKIND_USER_READER_NO_KEY;
+    auto reader = pool->registerReader(id, true);
+    __atomic_store_n(&mapped.header->publishing, 0u, __ATOMIC_RELEASE);
+    ASSERT_TRUE(reader);
+    EXPECT_TRUE(pool->registeredReaders().empty());
+    ASSERT_EQ(pool->loan(sizeof(Sample), second, bytes), SharedPoolResult::OK);
+    fill(bytes, 2);
+    ASSERT_EQ(pool->publish(second, sizeof(Sample), 2), SharedPoolResult::OK);
+    EXPECT_TRUE(pool->registeredReaders().empty());
+    SharedReadLoan a, b;
+    ASSERT_EQ(reader->waitNext(0, 0ms, a), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(a, 1));
+    EXPECT_EQ(pool->registeredReaders(), std::vector<GUID_t>{id});
+    ASSERT_TRUE(pool->releaseWriter(first));
+    ASSERT_TRUE(pool->releaseWriter(second));
+    ASSERT_EQ(reader->waitNext(1, 0ms, b), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(b, 2));
+    EXPECT_TRUE(reader->returnLoan(a));
+    EXPECT_TRUE(reader->returnLoan(b));
+    EXPECT_EQ(reader->waitNext(2, 0ms, a), SharedPoolResult::TIMEOUT);
+}
+
+TEST(SharedPool, FrozenRecheckWindowNeverSkipsAnEarlierPendingSequenceOrItsDeadline) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 1));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    SharedSampleToken tokens[2];
+    for (uint64_t sequence = 1; sequence <= 2; ++sequence) {
+        char* bytes = nullptr;
+        ASSERT_EQ(pool->loan(sizeof(Sample), tokens[sequence - 1], bytes), SharedPoolResult::OK);
+        fill(bytes, sequence);
+        ASSERT_EQ(pool->publish(tokens[sequence - 1], sizeof(Sample), sequence), SharedPoolResult::OK);
+        ASSERT_TRUE(pool->releaseWriter(tokens[sequence - 1]));
+    }
+    Mapping mapped(pool->descriptor());
+    auto& first = mapped.slot(tokens[0].slot);
+    // Models reserve prechecking zero pins, then replay adding a pin before
+    // its gate CAS: reserve must briefly freeze, recheck and restore this slot.
+    __atomic_store_n(&first.gate, uint64_t(3), __ATOMIC_RELEASE);
+    SharedReadLoan loan;
+    const auto started = std::chrono::steady_clock::now();
+    EXPECT_EQ(reader->waitNext(0, 0ms, loan), SharedPoolResult::TIMEOUT);
+    EXPECT_FALSE(loan);
+    EXPECT_LT(std::chrono::steady_clock::now() - started, 100ms);
+    __atomic_store_n(&first.gate, uint64_t(PUBLISHED), __ATOMIC_RELEASE);
+    ASSERT_EQ(reader->waitNext(0, 0ms, loan), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(loan, 1));
+    loan.reset();
+    ASSERT_EQ(reader->waitNext(1, 0ms, loan), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(loan, 2));
 }
 
 TEST(SharedPool, LocalDirectoryAndDiscoveredIdentityDeriveExactSegmentPath) {
@@ -630,6 +837,51 @@ TEST(SharedPool, ConcurrentReadersReceiveEverySampleWhileSlowLoansPinRingSlots) 
     EXPECT_EQ(stats.loan_references, 0u);
 }
 
+TEST(SharedPool, ConcurrentCallsOnOneReaderConsumeEachSampleOnceAndReleaseEveryPin) {
+    constexpr uint64_t samples = 2000;
+    auto pool = SharedPayloadPool::create(guid(), config(4, 1));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    std::array<std::atomic<unsigned>, samples + 1> seen{};
+    std::atomic<uint64_t> received{0};
+    std::atomic<bool> stop{false}, intact{true};
+    const auto deadline = std::chrono::steady_clock::now() + 10s;
+    auto consume = [&] {
+        while (!stop.load() && received.load() < samples &&
+                std::chrono::steady_clock::now() < deadline) {
+            SharedReadLoan loan;
+            const auto result = reader->waitNext(0, 0ms, loan);
+            if (result == SharedPoolResult::TIMEOUT) { std::this_thread::yield(); continue; }
+            if (result != SharedPoolResult::OK || loan.sequence() > samples ||
+                    !valid(loan, loan.sequence())) { intact = false; break; }
+            if (seen[loan.sequence()].fetch_add(1) != 0) intact = false;
+            ++received;
+        }
+    };
+    std::thread first(consume), second(consume);
+    bool published = true;
+    for (uint64_t sequence = 1; sequence <= samples; ++sequence) {
+        SharedSampleToken token; char* buffer = nullptr;
+        if (pool->loan(sizeof(Sample), token, buffer, 1s) != SharedPoolResult::OK) { published = false; break; }
+        fill(buffer, sequence);
+        if (pool->publish(token, sizeof(Sample), sequence) != SharedPoolResult::OK ||
+                !pool->releaseWriter(token)) { published = false; break; }
+    }
+    while (published && received.load() < samples && intact.load() &&
+            std::chrono::steady_clock::now() < deadline) std::this_thread::yield();
+    stop = true;
+    first.join(); second.join();
+    EXPECT_TRUE(published);
+    EXPECT_TRUE(intact.load());
+    EXPECT_EQ(received.load(), samples);
+    for (uint64_t i = 1; i <= samples; ++i) EXPECT_EQ(seen[i].load(), 1u) << i;
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.free_slots, 4u);
+    EXPECT_EQ(stats.pending_references, 0u);
+    EXPECT_EQ(stats.loan_references, 0u);
+}
+
 TEST(SharedPool, RejectsWrongSessionOversizedStaleAndRepeatedOperations) {
     auto pool = SharedPayloadPool::create(guid(), config());
     auto reader = pool->registerReader();
@@ -704,6 +956,162 @@ TEST(SharedPool, GenerationAndSequenceLimitsNeverWrapIntoStaleTokens) {
     ASSERT_TRUE(pool->releaseWriter(token));
     loan.reset();
     EXPECT_EQ(pool->loan(1, token, buffer), SharedPoolResult::EXHAUSTED);
+}
+
+TEST(SharedPool, NativeGenerationCrosses32BitBoundaryWithoutRetiringOrAcceptingOldToken) {
+    auto pool = SharedPayloadPool::create(guid(), config());
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    Mapping mapping(pool->descriptor());
+    // No operations are concurrent with this bounded fault injection. A
+    // production generation must not inherit the prototype's 32-bit limit.
+    mapping.slot(0).generation = uint64_t(std::numeric_limits<uint32_t>::max()) - 1;
+    SharedSampleToken previous{};
+    for (uint64_t sequence = 1; sequence <= 3; ++sequence) {
+        SharedSampleToken token; char* bytes = nullptr;
+        ASSERT_EQ(pool->loan(sizeof(Sample), token, bytes), SharedPoolResult::OK);
+        EXPECT_EQ(token.generation, uint64_t(std::numeric_limits<uint32_t>::max()) - 1 + sequence);
+        if (sequence > 1) {
+            EXPECT_FALSE(pool->releaseWriter(previous));
+            EXPECT_FALSE(reader->discard(previous));
+        }
+        fill(bytes, sequence);
+        ASSERT_EQ(pool->publish(token, sizeof(Sample), sequence), SharedPoolResult::OK);
+        ASSERT_TRUE(pool->releaseWriter(token));
+        SharedReadLoan loan;
+        ASSERT_EQ(reader->waitNext(sequence - 1, 0ms, loan), SharedPoolResult::OK);
+        EXPECT_TRUE(valid(loan, sequence));
+        ASSERT_TRUE(reader->returnLoan(loan));
+        previous = token;
+    }
+}
+
+TEST(SharedPool, All64ReaderBitsSupportTargetingAndReplayIntoTheHighestBit) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 64));
+    std::array<std::shared_ptr<SharedPoolReader>, 64> readers;
+    std::array<GUID_t, 64> names;
+    for (size_t index = 0; index < 63; ++index) {
+        names[index] = guid();
+        names[index].entityId.entityKind = ENTITYKIND_USER_READER_NO_KEY;
+        names[index].entityId.entityKey[1] = static_cast<unsigned char>(index);
+        readers[index] = pool->registerReader(names[index]);
+        ASSERT_TRUE(readers[index]) << index;
+    }
+    SharedSampleToken retained; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), retained, bytes), SharedPoolResult::OK);
+    fill(bytes, 91);
+    const std::vector<GUID_t> nobody;
+    ASSERT_EQ(pool->publish(retained, sizeof(Sample), 1, {}, &nobody), SharedPoolResult::OK);
+    names[63] = guid();
+    names[63].entityId.entityKind = ENTITYKIND_USER_READER_NO_KEY;
+    names[63].entityId.entityKey[1] = 63;
+    readers[63] = pool->registerReader(names[63], true);
+    ASSERT_TRUE(readers[63]);
+    EXPECT_FALSE(pool->registerReader());
+    SharedReadLoan replay;
+    ASSERT_EQ(readers[63]->waitNext(0, 0ms, replay), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(replay, 91));
+    EXPECT_EQ(replay.sequence(), 1u);
+    ASSERT_TRUE(pool->releaseWriter(retained));
+    ASSERT_TRUE(readers[63]->returnLoan(replay));
+
+    SharedSampleToken current;
+    ASSERT_EQ(pool->loan(sizeof(Sample), current, bytes), SharedPoolResult::OK);
+    fill(bytes, 92);
+    const std::vector<GUID_t> highestOnly{names[63]};
+    ASSERT_EQ(pool->publish(current, sizeof(Sample), 2, {}, &highestOnly), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(current));
+    for (size_t index = 0; index < 63; ++index) {
+        SharedReadLoan empty;
+        EXPECT_EQ(readers[index]->waitNext(0, 0ms, empty), SharedPoolResult::TIMEOUT) << index;
+    }
+    SharedReadLoan loan;
+    ASSERT_EQ(readers[63]->waitNext(1, 0ms, loan), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(loan, 92));
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.readers, 64u);
+    EXPECT_EQ(stats.loan_references, 1u);
+    ASSERT_TRUE(readers[63]->returnLoan(loan));
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.free_slots, 2u);
+}
+
+TEST(SharedPool, ClosingPinnedReaderDefersIdentityReuseUntilCrossThreadLoanReturn) {
+    auto pool = SharedPayloadPool::create(guid(), config(1, 1));
+    auto reader = pool->registerReader();
+    ASSERT_TRUE(reader);
+    SharedSampleToken old; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), old, bytes), SharedPoolResult::OK);
+    fill(bytes, 31);
+    ASSERT_EQ(pool->publish(old, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(old));
+    SharedReadLoan held;
+    ASSERT_EQ(reader->waitNext(0, 0ms, held), SharedPoolResult::OK);
+    reader->close();
+    std::weak_ptr<SharedPoolReader> oldRegistration = reader;
+    reader.reset();
+    EXPECT_FALSE(oldRegistration.expired());
+    EXPECT_FALSE(pool->registerReader());
+    SharedSampleToken extra;
+    EXPECT_EQ(pool->loan(1, extra, bytes), SharedPoolResult::EXHAUSTED);
+    bool intact = false;
+    std::thread returning([loan = std::move(held), &intact]() mutable {
+        intact = valid(loan, 31);
+        loan.reset();
+    });
+    returning.join();
+    EXPECT_TRUE(intact);
+    EXPECT_TRUE(oldRegistration.expired());
+    auto replacement = pool->registerReader();
+    ASSERT_TRUE(replacement);
+    ASSERT_EQ(pool->loan(sizeof(Sample), extra, bytes), SharedPoolResult::OK);
+    EXPECT_GT(extra.generation, old.generation);
+    fill(bytes, 32);
+    ASSERT_EQ(pool->publish(extra, sizeof(Sample), 2), SharedPoolResult::OK);
+    EXPECT_FALSE(replacement->discard(old));
+    EXPECT_FALSE(pool->releaseWriter(old));
+    ASSERT_TRUE(pool->releaseWriter(extra));
+    SharedReadLoan current;
+    ASSERT_EQ(replacement->waitNext(1, 0ms, current), SharedPoolResult::OK);
+    EXPECT_TRUE(valid(current, 32));
+}
+
+TEST(SharedPool, StaleConcurrentClosersCannotRetireAReplacementRegistrationOrItsLoan) {
+    auto pool = SharedPayloadPool::create(guid(), config(1, 1));
+    bool sound = true;
+    for (uint64_t sequence = 1; sequence <= 128 && sound; ++sequence) {
+        auto old = pool->registerReader();
+        ASSERT_TRUE(old);
+        std::atomic<bool> stop{false};
+        auto closeOld = [&] { while (!stop.load()) { old->close(); std::this_thread::yield(); } };
+        std::thread first(closeOld), second(closeOld);
+        std::shared_ptr<SharedPoolReader> replacement;
+        const auto deadline = std::chrono::steady_clock::now() + 2s;
+        while (!replacement && std::chrono::steady_clock::now() < deadline) {
+            replacement = pool->registerReader();
+            std::this_thread::yield();
+        }
+        SharedReadLoan loan;
+        SharedSampleToken token; char* bytes = nullptr;
+        bool writerPin = false;
+        if (!replacement || pool->loan(sizeof(Sample), token, bytes) != SharedPoolResult::OK) sound = false;
+        else {
+            writerPin = true;
+            fill(bytes, sequence);
+            if (pool->publish(token, sizeof(Sample), sequence) != SharedPoolResult::OK ||
+                    replacement->waitNext(0, 0ms, loan) != SharedPoolResult::OK || !valid(loan, sequence)) sound = false;
+        }
+        stop = true;
+        first.join(); second.join();
+        if (writerPin && !pool->releaseWriter(token)) sound = false;
+        if (loan && (!valid(loan, sequence) || !replacement->returnLoan(loan))) sound = false;
+        EXPECT_TRUE(sound) << "registration replacement round " << sequence;
+    }
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
+    EXPECT_EQ(stats.readers, 0u);
+    EXPECT_EQ(stats.free_slots, 1u);
 }
 
 TEST(SharedPool, OwnerDeathPoisonsSegmentAndPreservesAlreadyBorrowedBytes) {
@@ -792,6 +1200,104 @@ TEST(SharedPool, RestartUsesNewSessionAndOldDescriptorCannotAttachNewWriter) {
     EXPECT_THROW(SharedPayloadPool::open(descriptor), std::system_error);
 }
 
+// A stopped control-plane owner must not block already registered data-plane
+// participants. This does not claim the whole DDS write path is lock-free.
+TEST(SharedPoolBoundaries, PausedMetadataOwnerDoesNotBlockPublicationBorrowReturnOrSlotReuse) {
+    // Keep the owner process isolated: a regression cannot strand a future or
+    // a join in this test runner. Destroy the holder before the Writer so even
+    // an assertion failure first releases/poisons the shared robust mutex.
+    Child writer("contended-api-writer");
+    Wire w;
+    ASSERT_TRUE(transfer(writer.fd, &w, sizeof(w), false));
+    writer.orphan = descriptor(w);
+    Child holder("metadata-holder");
+    ASSERT_TRUE(transfer(holder.fd, &w, sizeof(w), true));
+    const std::array<char, 6> commands{{'P', 'Z', 'T', 'W', 'R', 'N'}};
+    const std::array<SharedPoolResult, 6> expected{{SharedPoolResult::OK,
+        SharedPoolResult::EXHAUSTED, SharedPoolResult::TIMEOUT, SharedPoolResult::TIMEOUT,
+        SharedPoolResult::OK, SharedPoolResult::OK}};
+    for (size_t index = 0; index < commands.size(); ++index) {
+        SCOPED_TRACE(commands[index]);
+        ASSERT_TRUE(sendByte(holder.fd, 'L'));
+        ASSERT_TRUE(expectByte(holder.fd, 'L'));
+        const int stopped = holder.waitStatus(WUNTRACED);
+        ASSERT_GE(stopped, 0);
+        ASSERT_TRUE(WIFSTOPPED(stopped));
+        ASSERT_EQ(WSTOPSIG(stopped), SIGSTOP);
+        ASSERT_TRUE(sendByte(writer.fd, commands[index]));
+        ASSERT_TRUE(expectByte(writer.fd, 'A'));
+        pollfd completion{writer.fd, POLLIN, 0};
+        int ready;
+        do { ready = poll(&completion, 1, 2000); } while (ready < 0 && errno == EINTR);
+        ASSERT_EQ(ready, 1) << "Data-plane operation waited for the stopped control-plane mutex owner";
+        ContendedResult result;
+        ASSERT_TRUE(transfer(writer.fd, &result, sizeof(result), false));
+        EXPECT_EQ(result.result, static_cast<int>(expected[index]));
+        EXPECT_EQ(kill(holder.pid, 0), 0); // Stopped is not owner death.
+        EXPECT_LT(result.elapsed_micros, 2000000);
+        // Only release the lock after the full API result has arrived. An old
+        // implementation cannot pass by completing after SIGCONT/unlock.
+        ASSERT_EQ(kill(holder.pid, SIGCONT), 0);
+        ASSERT_TRUE(sendByte(holder.fd, 'U'));
+        ASSERT_TRUE(expectByte(holder.fd, 'U'));
+    }
+    ASSERT_TRUE(sendByte(holder.fd, 'Q'));
+    EXPECT_EQ(holder.waitStatus(), 0);
+    ASSERT_TRUE(sendByte(writer.fd, 'Q'));
+    EXPECT_EQ(writer.waitStatus(), 0);
+}
+
+TEST(SharedPoolProcesses, NotificationCounterWrapWakesSleepingReaderAndPreservesLoan) {
+    auto pool = SharedPayloadPool::create(guid(), config());
+    SharedSampleToken token;
+    char* buffer = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), token, buffer), SharedPoolResult::OK);
+    Mapping mapping(pool->descriptor());
+    ASSERT_EQ(pthread_mutex_lock(&mapping.header->mutex), 0);
+    __atomic_store_n(&mapping.header->changed, std::numeric_limits<uint32_t>::max(), __ATOMIC_RELEASE);
+    ASSERT_EQ(pthread_mutex_unlock(&mapping.header->mutex), 0);
+    Child child("reader");
+    auto w = wire(pool->descriptor(), buffer);
+    ASSERT_TRUE(transfer(child.fd, &w, sizeof(w), true));
+    ASSERT_TRUE(expectByte(child.fd, 'R'));
+    ASSERT_TRUE(waitForFutexWait(child.pid));
+    fill(buffer);
+    ASSERT_EQ(pool->publish(token, sizeof(Sample), 1), SharedPoolResult::OK);
+    EXPECT_EQ(__atomic_load_n(&mapping.header->changed, __ATOMIC_ACQUIRE), 0u);
+    ASSERT_TRUE(expectByte(child.fd, 'L'));
+    ASSERT_TRUE(pool->releaseWriter(token));
+    SharedSampleToken extra; char* bytes = nullptr;
+    EXPECT_EQ(pool->loan(1, extra, bytes), SharedPoolResult::EXHAUSTED);
+    ASSERT_TRUE(sendByte(child.fd, 'D'));
+    ASSERT_TRUE(expectByte(child.fd, 'D'));
+    ASSERT_EQ(child.waitStatus(), 0);
+    ASSERT_EQ(pool->loan(1, extra, bytes), SharedPoolResult::OK);
+    EXPECT_GT(extra.generation, token.generation);
+    EXPECT_TRUE(pool->releaseWriter(extra));
+}
+
+TEST(SharedPoolProcesses, SignalDeliveredToWaitingReaderDoesNotLoseNextPublication) {
+    auto pool = SharedPayloadPool::create(guid(), config());
+    SharedSampleToken token;
+    char* buffer = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), token, buffer), SharedPoolResult::OK);
+    Child child("interruptible-reader");
+    auto w = wire(pool->descriptor(), buffer);
+    ASSERT_TRUE(transfer(child.fd, &w, sizeof(w), true));
+    ASSERT_TRUE(expectByte(child.fd, 'R'));
+    ASSERT_TRUE(waitForFutexWait(child.pid));
+    ASSERT_EQ(kill(child.pid, SIGUSR1), 0);
+    ASSERT_TRUE(expectByte(child.fd, 'I')); // Installed handler has actually run.
+    ASSERT_TRUE(waitForFutexWait(child.pid));
+    fill(buffer);
+    ASSERT_EQ(pool->publish(token, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(expectByte(child.fd, 'L'));
+    ASSERT_TRUE(pool->releaseWriter(token));
+    ASSERT_TRUE(sendByte(child.fd, 'D'));
+    ASSERT_TRUE(expectByte(child.fd, 'D'));
+    EXPECT_EQ(child.waitStatus(), 0);
+}
+
 TEST(SharedPoolProcesses, ExecReaderMapsAtDifferentAddressAndPinsTheSameNativeSample) {
     auto pool = SharedPayloadPool::create(guid(), config());
     SharedSampleToken token;
@@ -832,9 +1338,50 @@ TEST(SharedPoolProcesses, DeadReaderPinsAreReapedOnlyAfterConfirmedProcessDeath)
     char* extra = nullptr;
     EXPECT_EQ(pool->loan(8, extraToken, extra, 20ms), SharedPoolResult::TIMEOUT);
     EXPECT_TRUE(WIFSIGNALED(child.finish(true)));
+    // Process probing belongs to control-plane maintenance, not the native
+    // reserve/publish fast path. Confirmed death is reaped before retrying.
+    SharedPoolStats stats;
+    ASSERT_EQ(pool->statistics(stats), SharedPoolResult::OK);
     ASSERT_EQ(pool->loan(8, extraToken, extra), SharedPoolResult::OK);
     EXPECT_GT(extraToken.generation, token.generation);
     EXPECT_TRUE(pool->releaseWriter(extraToken));
+}
+
+TEST(SharedPoolProcesses, DeathInsideReaderOperationPoisonsSessionWithoutRevokingExistingLoans) {
+    auto pool = SharedPayloadPool::create(guid(), config(2, 2));
+    auto parentReader = pool->registerReader();
+    ASSERT_TRUE(parentReader);
+    SharedSampleToken first; char* bytes = nullptr;
+    ASSERT_EQ(pool->loan(sizeof(Sample), first, bytes), SharedPoolResult::OK);
+    fill(bytes, 17);
+    ASSERT_EQ(pool->publish(first, sizeof(Sample), 1), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(first));
+    SharedReadLoan preserved;
+    ASSERT_EQ(parentReader->waitNext(0, 0ms, preserved), SharedPoolResult::OK);
+    ASSERT_TRUE(valid(preserved, 17));
+    const auto oldSession = pool->descriptor().session;
+    Child child("leased-reader");
+    auto w = wire(pool->descriptor());
+    ASSERT_TRUE(transfer(child.fd, &w, sizeof(w), true));
+    ASSERT_TRUE(expectByte(child.fd, 'R'));
+    SharedSampleToken second;
+    ASSERT_EQ(pool->loan(sizeof(Sample), second, bytes), SharedPoolResult::OK);
+    fill(bytes, 29);
+    ASSERT_EQ(pool->publish(second, sizeof(Sample), 2), SharedPoolResult::OK);
+    ASSERT_TRUE(pool->releaseWriter(second));
+    ASSERT_TRUE(expectByte(child.fd, 'K'));
+    ASSERT_TRUE(WIFSIGNALED(child.finish(true)));
+    SharedPoolStats stats;
+    EXPECT_EQ(pool->statistics(stats), SharedPoolResult::CORRUPT);
+    EXPECT_EQ(pool->loan(1, second, bytes), SharedPoolResult::CORRUPT);
+    EXPECT_TRUE(valid(preserved, 17));
+    pool->closeWriter();
+    auto restarted = SharedPayloadPool::create(guid(), config(2, 2));
+    EXPECT_FALSE(restarted->descriptor().session == oldSession);
+    SharedSampleToken fresh;
+    EXPECT_EQ(restarted->loan(1, fresh, bytes), SharedPoolResult::OK);
+    EXPECT_TRUE(restarted->releaseWriter(fresh));
+    EXPECT_TRUE(valid(preserved, 17));
 }
 
 TEST(SharedPoolProcesses, WriterCrashPreservesLoanDetectsClosureAndAllowsExactOrphanCleanup) {

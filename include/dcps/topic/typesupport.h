@@ -43,6 +43,20 @@ public:
 	// Legacy/generated supports remain conservative until explicitly opted in.
 	virtual NativeTypeInfo get_native_type_info() const { return {}; }
 	virtual bool construct_native_sample(void*) const { return false; }
+	// Explicit opt-in for keyed native Loan paths. Metadata and representation
+	// must remain stable for this support's lifetime. Snapshot storage is raw,
+	// independent, pointer-free bytes needing no construction/destruction.
+	// Capture must read only key fields; restore must modify only key fields.
+	// Neither hook may serialize/copy the full sample or retain its storage.
+	// Providing valid metadata declares that both hooks implement this contract.
+	// Keyed supports without it are ineligible for native DataSharing. Returning
+	// false fails the operation without a full-sample snapshot fallback.
+	virtual NativeKeyInfo get_native_key_info() const { return {}; }
+	virtual bool capture_native_key(void*, const void*) const { return false; }
+	virtual bool restore_native_key(void*, const void*) const { return false; }
+	bool supports_native_data_sharing(const NativeTypeInfo& type) {
+		return type.loanable() && (!has_key() || get_native_key_info().valid_for(type));
+	}
 	/**
 	 * @brief 创建样本的函数。
 	 * @return void* 指向新创建的数据类型的指针。

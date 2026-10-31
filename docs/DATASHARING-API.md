@@ -1,16 +1,16 @@
 # DataSharing / Loan API（当前实现）
 
-> 当前后端为 Boost.Interprocess、布局v5；2026-10-28修复与验收见 [本轮报告](DATASHARING-COMPLETION-20261028.md) 与 [需求矩阵](DATASHARING-ACCEPTANCE.md)。本页明确标注2026-10-27的数字仅保留历史含义。
+> 当前后端为 Boost.Interprocess、共享布局 v6、发现能力 v3。生产同步协议与故障边界见 [生产后端报告](DATASHARING-PRODUCTION-20261030.md)，当前严格准入与新验证进度见 [严格准入报告](DATASHARING-STRICT-20261030.md) 与 [需求矩阵](DATASHARING-ACCEPTANCE.md)。下文旧日期及 discovery v2 的数字仅保留历史含义。
 
-当前实现已接通 Linux 上固定布局类型的自动共享发布/接收。共享能力与实际映射注册兼容的 Reader 从共享段收样；混合匹配中的其他 Reader 继续使用定向 RTPS。纯共享路径的双进程测试将两端序列化/反序列化器设为失败，Writer Loan 与普通写入均通过。带键类型也可使用原生共享路径；存在 SQL Reader 过滤器时继续走 CDR。键哈希仍通过 TypeSupport 的键操作计算；本轮Ubuntu验收范围和限制见当前报告。配置见 [QoS 手册](DATASHARING-QOS.md)。
+当前实现已接通 Linux 上固定布局类型的自动共享发布/接收。共享能力与实际映射注册兼容的 Reader 从共享段收样；混合匹配中的其他 Reader 继续使用定向 RTPS。纯共享路径可跳过两端完整载荷序列化/反序列化。零载荷复制限定 Writer Loan → 空输出序列的 Reader Loan；普通裸指针 write 会复制样本，预分配输出也复制。带键类型只有在 Writer 与 Reader 两端的 TypeSupport 均提供有效 key-only 元数据并实现下述钩子时才可进入 native。原生路径不再保留完整样本键快照回退；不满足契约的类型保留 CDR/RTPS。键字段和控制元数据仍会复制，“零载荷复制”不表示系统中没有任何字节复制。存在 SQL Reader 过滤器时继续走 CDR。键哈希仍通过 TypeSupport 的键操作计算，Ubuntu 验证范围见需求矩阵。配置见 [QoS 手册](DATASHARING-QOS.md)。
 
 ## 类型声明
 
-旧 TypeSupport 不必修改，默认不声明原生布局能力。新固定布局类型可从 `NativeTypeSupport<T>` 继承，像已有 TypeSupport 一样实现序列化、复制、类型名和键操作，并向基类构造函数提供版本化布局 ID。
+旧 TypeSupport 可以继续使用 CDR/RTPS，默认不声明原生布局能力；已有原生带键类型必须补齐 key-only 契约才可继续使用 native。新固定布局类型可从 `NativeTypeSupport<T>` 继承，像已有 TypeSupport 一样实现序列化、复制、类型名和键操作，并向基类构造函数提供版本化布局 ID。
 
 T 必须是标准布局、可平凡复制和析构、默认构造 noexcept 的类型，且所有字段都不依赖进程内地址。指针类型也可能满足 C++ trivial 属性，因此应用必须另外保证字段不含指针。布局 ID 应包含协议版本与 ABI 约束，改变成员顺序、大小、对齐或含义时必须更换。`std::string`、`std::vector` 等类型不能放入共享样本。
 
-`get_native_type_info()` 返回 bounded/plain、size、alignment 和 layout_id；bounded 与 plain 分别声明，只有两者成立且布局信息有效时才允许原生 Loan。
+`get_native_type_info()` 返回 bounded/plain、size、alignment 和 layout_id；bounded 与 plain 分别声明，两者成立且布局信息有效是原生 Loan 的基本条件。端点通过 `supports_native_data_sharing(info)` 统一校验：无键类型满足上述布局约束即可，带键类型还必须有 `NativeKeyInfo::valid_for(info)`。类型声明是应用契约，enable 不用假样本试执行 capture/restore；若应用声明元数据却未实现钩子，实际捕获/还原失败关闭，不会复制完整样本兜底。
 
 ## Writer
 
@@ -27,8 +27,8 @@ if (rc == RETCODE_OK) {
 }
 ```
 
-- `loan_sample(SampleLoan&)`：仅支持显式声明的原生布局，返回已初始化的对象。Linux Writer 在 enable 时准备共享池，默认 64 个槽位，目录 `/dev/shm`；通过 `qos.data_sharing` 配置。OFF 或 AUTO 在 enable 时未能准备共享段的端点返回 UNSUPPORTED。
-- `write(SampleLoan&, handle)`：句柄必须属于此 Writer。成功后句柄为空，原地址不得继续访问；失败时句柄及数据保持可用。有已注册的兼容 Reader 时直接发布借出的槽位；其他匹配 Reader 获取一次生成的 CDR。TRANSIENT_LOCAL Writer 尚无 Reader 时也保留原生历史；VOLATILE 且没有共享目标时沿用普通 RTPS。
+- `loan_sample(SampleLoan&)`：仅支持通过原生准入校验的类型，返回已初始化的对象。带键类型缺失或具有非法 NativeKeyInfo 时，ON enable 返回 UNSUPPORTED；AUTO enable 保留普通 CDR/RTPS 且不广告 DS，后续 loan_sample 返回 UNSUPPORTED。Linux Writer 在 enable 时准备共享池，默认 64 个槽位，目录 `/dev/shm`；通过 `qos.data_sharing` 配置。OFF 或 AUTO 在 enable 时未能准备共享段的端点返回 UNSUPPORTED。
+- `write(SampleLoan&, handle)`：句柄必须属于此 Writer。成功后句柄为空，原地址不得继续访问；失败时句柄及数据保持可用。有已注册且重放准备 ready 的兼容 Reader 时直接发布借出的槽位；其他匹配 Reader 获取一次生成的 CDR。TRANSIENT_LOCAL Writer 尚无 Reader 时也保留原生历史；VOLATILE 且没有共享目标时沿用普通 RTPS。
 - `discard_loan(SampleLoan&)`：归还未提交的句柄并清空。错误 Writer、重复操作和空句柄返回 PRECONDITION_NOT_MET。不修改其他 Writer 的借用。
 - `SampleLoan` 只能移动，移动后源句柄为空。析构或 `reset()` 自动取消。Writer 删除后句柄仍保活映射，应用可取消或析构，不能再调用已删除的 Writer。
 - `write(loan.data(), handle)` 是普通裸指针写入，不消费句柄；要使用借用的所有权语义，应使用句柄重载。
@@ -36,7 +36,7 @@ if (rc == RETCODE_OK) {
 | 情况 | 结果 |
 |---|---|
 | Writer 未 enable | NOT_ENABLED |
-| 类型未声明兼容布局或非 Linux 实现 | UNSUPPORTED |
+| 类型未声明兼容布局、带键类型缺失/非法 key-only 元数据，或非 Linux 实现 | UNSUPPORTED |
 | 输出句柄已有借用 | PRECONDITION_NOT_MET |
 | 池耗尽或本地分配失败 | OUT_OF_RESOURCES |
 | enable 时共享池布局/预算不合法（ON） | INCONSISTENT_POLICY |
@@ -75,11 +75,13 @@ Reader 在发现兼容 Writer 后，以本地目录配置及对端 GUID/会话�
 
 所有这些序列操作都要求应用避免并发修改同一个序列对象。Writer Loan 并发借出/取消已有测试；原生跨进程存储的崩溃/代次协议见设计文档。
 
-此次扩展改变了 TypeSupport/DataWriter 的虚函数接口及序列对象布局，使用方需要整体重新编译，不能仅替换动态库后继续使用旧二进制。
+此次扩展改变了 TypeSupport/DataWriter 的虚函数接口及序列对象布局，key-only 钩子也改变 TypeSupport 二进制 ABI。库、应用及自定义 TypeSupport 子类必须一起重新编译，不能仅替换动态库后继续使用旧二进制；默认实现保留旧类型的 CDR/RTPS 源码兼容。NativeKeyInfo 的具体大小/对齐仍是本地元数据；发现能力升到 v3，隔离仍允许旧原生全样本快照的 v2 对端，共享布局保持 v6。
 
-## 本机验证与覆盖率
+## 验证与覆盖率
 
-在仓库根目录执行，所有编译保持单线程：
+严格版本的生产验证入口为 `tools/ospp/production_lockfree_verify.py`，证据根为 `artifacts/strict-native-20261030/`。强制准入、旧版本隔离和完整样本快照移除后的 coverage-complete 已完成 500 项回归、9 次示例执行及 93.920% 新增行覆盖率，源码/库身份见严格报告；本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过。命令和结果状态见 [验收矩阵](DATASHARING-ACCEPTANCE.md)。
+
+以下是 2026-10-28 完整检查流程的复现命令，测试数量和结果属于当时的冻结版本。新运行使用新的输出目录，所有编译保持单线程：
 
 ```bash
 BUILD_JOBS=1 bash tools/ospp/bootstrap.sh "$PWD/artifacts/local-loan"
@@ -94,7 +96,7 @@ python3 tools/ospp/coverage.py --source . \
   --output artifacts/local-loan-sanitize/coverage --minimum 70
 ```
 
-`CORE_TESTS=1` 额外构建并运行 247 项核心测试；不设置时只运行池/Loan 集成与共享池测试。所有构建均为单线程。
+`CORE_TESTS=1` 在该历史版本额外运行 247 项核心测试；不设置时运行池/Loan 集成与共享池测试。测试数量以新运行的实际 XML 为准。
 
 覆盖率统计 GCC 标记的可执行生产代码行，取相对指定固定基线的新增行，合并库与测试翻译单元中的模板实例；不把测试、依赖和文档计入分母。QoS 阶段的历史快照为 1166/1225（95.18%），本轮测量以当前报告为准；这不是分支覆盖率，也不证明未实现的功能已完成。完整运行记录见 `OSPP-261760062.md`。
 
@@ -113,14 +115,24 @@ python3 tools/ospp/coverage.py --source . \
 
 带键原生类型与无键类型采用相同的布局约束。TypeSupport 的 `MakeKey` 必须只根据键字段稳定生成实例句柄，成功返回 0；键字段可以使用键序列化与 MD5，而纯共享的 `serialize_data` / `deserialize_data` 调用次数为 0。dispose/unregister 通过 RTPS inline key/status 通知，不能据此声称不发送网络控制消息。
 
-- Writer 注册实例时保存首个样本的独立本地快照，不占共享槽位。相同键再次注册返回原句柄，`get_key_value` 可重复查询；返回对象的非键字段来自首次快照，不代表最新样本。
-- Native 快照按声明的对齐分配，构造后复制固定布局字节；普通 CDR 注册保留序列化快照并通过原池回收。注册序列化失败不会留下已注册实例。
-- Reader 第一次接受某实例的 ALIVE 样本时保存独立快照。take/return_loan 后仍可查询键，且快照不会继续钉住共享槽位。CDR Reader 保存独立缓冲链，每次查询使用独立的全部分片游标。
+- 带键类型进入 native 必须实现下列 TypeSupport 钩子并声明有效 NativeKeyInfo。capture 只能读取键字段，restore 只能修改目标的键字段。元数据和表示在 TypeSupport 生命周期内保持稳定，快照必须是无指针、无需构造/析构的独立字节，不能保留样本地址。具体键表示无需在对端共享，但 Writer 与 Reader 各自在准入时校验它；只有遵循同一严格契约的 discovery v3 端点可以选择 DS，旧 v2 对端保留 RTPS。
+
+```cpp
+virtual NativeKeyInfo get_native_key_info() const;
+virtual bool capture_native_key(void* snapshot, const void* sample) const;
+virtual bool restore_native_key(void* sample, const void* snapshot) const;
+```
+
+- Writer 首次注册和 Reader 首次接受该实例 ALIVE 时仅分配 NativeKeyInfo::size 字节；实际分配对齐至少为 max_align_t。`get_key_value` 通过 restore 还原键，非键字段保留调用前值。相同键再次注册返回原句柄，重复查询不消费快照。
+- size 必须非零且不超过原生样本大小，alignment 必须非零、为二次幂且不大于原生样本对齐。缺失/非法元数据在 ON enable 阶段返回 UNSUPPORTED；AUTO 不广告 DS，普通 write 使用 CDR/RTPS，loan_sample 返回 UNSUPPORTED。内部 native 创建/查询若遇到缺失/非法元数据返回 BAD_PARAMETER，capture/restore false 或标准异常返回 ERROR，分配失败返回 OUT_OF_RESOURCES；register_instance 只返回句柄，相关失败表现为 HANDLE_NIL。
+- Reader 首次键快照捕获失败时拒绝本条准入，在排序、过滤、淘汰和所有权状态变更前回滚刚创建的空实例，不占 max_instances；已有实例与历史不因失败删除。已有快照的 restore 失败返回 ERROR 并保留快照，便于修正后重新查询；调用方不应依赖失败查询的输出内容。
+- 默认钩子不声明能力，带键类型不能进入 native；即使应用提供元数据但保留默认 capture/restore，实际操作也失败，不回退原生全样本 memcpy/copy_data。普通 CDR 注册保留序列化快照并通过原池回收，不受严格 native 快照规则影响。
+- 快照不占共享槽位、不保留源样本引用，直到实例回收/注销或实体销毁才释放；take/return_loan 后仍可查询已知键。CDR Reader 保存独立缓冲链，每次查询使用独立的全部分片游标。
 - `lookup_instance` 对未知键、空数据或键计算失败返回 HANDLE_NIL。注册的空数据、负时间戳和资源耗尽也返回 HANDLE_NIL；隐式注册的 write 在实例数耗尽时返回 OUT_OF_RESOURCES。
 - write 使用未注册的显式句柄返回 BAD_PARAMETER；样本键与已注册句柄不一致返回 PRECONDITION_NOT_MET。dispose/unregister 可以用空数据加有效句柄，空数据与 HANDLE_NIL 的组合返回 BAD_PARAMETER。
 - 注销成功后 Writer 的句柄不再可查，键快照释放；相同键可重新注册。Reader 保留其已知实例身份，并通过 dispose、无 Writer、重新 ALIVE 的通知跟踪实例状态与代数。
 
-每个已知实例会额外保留一份本地快照，其成本不包含在 `data_sharing.max_samples` 内。原生快照约为 `native size × 已知实例数`；普通快照按序列化长度计。Writer 可通过 `resource_limits.max_instances` 限制注册数；Reader按有限生命周期回收已知实例；默认无限时仍保留预算占用，具体语义见QoS手册。
+每个已知实例额外保留一份本地快照，成本不包含在 `data_sharing.max_samples` 或段预算内。native 键存储约为 `NativeKeyInfo::size × 已知实例数`，另有本地分配/索引开销，CDR 快照按序列化长度计。键快照及索引是会复制的元数据，不是完整用户载荷；这里不作“任何字节都不复制”的保证。Writer 可通过 `resource_limits.max_instances` 限制注册数；Reader按有限生命周期回收已知实例；默认无限时仍保留预算占用，具体语义见QoS手册。
 
 本阶段覆盖带键类型的基本注册/查询、ALIVE/dispose/unregister/重新注册、可靠/尽力和混合 Reader 场景。deadline/lifespan与注销及read/take_instance组合已有本轮回归，有限Reader生命周期回收与多Writer语义见当前QoS手册，验收以本轮矩阵为准。
 
@@ -159,9 +171,9 @@ SHARED 所有权下，一个实例可同时由多个 Writer 保持存活。一�
 
 双方 TRANSIENT_LOCAL 支持 Writer 预发布后 Reader 独立进程加入并借用保留样本；VOLATILE Reader 只收新数据。晚加入 OFF Reader 使用按需 CDR。BEST_EFFORT 历史在匹配时发送一次，不承诺任意发现顺序或丢包下都送达。
 
-ON 强制本地准备成功，对端兼容但共享映射失败仍使用 RTPS。兼容Reader的映射/注册暂时失败会自动退避重试，条件恢复后同一个Reader转到DS。Reader 默认无限 autopurge 时，已知键占用 max_instances 直到端点删除，take 和 return_loan 都不会释放实例预算。
+ON 强制本地准备成功，对端兼容但共享映射失败仍使用 RTPS。兼容 Reader 的映射/注册暂时失败会自动退避重试，注册与重放 ready 后同一个 Reader 转到 DS；损坏 native session 不承诺透明恢复。Reader 默认无限 autopurge 时，已知键占用 max_instances 直到端点删除，take 和 return_loan 都不会释放实例预算。
 
-重启期间旧端点的 DDS lease 可能尚未到期，Writer 可为这些旧目标准备 CDR；新 native Reader 仍走共享收样。应用已持有的 Reader Loan 可跨 Writer 死亡、段精确 unlink、Writer 重启及 Reader 删除保持可读，直至主动归还/释放。若持元数据锁的进程死亡导致段 CORRUPT，应重建端点，不能继续借出该段。
+重启期间旧端点的 DDS lease 可能尚未到期，Writer 可为这些旧目标准备 CDR；新 native Reader 仍走共享收样。应用已持有的 Reader Loan 可跨 Writer 死亡、段精确 unlink、Writer 重启及 Reader 删除保持可读，直至主动归还/释放。若管理锁持有者死亡，或已死亡登记遗留无法安全归属的短操作计数，session 进入 CORRUPT，应重建端点；已有 Loan 仍保留映射，不能继续从损坏段借出新样本。
 
 ## 当前失败原子性与回收语义（2026-10-28）
 
@@ -172,4 +184,4 @@ Reader有限autopurge删除实例身份后，旧句柄的get_key_value返回BAD_
 调度及Timer同步、deadline listener查询状态/修改QoS/注销的当前回归已加入验收。上文“尚未验证”段落保留为历史范围描述，当前结果见DATASHARING-ACCEPTANCE.md；未运行的检查器不会由ASan代替。
 
 
-本轮最终验收：普通与ASan/UBSan各468/468，两版各55项×30轮及三个有限示例各30轮通过；新增生产行覆盖率94.118%（2432/2584）。独立TSan限定路径通过，LSan未运行、历史WaitSet根因未知。当前完整证据与限制以 [本轮报告](DATASHARING-COMPLETION-20261028.md) 为准，早期数字只保留历史含义。
+当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。

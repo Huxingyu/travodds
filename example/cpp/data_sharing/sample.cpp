@@ -1,5 +1,6 @@
 // Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
 #include "sample.h"
+#include <cstring>
 
 namespace datasharing_demo {
 static_assert(sizeof(Sample) == 64, "Update the layout ID when the sample ABI changes");
@@ -11,6 +12,19 @@ void* SampleSupport::create_data() { return new Sample{}; }
 void SampleSupport::delete_data(void* p) { delete static_cast<Sample*>(p); }
 int32_t SampleSupport::copy_data(void* dst, void* src) {
     *static_cast<Sample*>(dst) = *static_cast<Sample*>(src); return 0;
+}
+NativeKeyInfo SampleSupport::get_native_key_info() const {
+    return keyed_ ? NativeKeyInfo{sizeof(uint64_t), alignof(uint64_t)} : NativeKeyInfo{};
+}
+bool SampleSupport::capture_native_key(void* key, const void* data) const {
+    if (!keyed_ || !key || !data) return false;
+    std::memcpy(key, &static_cast<const Sample*>(data)->key, sizeof(uint64_t));
+    return true;
+}
+bool SampleSupport::restore_native_key(void* data, const void* key) const {
+    if (!keyed_ || !key || !data) return false;
+    std::memcpy(&static_cast<Sample*>(data)->key, key, sizeof(uint64_t));
+    return true;
 }
 int32_t SampleSupport::serialize_data(void* p, CdrSerializer* cdr, int32_t) {
     ++serializations;

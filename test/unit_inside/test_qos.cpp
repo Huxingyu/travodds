@@ -1938,20 +1938,31 @@ TEST_F(QoSTest, QoS_OwnershipQosPolicy) {
 
 			// 15. SHARED类型所有匹配的对端的数据均能接收到
 			WaitPositive();
-			listener1.wait_data_available(1000);
 			TestModule::BasicData sample;
 			SampleInfo info;
-			EXPECT_EQ(reader1->take_next_sample(&sample, info), RETCODE_OK);
+			// DATA_AVAILABLE is a coalesced notification. The fixture's flag
+			// stays set after its first callback, so it cannot count samples.
+			// Wait on the actual DDS data predicate, with a finite deadline.
+			auto takeAvailable = [&](DataReader* reader, std::chrono::milliseconds timeout) {
+				const auto until = std::chrono::steady_clock::now() + timeout;
+				ReturnCode_t result;
+				do {
+					result = reader->take_next_sample(&sample, info);
+					if (result != RETCODE_NO_DATA) return result;
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				} while (std::chrono::steady_clock::now() < until);
+				return result;
+			};
+			EXPECT_EQ(takeAvailable(reader1, std::chrono::milliseconds(2000)), RETCODE_OK);
 			EXPECT_EQ(sample.id, 1);
-			listener1.wait_data_available(1000);
-			EXPECT_EQ(reader1->take_next_sample(&sample, info), RETCODE_OK);
+			EXPECT_EQ(takeAvailable(reader1, std::chrono::milliseconds(2000)), RETCODE_OK);
 			EXPECT_EQ(sample.id, 2);
-			listener2.wait_data_available(1000);
 			// 16. EXCLUSIVE类型只能接收到ownership_strength最大的对端的数据
-			EXPECT_EQ(reader2->take_next_sample(&sample, info), RETCODE_OK);
+			EXPECT_EQ(takeAvailable(reader2, std::chrono::milliseconds(2000)), RETCODE_OK);
 			EXPECT_EQ(sample.id, 3);
-			listener2.wait_data_available(1000);
-			EXPECT_EQ(reader2->take_next_sample(&sample, info), RETCODE_NO_DATA);
+			// Observe the full exclusion window; a stale callback must not make
+			// the negative assertion pass before the weaker writer can arrive.
+			EXPECT_EQ(takeAvailable(reader2, std::chrono::milliseconds(1000)), RETCODE_NO_DATA);
 
 			// 17. 发送检查完成信号
 			NotifyPositive();

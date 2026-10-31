@@ -137,11 +137,24 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 	/* 判断是否有key  */
 	std::map<InstanceHandle_t, CacheChangeVector>::iterator vitOut;
 	SerializedBuffer* buffer = nullptr;
+	bool newInstance = false;
+	std::shared_ptr<SerializedBuffer> keyBuffer;
+	std::shared_ptr<void> nativeKey;
 	/* 丢弃数据 */
 	{
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
+		newInstance = readerCache_->instanceChanges_.find(cache->instanceHandle) == readerCache_->instanceChanges_.end();
 		if (RETCODE_OUT_OF_RESOURCES == readerCache_->FindORAddKey(cache->instanceHandle, buffer, &vitOut)) {
 			return REJECTED_BY_INSTANCES_LIMIT;
+		}
+		if (datareader_ && !vitOut->second.keyBuffer && !vitOut->second.nativeKey) {
+			const auto keyResult = datareader_->CreateInstanceKey(cache, keyBuffer, nativeKey);
+			if (keyResult != RETCODE_OK) {
+				// Capture before filtering, eviction, or instance/ownership changes.
+				// A failed first sample must not consume the instance budget.
+				if (newInstance) readerCache_->instanceChanges_.erase(vitOut);
+				return keyResult;
+			}
 		}
         // Allocate descriptors without registering keys. Only an admitted
         // instance belongs in either history or the ordered read/take index.
@@ -213,7 +226,7 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 	}
 	{
 		std::unique_lock<std::mutex> lock(readerCache_->changeMutex_);
-		
+		auto& ins = readerCache_->instanceChanges_[cache->instanceHandle];
 		ReturnCode_t ret = readerCache_->UpdataSampleInstance(
 			cache->instanceHandle, 
 			cache->kind, 
@@ -224,11 +237,8 @@ ReturnCode_t Reader::AddChanges(std::shared_ptr<CacheChange> cache)
 		if (RETCODE_OK != ret) {
 			return ret;
 		}
-		auto& ins = readerCache_->instanceChanges_[cache->instanceHandle];
-		if (datareader_ && !ins.keyBuffer && !ins.nativeKey) {
-			const auto keyResult = datareader_->CreateInstanceKey(cache, ins.keyBuffer, ins.nativeKey);
-			if (keyResult != RETCODE_OK) return keyResult;
-		}
+		if (keyBuffer) ins.keyBuffer = std::move(keyBuffer);
+		if (nativeKey) ins.nativeKey = std::move(nativeKey);
 		ins.cacheChanges.push_back(cache);
 		readerCache_->AddSampleCounters(cache->sampleInfo.sample_state, ins.viewState, ins.instanceState);
 

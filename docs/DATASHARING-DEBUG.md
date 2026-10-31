@@ -1,6 +1,6 @@
 # DataSharing 调试与验证
 
-本手册针对 Linux 同主机固定布局 DataSharing。API 见 [DATASHARING-API.md](DATASHARING-API.md)，配置见 [DATASHARING-QOS.md](DATASHARING-QOS.md)，有限示例见 [README](../example/cpp/data_sharing/README.md)。当前验收结果和限制见 [本轮报告](DATASHARING-COMPLETION-20261028.md) 及 [状态](DATASHARING-PLAN.md)。
+本手册针对 Linux 同主机固定布局 DataSharing。API 见 [DATASHARING-API.md](DATASHARING-API.md)，配置见 [DATASHARING-QOS.md](DATASHARING-QOS.md)，有限示例见 [README](../example/cpp/data_sharing/README.md)。当前严格准入和新验证进度见 [严格准入报告](DATASHARING-STRICT-20261030.md) 及 [需求矩阵](DATASHARING-ACCEPTANCE.md)，共享协议见 [生产后端报告](DATASHARING-PRODUCTION-20261030.md)；2026-10-28 及同日 discovery v2 的测试与覆盖率属于历史冻结版本。
 
 ## 从可复现示例开始
 
@@ -16,7 +16,7 @@ python3 tools/ospp/datasharing_examples.py \
 ## 判断实际数据路径
 
 1. 确认两端 domain、topic、类型名、可靠性和其他匹配 QoS 相容。`get_matched_subscriptions`/`get_matched_publications` 只能证明 DDS 匹配。
-2. 确认类型声明 bounded/plain、非零大小、合法对齐和相同版本化布局 ID。布局内不得含跨进程无效的指针或动态容器。
+2. 确认类型声明 bounded/plain、非零大小、合法对齐和相同版本化布局 ID。布局内不得含跨进程无效的指针或动态容器。原生带键类型必须有有效 NativeKeyInfo 和 capture/restore 契约；两端均需 discovery v3，旧 v2 只走 RTPS。普通 DDS matched 不代表实际 DS 注册已 ready。
 3. 确认两端处于相同主机、PID namespace 和可访问的共享文件系统。容器间仅使用相同目录字符串不代表访问同一个共享段。
 4. 确认 Reader 映射预算足够，目录可访问，Writer 的槽位和 Reader 注册容量未耗尽。
 5. 在隔离的测试中检查原生借用及完整载荷序列化计数。有限示例在 OFF Reader 创建之前禁用完整载荷 CDR，并验证一次真实 Reader Loan，以确认共享路径已经建立。
@@ -28,11 +28,15 @@ python3 tools/ospp/datasharing_examples.py \
 | 现象 | 检查方向 |
 |---|---|
 | ON Writer 创建返回空 | 关闭自动 enable 后显式 enable 获取错误码；检查类型、目录、预算和资源配置 |
-| `loan_sample` 返回 UNSUPPORTED | OFF、类型不支持、平台不支持，或 AUTO 本地准备失败；检查 enable 日志 |
+| `loan_sample` 返回 UNSUPPORTED | OFF、类型/平台不支持、带键类型缺失或非法 NativeKeyInfo，或 AUTO 本地准备失败；检查 enable 日志。后者不广告 DS，普通 write 保留 CDR/RTPS |
 | OUT_OF_RESOURCES | 应用未提交/取消的 Writer Loan、Writer history、未读 Reader 投递和应用 Reader Loan 分别可能持有槽位；不能只数 history |
-| 匹配成功但仍走 CDR | 对端 OFF/类型不相容、共享组不交集、目录/预算/注册失败或内容过滤；检查实际映射注册 |
+| 匹配成功但仍走 CDR | 对端 OFF/类型不相容、共享组不交集、目录/预算/注册失败、重放未 ready 或内容过滤；检查实际映射和 ready 状态 |
+| 内部 statistics 返回 TIMEOUT | 管理 mutex 正忙；不等同于无数据或 session 损坏，已有数据面不等待此锁 |
+| 内部 waitNext/discard 并发竞争 | 同一本地 SharedPoolReader 的取样竞争立即 TIMEOUT/false；Loan 归还独立，DDS 应用序列本身也不能并发修改 |
+| 直接并发 publish 返回 EXHAUSTED | 内部发布 lane 竞争立即失败；DDS Writer 本身串行化提交，需与槽位容量耗尽区分 |
 | Writer write 失败后 Loan 仍有效 | 失败不消费应用 Loan；修正原因后重试或 discard，不得同时把它交给另一个 Writer |
 | 旧句柄 BAD_PARAMETER | unregister 后不再属于当前注册实例；重新注册同键再写入 |
+| key-only 捕获/还原失败 | ON enable 先拒绝缺失/非法 NativeKeyInfo；声明元数据不代表库试执行过钩子。检查 capture/restore 返回值，false/标准异常转换为失败，不回退全样本复制。首次 Reader 捕获失败不占 max_instances，既有快照查询失败保留快照，可修正后重试 |
 | return_loan 返回 PRECONDITION_NOT_MET | 检查是否混用了 Reader、数据/信息序列或借用批次；双方均已无借用时再次归还返回 OK |
 | 新加入的可靠 Reader 卡在第一条数据 | 检查首次 HEARTBEAT 的 firstSN、已收缓存及 GAP；发现公告也可能因旧缺口未提交。本补丁有 WriterProxyGap 回归及后加入 OFF Reader 的有限示例 |
 | 未写入样本就期待 deadline 通知 | 先建立实际实例/样本；空 history 的定时唤醒不能注册 NIL 实例。使用真实 write/receive 后再验证 WaitSet 状态 |
@@ -42,6 +46,8 @@ python3 tools/ospp/datasharing_examples.py \
 当前 ON 只强制本地准备；对端不支持或映射失败仍保留 RTPS。兼容会话映射/注册暂时失败后自动重试，25ms至1s退避。日志区分fallback/retry/success/non-retryable；CORRUPT或不兼容需新会话，不能恢复损坏段。
 
 ## 定位失败并保存证据
+
+严格版本首轮在 Participant 删除内容过滤 Topic 时遇到既有 ThreadPool 关闭丢唤醒：主线程 join worker，worker 仍在条件变量等待，但 shutdown 标志已为 1。现场与修复见 [严格报告](DATASHARING-STRICT-20261030.md#首轮失败与-threadpool-修复)；首轮 coverage-final 为失败证据，修复后应检查当前 coverage-complete，不能把被 SIGTERM 结束记为成功。
 
 保留失败时的源码 SHA、完整 stdout/stderr、退出码、测试 XML、进程身份和运行库路径。先单独运行失败用例，再重复其前置场景；只重跑最后一个用例可能漏掉之前的生命周期影响。并发问题需要实际线程栈或确定性复现支持，不能把后来发现的其他缺陷当作既有崩溃的已证实原因。
 
@@ -82,11 +88,13 @@ artifacts/local-loan/build-unit_payloadpool/payloadpool_test \
 
 ### 重启与通知排查
 
-共享布局当前为 5；旧布局在执行共享锁操作前拒绝。通知使用 Linux futex，等待采用单调时钟期限。若锁持有者死亡，则 CORRUPT 是安全拒绝，应重建端点。不要将已死 DDS Reader 的 lease 保留误认为共享 Loan 未回收；共享池统计按真实进程身份回收 pin，RTPS 发现仍可暂时保留旧匹配。
+共享布局当前为 6、发现能力为 3；旧布局在访问共享同步对象前拒绝，旧发现 v1/v2 保留 RTPS。v3 才表示端点执行强制带键 key-only 准入，禁止旧原生全样本快照回退。通知先采样原子代次再检查数据谓词，以单调时钟期限等待 Linux futex，取样和归还不持管理 mutex。控制锁被活进程占用时，新的注册可能等待，已有数据面可继续。
+
+管理锁持有者死亡，或已确认死亡的 Reader 登记仍有无法安全归属的短操作计数，都会使 session CORRUPT，需重建端点。死亡登记无短操作时由维护核实 PID/start identity 后回收 pin；不能按超时强减计数。已有 Loan 保留旧映射和字节。DDS discovery lease 可能暂存旧匹配，与共享池 pin 生命周期分开。
 
 新 Participant 可能复用旧 Reader entityId，定向回退数据必须同时带目标 Participant 的 INFO_DST。接收 DATA/FRAG 时丢弃外部前缀；UNKNOWN 允许广播。相关回归为 LoanIntegration.*DestinationPrefix*。
 
 Reader max_instances 满时，默认无限 autopurge 保留的已知键仍占容量，即使样本已 take 或 Loan 已归还。按业务实例数配置预算，或删除重建 Reader；需要有限回收时显式配置reader_data_lifecycle；其状态转移计时、实例预算释放及Loan保活见QoS手册。
 
 
-本轮最终验收：普通与ASan/UBSan各468/468，两版各55项×30轮及三个有限示例各30轮通过；新增生产行覆盖率94.118%（2432/2584）。独立TSan限定路径通过，LSan未运行、历史WaitSet根因未知。当前完整证据与限制以 [本轮报告](DATASHARING-COMPLETION-20261028.md) 为准，早期数字只保留历史含义。
+当前严格版本（共享布局 v6 / discovery v3）：**500/500 回归、三个示例各 3 轮共 9 次执行通过，新增生产可执行行覆盖率 93.920%（2765/2944）**。本次独立完整插桩 ASan/UBSan 与 TSan focused 各 57/57 通过，最终汇总审计通过；319 项输入身份、库/结果哈希及检查范围见 [严格准入报告](DATASHARING-STRICT-20261030.md)；[同日旧报告](DATASHARING-COMPLETION-20261030.md) 仅属 discovery v2 历史。LSan 无结论，历史 WaitSet 崩溃根因仍未知。

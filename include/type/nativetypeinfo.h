@@ -24,5 +24,17 @@ struct NativeTypeInfo {
 	}
 };
 
+// Explicit local key-only snapshot capability. A zero layout does not support
+// keyed native DataSharing; a supplied layout must fit the native sample.
+struct NativeKeyInfo {
+	uint32_t size = 0;
+	uint32_t alignment = 0;
+	bool provided() const { return size || alignment; }
+	bool valid_for(const NativeTypeInfo& type) const {
+		return type.loanable() && size && size <= type.size && alignment &&
+			!(alignment & (alignment - 1)) && alignment <= type.alignment;
+	}
+};
+
 TRAVODDS_NAMESPACE_END
 #endif

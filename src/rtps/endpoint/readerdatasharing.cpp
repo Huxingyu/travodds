@@ -95,13 +95,14 @@ bool Reader::StartDataSharing(const std::shared_ptr<Reader>& self, const Discove
             runtime->thread = std::thread([runtime, weak = std::weak_ptr<Reader>(self),
                     descriptor, type, replay, readerGuid = guid_] {
                 std::shared_ptr<SharedPoolReader> registration;
+                std::shared_ptr<SharedPayloadPool> pool;
                 unsigned attempts = 0;
                 auto delay = std::chrono::milliseconds(25);
                 while (!runtime->stopping.load() && !registration) {
                     if (weak.expired()) return;
                     bool terminal = false;
                     try {
-                        auto pool = SharedPayloadPool::open(descriptor);
+                        pool = SharedPayloadPool::open(descriptor);
                         SharedPoolStats stats;
                         auto result = pool->statistics(stats);
                         if (result == SharedPoolResult::CORRUPT || result == SharedPoolResult::CLOSED ||
@@ -133,7 +134,16 @@ bool Reader::StartDataSharing(const std::shared_ptr<Reader>& self, const Discove
                     while (!runtime->stopping.load()) {
                         SharedReadLoan loan;
                         const auto result = registration->waitNext(last, std::chrono::milliseconds(100), loan);
-                        if (result == SharedPoolResult::TIMEOUT) continue;
+                        if (result == SharedPoolResult::TIMEOUT) {
+                            // Liveness probes are control-plane work, outside
+                            // the no-mutex wait/take data plane. A busy metadata
+                            // manager returns TIMEOUT rather than blocking stop.
+                            SharedPoolStats stats;
+                            const auto state = pool->statistics(stats);
+                            if (state == SharedPoolResult::CORRUPT || state == SharedPoolResult::CLOSED ||
+                                (state == SharedPoolResult::OK && !stats.writer_alive)) break;
+                            continue;
+                        }
                         if (result != SharedPoolResult::OK) break;
                         last = loan.sequence();
                         auto reader = weak.lock();

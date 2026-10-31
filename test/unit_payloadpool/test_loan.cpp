@@ -47,13 +47,41 @@ public:
     std::atomic<bool> capable{true}, failSerialize{false}, failDeserialize{false};
     std::atomic<bool> keyed{false}, failKey{false};
     std::atomic<bool> failConstruct{false}, throwConstruct{false};
+    std::atomic<bool> compactKeys{true}, failCapture{false}, throwCapture{false};
+    std::atomic<bool> failRestore{false}, throwRestore{false};
+    std::atomic<int> malformedKeyInfo{0};
     std::atomic<int> serializeCalls{0}, deserializeCalls{0}, copyCalls{0}, serializeSuccesses{0};
+    mutable std::atomic<int> keyCaptureCalls{0}, keyRestoreCalls{0};
     NativeTypeInfo get_native_type_info() const override {
         return capable ? NativeTypeSupport::get_native_type_info() : NativeTypeInfo{};
     }
     bool construct_native_sample(void* p) const override {
         if (throwConstruct) throw std::runtime_error("injected constructor failure");
         return !failConstruct && NativeTypeSupport::construct_native_sample(p);
+    }
+    NativeKeyInfo get_native_key_info() const override {
+        if (!keyed || !compactKeys) return {};
+        switch (malformedKeyInfo) {
+        case 1: return {0, alignof(uint64_t)};
+        case 2: return {sizeof(NativeSample) + 1, alignof(uint64_t)};
+        case 3: return {sizeof(uint64_t), 3};
+        case 4: return {sizeof(uint64_t), alignof(NativeSample) * 2};
+        default: return {sizeof(uint64_t), alignof(uint64_t)};
+        }
+    }
+    bool capture_native_key(void* key, const void* data) const override {
+        ++keyCaptureCalls;
+        if (throwCapture) throw std::runtime_error("injected key capture failure");
+        if (failCapture || !key || !data) return false;
+        std::memcpy(key, &static_cast<const NativeSample*>(data)->index, sizeof(uint64_t));
+        return true;
+    }
+    bool restore_native_key(void* data, const void* key) const override {
+        ++keyRestoreCalls;
+        if (throwRestore) throw std::runtime_error("injected key restore failure");
+        if (failRestore || !key || !data) return false;
+        std::memcpy(&static_cast<NativeSample*>(data)->index, key, sizeof(uint64_t));
+        return true;
     }
     void* create_data() override { return new NativeSample{}; }
     void delete_data(void* p) override { delete static_cast<NativeSample*>(p); }
@@ -765,11 +793,11 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
                 ASSERT_EQ(type.MakeKey(&values[0], expected, true), 0);
                 EXPECT_EQ(infos[0].instance_handle, expected);
                 EXPECT_EQ(reader->lookup_instance(&values[0]), expected);
-                NativeSample snapshot{};
+                NativeSample snapshot{}; snapshot.values[6] = 8866;
                 for (int query = 0; query < 2; ++query) {
                     ASSERT_EQ(reader->get_key_value(&snapshot, expected), RETCODE_OK);
                     EXPECT_EQ(snapshot.index, index);
-                    EXPECT_EQ(snapshot.values[6], index + 79);
+                    EXPECT_EQ(snapshot.values[6], 8866u);
                 }
                 EXPECT_EQ(reader->get_key_value(nullptr, expected), RETCODE_BAD_PARAMETER);
             }
@@ -977,10 +1005,10 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
         NativeSample sample{}; sample.index = 9184;
         const auto handle = writer->lookup_instance(&sample);
         ASSERT_NE(handle, HANDLE_NIL);
-        NativeSample snapshot{};
+        NativeSample snapshot{}; snapshot.values[6] = 8866;
         ASSERT_EQ(writer->get_key_value(&snapshot, handle), RETCODE_OK);
         EXPECT_EQ(snapshot.index, 9184u);
-        EXPECT_EQ(snapshot.values[6], 9263u);
+        EXPECT_EQ(snapshot.values[6], 8866u);
         ASSERT_EQ(writer->dispose(nullptr, handle), RETCODE_OK);
         ASSERT_TRUE(byte(sockets[0], 'P', false));
         sample.values[6] = 666;
@@ -1090,7 +1118,8 @@ TEST_F(LoanIntegration, KeyedReaderKeepsIndependentFragmentedCdrSnapshotAndFresh
     EXPECT_EQ(reader->get_key_value(&sample, handle), RETCODE_ERROR);
 }
 
-TEST_F(LoanIntegration, KeyedReaderSnapshotConstructionFailureDoesNotRetainSourceOrPartialSnapshot) {
+TEST_F(LoanIntegration, KeyedNativeReaderRejectsMissingKeyHooksWithoutRetainingSource) {
+    type.compactKeys = false;
     auto* reader = makeReader();
     ASSERT_NE(reader, nullptr);
     auto* impl = dynamic_cast<DataReaderImpl*>(reader);
@@ -1102,18 +1131,20 @@ TEST_F(LoanIntegration, KeyedReaderSnapshotConstructionFailureDoesNotRetainSourc
     ++cache->nativeType.size;
     EXPECT_EQ(impl->CreateInstanceKey(cache, serialized, native), RETCODE_BAD_PARAMETER);
     cache->nativeType = type.get_native_type_info();
+    EXPECT_EQ(impl->CreateInstanceKey(cache, serialized, native), RETCODE_BAD_PARAMETER);
+    EXPECT_FALSE(native);
+    EXPECT_FALSE(serialized);
+    // Even a manually injected native cache cannot select a full-sample
+    // snapshot. A valid hook captures only key bytes without constructing T.
+    type.compactKeys = true;
     type.failConstruct = true;
-    EXPECT_EQ(impl->CreateInstanceKey(cache, serialized, native), RETCODE_ERROR);
-    EXPECT_FALSE(native);
-    type.failConstruct = false; type.throwConstruct = true;
-    EXPECT_EQ(impl->CreateInstanceKey(cache, serialized, native), RETCODE_ERROR);
-    EXPECT_FALSE(native);
-    type.throwConstruct = false;
     ASSERT_EQ(impl->CreateInstanceKey(cache, serialized, native), RETCODE_OK);
     EXPECT_NE(native.get(), source.get());
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(native.get()) % 64, 0u);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(native.get()) % alignof(uint64_t), 0u);
     source->index = 992;
-    EXPECT_EQ(static_cast<NativeSample*>(native.get())->index, 771u);
+    uint64_t key = 0;
+    std::memcpy(&key, native.get(), sizeof(key));
+    EXPECT_EQ(key, 771u);
     EXPECT_EQ(type.serializeCalls, 0);
     EXPECT_EQ(type.deserializeCalls, 0);
 }
@@ -1167,11 +1198,11 @@ TEST_F(LoanIntegration, KeyedRegistrationValidatesInputsCapacityAndSnapshotWitho
     ASSERT_NE(first, HANDLE_NIL);
     EXPECT_EQ(writer->register_instance(&sample), first);
     sample.values[0] = 999;
-    NativeSample snapshot{};
+    NativeSample snapshot{}; snapshot.values[0] = 7788;
     EXPECT_EQ(writer->get_key_value(nullptr, first), RETCODE_BAD_PARAMETER);
     EXPECT_EQ(writer->get_key_value(&snapshot, first), RETCODE_OK);
     EXPECT_EQ(snapshot.index, 123u);
-    EXPECT_EQ(snapshot.values[0], 456u);
+    EXPECT_EQ(snapshot.values[0], 7788u);
     ++sample.index;
     EXPECT_EQ(writer->write(&sample, first), RETCODE_PRECONDITION_NOT_MET);
     EXPECT_EQ(writer->lookup_instance(&sample), HANDLE_NIL);
@@ -1182,6 +1213,113 @@ TEST_F(LoanIntegration, KeyedRegistrationValidatesInputsCapacityAndSnapshotWitho
     EXPECT_EQ(writer->unregister_instance(nullptr, first), RETCODE_OK);
     EXPECT_EQ(writer->get_key_value(&snapshot, first), RETCODE_BAD_PARAMETER);
     EXPECT_NE(writer->register_instance(&sample), HANDLE_NIL);
+    EXPECT_EQ(type.serializeCalls, 0);
+    EXPECT_EQ(type.deserializeCalls, 0);
+    EXPECT_EQ(type.copyCalls, 0);
+}
+
+TEST_F(LoanIntegration, KeyedNativeCaptureFailurePreservesLoanAndRollsBackRegistration) {
+    ASSERT_EQ(publisher->delete_datawriter(writer), RETCODE_OK);
+    DataWriterQos qos;
+    qos.data_sharing.kind = ON_DATA_SHARING_QOS;
+    qos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
+    qos.resource_limits.max_instances = 1;
+    writer = publisher->create_datawriter(topic, qos, nullptr, STATUS_MASK_NONE);
+    ASSERT_NE(writer, nullptr);
+    SampleLoan loan;
+    ASSERT_EQ(writer->loan_sample(loan), RETCODE_OK);
+    auto* source = static_cast<NativeSample*>(loan.data());
+    source->index = 371; source->values[6] = 9876;
+    type.failSerialize = type.failDeserialize = true;
+    // Compact snapshots never construct/copy a complete NativeSample.
+    type.failConstruct = true;
+    for (int invalid = 1; invalid <= 4; ++invalid) {
+        type.malformedKeyInfo = invalid;
+        EXPECT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_BAD_PARAMETER);
+        ASSERT_TRUE(loan);
+        EXPECT_EQ(loan.data(), source);
+        EXPECT_EQ(writer->lookup_instance(source), HANDLE_NIL);
+    }
+    type.malformedKeyInfo = 0;
+    EXPECT_EQ(type.keyCaptureCalls, 0);
+    type.failCapture = true;
+    EXPECT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_ERROR);
+    ASSERT_TRUE(loan);
+    EXPECT_EQ(writer->lookup_instance(source), HANDLE_NIL);
+    type.failCapture = false; type.throwCapture = true;
+    EXPECT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_ERROR);
+    ASSERT_TRUE(loan);
+    EXPECT_EQ(source->values[6], 9876u);
+    EXPECT_EQ(writer->lookup_instance(source), HANDLE_NIL);
+    type.throwCapture = false;
+    ASSERT_EQ(writer->write(loan, HANDLE_NIL), RETCODE_OK);
+    EXPECT_FALSE(loan);
+    NativeSample query{}; query.index = 371; query.values[6] = 2244;
+    const auto handle = writer->lookup_instance(&query);
+    ASSERT_NE(handle, HANDLE_NIL);
+    type.failRestore = true;
+    EXPECT_EQ(writer->get_key_value(&query, handle), RETCODE_ERROR);
+    type.failRestore = false; type.throwRestore = true;
+    EXPECT_EQ(writer->get_key_value(&query, handle), RETCODE_ERROR);
+    type.throwRestore = false; query.index = 0;
+    EXPECT_EQ(writer->get_key_value(&query, handle), RETCODE_OK);
+    EXPECT_EQ(query.index, 371u);
+    EXPECT_EQ(query.values[6], 2244u);
+    EXPECT_EQ(type.get_native_key_info().size, sizeof(uint64_t));
+    EXPECT_EQ(type.keyCaptureCalls, 3);
+    EXPECT_EQ(type.keyRestoreCalls, 3);
+    EXPECT_EQ(type.copyCalls, 0);
+    EXPECT_EQ(type.serializeCalls, 0);
+    EXPECT_EQ(type.deserializeCalls, 0);
+}
+
+TEST_F(LoanIntegration, KeyedNativeReaderCaptureFailureDoesNotConsumeInstanceCapacityOrRetainSource) {
+    DataReaderQos qos;
+    qos.data_sharing.kind = OFF_DATA_SHARING_QOS;
+    qos.resource_limits.max_instances = 1;
+    auto* reader = subscriber->create_datareader(topic, qos, nullptr, STATUS_MASK_NONE);
+    ASSERT_NE(reader, nullptr);
+    auto rtps = dynamic_cast<DomainParticipantImpl*>(participant)->GetRelatedParticipant();
+    auto endpoint = rtps->GetReader(Conversion::ToGuid(reader->get_instance_handle()).entityId);
+    const auto until = std::chrono::steady_clock::now() + 4s;
+    while (!endpoint->MatchedWriterIsMatched(Conversion::ToGuid(writer->get_instance_handle())) &&
+        std::chrono::steady_clock::now() < until) std::this_thread::sleep_for(2ms);
+    ASSERT_TRUE(endpoint->MatchedWriterIsMatched(Conversion::ToGuid(writer->get_instance_handle())));
+    type.failSerialize = type.failDeserialize = true;
+    for (uint64_t attempt = 1; attempt <= 7; ++attempt) {
+        auto source = std::make_shared<NativeSample>(); source->index = attempt;
+        std::weak_ptr<NativeSample> sourceLifetime = source;
+        InstanceHandle_t handle;
+        ASSERT_EQ(type.MakeKey(source.get(), handle, true), 0);
+        auto cache = endpoint->new_change(ALIVE, nullptr, handle, writer->get_instance_handle(), TIME_ZERO);
+        cache->sequenceNumber = {0, uint32_t(attempt)};
+        cache->nativePayload = source; cache->nativeType = type.get_native_type_info();
+        type.malformedKeyInfo = attempt <= 4 ? int(attempt) : 0;
+        type.failCapture = attempt == 5; type.throwCapture = attempt == 6;
+        const auto result = endpoint->AddChanges(cache);
+        if (attempt < 7) {
+            EXPECT_EQ(result, attempt <= 4 ? RETCODE_BAD_PARAMETER : RETCODE_ERROR);
+            EXPECT_FALSE(endpoint->GetReaderCache()->IsKeyRegistered(handle));
+            EXPECT_FALSE(endpoint->GetReaderCache()->IsInstancePresent(handle));
+            NativeSample key{};
+            EXPECT_EQ(reader->get_key_value(&key, handle), RETCODE_BAD_PARAMETER);
+        } else {
+            ASSERT_EQ(result, RETCODE_OK);
+            SequenceData<NativeSample> values; SampleInfoSeq infos;
+            ASSERT_EQ(reader->take(values, infos, 1, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
+            ASSERT_TRUE(values.has_loan());
+            EXPECT_EQ(values[0].index, 7u);
+            ASSERT_EQ(reader->return_loan(values, infos), RETCODE_OK);
+            NativeSample key{}; key.values[0] = 6611;
+            ASSERT_EQ(reader->get_key_value(&key, handle), RETCODE_OK);
+            EXPECT_EQ(key.index, 7u); EXPECT_EQ(key.values[0], 6611u);
+        }
+        cache.reset(); source.reset();
+        EXPECT_TRUE(sourceLifetime.expired());
+    }
+    EXPECT_EQ(type.keyCaptureCalls, 3);
+    EXPECT_EQ(type.keyRestoreCalls, 1);
+    EXPECT_EQ(type.copyCalls, 0);
     EXPECT_EQ(type.serializeCalls, 0);
     EXPECT_EQ(type.deserializeCalls, 0);
 }
@@ -1526,6 +1664,51 @@ protected:
         return stats.free_slots;
     }
 };
+}
+
+TEST_F(NativeReaderIntegration, KeyedNativeKeySnapshotSurvivesSingleSlotReuseAndWriterDeletion) {
+    auto* reader = makeReader();
+    ASSERT_NE(reader, nullptr);
+    type.failSerialize = type.failDeserialize = true;
+    auto delivery = deliver(reader);
+    EXPECT_EQ(type.keyCaptureCalls, 1);
+    EXPECT_EQ(type.get_native_key_info().size, sizeof(uint64_t));
+    SequenceData<NativeSample> values; SampleInfoSeq infos;
+    ASSERT_EQ(reader->take(values, infos, 1, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE), RETCODE_OK);
+    ASSERT_TRUE(values.has_loan());
+    EXPECT_EQ(values[0].index, 73u);
+    EXPECT_EQ(freeSlots(delivery), 0u);
+    ASSERT_EQ(reader->return_loan(values, infos), RETCODE_OK);
+    EXPECT_TRUE(delivery.change.expired());
+    EXPECT_EQ(freeSlots(delivery), 1u);
+    // The only slot can be overwritten while the known instance survives.
+    SharedSampleToken replacement;
+    char* buffer = nullptr;
+    ASSERT_EQ(delivery.pool->loan(sizeof(NativeSample), replacement, buffer), SharedPoolResult::OK);
+    ASSERT_EQ(replacement.slot, 0u);
+    ASSERT_TRUE(type.construct_native_sample(buffer));
+    auto* overwritten = reinterpret_cast<NativeSample*>(buffer);
+    overwritten->index = 992;
+    for (auto& value : overwritten->values) value = 8844;
+    NativeSample key{}; key.values[6] = 5522;
+    for (int query = 0; query < 2; ++query) {
+        ASSERT_EQ(reader->get_key_value(&key, handle()), RETCODE_OK);
+        EXPECT_EQ(key.index, 73u);
+        EXPECT_EQ(key.values[6], 5522u);
+    }
+    ASSERT_TRUE(delivery.pool->releaseWriter(replacement));
+    ASSERT_EQ(publisher->delete_datawriter(writer), RETCODE_OK);
+    writer = nullptr;
+    key.index = 0;
+    ASSERT_EQ(reader->get_key_value(&key, handle()), RETCODE_OK);
+    EXPECT_EQ(key.index, 73u);
+    EXPECT_EQ(key.values[6], 5522u);
+    EXPECT_EQ(freeSlots(delivery), 1u);
+    EXPECT_EQ(type.keyCaptureCalls, 1);
+    EXPECT_EQ(type.keyRestoreCalls, 3);
+    EXPECT_EQ(type.copyCalls, 0);
+    EXPECT_EQ(type.serializeCalls, 0);
+    EXPECT_EQ(type.deserializeCalls, 0);
 }
 
 namespace {
@@ -3184,3 +3367,103 @@ TEST_F(LoanIntegration, KeepAllSharedExhaustionPreservesLoansAndAutoFallbackReco
         ASSERT_EQ(publisher->delete_datawriter(w),RETCODE_OK);
     }
 }
+
+#if defined(__linux__)
+TEST_F(LoanIntegration, NativeDdsWritesAndLoansProgressWhileThePoolControlMutexIsHeld) {
+    ASSERT_EQ(publisher->delete_datawriter(writer), RETCODE_OK);
+    writer = nullptr;
+    DataWriterQos qos;
+    qos.data_sharing.kind = ON_DATA_SHARING_QOS;
+    qos.data_sharing.max_samples = 3;
+    qos.data_sharing.max_readers = 2;
+    qos.history.depth = 1;
+    qos.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
+    writer = publisher->create_datawriter(topic, qos, nullptr, STATUS_MASK_NONE);
+    ASSERT_NE(writer, nullptr);
+    DataReaderQos rq;
+    rq.data_sharing.kind = ON_DATA_SHARING_QOS;
+    rq.reliability.kind = BEST_EFFORT_RELIABILITY_QOS;
+    auto* reader = subscriber->create_datareader(topic, rq, nullptr, STATUS_MASK_NONE);
+    ASSERT_NE(reader, nullptr);
+    auto rtps = dynamic_cast<DomainParticipantImpl*>(participant)->GetRelatedParticipant();
+    auto endpoint = rtps->GetWriter(Conversion::ToGuid(writer->get_instance_handle()).entityId);
+    const auto& info = dynamic_cast<DataWriterImpl*>(writer)->GetBuiltinTopicData().data_sharing;
+    SharedPoolDescriptor d;
+    d.writer = endpoint->GetGuid();
+    d.session = {info.session_high, info.session_low};
+    d.path = SharedPayloadPool::pathFor(d.writer, d.session, qos.data_sharing.shared_memory_directory);
+    d.config.payload_size = info.type.size;
+    d.config.alignment = std::max(64u, info.type.alignment);
+    d.config.slots = info.slots;
+    d.config.max_readers = info.max_readers;
+    d.config.max_segment_bytes = qos.data_sharing.max_segment_bytes;
+    d.segment_bytes = info.segment_bytes;
+    auto pool = SharedPayloadPool::open(d);
+    auto until = std::chrono::steady_clock::now() + 4s;
+    while (endpoint->SelectDataSharingReaders(pool->registeredReaders()).size() != 1 &&
+            std::chrono::steady_clock::now() < until) std::this_thread::sleep_for(2ms);
+    ASSERT_EQ(endpoint->SelectDataSharingReaders(pool->registeredReaders()).size(), 1u);
+    // Failed CDR paths cannot make this test appear to pass via transport
+    // fallback: every application sample must cross the native backend.
+    type.failSerialize = type.failDeserialize = true;
+    const int fd = open(d.path.c_str(), O_RDWR | O_CLOEXEC);
+    ASSERT_GE(fd, 0);
+    auto* address = mmap(nullptr, sizeof(shared_pool_detail::Header),
+        PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    ASSERT_NE(address, MAP_FAILED);
+    auto* header = static_cast<shared_pool_detail::Header*>(address);
+    struct MappingCleanup {
+        void* address;
+        ~MappingCleanup() { munmap(address, sizeof(shared_pool_detail::Header)); }
+    } mappingCleanup{address};
+    ASSERT_EQ(pthread_mutex_lock(&header->mutex), 0);
+    // No fatal assertion is permitted while the lock is held: on a failure we
+    // release it before waiting for the worker, so the old implementation
+    // reports a failed progress assertion instead of hanging the test runner.
+    auto exercise = std::async(std::launch::async, [&]() -> int {
+        SequenceData<NativeSample> held;
+        SampleInfoSeq heldInfo;
+        for (uint64_t sequence = 1; sequence <= 8; ++sequence) {
+            SampleLoan writable;
+            if (writer->loan_sample(writable) != RETCODE_OK) return 10;
+            auto* sample = static_cast<NativeSample*>(writable.data());
+            sample->index = sequence;
+            for (uint64_t i = 0; i < 7; ++i) sample->values[i] = sequence * 100 + i;
+            if (writer->write(writable, HANDLE_NIL) != RETCODE_OK || writable) return 11;
+            SequenceData<NativeSample> values;
+            SampleInfoSeq infos;
+            ReturnCode_t received;
+            const auto deadline = std::chrono::steady_clock::now() + 1500ms;
+            do {
+                received = reader->take(values, infos, 1, ANY_SAMPLE_STATE, ANY_VIEW_STATE, ANY_INSTANCE_STATE);
+                if (received != RETCODE_NO_DATA) break;
+                std::this_thread::sleep_for(1ms);
+            } while (std::chrono::steady_clock::now() < deadline);
+            if (received != RETCODE_OK || values.length() != 1 || !values.has_loan() ||
+                !infos[0].valid_data || values[0].index != sequence) return 12;
+            for (uint64_t i = 0; i < 7; ++i)
+                if (values[0].values[i] != sequence * 100 + i) return 13;
+            if (sequence == 1) {
+                held = std::move(values);
+                heldInfo = std::move(infos);
+            } else {
+                if (!held.has_loan() || held[0].index != 1) return 14;
+                for (uint64_t i = 0; i < 7; ++i) if (held[0].values[i] != 100 + i) return 15;
+                if (reader->return_loan(values, infos) != RETCODE_OK) return 16;
+            }
+        }
+        return reader->return_loan(held, heldInfo) == RETCODE_OK ? 0 : 17;
+    });
+    const auto readyWhileLocked = exercise.wait_for(3s);
+    const int unlocked = pthread_mutex_unlock(&header->mutex);
+    EXPECT_EQ(unlocked, 0);
+    EXPECT_EQ(readyWhileLocked, std::future_status::ready)
+        << "Native DDS write/Reader loan waited for a control-plane lock owner";
+    EXPECT_EQ(exercise.get(), 0);
+    EXPECT_EQ(type.serializeCalls, 0);
+    EXPECT_EQ(type.deserializeCalls, 0);
+    EXPECT_EQ(type.copyCalls, 0);
+    ASSERT_EQ(subscriber->delete_datareader(reader), RETCODE_OK);
+}
+#endif

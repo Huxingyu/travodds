@@ -637,6 +637,9 @@ public:
     void AfterWrite(const InstanceHandle_t& handle);
 #if defined(__linux__)
 	std::shared_ptr<class SharedPayloadPool> nativePool_;
+    // Control-plane /proc probes and robust-mutex recovery stay off write().
+    // The callback owns only a weak pool reference and never captures this.
+    std::shared_ptr<Timer> nativeMaintenanceTimer_;
 #endif
 protected:
 	TypeSupport* typeSupport_ = nullptr;

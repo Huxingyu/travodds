@@ -22,6 +22,9 @@ public:
     void* create_data() override;
     void delete_data(void*) override;
     int32_t copy_data(void*, void*) override;
+    NativeKeyInfo get_native_key_info() const override;
+    bool capture_native_key(void*, const void*) const override;
+    bool restore_native_key(void*, const void*) const override;
     uint32_t get_serialized_data_size(void*, uint32_t) override { return sizeof(Sample); }
     uint32_t get_max_serialized_data_size(void*, uint32_t) override { return sizeof(Sample); }
     int32_t serialize_data(void*, CdrSerializer*, int32_t) override;

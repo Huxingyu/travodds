@@ -7,7 +7,8 @@ USING_TRAVODDS_NAMESPACE
 namespace {
 DataSharingEndpointInfo readerInfo() {
     DataSharingEndpointInfo info;
-    info.version = 1; info.kind = AUTO_DATA_SHARING_QOS;
+    info.version = DataSharingEndpointInfo::CURRENT_VERSION;
+    info.kind = AUTO_DATA_SHARING_QOS;
     info.type = {true, true, 64, 64, "ospp.Native.u64x8.v1"};
     info.domain_ids = {0, 7};
     info.host_id = "11111111-2222-3333-4444-555555555555";
@@ -39,7 +40,9 @@ TEST(DataSharingDiscovery, MatchingRequiresCommonHostNamespaceTypeAndDomain) {
         auto other = reader; change(other); EXPECT_FALSE(writer.compatible_with(other));
     };
     incompatible([](auto& i) { i.version = 0; });
+    incompatible([](auto& i) { i.version = 1; });
     incompatible([](auto& i) { i.version = 2; });
+    incompatible([](auto& i) { i.version = DataSharingEndpointInfo::CURRENT_VERSION + 1; });
     incompatible([](auto& i) { i.kind = OFF_DATA_SHARING_QOS; });
     incompatible([](auto& i) { i.type.plain = false; });
     incompatible([](auto& i) { i.type.bounded = false; });
@@ -77,7 +80,7 @@ TEST(DataSharingDiscovery, CodecRoundTripsAndRejectsTruncationOversizedOrInvalid
         }
         auto bad = bytes; bad[0] ^= 1;
         EXPECT_FALSE(DecodeDataSharing(bad.data(), bad.size(), result));
-        bad = bytes; bad[7] = 2;
+        bad = bytes; bad[7] = DataSharingEndpointInfo::CURRENT_VERSION + 1;
         EXPECT_FALSE(DecodeDataSharing(bad.data(), bad.size(), result));
         bad = bytes; bad[11] = 2;
         EXPECT_FALSE(DecodeDataSharing(bad.data(), bad.size(), result));
@@ -107,6 +110,31 @@ TEST(DataSharingDiscovery, CodecRoundTripsAndRejectsTruncationOversizedOrInvalid
     invalid([](auto& i) { i.max_readers = 65; });
     invalid([](auto& i) { i.slots = 1048577; });
     invalid([](auto& i) { i.session_high = i.session_low = 0; });
+}
+
+TEST(DataSharingDiscovery, PreviousProtocolsNeverEnableStrictNativeDelivery) {
+    for (auto info : {readerInfo(), writerInfo()}) {
+        const bool writer = info.segment_bytes != 0;
+        ASSERT_EQ(info.version, 3u);
+        const auto current = EncodeDataSharing(info);
+        ASSERT_FALSE(current.empty());
+        for (uint32_t previous : {1u, 2u}) {
+            // Canonical big-endian words begin with magic and protocol.
+            // v2 has the same fields but cannot promise key-only snapshots.
+            auto bytes = current;
+            bytes[7] = previous;
+            DataSharingEndpointInfo parsed = info;
+            EXPECT_FALSE(DecodeDataSharing(bytes.data(), bytes.size(), parsed));
+            EXPECT_EQ(parsed.version, 0u);
+            EXPECT_FALSE(parsed.valid(writer));
+            auto legacy = info;
+            legacy.version = previous;
+            EXPECT_FALSE(legacy.valid(writer));
+            EXPECT_TRUE(EncodeDataSharing(legacy).empty());
+            if (writer) EXPECT_FALSE(legacy.compatible_with(readerInfo()));
+            else EXPECT_FALSE(writerInfo().compatible_with(legacy));
+        }
+    }
 }
 
 TEST(DataSharingDiscovery, WriterReaderParameterListsPreserveExtensionInBothByteOrders) {

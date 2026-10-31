@@ -120,6 +120,84 @@ void splitPath(const std::string& path, std::string& directory, std::string& nam
 // A killed process must not leave a userspace condition-variable waiter lock
 // behind. The kernel owns futex wait queues and removes waiters on process exit.
 static_assert(__atomic_always_lock_free(sizeof(uint32_t), nullptr), "Shared notification needs lock-free 32-bit atomics");
+static_assert(__atomic_always_lock_free(sizeof(uint64_t), nullptr), "Shared pool needs lock-free 64-bit atomics");
+template<class T> T load(const T& value) { return __atomic_load_n(&value, __ATOMIC_SEQ_CST); }
+template<class T> void store(T& value, T next) { __atomic_store_n(&value, next, __ATOMIC_SEQ_CST); }
+template<class T> bool cas(T& value, T& old, T next) {
+    return __atomic_compare_exchange_n(&value, &old, next, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+constexpr uint64_t PHASE_MASK = 3, OPERATION = 4, FROZEN = 3;
+constexpr uint64_t READER_OPEN = 0, READER_CLOSING = 1, READER_RETIRED = 2;
+
+struct Consumer {
+    std::atomic_flag& flag;
+    bool held;
+    explicit Consumer(std::atomic_flag& value, bool acquire = true)
+        : flag(value), held(acquire && !flag.test_and_set(std::memory_order_acquire)) {}
+    ~Consumer() { if (held) flag.clear(std::memory_order_release); }
+};
+
+// Generation is checked only after entering this gate. A concurrent reserve
+// cannot modify either payload or generation until the last operation exits.
+struct SlotLease {
+    Slot* value = nullptr;
+    SlotLease() = default;
+    SlotLease(const SlotLease&) = delete;
+    SlotLease& operator=(const SlotLease&) = delete;
+    ~SlotLease() { reset(); }
+    bool acquire(Slot& slot, bool writing = false) {
+        auto old = load(slot.gate);
+        for (;;) {
+            const auto phase = old & PHASE_MASK;
+            if (phase == FROZEN || phase == FREE || (!writing && phase != PUBLISHED) ||
+                    old > UINT64_MAX - OPERATION) return false;
+            if (cas(slot.gate, old, old + OPERATION)) { value = &slot; return true; }
+        }
+    }
+    void reset() {
+        if (value) __atomic_fetch_sub(&value->gate, OPERATION, __ATOMIC_RELEASE);
+        value = nullptr;
+    }
+};
+struct ReaderLease {
+    ReaderRecord* value = nullptr;
+    ReaderLease() = default;
+    ReaderLease(const ReaderLease&) = delete;
+    ReaderLease& operator=(const ReaderLease&) = delete;
+    ~ReaderLease() { reset(); }
+    bool acquire(ReaderRecord& reader, bool returning = false, uint64_t generation = 0) {
+        auto old = load(reader.gate);
+        for (;;) {
+            const auto phase = old & PHASE_MASK;
+            if ((phase != READER_OPEN && !(returning && phase == READER_CLOSING)) ||
+                    old > UINT64_MAX - OPERATION) return false;
+            if (cas(reader.gate, old, old + OPERATION)) break;
+        }
+        value = &reader;
+        if (!load(reader.active) || (generation && (load(reader.generation) != generation || reader.process.pid != getpid()))) {
+            reset(); return false;
+        }
+        return true;
+    }
+    void reset() {
+        if (value) __atomic_fetch_sub(&value->gate, OPERATION, __ATOMIC_RELEASE);
+        value = nullptr;
+    }
+};
+void slotPhase(Slot& slot, uint32_t phase) {
+    auto old = load(slot.gate);
+    while (!cas(slot.gate, old, (old & ~PHASE_MASK) | phase)) {}
+    store(slot.state, phase);
+}
+struct Publication {
+    Header* header;
+    bool held;
+    explicit Publication(Header* h) : header(h), held(false) {
+        uint32_t expected = 0;
+        held = cas(header->publishing, expected, uint32_t(1));
+    }
+    ~Publication() { if (held) store(header->publishing, uint32_t(0)); }
+};
 void notify(Header* header) noexcept {
     __atomic_add_fetch(&header->changed, 1u, __ATOMIC_RELEASE);
     syscall(SYS_futex, &header->changed, FUTEX_WAKE, INT_MAX, nullptr, nullptr, 0);
@@ -128,7 +206,11 @@ struct Guard {
     Header* header;
     bool held = false;
     SharedPoolResult result = SharedPoolResult::SYSTEM_ERROR;
-    explicit Guard(Header* value) : header(value) { acquired(pthread_mutex_lock(&header->mutex)); }
+    explicit Guard(Header* value, bool nonblocking = false) : header(value) {
+        const int rc = nonblocking ? pthread_mutex_trylock(&header->mutex) : pthread_mutex_lock(&header->mutex);
+        if (rc == EBUSY) result = SharedPoolResult::TIMEOUT;
+        else acquired(rc);
+    }
     ~Guard() { if (held) pthread_mutex_unlock(&header->mutex); }
     void acquired(int rc) {
         if (!rc || rc == EOWNERDEAD) {
@@ -136,30 +218,15 @@ struct Guard {
             if (rc == EOWNERDEAD) {
                 // No uncertain partial transaction is repaired/reused. Existing
                 // loans remain mapped, and all further allocation is refused.
-                header->poisoned = 1;
-                header->alive = 0;
+                store(header->poisoned, uint32_t(1));
+                store(header->alive, uint32_t(0));
                 pthread_mutex_consistent(&header->mutex);
                 notify(header);
             }
-            result = header->poisoned ? SharedPoolResult::CORRUPT : SharedPoolResult::OK;
+            result = load(header->poisoned) ? SharedPoolResult::CORRUPT : SharedPoolResult::OK;
         } else {
             result = rc == ENOTRECOVERABLE ? SharedPoolResult::CORRUPT : SharedPoolResult::SYSTEM_ERROR;
         }
-    }
-    void waitUntil(const timespec& deadline) {
-        // Snapshot under the metadata lock, then release it before sleeping.
-        // A publication in between makes FUTEX_WAIT_BITSET return EAGAIN,
-        // preventing a lost wakeup. The deadline is absolute CLOCK_MONOTONIC.
-        const auto observed = __atomic_load_n(&header->changed, __ATOMIC_ACQUIRE);
-        const int unlocked = pthread_mutex_unlock(&header->mutex);
-        if (unlocked) { result = SharedPoolResult::SYSTEM_ERROR; return; }
-        held = false;
-        const long waited = syscall(SYS_futex, &header->changed, FUTEX_WAIT_BITSET,
-            observed, &deadline, nullptr, FUTEX_BITSET_MATCH_ANY);
-        const int error = waited < 0 ? errno : 0;
-        acquired(pthread_mutex_lock(&header->mutex));
-        if (result == SharedPoolResult::OK && error && error != ETIMEDOUT && error != EAGAIN && error != EINTR)
-            result = SharedPoolResult::SYSTEM_ERROR;
     }
 };
 using Clock = std::chrono::steady_clock;
@@ -176,8 +243,9 @@ timespec nextWake(Clock::time_point deadline) {
     return result;
 }
 uint64_t bit(uint32_t index) { return uint64_t(1) << index; }
-void recycle(Slot& slot) {
-    if (!slot.writer_held && !slot.pending && !slot.loaned) slot.state = FREE;
+bool unpinned(const Slot& slot) { return !load(slot.writer_held) && !load(slot.pending) && !load(slot.loaned); }
+void sleepUntil(Header* header, uint32_t observed, const timespec& deadline) {
+    syscall(SYS_futex, &header->changed, FUTEX_WAIT_BITSET, observed, &deadline, nullptr, FUTEX_BITSET_MATCH_ANY);
 }
 }
 
@@ -256,43 +324,123 @@ struct SharedPayloadPool::Impl {
     char* payload(uint32_t index) const { return static_cast<char*>(mapping) + memory.payload + memory.stride * index; }
     bool tokenMatches(const SharedSampleToken& token) const {
         return token.session == header->prefix.session && token.slot < header->prefix.slots &&
-            token.generation && slot(token.slot).generation == token.generation;
+            token.generation && load(slot(token.slot).generation) == token.generation;
     }
-    bool readerMatches(uint32_t index, uint64_t generation) const {
-        if (index >= header->prefix.max_readers) return false;
-        const auto& reader = header->readers[index];
-        return reader.active && reader.generation == generation && reader.process.pid == getpid();
+    SharedPoolResult health() const {
+        if (load(header->poisoned)) return SharedPoolResult::CORRUPT;
+        return load(header->alive) ? SharedPoolResult::OK : SharedPoolResult::CLOSED;
     }
-    void removeReader(uint32_t index) {
+    void poison() {
+        store(header->poisoned, uint32_t(1));
+        store(header->alive, uint32_t(0));
+        notify(header);
+    }
+    // Called only after closing the registration to new operations. Existing
+    // takes may finish; either this scan observes their pending bit or the
+    // publisher observes CLOSING and removes a late pending bit itself.
+    void clearPending(uint32_t index, bool loans = false) {
         const auto mask = ~bit(index);
         for (uint32_t i = 0; i < header->prefix.slots; ++i) {
             auto& current = slot(i);
-            current.pending &= mask;
-            current.loaned &= mask;
-            recycle(current);
+            SlotLease lease;
+            if (!lease.acquire(current, true)) continue;
+            __atomic_fetch_and(&current.pending, mask, __ATOMIC_ACQ_REL);
+            if (loans) __atomic_fetch_and(&current.loaned, mask, __ATOMIC_ACQ_REL);
         }
-        header->readers[index].active = 0;
+    }
+    void tryRetireReader(uint32_t index) {
+        auto& reader = header->readers[index];
+        ReaderLease retirement;
+        if (!retirement.acquire(reader, true) ||
+                load(reader.gate) != READER_CLOSING + OPERATION) return;
+        // New takes and publications cannot enter CLOSING. Wait by retrying
+        // maintenance, never by blocking, until every previously entered
+        // operation has left before dropping unread pins. This prevents a
+        // close from racing the pending-to-loaned transfer.
+        clearPending(index);
+        const auto mask = bit(index);
+        for (uint32_t i = 0; i < header->prefix.slots; ++i) {
+            const auto& current = slot(i);
+            if ((load(current.pending) | load(current.loaned)) & mask) return;
+        }
+        // Keep our own operation lease throughout the scan. Without it a
+        // second closer could retire/reopen/close this index while we pause,
+        // making an old CLOSING-only CAS retire an unrelated registration.
+        uint64_t expected = READER_CLOSING + OPERATION;
+        if (cas(reader.gate, expected, READER_RETIRED)) {
+            retirement.value = nullptr; // The successful CAS consumed it.
+            store(reader.active, uint32_t(0));
+        }
+    }
+    void closeRegistration(uint32_t index) {
+        auto& reader = header->readers[index];
+        store(reader.accepting, uint32_t(0));
+        auto gate = load(reader.gate);
+        while ((gate & PHASE_MASK) == READER_OPEN &&
+                !cas(reader.gate, gate, (gate & ~PHASE_MASK) | READER_CLOSING)) {}
+        tryRetireReader(index);
+        notify(header);
+    }
+    void removeReader(uint32_t index) {
+        closeRegistration(index);
+        auto& reader = header->readers[index];
+        // A killed process can have died while owning a short slot lease.
+        // There is no safe way to guess/subtract its count. Retire the entire
+        // session conservatively rather than silently losing capacity or
+        // overwriting an old Loan. Long-lived Loans do not hold these gates.
+        if (load(reader.gate) & ~PHASE_MASK) { poison(); return; }
+        clearPending(index, true);
+        tryRetireReader(index);
         notify(header);
     }
     void reapReaders() {
         for (uint32_t i = 0; i < header->prefix.max_readers; ++i) {
             const auto& r = header->readers[i];
-            if (r.active && processState(r.process.pid, r.process.start) == ProcessState::DEAD) removeReader(i);
+            if (load(r.active) && processState(r.process.pid, r.process.start) == ProcessState::DEAD)
+                removeReader(i);
+            else if (load(r.active) && !load(r.accepting)) {
+                tryRetireReader(i);
+            }
         }
     }
     void markClosed() {
-        header->alive = 0;
-        for (uint32_t i = 0; i < header->prefix.slots; ++i) {
-            auto& current = slot(i);
-            current.writer_held = 0;
-            recycle(current);
-        }
+        store(header->alive, uint32_t(0));
+        for (uint32_t i = 0; i < header->prefix.slots; ++i)
+            store(slot(i).writer_held, uint32_t(0));
         notify(header);
     }
     void checkWriter() {
         const auto& p = header->prefix.creator;
-        if (header->alive && processState(p.pid, p.start) == ProcessState::DEAD) markClosed();
+        if (load(header->alive) && processState(p.pid, p.start) == ProcessState::DEAD) markClosed();
     }
+    bool finishRegistration(uint32_t index) {
+        auto& reader = header->readers[index];
+        if (load(reader.ready) == 1) return true;
+        ReaderLease registration;
+        if (!registration.acquire(reader)) return false;
+        uint32_t expected = 0;
+        if (!cas(reader.ready, expected, uint32_t(2))) return expected == 1;
+        // An old publication might have captured targets before OPEN. Its
+        // release of publishing must be observed before the replay snapshot.
+        // Future publications already see this OPEN registration. Never wait
+        // for that old publisher or hold the metadata mutex on this path.
+        if (load(header->publishing)) { store(reader.ready, uint32_t(0)); return false; }
+        const auto watermark = load(header->last_sequence);
+        if (load(reader.replay)) for (uint32_t i = 0; i < header->prefix.slots; ++i) {
+            auto& current = slot(i);
+            SlotLease lease;
+            if (!lease.acquire(current)) continue;
+            if (load(current.writer_held) && load(current.sequence) <= watermark) {
+                __atomic_fetch_or(&current.pending, bit(index), __ATOMIC_ACQ_REL);
+                if (!load(reader.accepting))
+                    __atomic_fetch_and(&current.pending, ~bit(index), __ATOMIC_ACQ_REL);
+            }
+        }
+        store(reader.ready, uint32_t(1));
+        notify(header);
+        return true;
+    }
+
 };
 
 std::shared_ptr<SharedPayloadPool> SharedPayloadPool::create(const GUID_t& writer,
@@ -365,6 +513,7 @@ std::shared_ptr<SharedPayloadPool> SharedPayloadPool::create(const GUID_t& write
     p.pid_namespace_device = pidNamespace.st_dev;
     p.pid_namespace_inode = pidNamespace.st_ino;
     h->alive = 1;
+    for (uint32_t i = 0; i < config.max_readers; ++i) h->readers[i].gate = READER_RETIRED;
     p.magic = MAGIC;
     impl.initialized = true;
     fileLock(impl.fd, LOCK_UN);
@@ -438,10 +587,7 @@ SharedPayloadPool::~SharedPayloadPool() {
 void SharedPayloadPool::unlinkOwnedFile() { impl_->unlinkFile(); }
 void SharedPayloadPool::closeWriter() {
     if (!impl_->owner || impl_->owner_pid != getpid()) return;
-    {
-        Guard guard(impl_->header);
-        if (guard.result == SharedPoolResult::OK) impl_->markClosed();
-    }
+    impl_->markClosed();
     unlinkOwnedFile();
 }
 bool SharedPayloadPool::removeOrphan(const SharedPoolDescriptor& descriptor) {
@@ -449,11 +595,7 @@ bool SharedPayloadPool::removeOrphan(const SharedPoolDescriptor& descriptor) {
     auto& impl = *pool->impl_;
     const auto& process = impl.header->prefix.creator;
     if (processState(process.pid, process.start) != ProcessState::DEAD) return false;
-    {
-        Guard guard(impl.header);
-        if (guard.result == SharedPoolResult::OK) impl.markClosed();
-        else if (guard.result != SharedPoolResult::CORRUPT) return false;
-    }
+    impl.markClosed();
     impl.unlinkFile();
     return true;
 }
@@ -465,69 +607,89 @@ SharedPoolResult SharedPayloadPool::loan(uint32_t size, SharedSampleToken& token
     auto& impl = *impl_;
     if (!impl.owner || impl.owner_pid != getpid() || size > descriptor_.config.payload_size || !validTimeout(timeout)) return SharedPoolResult::INVALID;
     const auto deadline = Clock::now() + timeout;
-    Guard guard(impl.header);
     for (;;) {
-        if (guard.result != SharedPoolResult::OK) return guard.result;
-        if (!impl.header->alive) return SharedPoolResult::CLOSED;
-        impl.reapReaders();
+        const auto observed = load(impl.header->changed);
+        const auto health = impl.health();
+        if (health != SharedPoolResult::OK) return health;
+        const auto start = __atomic_fetch_add(&impl.header->next_slot, uint32_t(1), __ATOMIC_RELAXED);
         for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
-            const auto index = (uint64_t(impl.header->next_slot) + i) % descriptor_.config.slots;
-            auto& current = impl.slot(uint32_t(index));
-            if (current.state != FREE || current.generation == std::numeric_limits<uint64_t>::max()) continue;
-            ++current.generation;
-            current.state = WRITING;
-            current.writer_held = 1;
+            const auto index = uint32_t((uint64_t(start) + i) % descriptor_.config.slots);
+            auto& current = impl.slot(index);
+            // Do not freeze a slot carrying any unread delivery: a scanner
+            // must never temporarily skip an earlier pending sequence.
+            if (!unpinned(current)) continue;
+            auto gate = load(current.gate);
+            if ((gate & ~PHASE_MASK) || (gate & PHASE_MASK) == FROZEN || !cas(current.gate, gate, FROZEN)) continue;
+            if (!unpinned(current) || load(current.generation) == UINT64_MAX) {
+                store(current.gate, gate); continue;
+            }
+            const auto generation = load(current.generation) + 1;
+            store(current.generation, generation);
+            store(current.writer_held, uint32_t(1));
+            store(current.pending, uint64_t(0));
+            store(current.loaned, uint64_t(0));
+            store(current.sequence, uint64_t(0));
             current.size = size;
-            current.sequence = current.pending = current.loaned = 0;
-            impl.header->next_slot = uint32_t((index + 1) % descriptor_.config.slots);
-            token = {descriptor_.session, uint32_t(index), current.generation};
-            buffer = impl.payload(uint32_t(index));
+            store(current.state, uint32_t(WRITING));
+            store(current.gate, uint64_t(WRITING));
+            token = {descriptor_.session, index, generation};
+            buffer = impl.payload(index);
             return SharedPoolResult::OK;
         }
         if (Clock::now() >= deadline) return timeout.count() ? SharedPoolResult::TIMEOUT : SharedPoolResult::EXHAUSTED;
-        guard.waitUntil(nextWake(deadline));
+        sleepUntil(impl.header, observed, nextWake(deadline));
     }
 }
 SharedPoolResult SharedPayloadPool::publish(const SharedSampleToken& token, uint32_t size, uint64_t sequence,
         const SharedSampleMetadata& metadata, const std::vector<GUID_t>* readers) {
     auto& impl = *impl_;
-    if (!impl.owner || impl.owner_pid != getpid() || size > descriptor_.config.payload_size || !sequence) return SharedPoolResult::INVALID;
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK) return guard.result;
-    if (!impl.header->alive) return SharedPoolResult::CLOSED;
-    if (!impl.tokenMatches(token)) return SharedPoolResult::INVALID;
+    if (!impl.owner || impl.owner_pid != getpid() || size > descriptor_.config.payload_size || !sequence ||
+            !(token.session == descriptor_.session) || token.slot >= descriptor_.config.slots) return SharedPoolResult::INVALID;
+    const auto health = impl.health();
+    if (health != SharedPoolResult::OK) return health;
+    // DDS serializes publication with its existing Writer lane. Direct callers
+    // contending for this lane fail immediately, rather than waiting for a
+    // stopped publisher or a metadata-lock holder.
+    Publication publication(impl.header);
+    if (!publication.held) return SharedPoolResult::EXHAUSTED;
     auto& current = impl.slot(token.slot);
-    if (current.state != WRITING || !current.writer_held || size > current.size ||
-        sequence <= impl.header->last_sequence) return SharedPoolResult::INVALID;
-    impl.reapReaders();
+    SlotLease lease;
+    if (!lease.acquire(current, true) || !impl.tokenMatches(token) ||
+            (load(current.gate) & PHASE_MASK) != WRITING || !load(current.writer_held) || size > current.size ||
+            sequence <= load(impl.header->last_sequence)) return SharedPoolResult::INVALID;
+    ReaderLease registrations[MAX_READERS];
     uint64_t pending = 0;
     for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
-        const auto& r = impl.header->readers[i];
-        if (!r.active || !r.accepting) continue;
-        GUID_t guid; memcpy(&guid, r.guid, 16);
-        if (!readers || std::find(readers->begin(), readers->end(), guid) != readers->end()) pending |= bit(i);
+        auto& reader = impl.header->readers[i];
+        if (!registrations[i].acquire(reader)) continue;
+        GUID_t guid; memcpy(&guid, reader.guid, 16);
+        if (load(reader.accepting) && (!readers || std::find(readers->begin(), readers->end(), guid) != readers->end()))
+            pending |= bit(i);
+        else registrations[i].reset();
     }
     current.size = size;
-    current.sequence = sequence;
+    store(current.sequence, sequence);
     current.metadata = metadata;
-    current.pending = pending;
-    current.loaned = 0;
-    current.state = PUBLISHED;
-    impl.header->last_sequence = sequence;
+    store(current.pending, pending);
+    // A close racing target selection either clears the bit itself or is
+    // observed here; the registration lease prevents identity reuse meanwhile.
+    for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i)
+        if ((pending & bit(i)) && !load(impl.header->readers[i].accepting))
+            __atomic_fetch_and(&current.pending, ~bit(i), __ATOMIC_ACQ_REL);
+    slotPhase(current, PUBLISHED);
+    store(impl.header->last_sequence, sequence);
     notify(impl.header);
     return SharedPoolResult::OK;
 }
 bool SharedPayloadPool::releaseWriter(const SharedSampleToken& token) {
     auto& impl = *impl_;
-    if (!impl.owner || impl.owner_pid != getpid()) return false;
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK || !impl.tokenMatches(token)) return false;
+    if (!impl.owner || impl.owner_pid != getpid() || !(token.session == descriptor_.session) || token.slot >= descriptor_.config.slots) return false;
     auto& current = impl.slot(token.slot);
-    if (!current.writer_held) return false;
-    current.writer_held = 0;
-    recycle(current);
-    notify(impl.header);
-    return true;
+    SlotLease lease;
+    if (!lease.acquire(current, true) || !impl.tokenMatches(token)) return false;
+    const bool released = __atomic_exchange_n(&current.writer_held, uint32_t(0), __ATOMIC_ACQ_REL) != 0;
+    if (released) notify(impl.header);
+    return released;
 }
 bool SharedPayloadPool::getBuffer(uint32_t size, char*& buffer) {
     SharedSampleToken token;
@@ -541,12 +703,9 @@ bool SharedPayloadPool::releaseBuffer(char*& buffer) {
     if (address < begin || address - begin >= impl.memory.stride * descriptor_.config.slots ||
         (address - begin) % impl.memory.stride) return false;
     const auto index = uint32_t((address - begin) / impl.memory.stride);
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK) return false;
     auto& current = impl.slot(index);
-    if (!current.writer_held) return false;
-    current.writer_held = 0;
-    recycle(current);
+    SlotLease lease;
+    if (!lease.acquire(current, true) || !__atomic_exchange_n(&current.writer_held, uint32_t(0), __ATOMIC_ACQ_REL)) return false;
     buffer = nullptr;
     notify(impl.header);
     return true;
@@ -558,30 +717,29 @@ std::shared_ptr<SharedPoolReader> SharedPayloadPool::registerReader(const GUID_t
     Guard guard(impl.header);
     if (guard.result != SharedPoolResult::OK) return nullptr;
     impl.checkWriter();
-    if (!impl.header->alive) return nullptr;
+    if (impl.health() != SharedPoolResult::OK) return nullptr;
     impl.reapReaders();
-    if (guid != GUID_UNKNOWN) {
-        for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
-            const auto& r = impl.header->readers[i];
-            if (r.active && r.accepting && memcmp(r.guid, &guid, 16) == 0) return nullptr;
-        }
+    if (impl.health() != SharedPoolResult::OK) return nullptr;
+    if (guid != GUID_UNKNOWN) for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
+        auto& r = impl.header->readers[i];
+        ReaderLease lease;
+        if (lease.acquire(r) && load(r.accepting) && memcmp(r.guid, &guid, 16) == 0) return nullptr;
     }
     for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
         auto& r = impl.header->readers[i];
-        if (r.active || r.generation == std::numeric_limits<uint64_t>::max()) continue;
-        // Allocate the local registration before publishing any shared state.
-        auto reader = std::shared_ptr<SharedPoolReader>(new SharedPoolReader(shared_from_this(), i, r.generation + 1));
+        if (load(r.active) || load(r.gate) != READER_RETIRED || load(r.generation) == UINT64_MAX) continue;
+        const auto generation = load(r.generation) + 1;
+        auto reader = std::shared_ptr<SharedPoolReader>(new SharedPoolReader(shared_from_this(), i, generation));
         r.process = process;
-        ++r.generation;
-        r.active = 1;
-        r.accepting = 1;
-        r.replay = replay ? 1u : 0u;
+        store(r.generation, generation);
+        store(r.active, uint32_t(1));
+        store(r.accepting, uint32_t(1));
+        store(r.replay, replay ? uint32_t(1) : uint32_t(0));
+        store(r.ready, replay ? uint32_t(0) : uint32_t(1));
         memcpy(r.guid, &guid, 16);
-        if (replay) for (uint32_t slot = 0; slot < descriptor_.config.slots; ++slot) {
-            auto& sample = impl.slot(slot);
-            if (sample.state == PUBLISHED && sample.writer_held) sample.pending |= bit(i);
-        }
+        store(r.gate, READER_OPEN);
         reader->registered_ = true;
+        if (replay) impl.finishRegistration(i);
         return reader;
     }
     return nullptr;
@@ -589,12 +747,12 @@ std::shared_ptr<SharedPoolReader> SharedPayloadPool::registerReader(const GUID_t
 std::vector<GUID_t> SharedPayloadPool::registeredReaders(bool replayOnly) {
     std::vector<GUID_t> readers;
     auto& impl = *impl_;
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK) return readers;
-    impl.reapReaders();
+    if (impl.health() != SharedPoolResult::OK) return readers;
     for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
-        const auto& r = impl.header->readers[i];
-        if (!r.active || !r.accepting || (replayOnly && !r.replay)) continue;
+        auto& r = impl.header->readers[i];
+        ReaderLease lease;
+        if (!lease.acquire(r) || !load(r.accepting) || load(r.ready) != 1 ||
+                (replayOnly && !load(r.replay))) continue;
         GUID_t guid; memcpy(&guid, r.guid, 16);
         if (guid != GUID_UNKNOWN) readers.push_back(guid);
     }
@@ -603,86 +761,147 @@ std::vector<GUID_t> SharedPayloadPool::registeredReaders(bool replayOnly) {
 SharedPoolResult SharedPayloadPool::waitNext(const std::shared_ptr<SharedPoolReader>& reader,
         uint64_t after, std::chrono::milliseconds timeout, SharedReadLoan& output) {
     if (output || !validTimeout(timeout)) return SharedPoolResult::INVALID;
+    Consumer consumer(reader->consuming_);
+    if (!consumer.held) return SharedPoolResult::TIMEOUT;
     auto& impl = *impl_;
     const auto deadline = Clock::now() + timeout;
-    Guard guard(impl.header);
     for (;;) {
-        if (guard.result != SharedPoolResult::OK) return guard.result;
-        if (!impl.readerMatches(reader->index_, reader->generation_)) return SharedPoolResult::INVALID;
-        if (!impl.header->readers[reader->index_].accepting) return SharedPoolResult::CLOSED;
-        impl.checkWriter();
+        const auto observed = load(impl.header->changed);
+        if (load(impl.header->poisoned)) return SharedPoolResult::CORRUPT;
+        if (reader->index_ >= descriptor_.config.max_readers) return SharedPoolResult::INVALID;
+        auto& registration = impl.header->readers[reader->index_];
+        ReaderLease operation;
+        if (!operation.acquire(registration, false, reader->generation_)) {
+            if (load(registration.generation) == reader->generation_ && !load(registration.accepting)) return SharedPoolResult::CLOSED;
+            return SharedPoolResult::INVALID;
+        }
+        if (!load(registration.accepting)) return SharedPoolResult::CLOSED;
+        const bool ready = impl.finishRegistration(reader->index_);
+        // A close observed before this snapshot makes its final watermark
+        // visible. If close happens after the scan, rescan before reporting
+        // CLOSED so its last pending publications are drained.
+        const bool writerAlive = load(impl.header->alive) != 0;
+        const auto watermark = load(impl.header->last_sequence);
         uint32_t selected = descriptor_.config.slots;
-        uint64_t sequence = std::numeric_limits<uint64_t>::max();
-        for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
-            const auto& current = impl.slot(i);
-            if (current.state == PUBLISHED && (current.pending & bit(reader->index_)) &&
-                current.sequence > after && (selected == descriptor_.config.slots || current.sequence < sequence)) {
-                selected = i;
-                sequence = current.sequence;
+        uint64_t sequence = UINT64_MAX, generation = 0;
+        const auto mask = bit(reader->index_);
+        bool retryScan = false;
+        if (ready) for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
+            auto& current = impl.slot(i);
+            SlotLease lease;
+            if (!lease.acquire(current)) {
+                // A reserve precheck can precede replay adding a pin. Its
+                // frozen/recheck window must not hide an earlier pending
+                // sample from this ordered scan. Do not wait on that gate.
+                if (load(current.pending) & mask) retryScan = true;
+                continue;
+            }
+            const auto candidate = load(current.sequence);
+            if ((load(current.pending) & mask) && candidate > after && candidate <= watermark &&
+                    (selected == descriptor_.config.slots || candidate < sequence)) {
+                selected = i; sequence = candidate; generation = load(current.generation);
             }
         }
-        if (selected != descriptor_.config.slots) {
+        if (!retryScan && selected != descriptor_.config.slots) {
             auto& current = impl.slot(selected);
-            current.pending &= ~bit(reader->index_);
-            current.loaned |= bit(reader->index_);
-            output.reader_ = reader;
-            output.token_ = {descriptor_.session, selected, current.generation};
-            output.data_ = impl.payload(selected);
-            output.size_ = current.size;
-            output.sequence_ = current.sequence;
-            output.metadata_ = current.metadata;
-            return SharedPoolResult::OK;
+            SlotLease lease;
+            if (lease.acquire(current) && load(current.generation) == generation &&
+                    (load(current.pending) & mask)) {
+                const auto oldLoans = __atomic_fetch_or(&current.loaned, mask, __ATOMIC_ACQ_REL);
+                if (!(oldLoans & mask)) {
+                    const auto oldPending = __atomic_fetch_and(&current.pending, ~mask, __ATOMIC_ACQ_REL);
+                    if (oldPending & mask) {
+                        output.reader_ = reader;
+                        output.token_ = {descriptor_.session, selected, generation};
+                        output.data_ = impl.payload(selected);
+                        output.size_ = current.size;
+                        output.sequence_ = sequence;
+                        output.metadata_ = current.metadata;
+                        return SharedPoolResult::OK;
+                    }
+                    __atomic_fetch_and(&current.loaned, ~mask, __ATOMIC_ACQ_REL);
+                }
+            }
+            // A reserve/recheck window may have intervened. Recheck the
+            // deadline below rather than spinning past a zero timeout.
+            retryScan = true;
         }
-        if (!impl.header->alive) return SharedPoolResult::CLOSED;
+        operation.reset();
+        if (!writerAlive && !retryScan) return SharedPoolResult::CLOSED;
+        if (writerAlive && !load(impl.header->alive)) continue;
+        // Death probing is an empty-reader control action, never part of
+        // Writer reserve/commit/return or registeredReaders target selection.
+        if (writerAlive) {
+            impl.checkWriter();
+            if (!load(impl.header->alive)) continue;
+        }
         if (Clock::now() >= deadline) return SharedPoolResult::TIMEOUT;
-        guard.waitUntil(nextWake(deadline));
+        sleepUntil(impl.header, observed, nextWake(deadline));
     }
 }
 bool SharedPayloadPool::releaseReader(const SharedPoolReader& reader, const SharedSampleToken& token, bool unread) {
     auto& impl = *impl_;
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK || !impl.readerMatches(reader.index_, reader.generation_) || !impl.tokenMatches(token)) return false;
+    if (reader.index_ >= descriptor_.config.max_readers || !(token.session == descriptor_.session) || token.slot >= descriptor_.config.slots) return false;
+    auto& registration = impl.header->readers[reader.index_];
+    // A discard competes with take for the same unread bit. Loan return
+    // only clears an already-owned loan bit and may run concurrently.
+    Consumer consumer(reader.consuming_, unread);
+    if (unread && !consumer.held) return false;
+    ReaderLease operation;
+    if (!operation.acquire(registration, !unread, reader.generation_)) return false;
     auto& current = impl.slot(token.slot);
+    SlotLease lease;
+    if (!lease.acquire(current) || !impl.tokenMatches(token)) return false;
     auto& mask = unread ? current.pending : current.loaned;
-    if (!(mask & bit(reader.index_))) return false;
-    mask &= ~bit(reader.index_);
-    recycle(current);
-    notify(impl.header);
-    return true;
+    const auto removed = __atomic_fetch_and(&mask, ~bit(reader.index_), __ATOMIC_ACQ_REL) & bit(reader.index_);
+    if (removed) notify(impl.header);
+    return removed != 0;
 }
 void SharedPayloadPool::unregisterReader(const SharedPoolReader& reader) {
     auto& impl = *impl_;
-    Guard guard(impl.header);
-    if (guard.result == SharedPoolResult::OK && impl.readerMatches(reader.index_, reader.generation_)) impl.removeReader(reader.index_);
+    if (reader.index_ >= descriptor_.config.max_readers) return;
+    auto& registration = impl.header->readers[reader.index_];
+    ReaderLease operation;
+    if (!operation.acquire(registration, true, reader.generation_)) return;
+    impl.closeRegistration(reader.index_);
+    operation.reset();
+    impl.tryRetireReader(reader.index_);
 }
 void SharedPayloadPool::closeReader(const SharedPoolReader& reader) {
     auto& impl = *impl_;
-    Guard guard(impl.header);
-    if (guard.result != SharedPoolResult::OK || !impl.readerMatches(reader.index_, reader.generation_)) return;
-    impl.header->readers[reader.index_].accepting = 0;
-    for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
-        auto& sample = impl.slot(i);
-        sample.pending &= ~bit(reader.index_);
-        recycle(sample);
-    }
-    notify(impl.header);
+    if (reader.index_ >= descriptor_.config.max_readers) return;
+    auto& registration = impl.header->readers[reader.index_];
+    ReaderLease operation;
+    if (!operation.acquire(registration, true, reader.generation_)) return;
+    impl.closeRegistration(reader.index_);
+    operation.reset();
+    impl.tryRetireReader(reader.index_);
 }
 SharedPoolResult SharedPayloadPool::statistics(SharedPoolStats& stats) {
     auto& impl = *impl_;
     stats = {};
-    Guard guard(impl.header);
+    Guard guard(impl.header, true);
     if (guard.result != SharedPoolResult::OK) return guard.result;
     impl.checkWriter();
-    stats.writer_alive = impl.header->alive;
+    impl.reapReaders();
+    if (load(impl.header->poisoned)) return SharedPoolResult::CORRUPT;
+    stats.writer_alive = load(impl.header->alive) != 0;
     for (uint32_t i = 0; i < descriptor_.config.slots; ++i) {
         const auto& current = impl.slot(i);
-        stats.free_slots += current.state == FREE;
-        stats.writing_slots += current.state == WRITING;
-        stats.published_slots += current.state == PUBLISHED;
-        stats.pending_references += __builtin_popcountll(current.pending);
-        stats.loan_references += __builtin_popcountll(current.loaned);
+        const bool free = unpinned(current);
+        const auto phase = load(current.gate) & PHASE_MASK;
+        stats.free_slots += free;
+        stats.writing_slots += !free && phase == WRITING;
+        stats.published_slots += !free && phase == PUBLISHED;
+        stats.pending_references += __builtin_popcountll(load(current.pending));
+        stats.loan_references += __builtin_popcountll(load(current.loaned));
     }
-    for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) stats.readers += impl.header->readers[i].active != 0;
+    for (uint32_t i = 0; i < descriptor_.config.max_readers; ++i) {
+        if (load(impl.header->readers[i].active)) {
+            impl.finishRegistration(i);
+            ++stats.readers;
+        }
+    }
     return SharedPoolResult::OK;
 }
 

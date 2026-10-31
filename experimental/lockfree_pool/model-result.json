@@ -1,0 +1,46 @@
+{
+  "naive_check_then_clear_stale_return": {
+    "states": 20,
+    "counterexample": [
+      "A: snapshot generation=1, loan=1",
+      "B: snapshot generation=1, loan=1",
+      "A: delayed clear bit",
+      "Writer: reserve generation=2",
+      "Writer: publish generation=2, loan=1",
+      "B: delayed clear bit"
+    ]
+  },
+  "packed_control_CAS_stale_return": {
+    "states": 19,
+    "counterexample": null
+  },
+  "packed_control_lifecycle": {
+    "states": 69,
+    "transitions": 134,
+    "safety_violations": 0,
+    "scope": "one slot, two Readers, two generations, atomic control steps under SC"
+  },
+  "ungated_scan": {
+    "interleavings": 35,
+    "ordering_violations": 2,
+    "first_counterexample": [
+      "snapshot",
+      "scan A",
+      "commit A",
+      "watermark A",
+      "commit B",
+      "watermark B",
+      "scan B"
+    ]
+  },
+  "watermark_gated_scan": {
+    "interleavings": 35,
+    "ordering_violations": 0,
+    "first_counterexample": null
+  },
+  "limitations": [
+    "bounded sequential-consistency models",
+    "does not model C++ weak memory, futex, crashes, registration, mapping lifetime",
+    "no performance or formal whole-system lock-free claim"
+  ]
+}
