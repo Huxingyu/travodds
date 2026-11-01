@@ -1,4 +1,14 @@
-# DataSharing 性能（2026-11-01，布局 v7 / discovery v5）
+# DataSharing 性能（f32da83 重测未完成，2026-11-01）
+
+**本次未取得有效的版本性能对照。** 按原方法准备了 `0bbeaed` 与 `f32da8390b0af07500f67eb1d0a1279a9c968f4f` 的库和同一 benchmark driver，但新增外部进程监控器误判了本任务刚正常退出、等待回收的 zombie Writer，主动中止了基准组。基准仅完成第一轮 **9/27**，第 10 项被中止；f32da83 组 **0/27**，没有执行。按 TASK 的“失败不重试”约束未重跑，不能给出两组三轮中位数、九组版本差值或新增锁影响结论，也不能写成“没有影响”。详见 [本次未完成报告](../../../artifacts/datasharing-perf-f32da83/REPORT.md)、[原始测量记录](../../../artifacts/datasharing-perf-f32da83/measurement.json)及[独立中止诊断](../../../artifacts/datasharing-perf-f32da83/measurement-failure-audit.json)。
+
+构建与 ABI 核验已通过：本机 jobs=1、nice=19、CPU 亲和 `[0,1]`、编译地址空间上限 512 MiB，沿用 `-O3 -g0 -DNDEBUG` 和原优化/GC 参数。SHA 核验复用旧对象，重新链接的基准库与上一轮库逐字节一致（SHA `fdf017da754b7be7db5440f2dfc87f6aaea6cd2c6a679f630676c1551118df88`）；只重编 ReaderProxy（2.937 s）后生成目标库（SHA `7ed3c24c732b236a4a89ec0aa44dfae0778487f3a5795e1dfbab1f57fc44dda6`）。两版公共头文件、5444 个导出符号的名称/类型相同，类布局未改；driver 两组计划使用相同字节，SHA `9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d`。私库 ldd/ELF 核验均通过，已运行基准进程的实际映射、nice/亲和也吻合。旧依赖历史缺失的 thirdparty/系统 SHA 无法补证，未冒称历史冻结完整。[构建](../../../artifacts/datasharing-perf-f32da83/build-records.json)与[依赖审计](../../../artifacts/datasharing-perf-f32da83/dependency-reuse-audit.json)分别保存依据。
+
+原 runner `tools/ospp/benchmark.py`、driver、生产代码和测试均未修改；RELIABLE、KEEP_LAST16、64 槽、batch=8、warmup=32、计量 256/256/128 条和三轮模式轮换不变。实测在本机真实内核执行，监控采样没有发现编译或其他 DDS 测试；触发中止的 PID 经祖先链及原始结果确认就是本任务的 Writer。9 项已完成结果的原始载荷/CDR 检查通过，第 10 项没有自然退出结果，不能推断后续或目标组会通过。错误在新增证据脚本 `measure.py`，没有发现可据此确认的产品失败，也未修改产品或测试。
+
+原始中止记录保留退出 `-9`、非超时，以及两个新增共享目录；目录内容先归档到本次 `aborted-shm/`，确认记录的任务进程退出后仅清理这两个本任务目录。清理后 `/dev/shm` 相对初始清单无新增，三个保护目录共 9685 项路径及 lstat 元数据核验不变，见 [清理记录](../../../artifacts/datasharing-perf-f32da83/cleanup.json)。未使用 Modal，费用 **$0**，无本任务 Modal app；未新增 swap。本次文档提交不改变既有完整验收证据；下文保留上一轮与 10/28 的完整历史数据，不能当作 f32da83 的性能成绩。
+
+## 上一轮已完成测量（2026-11-01，布局 v7 / discovery v5）
 
 当前受测实现为 `0caef22`，包含 `0ce433d`、`a8ba0ef`、回放修复 `c78607d`，以及 Reader 发布状态和 Writer 过滤器快照的竞态修复。本轮没有为改善数字调整性能参数。新原始证据位于 `artifacts/datasharing-followups-20261101/performance-verified/`；首轮 `performance/` 结果仅作历史补充。
 

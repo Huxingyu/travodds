@@ -47,9 +47,9 @@ PayloadPool、共享段/真实历史环、跨进程通知、Loan API、零载荷
 
 旧首次 get_matched_publication_data 返回 3（BAD_PARAMETER）时没有记录所选 peer GUID，根因未证实。现测试采用独立 exec 对的 Topic，并断言精确父 Writer GUID/handle，lookup 原断言保留；后续通过和一次带 GUID 诊断均不能证明最初失败来自旧端点。原失败仍在 [tsan-final 原始日志](../../../artifacts/datasharing-followups-20261101/tsan-final/logs/test-loan_part_1.log)。
 
-性能数据绑定 0bbeaed 的既有 v7/v5 测量。本轮最终提交 f32da8390b0af07500f67eb1d0a1279a9c968f4f 增加 ReaderProxy 控制面锁后未重新测量性能；下述 64 B RTPS 吞吐 -5.61%/p99 0.94 ms、64 KiB RTPS 约 71 samples/s/p95/p99 约 200 ms 均为旧版本的实际测量，不是最终提交的实测成绩。这些历史差异不能归因于本次新增锁，也不能据此证明最终实现性能不变；本任务不优化 RTPS 性能，仅如实保留历史观测和未归因限制。 RTPS 64 B 吞吐相对同日旧程序 -5.61%、p99 0.94 ms，退化尚未定量归因；64 KiB RTPS 约 71 samples/s、p95/p99 约 200 ms 属既有行为，本次不优化。性能来自 2 核共享 VM 三轮短测，不是最大可持续吞吐、专机因果归因或 SLA。软件层“只写一次”验证应用在最终共享槽位单遍填写及框架不搬运完整载荷，不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”限于通知及共享数据面不获取跨进程管理 mutex，不证明整个 DDS write 形式化 lock-free/wait-free。本机 OFF/mixed/UDP 回退没有真实跨主机验证。ASan 关闭 LSan，未做泄漏扫描，不能写“无泄漏”。
+已按上一轮方法尝试在本机对 `0bbeaed` 与最终代码 `f32da8390b0af07500f67eb1d0a1279a9c968f4f` 连续重测，但新增进程监控器把本任务正常退出待回收的 zombie Writer 误判为外部 DDS 测试，主动中止了基准组。基准第一轮 9/27 自然退出且载荷/CDR 检查通过，第 10 项中止，f32da83 组 0/27；遵守失败不重试，未重跑。因此重测尚未完成，仍没有最终代码的有效三轮性能对照，不能判断新增 ReaderProxy 锁有无可见影响。基准库按 SHA 原字节复现、目标库构建和 ABI 核验通过，均不等于性能测试通过；原失败、两目录残留及后续归档清理分开记录。见 [性能报告](DATASHARING-PERFORMANCE.md)和[本次证据](../../../artifacts/datasharing-perf-f32da83/REPORT.md)。旧 `performance-verified/` 实测代码为 `0caef22`，与文档提交 `0bbeaed` 的生产字节一致；64 B RTPS 吞吐 -5.61%/p99 0.94 ms、64 KiB RTPS 约 71 samples/s/p95/p99 约 200 ms 均保留为旧轮观测，退化尚未定量归因，不能归因本次新增锁。本任务不优化 RTPS；2 核共享 VM 三轮短测不是最大可持续吞吐、专机因果归因或 SLA。软件层“只写一次”不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”仅限通知及共享数据面不获取跨进程管理 mutex，不证明整个 DDS write 形式化 lock-free/wait-free。OFF/mixed/UDP 回退没有真实跨主机验证。ASan 关闭 LSan，未做泄漏扫描。
 
-旧无栈 WaitSet 崩溃根因仍未知；返回 3 的原始 peer GUID 亦未记录。statistics 的测试握手前提已用同类真实交错和精确断言验证，仍不冒称已知历史 holder；小消息 RTPS 退化未完成定量归因。受控载荷证明不是恶意进程安全沙箱，TypeSupport 类型契约仍必须满足。
+旧无栈 WaitSet 崩溃根因仍未知；返回 3 的原始 peer GUID 亦未记录。statistics 的测试握手前提已用同类真实交错和精确断言验证，仍不冒称已知历史 holder；历史小消息 RTPS 退化未完成定量归因。受控载荷证明不是恶意进程安全沙箱，TypeSupport 类型契约仍必须满足。
 
 ## 资源、保护目录与停止条件
 
