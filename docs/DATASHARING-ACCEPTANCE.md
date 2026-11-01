@@ -1,33 +1,51 @@
 # DataSharing 官方八项验收对照
 
-本页按官方项目 **261760062** 的原始 programDesc/outputRequirement 核对当前 **共享布局 v7 / discovery v5**。原文、逐文件哈希和验收计划保存在 [原始要求](../../../artifacts/strict-ring-20261031/requirements/acceptance-plan.json)。本轮已补齐真实发布历史环及原生载荷直接访问证据；完整普通回归 **542/542**、有限示例 **9/9**、新增生产可执行行覆盖率 **94.132%（2984/3170）**，独立 **ASan/UBSan 99/99、TSan 99/99** 通过。八项实现与当前运行证据已齐全，最终交付身份核验见 [综合审计原始记录](../../../artifacts/strict-ring-20261031/final-verification.json)。
+本轮完整证据与最终审计已通过，范围与证明边界见下文。文档单独提交，不改变受测代码身份；之后源码/测试/构建工具再变化，受影响证据必须重跑。本报告不声称文档已提交或分支已推送；普通推送 origin 的最终 HEAD 以交付记录为准，不 force、不推 upstream/gitee、不提 PR。
 
-| 官方交付 | 当前实现及直接证据 | 本轮检查 |
+本页按官方项目 **261760062** 的 programDesc/outputRequirement 核对：最终受测代码提交 `f32da8390b0af07500f67eb1d0a1279a9c968f4f`，共享布局 **v7 / discovery v5**；`5609` 项源码/测试/依赖/构建工具输入的同一规范身份为 `65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861`。plain、coverage 普通全量各 **555 = 259 模块 + 49 共享池 + 247 core**；ASan/UBSan、TSan 各 **308 = 259 + 49**（不含 core）；有限示例 **9 次**（Loan/keyed/mixed 各 3）。新增生产可执行行覆盖率为 **95.556%（3096/3240，144 个翻译单元）**。原始要求保留于 [历史原文](../../../artifacts/strict-ring-20261031/requirements/acceptance-plan.json)。旧 ecb4b3c 的 542/99/99、9 示例、94.132%（2984/3170，143 TU）只证明当时冻结源码。
+
+| 官方交付 | 当前实现及本次已核验的行为 | 当前状态 |
 |---|---|---|
-| 1. 实现 PayloadPool 接口 | IPayloadPool/ITopicPayloadPool、四种普通池、按 Topic 的 Writer/Reader 共享、失败事务归还及分片生命周期 | 完整模块 249 项及核心 247 项通过；Reader 普通池检查版通过 |
-| 2. 实现 DataSharing 共享段管理 | Boost 映射、Writer GUID/session 命名；真实闭合发布历史环，Reader/replay 沿环；64 位位置/代次/epoch、pin、关闭/死亡/孤儿处理 | 共享池 46 项包含新增 7 项环及 2 项只读保护检查；普通版、ASan/UBSan 与 TSan 通过 |
-| 3. 实现跨进程通知 | 原子通知代次/futex、Reader listener；先采样再检查谓词；关闭后重扫最终水位 | 通知回绕、信号、进程死亡及真实 DDS 管理锁暂停进展检查通过 |
-| 4. 实现 DDS 层 Loan API | Writer loan/write/discard、Reader read/take/return、错误返回及删除后的 Loan 保活 | 原生生命周期、错误分支和页保护集成检查通过 |
-| 5. 零拷贝 Read/Write 旁路与 RTPS 回退 | no-init 构造、直接共享 Loan、key-only、v5 协商隔离 v1–v4；同 backing 的独立进程原生访问；RTPS/mixed 回退保留 | 4 项页面保护测试及原始 proof 核验通过；原生完整载荷序列化/反序列化/copy/create 回调为 0；混合示例通过 |
-| 6. DataSharingQosPolicy | AUTO/ON/OFF、目录/容量/预算、API/XML、类型与协议准入、不可变配置及重试 | 配置、协商和降级的普通模块回归通过 |
-| 7. 单元测试 ≥70% 及 Loan/QoS 示例 | 当前 Ubuntu 上重新构建全部生产库、完整普通回归；Loan、keyed、mixed 各 3 轮独立 exec；143 个翻译单元覆盖数据 | 542/542、9/9、94.132%；ASan/UBSan 与 TSan 各 99/99 |
-| 8. 详细设计与 API/QoS/错误调试手册 | [设计](DATASHARING-DESIGN.md)、[环与载荷证据](DATASHARING-RING.md)、[API](DATASHARING-API.md)、[QoS](DATASHARING-QOS.md)、[调试](DATASHARING-DEBUG.md)和公开示例 | 手册已同步 v7/v5；[综合审计](../../../artifacts/strict-ring-20261031/final-verification.json)及[交付索引](../../../artifacts/portable-evidence-20261031/native-v5-delivery.md)记录最终证据 |
+| 1. 实现 PayloadPool 接口 | IPayloadPool/ITopicPayloadPool、四种普通池、Topic 池共享、准入失败事务和分片生命周期；完整模块与 core 覆盖 | 通过（限本页所述范围） |
+| 2. 实现 DataSharing 共享段管理 | Writer GUID/session 命名、Boost 映射、真实闭合发布历史环；按 retained 回放候选加 lease/pin，空闲节点不被无关回放占用；保活/关闭/代次与坏环拒绝 | 49 项共享池身份；通过（限本页所述范围） |
+| 3. 实现跨进程通知 | 原子通知代次/futex、先采样再检查谓词、关闭后重扫；真实内核验证管理 mutex 暂停时共享进展 | 通过（限本页所述范围） |
+| 4. 实现 DDS 层 Loan API | Writer loan/write/discard、Reader read/take/return、错误码和删除后的 Loan 映射保活；statistics 测试握手前提经确定性验证修复 | 通过（限本页所述范围） |
+| 5. 零拷贝分支与 RTPS 回退 | no-init、native Loan、key-only、v5 协商与普通/混合回退；四项实际共享 backing/访问保护 proof，Modal 与本机分别留证 | 通过（限本页所述范围） |
+| 6. DataSharingQosPolicy | AUTO/ON/OFF、目录/容量/预算、API/XML、类型与协议准入、不可变性和降级 | 通过（限本页所述范围） |
+| 7. 单元测试 ≥70% 与 Loan/QoS 示例 | plain/coverage 各 555，ASan/UBSan 与 TSan 各 308，有限例 9；官方新增行覆盖率 95.556%（3096/3240，144 个翻译单元） | 通过（限本页所述范围） |
+| 8. 设计与 API/QoS/调试手册 | [设计](DATASHARING-DESIGN.md)、[环](DATASHARING-RING.md)、[API](DATASHARING-API.md)、[QoS](DATASHARING-QOS.md)、[调试](DATASHARING-DEBUG.md)、[本次报告](DATASHARING-PROGRESS-20261101.md)及当前完整身份/交付绑定 | 通过（限本页所述范围） |
 
 ## 原文严格范围与证据边界
 
-“按Writer GUID命名的共享环形历史段”由实际发布顺序的共享闭合双链实现；分配位置不是发布顺序，取消的未发布 Loan 不进入历史。正常 Reader 和晚加入回放沿历史环读取，仅 epoch 不稳定时保留安全扫描；稳定坏环返回 CORRUPT。实现、事务和九项新增测试见 [环说明](DATASHARING-RING.md)。
+“按 Writer GUID 命名的共享环形历史段”由按 publish sequence 连接的共享闭合双链实现，reservation 顺序不等于 publish 顺序。正常 Reader 与 TRANSIENT_LOCAL 回放沿环，epoch 不稳定时有安全 fallback；稳定坏环返回 CORRUPT。本次继承 c78607d：确定性暂停真实回放 lease 证明旧版短暂占住已消费空闲节点，零超时 loan 误报 EXHAUSTED；修复先选择水位内 retained 节点再 lease/复查/pin，忙 retained 节点延后 ready，不削弱回放保护。红/绿证据位于旧 followups/replay/，两个永久回归已进入本次新测试程序。
 
-原文“同主机plain/bounded类型数据读写全程物理内存仅写入1次，无任何用户态拷贝”与第 5 项“零拷贝分支，同时保留 RTPS 降级回退”一同核对。工程上验证的是兼容端点实际选择的 native Writer Loan → Reader Loan：应用在最终共享槽位单遍填写，框架不初始化或搬运完整载荷。独立 exec 的实际 Loan 逐页 VMA 证明同 device/inode/file offset 和 MAP_SHARED；框架窗口为 PROT_NONE（key 页只读），应用仅有一次填写窗口。read/write 故障负控、所有别名保护、seccomp 拒绝探针、完整载荷回调和源码/启动路径审查共同提供证据。键、索引及控制元数据仍可复制；普通 write、预分配输出和 RTPS 保持兼容复制语义。
+原文“物理内存仅写入 1 次、无任何用户态拷贝”结合第 5 项“零拷贝分支及 RTPS 回退”验收兼容端点实际选择的 native Writer Loan → Reader Loan：应用单遍填写最终共享槽位；device/inode/file offset/MAP_SHARED、PROT_NONE/key-RO、所有别名保护、故障负控、seccomp 拒绝探针和完整载荷回调共同验证框架窗口。普通 write、预分配输出和 RTPS 保留复制语义；证据不构成恶意进程安全沙箱，也不免除 TypeSupport 类型契约。Ubuntu/openEuler 为原文的“或”，自动 IDL native 生成器不作为额外要求。
 
-该证据不测量 DRAM 总线事务次数；内核清零、缓存写回、页迁移和 ECC 不受 DDS API 控制。没有把“仅拦截 CDR/copy 回调”冒充完整载荷访问证明，也没有声称任意恶意 TypeSupport 可以免除类型契约。
+旧首次 get_matched_publication_data 返回 3（BAD_PARAMETER）时没有记录所选 peer GUID，根因未证实。现测试采用独立 exec 对的 Topic，并断言精确父 Writer GUID/handle，lookup 原断言保留；后续通过和一次带 GUID 诊断均不能证明最初失败来自旧端点。原失败仍在 [tsan-final 原始日志](../../../artifacts/datasharing-followups-20261101/tsan-final/logs/test-loan_part_1.log)。
 
-官方要求 DataSharingNotification 无锁通知，没有要求整个 DDS write 形式化 lock-free/wait-free。共享数据面不获取跨进程管理 mutex；注册/维护、DDS 本地 Writer/history/发现锁和 futex 系统调用仍存在。原文平台为 Ubuntu **或** openEuler，没有自动 IDL native 生成器这一额外硬性条件。
+性能数据绑定 0bbeaed 的既有 v7/v5 测量。本轮最终提交 f32da8390b0af07500f67eb1d0a1279a9c968f4f 增加 ReaderProxy 控制面锁后未重新测量性能；下述 64 B RTPS 吞吐 -5.61%/p99 0.94 ms、64 KiB RTPS 约 71 samples/s/p95/p99 约 200 ms 均为旧版本的实际测量，不是最终提交的实测成绩。这些历史差异不能归因于本次新增锁，也不能据此证明最终实现性能不变；本任务不优化 RTPS 性能，仅如实保留历史观测和未归因限制。 RTPS 64 B 吞吐相对同日旧程序 -5.61%、p99 0.94 ms，退化尚未定量归因；64 KiB RTPS 约 71 samples/s、p95/p99 约 200 ms 属既有行为，本次不优化。性能来自 2 核共享 VM 三轮短测，不是最大可持续吞吐、专机因果归因或 SLA。软件层“只写一次”验证应用在最终共享槽位单遍填写及框架不搬运完整载荷，不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”限于通知及共享数据面不获取跨进程管理 mutex，不证明整个 DDS write 形式化 lock-free/wait-free。本机 OFF/mixed/UDP 回退没有真实跨主机验证。ASan 关闭 LSan，未做泄漏扫描，不能写“无泄漏”。
 
-## 当前冻结与复核入口
+## 新证据的执行分工与绑定
 
-本轮 **323** 项生产/测试/工具输入的规范身份为 `42ee01a89f3cba2e11df8147ece3ea73ba2906c0652bcbd0c71e460262b6b3ea`；[冻结清单](../../../artifacts/strict-ring-20261031/frozen-source-atomic-final.json)保存逐文件 SHA-256。当前普通结果位于 [coverage-atomic-final](../../../artifacts/strict-ring-20261031/coverage-atomic-final/results.json)，独立 [ASan/UBSan](../../../artifacts/strict-ring-20261031/asan-atomic-final/results.json) 和 [TSan](../../../artifacts/strict-ring-20261031/tsan-atomic-final/results.json)均通过。[精确绑定](../../../artifacts/strict-ring-20261031/final-bindings.json)和[最终审计](../../../artifacts/strict-ring-20261031/final-verification.json)核对三轮同一源码、私有链接二进制、原始 proof、覆盖率、示例及清理状态；[交付索引](../../../artifacts/portable-evidence-20261031/native-v5-delivery.md)保存源码与便携证据包。
+本轮实际证据：[冻结输入](../../../artifacts/datasharing-final-20261101/round2/source-manifest.json)、[最终审计](../../../artifacts/datasharing-final-20261101/round2/audit/final-audit.json)、[statistics 原始结果](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/results.json)、[费用/用量记录](../../../artifacts/datasharing-final-20261101/usage-ledger.json)。受测实现 f32da8390b0af07500f67eb1d0a1279a9c968f4f，源码身份 65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861（5609 项输入）；plain/coverage 各 555 = 259 模块 + 49 共享池 + 247 core，ASan/UBSan 与 TSan 各 308（不含 core），9 次有限示例，新增生产可执行行覆盖率 95.556%（3096/3240，144 个翻译单元）。 审计核对四模式真实 XML/log、用例身份、同一源码、私有库 ELF/插桩、原始载荷 proof、覆盖率及资源清理；此前 Modal 独立复验和 followups 仅保留其原有历史身份。
 
-资源边界为本机 jobs=1、nice=19、ionice best-effort 7、编译进程地址空间 768 MiB，无新增 swap 或支出。ASan/UBSan 不启用 LSan，不作泄漏扫描通过的声明。新源码不能借用前轮数字验收；v6/v4 的 529 项、93.936% 和检查版各 86 项仅保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)。
+本次 plain/coverage/asan/tsan 四模式均在 Modal 从同一最终源码重新编译生产库和相应测试程序，不复用旧对象、旧二进制或旧覆盖计数；Ubuntu 24.04、g++ 13.3，固定 CPU=2、memory=4096 MiB。冻结清单包含 thirdparty、GTest zip、实际编译源码/头文件和构建脚本，逐文件 SHA 与最终代码身份一起绑定；清单数量以实际审计为准。
+
+各模式模块 259 项在 Modal 执行；完整共享池 49 项在本机真实内核运行，plain/coverage 的 core 247 项也在本机运行。ASan/UBSan 与 TSan 不包含 core。按预先约定分工补齐 gVisor 的 futex 观测、IPv6 和网络环境限制，回传 ELF/私有库与 Modal 产物 SHA 完全相同，用例身份无遗漏；原始环境失败记录保留，不能把真实竞争归为环境限制。
+
+每模式 Modal 模块内四项 NativePayloadWrites 均留原始 proof；本机使用相同 ELF/私有库独立补跑四项，由 tools/ospp/native_payload_writes.py 重解析 XML/log/proof。重复身份仅增加真实内核证据，不额外计数。Loan/keyed/mixed 各 3 次有限示例在本机 coverage 模式自然退出，共 9 次，实际收发计数通过核对。
+
+覆盖率实测 95.556%（3096/3240，144 个翻译单元），最低要求 70%。使用 -fprofile-update=atomic，Modal/local 各从空的新计数目录采集，合并相同编译身份的新 gcda，全部实际链接 gcno（包括无 gcda 的零命中单元）进入统计。tools/ospp/coverage.py 按固定基线 489067108405b27afbd369245542f5e88d457f18 重算新增生产可执行行；原始生产负计数 0 个，负计数均按未覆盖处理，未复用旧计数。这不是分支覆盖率或全仓库文本行覆盖率。
+
+statistics() 通过非阻塞 trylock 获取控制面快照，合法并发持锁可返回 TIMEOUT。原测试在子 Reader listener 仍运行时直接要求关闭快照返回 OK，没有建立必要的静止前提，属于测试握手缺口。本轮在真实 statistics Guard 已成功持有真实共享 mutex 后仅暂停执行：子工作线程的 PID/TID、mutex owner TID 和解析到 readerdatasharing.cpp 的调用栈均匹配。旧测试原 ASSERT 确定性失败，退出 1、TIMEOUT；增加 D/C/L 握手，等待 Reader 删除返回并完成 listener join，同时保留首条应用 Loan，原 OK、writer_alive=false、pending=0、loan_references=1 精确断言全部通过，退出 0。仅修测试的同步前提，未改产品统计语义、未新增 sleep/重试或放宽断言。这证明一种真实 listener 的同类合法交错可以产生该失败；历史偶发轮没有记录持锁者，不能据此声称已经识别那个历史 holder。原全量约 8 轮 1 次失败、单独 Modal 200 次/本机 40 次未复现均仍为历史现象。见 [before](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/before/summary.json)、[after](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/after/summary.json)。
+
+本机 jobs=1、nice=19，未新增 swap/本机支出，不在远端存放凭据，未再连接不可用 ECS。Modal 固定 2 CPU/4096 MiB、Ubuntu 24.04/g++ 13.3、无 GPU；本任务请求资源时长与下载量估计 $0.086696，含预留的保守估计 $0.488881，低于 $1 授权上限，已结算记录不含待运行预留；不是账单。最终审计确认 Modal app 已停止、/dev/shm 无本任务新增残留、旧 strict/portable 保护路径核验通过。
+
+`artifacts/strict-ring-20261031/` 与 `artifacts/portable-evidence-20261031/` 只读，现有文件内容与历史数字不修改。旧 0bbeaed 的 Modal 独立复验、followups 的首轮成功/失败/停止记录保持各自身份，不能合并冒充本次成功。真正竞争必须诊断，gVisor 限制不授权跳过用例。最终审计须把同一源码、用例身份、模式插桩及私有链接串起来；便携包哈希校验不等于重新执行测试。
+
+首次诊断归档 [attempt1](../../../artifacts/datasharing-final-20261101/statistics/attempt1/statistics-result/results.json) 为配置失败：源码包遗漏 cmake/，configure-library 退出 1，未构建/执行任何测试；不得计为测试失败或通过。补齐源码包的 attempt2 保留独立输入/工具/程序 SHA 与原始 before/after 证据；旧归档不覆盖。
+
+首轮受测 556c918d7e9659e42c266c5c524d8f2c038fb0c0 的 TSan 在 ReaderProxy::RequestedChangesSet 写请求 vector 与异步 RequestedChanges 复制读取之间报告真实数据竞争。模块退出 66，用时 12.542 s、限时 180 s，timed_out=false；尚有子进程 [2511]，清理记录 killed_pids=[1065, 2511]。这不是超时或 gVisor 环境失败。旧私有容器原始 shm_added 保留一个 DS 段并判失败，不能改写为旧轮无残留。后续已确认旧私有容器所属 app 停止且任务数为 0；停止记录不等于现场验证原段已删除，原始残留仍作为失败事实保留，与成功轮最终无新增残留分开。产品最小修复单独提交后，本轮在新的源码身份上从零重跑全部四模式、示例、覆盖率及 proof；旧 plain/coverage/ASan 的成功和旧失败 TSan 都不能替代新提交的验收。详见 [原始 race 分析](../../../artifacts/datasharing-final-20261101/race/README.md)与[首次 TSan 原始结果](../../../artifacts/datasharing-final-20261101/remote/tsan/results.json)。
 
 ## 历史验收记录（2026-10-28，布局 v5）
 

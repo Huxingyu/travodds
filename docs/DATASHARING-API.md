@@ -1,6 +1,7 @@
 # DataSharing / Loan API（当前实现）
 
-> 本轮实现采用 Boost.Interprocess、共享布局 v7、发现能力 v5，真实发布历史环与 Reader 载荷只读保护已完成本轮验证，见 [环形历史与载荷写入说明](DATASHARING-RING.md)。v6/v4 的 529 项、93.936% 等前轮结果及更早版本数字只证明各自冻结源码，不能证明本轮。最终状态以 [需求矩阵](DATASHARING-ACCEPTANCE.md) 为准。
+> 最终受测代码提交 `f32da8390b0af07500f67eb1d0a1279a9c968f4f`，共享布局 **v7 / discovery v5**；`5609` 项源码/测试/依赖/构建工具输入的同一规范身份为 `65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861`。当前状态 **通过（限本页所述范围）**，实测 plain/coverage 各 555、ASan/UBSan 与 TSan 各 308、有限示例 9、覆盖率 95.556%（3096/3240，144 个翻译单元）。结果仅以[本次报告](DATASHARING-PROGRESS-20261101.md)和[需求矩阵](DATASHARING-ACCEPTANCE.md)的新证据为准；下文有日期的快照只证明各自历史。
+
 
 当前实现已接通 Linux 上固定布局类型的自动共享发布/接收。共享能力与实际映射注册兼容的 Reader 从共享段收样；混合匹配中的其他 Reader 继续使用定向 RTPS。纯共享路径可跳过两端完整载荷序列化/反序列化。零载荷复制限定 Writer Loan → 空输出序列的 Reader Loan；普通裸指针 write 会复制样本，预分配输出也复制。带键类型只有在 Writer 与 Reader 两端的 TypeSupport 均提供有效 key-only 元数据并实现下述钩子时才可进入 native。原生路径不再保留完整样本键快照回退；不满足契约的类型保留 CDR/RTPS。键字段和控制元数据仍会复制，“零载荷复制”不表示系统中没有任何字节复制。存在 SQL Reader 过滤器时继续走 CDR。键哈希仍通过 TypeSupport 的键操作计算，Ubuntu 验证范围见需求矩阵。配置见 [QoS 手册](DATASHARING-QOS.md)。
 
@@ -65,7 +66,7 @@ if (rc == RETCODE_OK) {
 
 当批次全部为布局兼容的有效原生缓存时，空输出序列借用其真实映射地址；数据与 SampleInfo 绑定同一个批次 pin。普通 RTPS 数据、混合批次和无有效数据的控制样本返回自有对象。`SequenceData<T>(capacity)` 预分配输出会请求复制；单样本 read/take 也复制，原生样本复制不经过反序列化。
 
-普通 RTPS Reader 的 payload_pool 配置控制 history 准入拷贝：完整 CDR 分片链事务性转入本地 Topic 池，native SharedReadLoan 保持旁路，transport 整包及独立 CDR 键快照仍归原池。五个普通池参数不可变，活动 domain/topic/type 池配置必须一致；前轮 19 项 Reader 回归已覆盖真实接收、耗尽回滚与缓存保活，本轮新源码需重新验证，详见 [普通池手册](PAYLOADPOOL-QOS.md)。
+普通 RTPS Reader 的 payload_pool 配置控制 history 准入拷贝：完整 CDR 分片链事务性转入本地 Topic 池，native SharedReadLoan 保持旁路，transport 整包及独立 CDR 键快照仍归原池。五个普通池参数不可变，活动 domain/topic/type 池配置必须一致；前轮 19 项 Reader 回归覆盖真实接收、耗尽回滚与缓存保活，已纳入本次新源码完整模块并通过验证，详见 [普通池手册](PAYLOADPOOL-QOS.md)。
 
 Reader 在发现兼容 Writer 后，以本地目录配置及对端 GUID/会话推导文件名，验证共享段并注册自身 GUID。独立监听线程通过原子代次与 Linux futex 等待共享通知，生成持有 SharedReadLoan 的原生缓存，再交给现有可靠性代理与 history。可靠和尽力模式、同参与者内的 ON/OFF Reader 混用均有独立 exec 进程测试。
 
@@ -84,7 +85,37 @@ Reader 在发现兼容 Writer 后，以本地目录配置及对端 GUID/会话�
 
 ## 验证与覆盖率
 
-生产验证入口为 `tools/ospp/production_lockfree_verify.py`，新载荷证据由 `tools/ospp/native_payload_writes.py` 绑定实际 XML/log；本轮 v7/v5 已完成验证，结果为 542 项普通回归、两个检查版各 99 项、9 次示例及 94.132% 覆盖率。前轮 v6/v4 的 529 项、9 次示例、93.936% 和两版 focused 各 86 项，以及 10/30 v3 的旧数字均保留历史含义。新运行采用 768 MiB 编译限额、单线程和独立 build 目录，环/页保护设计见 [本轮说明](DATASHARING-RING.md)，结果以 [验收矩阵](DATASHARING-ACCEPTANCE.md) 为准。
+本轮完整证据与最终审计已通过，范围与证明边界见下文。文档单独提交，不改变受测代码身份；之后源码/测试/构建工具再变化，受影响证据必须重跑。本报告不声称文档已提交或分支已推送；普通推送 origin 的最终 HEAD 以交付记录为准，不 force、不推 upstream/gitee、不提 PR。
+
+最终受测代码提交 `f32da8390b0af07500f67eb1d0a1279a9c968f4f`，共享布局 **v7 / discovery v5**；`5609` 项源码/测试/依赖/构建工具输入的同一规范身份为 `65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861`。plain、coverage 普通全量各 **555 = 259 模块 + 49 共享池 + 247 core**；ASan/UBSan、TSan 各 **308 = 259 + 49**（不含 core）；有限示例 **9 次**（Loan/keyed/mixed 各 3），新增生产可执行行覆盖率 **95.556%（3096/3240，144 个翻译单元）**。
+
+本轮实际证据：[冻结输入](../../../artifacts/datasharing-final-20261101/round2/source-manifest.json)、[最终审计](../../../artifacts/datasharing-final-20261101/round2/audit/final-audit.json)、[statistics 原始结果](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/results.json)、[费用/用量记录](../../../artifacts/datasharing-final-20261101/usage-ledger.json)。受测实现 f32da8390b0af07500f67eb1d0a1279a9c968f4f，源码身份 65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861（5609 项输入）；plain/coverage 各 555 = 259 模块 + 49 共享池 + 247 core，ASan/UBSan 与 TSan 各 308（不含 core），9 次有限示例，新增生产可执行行覆盖率 95.556%（3096/3240，144 个翻译单元）。 审计核对四模式真实 XML/log、用例身份、同一源码、私有库 ELF/插桩、原始载荷 proof、覆盖率及资源清理；此前 Modal 独立复验和 followups 仅保留其原有历史身份。
+
+本次 plain/coverage/asan/tsan 四模式均在 Modal 从同一最终源码重新编译生产库和相应测试程序，不复用旧对象、旧二进制或旧覆盖计数；Ubuntu 24.04、g++ 13.3，固定 CPU=2、memory=4096 MiB。冻结清单包含 thirdparty、GTest zip、实际编译源码/头文件和构建脚本，逐文件 SHA 与最终代码身份一起绑定；清单数量以实际审计为准。
+
+各模式模块 259 项在 Modal 执行；完整共享池 49 项在本机真实内核运行，plain/coverage 的 core 247 项也在本机运行。ASan/UBSan 与 TSan 不包含 core。按预先约定分工补齐 gVisor 的 futex 观测、IPv6 和网络环境限制，回传 ELF/私有库与 Modal 产物 SHA 完全相同，用例身份无遗漏；原始环境失败记录保留，不能把真实竞争归为环境限制。
+
+每模式 Modal 模块内四项 NativePayloadWrites 均留原始 proof；本机使用相同 ELF/私有库独立补跑四项，由 tools/ospp/native_payload_writes.py 重解析 XML/log/proof。重复身份仅增加真实内核证据，不额外计数。Loan/keyed/mixed 各 3 次有限示例在本机 coverage 模式自然退出，共 9 次，实际收发计数通过核对。
+
+覆盖率实测 95.556%（3096/3240，144 个翻译单元），最低要求 70%。使用 -fprofile-update=atomic，Modal/local 各从空的新计数目录采集，合并相同编译身份的新 gcda，全部实际链接 gcno（包括无 gcda 的零命中单元）进入统计。tools/ospp/coverage.py 按固定基线 489067108405b27afbd369245542f5e88d457f18 重算新增生产可执行行；原始生产负计数 0 个，负计数均按未覆盖处理，未复用旧计数。这不是分支覆盖率或全仓库文本行覆盖率。
+
+statistics() 通过非阻塞 trylock 获取控制面快照，合法并发持锁可返回 TIMEOUT。原测试在子 Reader listener 仍运行时直接要求关闭快照返回 OK，没有建立必要的静止前提，属于测试握手缺口。本轮在真实 statistics Guard 已成功持有真实共享 mutex 后仅暂停执行：子工作线程的 PID/TID、mutex owner TID 和解析到 readerdatasharing.cpp 的调用栈均匹配。旧测试原 ASSERT 确定性失败，退出 1、TIMEOUT；增加 D/C/L 握手，等待 Reader 删除返回并完成 listener join，同时保留首条应用 Loan，原 OK、writer_alive=false、pending=0、loan_references=1 精确断言全部通过，退出 0。仅修测试的同步前提，未改产品统计语义、未新增 sleep/重试或放宽断言。这证明一种真实 listener 的同类合法交错可以产生该失败；历史偶发轮没有记录持锁者，不能据此声称已经识别那个历史 holder。原全量约 8 轮 1 次失败、单独 Modal 200 次/本机 40 次未复现均仍为历史现象。见 [before](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/before/summary.json)、[after](../../../artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result/after/summary.json)。
+
+旧首次 get_matched_publication_data 返回 3（BAD_PARAMETER）时没有记录所选 peer GUID，根因未证实。现测试采用独立 exec 对的 Topic，并断言精确父 Writer GUID/handle，lookup 原断言保留；后续通过和一次带 GUID 诊断均不能证明最初失败来自旧端点。原失败仍在 [tsan-final 原始日志](../../../artifacts/datasharing-followups-20261101/tsan-final/logs/test-loan_part_1.log)。
+
+性能数据绑定 0bbeaed 的既有 v7/v5 测量。本轮最终提交 f32da8390b0af07500f67eb1d0a1279a9c968f4f 增加 ReaderProxy 控制面锁后未重新测量性能；下述 64 B RTPS 吞吐 -5.61%/p99 0.94 ms、64 KiB RTPS 约 71 samples/s/p95/p99 约 200 ms 均为旧版本的实际测量，不是最终提交的实测成绩。这些历史差异不能归因于本次新增锁，也不能据此证明最终实现性能不变；本任务不优化 RTPS 性能，仅如实保留历史观测和未归因限制。 RTPS 64 B 吞吐相对同日旧程序 -5.61%、p99 0.94 ms，退化尚未定量归因；64 KiB RTPS 约 71 samples/s、p95/p99 约 200 ms 属既有行为，本次不优化。性能来自 2 核共享 VM 三轮短测，不是最大可持续吞吐、专机因果归因或 SLA。软件层“只写一次”验证应用在最终共享槽位单遍填写及框架不搬运完整载荷，不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”限于通知及共享数据面不获取跨进程管理 mutex，不证明整个 DDS write 形式化 lock-free/wait-free。本机 OFF/mixed/UDP 回退没有真实跨主机验证。ASan 关闭 LSan，未做泄漏扫描，不能写“无泄漏”。
+
+本机 jobs=1、nice=19，未新增 swap/本机支出，不在远端存放凭据，未再连接不可用 ECS。Modal 固定 2 CPU/4096 MiB、Ubuntu 24.04/g++ 13.3、无 GPU；本任务请求资源时长与下载量估计 $0.086696，含预留的保守估计 $0.488881，低于 $1 授权上限，已结算记录不含待运行预留；不是账单。最终审计确认 Modal app 已停止、/dev/shm 无本任务新增残留、旧 strict/portable 保护路径核验通过。
+
+本次继承的回放修复避免只读扫描/无关回放 lease 占用已消费空闲节点；retained replay pin、Writer、pending 和应用 Loan 仍阻止槽位复用。Reader 发布后重复绑定已删除，同非空端点重绑幂等；Writer 过滤器 map 在既有锁下取拥有型快照，SQL/TypeSupport/RTPS 锁外执行。这些改动须由本次最终身份检查，历史定向通过不能替代新证据。
+
+旧 ecb4b3c 的严格补全快照为 542/542、9 示例、94.132%（2984/3170，143 TU）和检查器各 99 项；v6/v4 为 529/9/93.936% 和检查器各 86 项。旧 strict/portable 两目录只读保留，不能给本次新源码背书。
+
+首次诊断归档 [attempt1](../../../artifacts/datasharing-final-20261101/statistics/attempt1/statistics-result/results.json) 为配置失败：源码包遗漏 cmake/，configure-library 退出 1，未构建/执行任何测试；不得计为测试失败或通过。补齐源码包的 attempt2 保留独立输入/工具/程序 SHA 与原始 before/after 证据；旧归档不覆盖。
+
+首轮受测 556c918d7e9659e42c266c5c524d8f2c038fb0c0 的 TSan 在 ReaderProxy::RequestedChangesSet 写请求 vector 与异步 RequestedChanges 复制读取之间报告真实数据竞争。模块退出 66，用时 12.542 s、限时 180 s，timed_out=false；尚有子进程 [2511]，清理记录 killed_pids=[1065, 2511]。这不是超时或 gVisor 环境失败。旧私有容器原始 shm_added 保留一个 DS 段并判失败，不能改写为旧轮无残留。后续已确认旧私有容器所属 app 停止且任务数为 0；停止记录不等于现场验证原段已删除，原始残留仍作为失败事实保留，与成功轮最终无新增残留分开。产品最小修复单独提交后，本轮在新的源码身份上从零重跑全部四模式、示例、覆盖率及 proof；旧 plain/coverage/ASan 的成功和旧失败 TSan 都不能替代新提交的验收。详见 [原始 race 分析](../../../artifacts/datasharing-final-20261101/race/README.md)与[首次 TSan 原始结果](../../../artifacts/datasharing-final-20261101/remote/tsan/results.json)。
+
+
 
 以下是 2026-10-28 完整检查流程的复现命令，测试数量和结果属于当时的冻结版本。新运行使用新的输出目录，所有编译保持单线程：
 
@@ -189,4 +220,4 @@ Reader有限autopurge删除实例身份后，旧句柄的get_key_value返回BAD_
 调度及Timer同步、deadline listener查询状态/修改QoS/注销的当前回归已加入验收。上文“尚未验证”段落保留为历史范围描述，当前结果见DATASHARING-ACCEPTANCE.md；未运行的检查器不会由ASan代替。
 
 
-当前严格补全轮采用共享布局 v7 / discovery v5，新增真实发布历史环与 Reader 全载荷只读映射，已完成本轮验证，设计和实际证据见 [环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 321 项冻结输入对应 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项，原始范围保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)；这些数字不能作为本轮新源码通过结果。[10/30 报告](DATASHARING-STRICT-20261030.md) 继续保留更早 v3 的历史。LSan 未启用，历史 WaitSet 崩溃根因仍未知。
+当前布局仍为 v7 / discovery v5，最终源码与新完整证据的状态为 通过（限本页所述范围），见 [11/1 报告](DATASHARING-PROGRESS-20261101.md)和[环形历史与载荷写入说明](DATASHARING-RING.md)。前轮 v6/v4 的 321 项冻结输入对应 529 项普通回归、9 次示例、93.936% 覆盖率和两个检查版各 86 项，原始范围保留于 [前轮报告](DATASHARING-PROGRESS-20261031.md)；这些数字不能作为本轮新源码通过结果。[10/30 报告](DATASHARING-STRICT-20261030.md) 继续保留更早 v3 的历史。LSan 未启用，历史 WaitSet 崩溃根因仍未知。
