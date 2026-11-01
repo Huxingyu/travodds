@@ -913,6 +913,10 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
         ASSERT_EQ(subscriber->delete_datareader(reader), RETCODE_OK);
         EXPECT_EQ(held[0].index, 9182u);
         EXPECT_EQ(held[0].values[6], 9261u);
+        // Reader deletion joins its native listener; keep the explicit
+        // application Loan alive until the parent checks the closed pool.
+        ASSERT_TRUE(byte(fd, 'C', true));
+        ASSERT_TRUE(byte(fd, 'L', false));
         held.unloan(); heldInfo.unloan();
         close(fd);
         return;
@@ -1060,12 +1064,16 @@ void LoanIntegration::RunNativeExec(bool reliable, bool mixed, bool late, bool r
     ASSERT_EQ(publisher->delete_datawriter(writer), RETCODE_OK);
     writer = nullptr;
     EXPECT_FALSE(std::filesystem::exists(d.path));
+    // statistics() is a nonblocking control-plane snapshot. Stop and
+    // join the child's native listener before requiring an OK result.
+    ASSERT_TRUE(byte(sockets[0], 'D', true));
+    ASSERT_TRUE(byte(sockets[0], 'C', false));
     SharedPoolStats closed;
     ASSERT_EQ(pool->statistics(closed), SharedPoolResult::OK);
     EXPECT_FALSE(closed.writer_alive);
     EXPECT_EQ(closed.pending_references, 0u);
     EXPECT_EQ(closed.loan_references, 1u); // only the first sample's explicit application Loan
-    ASSERT_TRUE(byte(sockets[0], 'D', true));
+    ASSERT_TRUE(byte(sockets[0], 'L', true));
     int status = 0; pid_t reaped = 0;
     while (std::chrono::steady_clock::now() < deadline) {
         reaped = waitpid(pid, &status, WNOHANG);
