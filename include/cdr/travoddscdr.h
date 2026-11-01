@@ -175,22 +175,22 @@ public:
            case 2:
                memcpy(&val_16, &value, sizeof(uint16_t));
                val_16 = __builtin_bswap16(val_16);
-               tmpValue = val_16;
+               memcpy(&tmpValue, &val_16, sizeof(val_16));
                break;
            case 4:
                memcpy(&val_32, &value, sizeof(uint32_t));
                val_32 = __builtin_bswap32(val_32);
-               tmpValue = val_32;
+               memcpy(&tmpValue, &val_32, sizeof(val_32));
                break;
            case 8:
                memcpy(&val_64, &value, sizeof(uint64_t));
                val_64 = __builtin_bswap64(val_64);
-               tmpValue = val_64;
+               memcpy(&tmpValue, &val_64, sizeof(val_64));
                break;
            default:
                return false;
            }
-           // 本机端序与要求编码端序相同，直接拷贝进入缓冲区
+           // 保留交换后的位模式，不能将整数数值转换为浮点数。
            retBuffer = curProcessMsgBlock_->writeData((char*)&tmpValue, typeSize);
            if (!retBuffer) {
                return false;
@@ -486,15 +486,27 @@ public:
         // 端序转换
         if (useLittleEndian_ != isLittleEndian()) {
             switch (typeSize) {
-            case 2:
-                value = __builtin_bswap16(*(uint16_t*)&value);
+            case 2: {
+                uint16_t bits;
+                memcpy(&bits, &value, sizeof(bits));
+                bits = __builtin_bswap16(bits);
+                memcpy(&value, &bits, sizeof(bits));
                 break;
-            case 4:
-                value = __builtin_bswap32(*(uint32_t*)&value);
+            }
+            case 4: {
+                uint32_t bits;
+                memcpy(&bits, &value, sizeof(bits));
+                bits = __builtin_bswap32(bits);
+                memcpy(&value, &bits, sizeof(bits));
                 break;
-            case 8:
-                value = __builtin_bswap64(*(uint64_t*)&value);
+            }
+            case 8: {
+                uint64_t bits;
+                memcpy(&bits, &value, sizeof(bits));
+                bits = __builtin_bswap64(bits);
+                memcpy(&value, &bits, sizeof(bits));
                 break;
+            }
             default:
                 return false;
             }
