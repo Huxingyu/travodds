@@ -1,0 +1,492 @@
+{
+  "schema": 1,
+  "passed": true,
+  "implementation_commit": "f32da8390b0af07500f67eb1d0a1279a9c968f4f",
+  "audited_head": "f32da8390b0af07500f67eb1d0a1279a9c968f4f",
+  "canonical_source_identity_sha256": "65a3cde4be51c42897dfd974a2eea661e4c74b06abd1d2a5d40a18810da82861",
+  "source_input_count": 5609,
+  "auditor_sha256": "a69fa1b6196b057f65afdf227145a43eb2e694e9dc23dcc0b4fd09d2b6a6be77",
+  "modes": {
+    "plain": {
+      "passed": true,
+      "unique_tests": 555,
+      "payloadpool_tests": 259,
+      "sharedpool_tests": 49,
+      "case_identity_sha256": "539d45c7eef66d9b9032bec0f75aed7351569bae925bdcfe2bdd6ac23484a942",
+      "ship": {
+        "archive_sha256": "d38ab944b59abf714c2364bda049fcb500a0086d81fab4c61d3d8e586200e108",
+        "files": 342
+      },
+      "elf": {
+        "libtravodds": {
+          "sha256": "5a3893503bf9d1b4e9fa6f55db058c8bc3fe31f95f58b3cf91de1fa4d956d633",
+          "build_id": "a2c7cde353f8b1b2851a22aa88e1a09975eb7b21",
+          "private_library_verified": true,
+          "instrumentation": []
+        },
+        "payloadpool_test": {
+          "sha256": "2caca8b970ee0e283aceb62d07eece07fee19838b9f89ef63ffaf095e66ea6b2",
+          "build_id": "f159a08e701ee7ee525b3e7b01570e8057f788f4",
+          "private_library_verified": true,
+          "instrumentation": []
+        },
+        "sharedpayloadpool_test": {
+          "sha256": "3d7c0f1acbe425be23150f62972f2a1fb3a5c601bb13cdaa5e9e22263022f7e8",
+          "build_id": "3286a4827056564ccff1e83c54c741172e36479e",
+          "private_library_verified": true,
+          "instrumentation": []
+        },
+        "unit_test": {
+          "sha256": "48b3a6f1fc73da268c6b3cb04bf24f2eb562178b4f9e46f4de5c28129a164f60",
+          "build_id": "b38575ddead99a7745998445df8a545809652d86",
+          "private_library_verified": true,
+          "instrumentation": []
+        }
+      },
+      "provenance": {
+        "linked_objects": 139,
+        "notes": 0,
+        "official_notes": 0,
+        "compiler_dependency_files": 1638,
+        "path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/round2/remote/plain/build-provenance.json"
+      },
+      "native_payload_proof": {
+        "modal": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "f11630b5ba7ee225259ea8393ddfe801f0399f661491c9c83c54894ea9a1e9e8",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        },
+        "local": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "1a3dee9206c291e9e38764f5b08d09f3f5f2e1a4281d64a822ff03fa8be3f92e",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        }
+      },
+      "core_tests": 247
+    },
+    "coverage": {
+      "passed": true,
+      "unique_tests": 555,
+      "payloadpool_tests": 259,
+      "sharedpool_tests": 49,
+      "case_identity_sha256": "539d45c7eef66d9b9032bec0f75aed7351569bae925bdcfe2bdd6ac23484a942",
+      "ship": {
+        "archive_sha256": "a6cdda9cc95e5c844fd16153f66154630df2e120b099c2e9092b8813a8e038dd",
+        "files": 675
+      },
+      "elf": {
+        "libtravodds": {
+          "sha256": "7f24395f98f94050796874b838cb98adb87c5dd65a2381c676ea5fca1f9d33db",
+          "build_id": "1bce655878cad7df1dcd33a82a90ee4305644a4f",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "payloadpool_test": {
+          "sha256": "ff47e30a5fa67ced9e4ec6367474f48baa89f0eab3814c29cf217688df548501",
+          "build_id": "b5981e0518de768c4d8377a0e5de6e2e8a19f70a",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "sharedpayloadpool_test": {
+          "sha256": "cd72f5377873ddb746b38942f33ebecbc3766623e2ea3b0e39e26096bf23efb8",
+          "build_id": "51cf84c5c3c36b6c58be3f33a6ee74bb0eeac514",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "unit_test": {
+          "sha256": "aae56cce3008ed73bd46a329b289d8a92b5e3dc84704cec2648af003f0b568f2",
+          "build_id": "9e72acf981e2d2cf8f913e4712e64b1f53e1f233",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "datasharing_loan": {
+          "sha256": "d2c1ebf1ebbc9009d88fbd28950c9c1c04588a4d27e39eeb0f39944bbf9566a0",
+          "build_id": "03706d731a2ab72b71fc29db1b3c433da35db4aa",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "datasharing_keyed": {
+          "sha256": "8ad79039f6aa14732a2a890403cd6ead263f2ac6189d60f798c4ba26f0f2b076",
+          "build_id": "22baf57bba6c92b0b1c8add769ae6a914b554b2a",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        },
+        "datasharing_mixed": {
+          "sha256": "d1101702aefc81570d9d2f1b5844208c1ffb7149f5c74f5215fbb52595dc9f9c",
+          "build_id": "1c2eabb47a21910b5991f97fc6960ea975b811c3",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__gcov_"
+          ]
+        }
+      },
+      "provenance": {
+        "linked_objects": 144,
+        "notes": 148,
+        "official_notes": 144,
+        "compiler_dependency_files": 1645,
+        "path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/round2/remote/coverage/build-provenance.json"
+      },
+      "native_payload_proof": {
+        "modal": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "3f0726f0c2c68f2443026998c777fd1a2ca468ac53f29198fae9c2c98d01a60e",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        },
+        "local": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "6d542eed94fb48f1c673915a9fadc296cb418cdd677d287178c4dc749f9025cc",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        }
+      },
+      "core_tests": 247
+    },
+    "asan": {
+      "passed": true,
+      "unique_tests": 308,
+      "payloadpool_tests": 259,
+      "sharedpool_tests": 49,
+      "case_identity_sha256": "6a43952448182ae28bae024e6368978cbe0d2dc1b0c4beee3c88f317b193cde2",
+      "ship": {
+        "archive_sha256": "80ecfe9b8de2f094024b5f3cfad3bdea64c1c9a430281b03bfb7c61efb0530fa",
+        "files": 289
+      },
+      "elf": {
+        "libtravodds": {
+          "sha256": "611a6294843e9ccc9ab111fcf2735e2d27b7af1d24d23ef1b2e7889a8103b1bf",
+          "build_id": "b712e610e252c2470818a42d5c038dcc0b2d5c68",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__asan_",
+            "__ubsan_"
+          ]
+        },
+        "payloadpool_test": {
+          "sha256": "4bd1f96d7e3d581a4e4cdc749dd99633f72f44f180cc071222180e57a768f04b",
+          "build_id": "726e9f571b24b5b2d2ab6b0885d9581ebc155727",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__asan_",
+            "__ubsan_"
+          ]
+        },
+        "sharedpayloadpool_test": {
+          "sha256": "de32ba35ea2e7b9ec8dcb1cf7e2dac0d45e4f907ab7333c03e8ddbc1b34de69b",
+          "build_id": "1dc61551a9c640cb01537202ff63922f87f3c121",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__asan_",
+            "__ubsan_"
+          ]
+        }
+      },
+      "provenance": {
+        "linked_objects": 114,
+        "notes": 0,
+        "official_notes": 0,
+        "compiler_dependency_files": 1589,
+        "path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/round2/remote/asan/build-provenance.json"
+      },
+      "native_payload_proof": {
+        "modal": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "6c4c526e3df3af074c38b48a073f099f98a1be3c89c11b974b9aea56e567d110",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        },
+        "local": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "e94a54894527d3798f667f04ac171f1dc702adaed70e3bcf36bdbbe814feaaa6",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        }
+      }
+    },
+    "tsan": {
+      "passed": true,
+      "unique_tests": 308,
+      "payloadpool_tests": 259,
+      "sharedpool_tests": 49,
+      "case_identity_sha256": "6a43952448182ae28bae024e6368978cbe0d2dc1b0c4beee3c88f317b193cde2",
+      "ship": {
+        "archive_sha256": "e3543c01d05e480ac55fda79ca4d6c44e7aa1530da8206f8bfe693178322ca1c",
+        "files": 287
+      },
+      "elf": {
+        "libtravodds": {
+          "sha256": "771067c6a5ed0f9a9c89544d09b0c93cdeb472668dd90a5712a078bafff9c922",
+          "build_id": "39869fdaa0198c22c22428ce4bff5fd382db4350",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__tsan_"
+          ]
+        },
+        "payloadpool_test": {
+          "sha256": "720cc7f5fce93c46172f32095bd008bab527386df4dd134ca68ab1f1099bb0cd",
+          "build_id": "b3cf957b519c1b8825a27e52f2343950e6751b8f",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__tsan_"
+          ]
+        },
+        "sharedpayloadpool_test": {
+          "sha256": "95be84e1e468097a0af5e8ef47bc1e727a2bb7b3ea2c3766a0bdb9272e00433f",
+          "build_id": "b6e8c7ee4280b43bd840441af4c5e10a76a8b0f5",
+          "private_library_verified": true,
+          "instrumentation": [
+            "__tsan_"
+          ]
+        }
+      },
+      "provenance": {
+        "linked_objects": 114,
+        "notes": 0,
+        "official_notes": 0,
+        "compiler_dependency_files": 1591,
+        "path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/round2/remote/tsan/build-provenance.json"
+      },
+      "native_payload_proof": {
+        "modal": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "8a09f209e7296610f5864ebf2dc9e9a1f2ae7ee9e25c06f41a50fb3dab4bab1e",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        },
+        "local": {
+          "tests": 4,
+          "raw_revalidated": true,
+          "sha256": "a00c101dc7c70bd7ae800c6a4b79e14c4c5c7e5f0cbd43bcac636f68330950ab",
+          "fault_signals": [
+            0,
+            0,
+            11,
+            11
+          ]
+        }
+      }
+    }
+  },
+  "examples": {
+    "passed": true,
+    "runs": 9,
+    "raw_records_revalidated": true
+  },
+  "coverage": {
+    "passed": true,
+    "translation_units": 144,
+    "covered_added_lines": 3096,
+    "executable_added_lines": 3240,
+    "percent": 95.556,
+    "required_percent": 70,
+    "negative_production_counts": 0,
+    "negative_count_policy": "Counts <=0 are uncovered; no clipping or absolute-value conversion.",
+    "baseline": "489067108405b27afbd369245542f5e88d457f18",
+    "raw_json_recomputed_without_running_gcov": true
+  },
+  "statistics": {
+    "passed": true,
+    "evidence": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/statistics/attempt2/statistics-result",
+    "before_returncode": 1,
+    "after_returncode": 0,
+    "historical_holder_unproved": true,
+    "historical_setup_failure_preserved": true,
+    "interpretation": "A controlled real listener interleaving proves a valid source of TIMEOUT; the historical failing run did not record its holder."
+  },
+  "cleanup": {
+    "passed": true,
+    "shm_added": [],
+    "protected_paths": 6582,
+    "modal_apps_stopped": true,
+    "modal_app_rows": [
+      {
+        "app_id": "ap-HbqoPsV9vgMUJ75m95mW7o",
+        "description": "travodds-final-20261101-round2",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:34:45+08:00",
+        "stopped_at": "2026-11-01 18:40:52+08:00"
+      },
+      {
+        "app_id": "ap-6bGtMXIbs2aa1ogJQSKZdP",
+        "description": "travodds-final-20261101-round2",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:28:40+08:00",
+        "stopped_at": "2026-11-01 18:33:53+08:00"
+      },
+      {
+        "app_id": "ap-FQTi7fO9bxCBfqfgj9NcAU",
+        "description": "travodds-final-20261101-round2",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:23:55+08:00",
+        "stopped_at": "2026-11-01 18:28:22+08:00"
+      },
+      {
+        "app_id": "ap-yvUdWpI1PtwbVzPJ2uSFaA",
+        "description": "travodds-final-20261101-round2",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:19:32+08:00",
+        "stopped_at": "2026-11-01 18:23:38+08:00"
+      },
+      {
+        "app_id": "ap-4VGkWbrpezCRe4l0kDeuyx",
+        "description": "travodds-final-20261101",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:07:36+08:00",
+        "stopped_at": "2026-11-01 18:10:34+08:00"
+      },
+      {
+        "app_id": "ap-VKnZztPZnxzVLcdY4vQCmT",
+        "description": "travodds-final-20261101",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 18:01:54+08:00",
+        "stopped_at": "2026-11-01 18:06:59+08:00"
+      },
+      {
+        "app_id": "ap-kxFcskbLVNZVbjR0INfaQB",
+        "description": "travodds-final-20261101",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 17:56:21+08:00",
+        "stopped_at": "2026-11-01 18:01:22+08:00"
+      },
+      {
+        "app_id": "ap-uIesVOxzFady6XKn6lwL1H",
+        "description": "travodds-final-20261101",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 17:49:51+08:00",
+        "stopped_at": "2026-11-01 17:55:12+08:00"
+      },
+      {
+        "app_id": "ap-HBBe2ih1Iby6u9X7XLPJoF",
+        "description": "travodds-final-statistics",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 17:45:52+08:00",
+        "stopped_at": "2026-11-01 17:48:24+08:00"
+      },
+      {
+        "app_id": "ap-KgUyIPKo1zPcE8ZcShCmFA",
+        "description": "travodds-final-statistics",
+        "state": "stopped",
+        "tasks": "0",
+        "created_at": "2026-11-01 17:43:11+08:00",
+        "stopped_at": "2026-11-01 17:43:49+08:00"
+      }
+    ],
+    "protected_scope": "Exact path-set and lstat mode/size/mtime_ns/inode; no original all-file content-hash inventory exists."
+  },
+  "round_evidence_root": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/round2",
+  "parent_evidence_root": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101",
+  "prior_tsan_failure": {
+    "preserved": true,
+    "passed": false,
+    "implementation_commit": "556c918d7e9659e42c266c5c524d8f2c038fb0c0",
+    "result_path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/remote/tsan/results.json",
+    "log_path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/remote/tsan/logs/payloadpool_test.log",
+    "log_sha256": "14a04c664123c6574f0841a781a0b2602f85814a7fc05dc52e27c414ec8e3a51",
+    "report_line": 2441,
+    "exit_code": 66,
+    "timed_out": false,
+    "unexpected_survivors": [
+      2511
+    ],
+    "killed_pids": [
+      1065,
+      2511
+    ],
+    "shm_added": [
+      "travodds_ds_02009e49cf0952108a00000002000003_d5116e3f7e7b5130c9f821ea62365dd5.shm"
+    ],
+    "cleanup_error": "RuntimeError('New shared-memory residue; do not delete or hide it')",
+    "race_write_function": "ReaderProxy::RequestedChangesSet",
+    "race_read_function": "ReaderProxy::RequestedChanges",
+    "modal_apps_stopped": true,
+    "modal_tasks": 0,
+    "cleanup_interpretation": "The failed first-round private container recorded native DS residue after a real TSan abort and forced descendant cleanup. Its app is stopped with zero running tasks; this is not a residue-free shutdown claim.",
+    "local_followup": {
+      "path": "/home/ubuntu/project/travodds/artifacts/datasharing-final-20261101/local/tsan/results.json",
+      "local_phase_passed": true,
+      "combined_mode_passed": false,
+      "shm_added": []
+    }
+  },
+  "budget": {
+    "budget_usd": 1,
+    "conservative_including_reserve_usd": 0.488881,
+    "requested_allocation_plus_egress_usd": 0.086696,
+    "not_invoice": true
+  },
+  "pipeline_differences": [
+    "The first round real ReaderProxy requested-vector TSan race, exit66, killed descendants and native DS residue remain failed evidence. Round2 rebuilds every mode and counter from scratch after the product fix.",
+    "Four completely fresh builds replace historical object reuse; counts derive from raw listings/link provenance, not 324/144 fixed cardinalities.",
+    "Modal runs the full payload aggregate; all shared-pool/core identities run unchanged ELF bytes on the real kernel. Raw environments remain separate.",
+    "Source and build absolute paths agree across environments; source -I precedes imported system headers. Raw gcov JSON paths are never rewritten.",
+    "Official atomic coverage uses preserved two-environment counters; audit independently recomputes existing raw JSON without invoking gcov.",
+    "Every mode binds runtime libraries, ELF hashes/build IDs, complete identities and both raw native proofs; statistics RED remains an expected failure witness."
+  ],
+  "limitations": [
+    "Sanitizers cover module/shared-pool integration; core tests run in plain and coverage modes. LSan is disabled.",
+    "System compiler dependency hashes are compared across fresh Modal images; shipped portable runtimes are pinned. Host glibc/loader identities are recorded separately.",
+    "Return-code-3 historical cause remains unproved; performance and cross-host fallback limitations remain as documented.",
+    "Native software payload guards do not measure hardware DRAM writes; lock-free scope is limited to notification/shared data plane."
+  ],
+  "inputs_manifest_sha256": "b71a88e0d85c8e76617cc572290bffe6843efbd2233c58e8b72ff6a7f373f5f2",
+  "completed_utc": "2026-11-01T10:43:51.962808+00:00"
+}

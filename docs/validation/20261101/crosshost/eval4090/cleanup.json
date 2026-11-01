@@ -1,0 +1,323 @@
+{
+  "utc": "2026-11-01T12:38:09.435186+00:00",
+  "passed": true,
+  "local_shm_before": [
+    "PostgreSQL.1955600282",
+    "PostgreSQL.581413842",
+    "TravoddsAcceptSharedMemory35911",
+    "TravoddsAcceptSharedMemory35913",
+    "TravoddsGlobalUUIDSharedMemory",
+    "TravoddsTransportMemory6553608Os-35913",
+    "TravoddsTransportMemory655360OAR-35911",
+    "TravoddsTransportMemory655360kja-35911",
+    "TravoddsTransportMemory655366lu5-35913",
+    "TravoddsTransportMemory655367hHK-35911",
+    "TravoddsTransportMemory655368Ick-35913",
+    "TravoddsTransportMemory655369Fok-35911",
+    "TravoddsTransportMemory65536Brdo-35913",
+    "TravoddsTransportMemory65536D2z9-7413",
+    "TravoddsTransportMemory65536Di34-35913",
+    "TravoddsTransportMemory65536DnYR-7411",
+    "TravoddsTransportMemory65536E0zE-35913",
+    "TravoddsTransportMemory65536EkKs-35911",
+    "TravoddsTransportMemory65536Hj9c-35911",
+    "TravoddsTransportMemory65536IyUe-35911",
+    "TravoddsTransportMemory65536JEDt-35911",
+    "TravoddsTransportMemory65536K2DB-7411",
+    "TravoddsTransportMemory65536KAwS-35911",
+    "TravoddsTransportMemory65536KtQ5-35913",
+    "TravoddsTransportMemory65536MNyH-35913",
+    "TravoddsTransportMemory65536NW2m-35913",
+    "TravoddsTransportMemory65536NnT1-7413",
+    "TravoddsTransportMemory65536O0WK-35913",
+    "TravoddsTransportMemory65536O7zK-7411",
+    "TravoddsTransportMemory65536Ojxe-35913",
+    "TravoddsTransportMemory65536Pg1S-35911",
+    "TravoddsTransportMemory65536Qwgw-35911",
+    "TravoddsTransportMemory65536S7bc-35911",
+    "TravoddsTransportMemory65536SC3i-35911",
+    "TravoddsTransportMemory65536Tz7V-7413",
+    "TravoddsTransportMemory65536VdvM-35913",
+    "TravoddsTransportMemory65536XXGz-35913",
+    "TravoddsTransportMemory65536Zpcj-35913",
+    "TravoddsTransportMemory65536b8Jv-35913",
+    "TravoddsTransportMemory65536by5B-35911",
+    "TravoddsTransportMemory65536cNko-35913",
+    "TravoddsTransportMemory65536daRv-35913",
+    "TravoddsTransportMemory65536e6sx-35913",
+    "TravoddsTransportMemory65536eVGE-35913",
+    "TravoddsTransportMemory65536f52k-35911",
+    "TravoddsTransportMemory65536gmAQ-35911",
+    "TravoddsTransportMemory65536h4CH-35911",
+    "TravoddsTransportMemory65536jHIG-35913",
+    "TravoddsTransportMemory65536lXtM-35911",
+    "TravoddsTransportMemory65536m05y-35913",
+    "TravoddsTransportMemory65536oJq9-35911",
+    "TravoddsTransportMemory65536p0Gr-35911",
+    "TravoddsTransportMemory65536p8nO-35913",
+    "TravoddsTransportMemory65536sw89-35911",
+    "TravoddsTransportMemory65536tvWC-35913",
+    "TravoddsTransportMemory65536vtH4-35911",
+    "TravoddsTransportMemory65536xhQW-35911",
+    "TravoddsTransportMemory65536yL0R-35913",
+    "TravoddsTransportMemory65536zKdU-35911",
+    "TravoddsWatchDogSharedMemory",
+    "claude_df.txt",
+    "claude_df2.txt",
+    "claude_df3.txt",
+    "claude_df4.txt",
+    "lingbot-stage1-continuation10000-wandb",
+    "llm-parser-rescore-check.json",
+    "s32.txt",
+    "sem.TravoddsGlobalUUIDMutex",
+    "sem.TravoddsWatchDogUUIDMutex"
+  ],
+  "local_shm_after": [
+    "PostgreSQL.1955600282",
+    "PostgreSQL.581413842",
+    "TravoddsAcceptSharedMemory35911",
+    "TravoddsAcceptSharedMemory35913",
+    "TravoddsGlobalUUIDSharedMemory",
+    "TravoddsTransportMemory6553608Os-35913",
+    "TravoddsTransportMemory655360OAR-35911",
+    "TravoddsTransportMemory655360kja-35911",
+    "TravoddsTransportMemory655366lu5-35913",
+    "TravoddsTransportMemory655367hHK-35911",
+    "TravoddsTransportMemory655368Ick-35913",
+    "TravoddsTransportMemory655369Fok-35911",
+    "TravoddsTransportMemory65536Brdo-35913",
+    "TravoddsTransportMemory65536D2z9-7413",
+    "TravoddsTransportMemory65536Di34-35913",
+    "TravoddsTransportMemory65536DnYR-7411",
+    "TravoddsTransportMemory65536E0zE-35913",
+    "TravoddsTransportMemory65536EkKs-35911",
+    "TravoddsTransportMemory65536Hj9c-35911",
+    "TravoddsTransportMemory65536IyUe-35911",
+    "TravoddsTransportMemory65536JEDt-35911",
+    "TravoddsTransportMemory65536K2DB-7411",
+    "TravoddsTransportMemory65536KAwS-35911",
+    "TravoddsTransportMemory65536KtQ5-35913",
+    "TravoddsTransportMemory65536MNyH-35913",
+    "TravoddsTransportMemory65536NW2m-35913",
+    "TravoddsTransportMemory65536NnT1-7413",
+    "TravoddsTransportMemory65536O0WK-35913",
+    "TravoddsTransportMemory65536O7zK-7411",
+    "TravoddsTransportMemory65536Ojxe-35913",
+    "TravoddsTransportMemory65536Pg1S-35911",
+    "TravoddsTransportMemory65536Qwgw-35911",
+    "TravoddsTransportMemory65536S7bc-35911",
+    "TravoddsTransportMemory65536SC3i-35911",
+    "TravoddsTransportMemory65536Tz7V-7413",
+    "TravoddsTransportMemory65536VdvM-35913",
+    "TravoddsTransportMemory65536XXGz-35913",
+    "TravoddsTransportMemory65536Zpcj-35913",
+    "TravoddsTransportMemory65536b8Jv-35913",
+    "TravoddsTransportMemory65536by5B-35911",
+    "TravoddsTransportMemory65536cNko-35913",
+    "TravoddsTransportMemory65536daRv-35913",
+    "TravoddsTransportMemory65536e6sx-35913",
+    "TravoddsTransportMemory65536eVGE-35913",
+    "TravoddsTransportMemory65536f52k-35911",
+    "TravoddsTransportMemory65536gmAQ-35911",
+    "TravoddsTransportMemory65536h4CH-35911",
+    "TravoddsTransportMemory65536jHIG-35913",
+    "TravoddsTransportMemory65536lXtM-35911",
+    "TravoddsTransportMemory65536m05y-35913",
+    "TravoddsTransportMemory65536oJq9-35911",
+    "TravoddsTransportMemory65536p0Gr-35911",
+    "TravoddsTransportMemory65536p8nO-35913",
+    "TravoddsTransportMemory65536sw89-35911",
+    "TravoddsTransportMemory65536tvWC-35913",
+    "TravoddsTransportMemory65536vtH4-35911",
+    "TravoddsTransportMemory65536xhQW-35911",
+    "TravoddsTransportMemory65536yL0R-35913",
+    "TravoddsTransportMemory65536zKdU-35911",
+    "TravoddsWatchDogSharedMemory",
+    "claude_df.txt",
+    "claude_df2.txt",
+    "claude_df3.txt",
+    "claude_df4.txt",
+    "lingbot-stage1-continuation10000-wandb",
+    "llm-parser-rescore-check.json",
+    "s32.txt",
+    "sem.TravoddsGlobalUUIDMutex",
+    "sem.TravoddsWatchDogUUIDMutex"
+  ],
+  "local_shm_added": [],
+  "local_shm_deleted": [],
+  "local_netns_before": "",
+  "local_netns_after": "",
+  "local_bridge_and_ssh_live_pids_remaining": [],
+  "remote_shm_before": [
+    "openlet-eval-20261030-35280"
+  ],
+  "remote_shm_after": [
+    "openlet-eval-20261030-35280"
+  ],
+  "remote_shm_added": [],
+  "remote_shm_deleted": [],
+  "remote_task_directory_exists": false,
+  "remote_task_processes": [],
+  "openlet_prior_worker_pids_exited": [
+    43257,
+    43390,
+    43392,
+    43508,
+    43518,
+    45005,
+    45006,
+    45288,
+    45347
+  ],
+  "openlet_scope": "Post-test inventory observed controllers 43248/28406 and persistent 2393/2394 with their original start times; later PID observations are retained separately and may show naturally completed processes. No signal targeted any OpenLET PID, no OpenLET files/configuration/GPU were touched. PID observations alone do not establish evaluation outcome or absence of all timing impact.",
+  "signals_sent": [
+    {
+      "host": "vm",
+      "pid": 3900666,
+      "signal": "SIGTERM",
+      "purpose": "stop own bridge after every DDS child exited 0"
+    }
+  ],
+  "remote_dds_all_natural_exit": true,
+  "modal_used": false,
+  "mac_or_muse_used": false,
+  "openlet_main_pids_unchanged_at_post_test_inventory": [
+    2393,
+    2394,
+    28406,
+    43248
+  ],
+  "openlet_final_pid_checks": [
+    {
+      "pid": 2393,
+      "comm": "proot",
+      "same_process": true,
+      "state": "S",
+      "starttime": "1072412693"
+    },
+    {
+      "pid": 2394,
+      "comm": "Xorg",
+      "same_process": true,
+      "state": "S",
+      "starttime": "1072412693"
+    },
+    {
+      "pid": 28406,
+      "comm": "openlet-light-c",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43248,
+      "comm": "python",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43257,
+      "comm": "python",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43390,
+      "comm": "proot",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43392,
+      "comm": "python3",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43508,
+      "comm": "roscore",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 43518,
+      "comm": "rosmaster",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 45005,
+      "comm": "proot",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 45006,
+      "comm": "python",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 45288,
+      "comm": "roslaunch",
+      "same_process": false,
+      "state": "gone"
+    },
+    {
+      "pid": 45347,
+      "comm": "nodelet",
+      "same_process": false,
+      "state": "gone"
+    }
+  ],
+  "openlet_current_processes": [
+    {
+      "pid": 2393,
+      "ppid": 1,
+      "state": "S",
+      "comm": "proot",
+      "entry": ""
+    },
+    {
+      "pid": 2394,
+      "ppid": 2393,
+      "state": "S",
+      "comm": "Xorg",
+      "entry": ""
+    },
+    {
+      "pid": 48673,
+      "ppid": 1,
+      "state": "S",
+      "comm": "openlet-light-c",
+      "entry": "/root/openlet-light-chain.sh"
+    },
+    {
+      "pid": 48828,
+      "ppid": 48676,
+      "state": "S",
+      "comm": "python",
+      "entry": "/content/openlet/scripts/run_act_closed_loop_eval.py"
+    },
+    {
+      "pid": 48837,
+      "ppid": 48828,
+      "state": "S",
+      "comm": "python",
+      "entry": "/content/openlet/scripts/evaluate_act_baseline.py"
+    },
+    {
+      "pid": 48901,
+      "ppid": 48837,
+      "state": "S",
+      "comm": "proot",
+      "entry": ""
+    },
+    {
+      "pid": 48902,
+      "ppid": 48901,
+      "state": "t",
+      "comm": "python",
+      "entry": "/content/openlet/scripts/launch_act_deploy.py"
+    }
+  ]
+}

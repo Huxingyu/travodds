@@ -26,7 +26,7 @@ Writer 捕获失败不留下已注册实例，不消费应用 Writer Loan，修�
 
 ## 当前验证与证据
 
-证据根目录为 `/home/ubuntu/project/travodds/artifacts/completion-20261030/`，以下路径相对于此目录。运行器记录命令、退出、资源、XML、317 个源码/构建输入 SHA-256 与实际动态库 SHA-256，并在结束时复核输入和库未变；文档和 README 不参与构建身份。全部编译串行执行，编译进程地址空间上限 768 MiB。当前汇总审计入口为 [final-verification.json](/home/ubuntu/project/travodds/artifacts/completion-20261030/final-verification.json)，`passed=true`。该快照生成于 `2026-10-30T12:24:53.152984Z`：三套 317 项冻结输入一致，每套 68 个纳入清单的安装公共头与源码一致，10 个二进制均链接各自的私有库；当时 `/dev/shm/travodds*` 为空，证据根目录下没有仍在执行的测试程序。审计逻辑见 [final-audit.py](/home/ubuntu/project/travodds/artifacts/completion-20261030/final-audit.py)，只核对现有产物，不重编或重跑测试，并拒绝覆盖已有汇总。
+证据根目录为 `/home/ubuntu/project/travodds/artifacts/completion-20261030/`，以下路径相对于此目录。运行器记录命令、退出、资源、XML、317 个源码/构建输入 SHA-256 与实际动态库 SHA-256，并在结束时复核输入和库未变；文档和 README 不参与构建身份。全部编译串行执行，编译进程地址空间上限 768 MiB。当前汇总审计入口为 final-verification.json：`/home/ubuntu/project/travodds/artifacts/completion-20261030/final-verification.json`（本机证据，不随仓库分发），`passed=true`。该快照生成于 `2026-10-30T12:24:53.152984Z`：三套 317 项冻结输入一致，每套 68 个纳入清单的安装公共头与源码一致，10 个二进制均链接各自的私有库；当时 `/dev/shm/travodds*` 为空，证据根目录下没有仍在执行的测试程序。审计逻辑见 final-audit.py：`/home/ubuntu/project/travodds/artifacts/completion-20261030/final-audit.py`（本机证据，不随仓库分发），只核对现有产物，不重编或重跑测试，并拒绝覆盖已有汇总。
 
 | 验证 | 当前结果 | 证据 |
 |---|---|---|

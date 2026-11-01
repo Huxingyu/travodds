@@ -66,7 +66,7 @@ ASan 首次测试构建失败于 GoogleTest 自动枚举继承了编译器地址
 
 磁盘紧张时仅删除本轮 ASan 生产库的 96 个生成对象缓存，约 153.5 MiB，保留源码、库、可执行测试、哈希及完整日志。清理前后库 SHA-256 一致，记录为 `asan-object-cache-cleanup.json`。
 
-原有协作代理被 `401 USER_INACTIVE` 中断。另按 [claude 技能](/home/ubuntu/.codex/skills/claude/SKILL.md) 请求只读独立审查，但账号返回 `You've hit your weekly limit`，未产生专家审查结论。问题和诊断保留在 `/home/ubuntu/Library/Application Support/AI Expert Reviews/claude-20261030-002947.z9cmmpxt/`；本轮不宣称获得了最终独立专家批准，重要交错由主线程复查并以回归验证。
+原有协作代理被 `401 USER_INACTIVE` 中断。另按 claude 技能：`/home/ubuntu/.codex/skills/claude/SKILL.md`（本机证据，不随仓库分发） 请求只读独立审查，但账号返回 `You've hit your weekly limit`，未产生专家审查结论。问题和诊断保留在 `/home/ubuntu/Library/Application Support/AI Expert Reviews/claude-20261030-002947.z9cmmpxt/`；本轮不宣称获得了最终独立专家批准，重要交错由主线程复查并以回归验证。
 
 ## 重现
 

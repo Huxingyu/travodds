@@ -1,6 +1,6 @@
 # 普通序列化载荷池配置
 
-本轮增加 DataReaderQos::payload_pool，与既有 DataWriterQos::payload_pool 一起控制本地普通 CDR/RTPS history 载荷。19 项 Reader 回归已在正式模块 245 项及独立 ASan/UBSan、TSan 中通过，包含真实接收、分片、配置和寿命验证；本轮证据见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)。普通池与 data_sharing 共享槽位预算独立，不参与端点发现，也不要求远端端点采用同样配置。
+DataReaderQos::payload_pool 与 DataWriterQos::payload_pool 一起控制本地普通 CDR/RTPS history 载荷。19 项 Reader 回归包含真实接收、分片、配置和寿命验证，已在受测代码 `f32da83` 的 259 项模块中核实：plain、coverage、ASan/UBSan、TSan 四模式均包含这 19 项且通过，见 [11/1 报告](DATASHARING-PROGRESS-20261101.md)。245 项属于 [10/31 历史轮次](DATASHARING-PROGRESS-20261031.md)。普通池与 data_sharing 共享槽位预算独立，不参与端点发现，也不要求远端端点采用同样配置。
 
 ```cpp
 DataWriterQos qos;
@@ -50,4 +50,4 @@ XML 写法：
 
 Reader 在 datareader_qos 下使用同名 payload_pool 节及相同字段。支持 profile 继承与部分字段覆盖；未知字段、重复字段/段、属性、非法嵌套、负数、数值溢出和不一致配置会使 XML 加载失败。配置是本地预算；Reader 的原生共享映射继续由 data_sharing 管理。
 
-本轮验证状态见 [10/31 报告](DATASHARING-PROGRESS-20261031.md)；普通池回归不能代替 DataSharing 端到端和性能验收。
+当前验证状态见 [11/1 报告](DATASHARING-PROGRESS-20261101.md)和[验收矩阵](DATASHARING-ACCEPTANCE.md)；普通池回归不能代替 DataSharing 端到端和性能验收。

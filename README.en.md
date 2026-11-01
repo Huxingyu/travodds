@@ -1,5 +1,7 @@
 # TravoDDS
 
+This branch includes DataSharing, PayloadPool and Loan APIs. See the [acceptance matrix](docs/DATASHARING-ACCEPTANCE.md), [finite examples](example/cpp/data_sharing/README.md) and [testing guide](docs/DATASHARING-TESTING.md).
+
 #### Description
 AGIROS开源社区自研DDS
 

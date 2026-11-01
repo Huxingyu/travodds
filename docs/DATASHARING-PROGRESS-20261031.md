@@ -15,7 +15,7 @@
 | 第 1 项：Reader 普通载荷池 | 为 Reader 增加本地 payload_pool 配置，在普通 RTPS history 准入边界将完整 CDR 分片链事务性转入 Topic 池；配置相同的同 domain/topic/type Reader/Writer 复用池，native SharedReadLoan 直接保留 | **19 项 Reader 回归在正式模块 245 项、ASan/UBSan 及 TSan 中通过**，包含真实 RTPS/分片、池共享/隔离/冲突、原池归还、耗尽回滚、MultiTopic 与删除后缓存寿命 |
 | 第 5 项：借出时不初始化完整载荷 | TypeSupport 增加保守默认 false 的 supports_native_uninitialized_sample()；NativeTypeSupport 仅对 trivially default constructible 类型默认允许，以 placement new T 开始对象寿命，不使用 T{} 清零 | **10 项无初始化回归在正式模块、ASan/UBSan 及 TSan 中通过**，包括逐字节哨兵、槽位复用、类型门控及真实 DDS Loan |
 | 旧 native 对端隔离 | discovery v4 表示同时满足无初始化及 key-only 门控；v1/v2/v3 不选择 native，保留普通 RTPS；共享布局仍为 v6 | 正式模块中的旧协议隔离与当前门控回归通过；旧 v3 结果不用于证明新契约 |
-| 可移交证据 | 小型原始 JSON/XML/log、冻结源码哈希及相对索引可独立打包；大库/二进制/对象缓存留在原构建目录，重建时重新生成 | [当前主包](../../../artifacts/portable-evidence-20261031/native-v4-final-review/README.md) 与 [历史补充包](../../../artifacts/portable-evidence-20261031/native-v4-history-review/README.md) 已生成；前者严格匹配当前源码，后者保留四次失败与两次诊断 |
+| 可移交证据 | 小型原始 JSON/XML/log、冻结源码哈希及相对索引可独立打包；大库/二进制/对象缓存留在原构建目录，重建时重新生成 | 当前主包：`artifacts/portable-evidence-20261031/native-v4-final-review/README.md`（本机证据，不随仓库分发） 与 历史补充包：`artifacts/portable-evidence-20261031/native-v4-history-review/README.md`（本机证据，不随仓库分发） 已生成；前者严格匹配当前源码，后者保留四次失败与两次诊断 |
 
 Reader Topic 池预算仅约束转入 history 的普通 CDR 载荷分片，不把 transport 接收整包、独立 CDR key snapshot 或 native 共享槽位混入同一预算。原始接收缓冲继续归其原池；任何准入分配失败必须归还已分配分片，不留下半条 history 样本。具体 QoS、预算与不可变性见 [普通池手册](PAYLOADPOOL-QOS.md)。
 
@@ -35,7 +35,7 @@ asan-final/results.json 已为 passed=true，11 个命令均退出 0，独立生
 
 tsan-final/results.json 已为 passed=true，使用独立 build-tsan 重新构建，11 个命令均退出 0，相同 **86/86 项 focused 通过**，无 race 报告；失败/错误/禁用/跳过均为 0，结果完成于 `2026-10-31T06:10:00.062875Z`。构建将 GoogleTest 枚举延迟至 PRE_TEST；本轮直接运行测试 binary，TSan 实际测试以 setarch x86_64 -R 执行，设置 TSAN_OPTIONS=halt_on_error=1:exitcode=66。两个检查版均绑定当前冻结源码；focused 不代表完整 DDS 套件，也不证明所有线程交错无竞争。
 
-[最终审计原始记录](../../../artifacts/portable-evidence-20261031/native-v4-final-review/records/04-current-audit-metadata/final-verification.json) 于 `2026-10-31T06:10:27.599189Z` 记录 passed=true：三模式 321 项源码哈希相同，每模式 68 个安装头匹配，16 个程序链接各自私有生产库，生产库/GTest/测试插桩与编译链接证据符合各自模式。审计同时核对 137 项预正式覆盖率计数归档的成员名称/大小/哈希、资源及缓存清理记录、9 次示例、覆盖率算术和变更翻译单元；临时 swap 已移除，遗留共享文件与当前验收程序均为 0。完整审计依赖原构建库、程序、覆盖率缓存与宿主状态；小包保留其原始结果及脚本，便携校验不会冒充重新执行完整审计。
+最终审计原始记录：`artifacts/portable-evidence-20261031/native-v4-final-review/records/04-current-audit-metadata/final-verification.json`（本机证据，不随仓库分发） 于 `2026-10-31T06:10:27.599189Z` 记录 passed=true：三模式 321 项源码哈希相同，每模式 68 个安装头匹配，16 个程序链接各自私有生产库，生产库/GTest/测试插桩与编译链接证据符合各自模式。审计同时核对 137 项预正式覆盖率计数归档的成员名称/大小/哈希、资源及缓存清理记录、9 次示例、覆盖率算术和变更翻译单元；临时 swap 已移除，遗留共享文件与当前验收程序均为 0。完整审计依赖原构建库、程序、覆盖率缓存与宿主状态；小包保留其原始结果及脚本，便携校验不会冒充重新执行完整审计。
 
 | 已通过的当前产物（相对本轮证据根） | SHA-256 |
 |---|---|
@@ -113,10 +113,10 @@ nice -n 19 ionice -c 2 -n 7 python3 tools/ospp/production_lockfree_verify.py \
 
 | 已生成的小包 | 压缩字节数 | 归档 SHA-256 | manifest.json SHA-256 |
 |---|---|---|---|
-| [当前主包](../../../artifacts/portable-evidence-20261031/native-v4-final-review.tar.gz) / [相对索引](../../../artifacts/portable-evidence-20261031/native-v4-final-review/README.md) | 319712 | `16eebf15b37fc460db8439bdb608ed28c2ea85ca31304d58e7c6121f3bcdc627` | `c3ced7838c57db467226b94160b49a6079ed9484888240a5a27b66e35c0de4d6` |
-| [历史补充包](../../../artifacts/portable-evidence-20261031/native-v4-history-review.tar.gz) / [相对索引](../../../artifacts/portable-evidence-20261031/native-v4-history-review/README.md) | 285651 | `5c79838a532785b09fb5d1a1b6a0505350eebca4697429bf1ea0f292282d785b` | `b3dfc4e3ec2d4ab617e9cc253060cc3a5a0b7006c5873313a5ad20bf60bd9cbb` |
+| 当前主包：`artifacts/portable-evidence-20261031/native-v4-final-review.tar.gz`（本机证据，不随仓库分发） / 相对索引：`artifacts/portable-evidence-20261031/native-v4-final-review/README.md`（本机证据，不随仓库分发） | 319712 | `16eebf15b37fc460db8439bdb608ed28c2ea85ca31304d58e7c6121f3bcdc627` | `c3ced7838c57db467226b94160b49a6079ed9484888240a5a27b66e35c0de4d6` |
+| 历史补充包：`artifacts/portable-evidence-20261031/native-v4-history-review.tar.gz`（本机证据，不随仓库分发） / 相对索引：`artifacts/portable-evidence-20261031/native-v4-history-review/README.md`（本机证据，不随仓库分发） | 285651 | `5c79838a532785b09fb5d1a1b6a0505350eebca4697429bf1ea0f292282d785b` | `b3dfc4e3ec2d4ab617e9cc253060cc3a5a0b7006c5873313a5ad20bf60bd9cbb` |
 
-两包从归档解压到新的目录，321 项源码也复制到独立位置，分别使用包内自带 verifier 校验，均退出 0；[搬迁复核原始记录](../../../artifacts/portable-evidence-20261031/native-v4-relocation-verification.json) 保留精确命令和源码差异。以下为生成主包及搬迁后复核的等价命令，路径相对于交付目录；重新打包必须选新的输出名：
+两包从归档解压到新的目录，321 项源码也复制到独立位置，分别使用包内自带 verifier 校验，均退出 0；搬迁复核原始记录：`artifacts/portable-evidence-20261031/native-v4-relocation-verification.json`（本机证据，不随仓库分发） 保留精确命令和源码差异。以下为生成主包及搬迁后复核的等价命令，路径相对于交付目录；重新打包必须选新的输出名：
 
 ```bash
 python3 tools/ospp/package_evidence.py package \

@@ -1,0 +1,386 @@
+{
+  "allocation": {
+    "cpu": 2,
+    "memory_mib": 4096
+  },
+  "function_timeout_seconds": 600,
+  "command_budget_seconds": 540,
+  "retry_policy": "One invocation, retries=0; each before/after runs once",
+  "input_sha256": {
+    "baseline-source.tar.gz": "7abeea88072d5920bd297491ce41a6c35f145b5e3052cbab4a41ad9f15f7746b",
+    "baseline-source.json": "4546f1c3ffcdeec32b464cc85de5a35793fc9e29912f5e3a88e7497264758201",
+    "baseline-inputs.json": "fb9f8b83a3d030982f8e77f66db25300d6ac244e7576edb19e6f2541e25c1cb4",
+    "prepare.py": "f3e79ffdb80a14a4a2d4941141d5496248aa4278a2993209a8ac4adc50bc3d0e",
+    "cpp_lexer.py": "f06f9568f244e263548d6b038ffb4f8105425867a5d4393c40b0a25ef6654ac4",
+    "hook.cpp": "47b15daeff59d613afbaef1e88fa8a3155f104f802c6ecbdef89e28bed4e4d3d",
+    "hook.h": "617e969a425d0a9ec45a360ba6c78729af142ce826005e79a31920e6a962ed90",
+    "run.py": "fdb4f059c81224f67d3cc36e86a2aaa486358a457f80fbbc0eb7c51a7b8adb8e",
+    "modal_diagnose.py": "6d12c330a4489821ff7f5382a5ecdd29344b321d12050ed68ddb1b30d72f490f",
+    "reviewed-generated-manifest.json": "170e3f5e55b856bc6f36fe79b9efeae4dd566a342969d0b20c9340e477883cfb"
+  },
+  "commands": [
+    {
+      "label": "compiler-version",
+      "argv": [
+        "g++",
+        "--version"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.007759148999999965,
+      "log_sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8"
+    },
+    {
+      "label": "extract",
+      "argv": [
+        "tar",
+        "xzf",
+        "/opt/baseline-source.tar.gz",
+        "-C",
+        "/diagnosis/src"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.4688210719999999,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prepare",
+      "argv": [
+        "python3",
+        "/opt/prepare.py",
+        "--source",
+        "/diagnosis/src",
+        "--output",
+        "/diagnosis/prepared"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 1.7474123559999999,
+      "log_sha256": "669bd2892a264786bd76fd76b4d7e2f374b94c6ff9e2ffc357563e165c7612e3"
+    },
+    {
+      "label": "configure-library",
+      "argv": [
+        "cmake",
+        "-S",
+        "/diagnosis/src",
+        "-B",
+        "/diagnosis/library",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_CXX_FLAGS_RELEASE=-O0 -g1 -fno-omit-frame-pointer -fno-optimize-sibling-calls -DNDEBUG --param=ggc-min-expand=15 --param=ggc-min-heapsize=16384",
+        "-DCMAKE_INSTALL_PREFIX=/diagnosis/install"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 1.2328982970000002,
+      "log_sha256": "86789dce1f148769f4148892ab340f72050e33711f1ba7f31a26b16065fc2d5e"
+    },
+    {
+      "label": "build-library",
+      "argv": [
+        "cmake",
+        "--build",
+        "/diagnosis/library",
+        "--parallel",
+        "2",
+        "--target",
+        "install"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 99.788298876,
+      "log_sha256": "7766c138823cdab55484afe80cfd1b2fcf8c23cf0f6b9e9a225187072dba0992"
+    },
+    {
+      "label": "library-elf",
+      "argv": [
+        "readelf",
+        "-h",
+        "-n",
+        "-S",
+        "-W",
+        "/diagnosis/install/lib/libtravodds.so.1.1.0"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.020554942999993386,
+      "log_sha256": "e6ba2309c84075629e851c4135aa3161da789c251f4198747c4359ade2ea1480"
+    },
+    {
+      "label": "library-dynamic-symbols",
+      "argv": [
+        "nm",
+        "-D",
+        "/diagnosis/install/lib/libtravodds.so.1.1.0"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.06694046600000547,
+      "log_sha256": "6cd918abbb5aeee76d7d2459083fdab4f4cb08f8f3ba3e2539130f719c66e99d"
+    },
+    {
+      "label": "configure-gtest",
+      "argv": [
+        "cmake",
+        "-S",
+        "/diagnosis/src/test/unit_payloadpool",
+        "-B",
+        "/diagnosis/tests",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_CXX_FLAGS_RELEASE=-O0 -g1 -fno-omit-frame-pointer -fno-optimize-sibling-calls -DNDEBUG --param=ggc-min-expand=15 --param=ggc-min-heapsize=16384",
+        "-DCMAKE_PREFIX_PATH=/diagnosis/install"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 1.8807637770000127,
+      "log_sha256": "e9205deae19cb52d36e6f9d759aa00915c69042afbdc2ca29fe360f06ee7f0d1"
+    },
+    {
+      "label": "build-gtest",
+      "argv": [
+        "cmake",
+        "--build",
+        "/diagnosis/tests",
+        "--parallel",
+        "2",
+        "--target",
+        "gtest_main"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 7.524147288999998,
+      "log_sha256": "42c2d821da5a65187ac087e2d6d7fbf1cbf3fe471a4c1c6f746b5e648c393a9d"
+    },
+    {
+      "label": "compile-before",
+      "argv": [
+        "g++",
+        "-I/diagnosis/src/test/unit_payloadpool/../../src",
+        "-I/diagnosis/src/test/unit_payloadpool/../../example/cpp/hello_world",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/tao",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/asio-1.13.0/include",
+        "-isystem",
+        "/diagnosis/install/include/travodds",
+        "-isystem",
+        "/diagnosis/tests/_deps/googletest-src/googletest/include",
+        "-isystem",
+        "/diagnosis/tests/_deps/googletest-src/googletest",
+        "-O0",
+        "-g1",
+        "-fno-omit-frame-pointer",
+        "-fno-optimize-sibling-calls",
+        "-DNDEBUG",
+        "--param=ggc-min-expand=15",
+        "--param=ggc-min-heapsize=16384",
+        "-std=gnu++17",
+        "-I/opt",
+        "-rdynamic",
+        "/diagnosis/prepared/loan-before.cpp",
+        "/opt/hook.cpp",
+        "/diagnosis/install/lib/libtravodds.so.1.1.0",
+        "/diagnosis/tests/lib/libgtest_main.a",
+        "/diagnosis/tests/lib/libgtest.a",
+        "-pthread",
+        "-ldl",
+        "-Wl,-rpath,/diagnosis/install/lib",
+        "-o",
+        "/diagnosis/result/loan-before"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 6.00832170999999,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "binary-symbols-before",
+      "argv": [
+        "nm",
+        "-D",
+        "/diagnosis/result/loan-before"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.01793638800000963,
+      "log_sha256": "fd35ab4db95f97b22ff183b1cdfef5bed54ce3495bba0d385e9297c03ae2913b"
+    },
+    {
+      "label": "binary-elf-before",
+      "argv": [
+        "readelf",
+        "-h",
+        "-n",
+        "-S",
+        "-W",
+        "/diagnosis/result/loan-before"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.009273627000013107,
+      "log_sha256": "08addb4a9b94c0d12c7c9b591cf8ea7ec964e2e92368d572632b340be8f9730f"
+    },
+    {
+      "label": "experiment-before",
+      "argv": [
+        "python3",
+        "/opt/run.py",
+        "--binary",
+        "/diagnosis/result/loan-before",
+        "--library-dir",
+        "/diagnosis/install/lib",
+        "--manifest",
+        "/diagnosis/prepared/manifest.json",
+        "--mode",
+        "before",
+        "--output",
+        "/diagnosis/result/before"
+      ],
+      "timeout_seconds": 90,
+      "exit_code": 0,
+      "seconds": 2.2468764300000004,
+      "log_sha256": "177d4be34775c24c8fc6b3a7816ca81ae0b132aaa233b660f4bb42dc2f3f026a"
+    },
+    {
+      "label": "compile-after",
+      "argv": [
+        "g++",
+        "-I/diagnosis/src/test/unit_payloadpool/../../src",
+        "-I/diagnosis/src/test/unit_payloadpool/../../example/cpp/hello_world",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/tao",
+        "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/asio-1.13.0/include",
+        "-isystem",
+        "/diagnosis/install/include/travodds",
+        "-isystem",
+        "/diagnosis/tests/_deps/googletest-src/googletest/include",
+        "-isystem",
+        "/diagnosis/tests/_deps/googletest-src/googletest",
+        "-O0",
+        "-g1",
+        "-fno-omit-frame-pointer",
+        "-fno-optimize-sibling-calls",
+        "-DNDEBUG",
+        "--param=ggc-min-expand=15",
+        "--param=ggc-min-heapsize=16384",
+        "-std=gnu++17",
+        "-I/opt",
+        "-rdynamic",
+        "/diagnosis/prepared/loan-after.cpp",
+        "/opt/hook.cpp",
+        "/diagnosis/install/lib/libtravodds.so.1.1.0",
+        "/diagnosis/tests/lib/libgtest_main.a",
+        "/diagnosis/tests/lib/libgtest.a",
+        "-pthread",
+        "-ldl",
+        "-Wl,-rpath,/diagnosis/install/lib",
+        "-o",
+        "/diagnosis/result/loan-after"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 6.217283624999993,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "binary-symbols-after",
+      "argv": [
+        "nm",
+        "-D",
+        "/diagnosis/result/loan-after"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.017863852000004954,
+      "log_sha256": "2e1ada81b4580b46ef97cb76700000ad99ea827aa9b5da07a078912e76a9f27d"
+    },
+    {
+      "label": "binary-elf-after",
+      "argv": [
+        "readelf",
+        "-h",
+        "-n",
+        "-S",
+        "-W",
+        "/diagnosis/result/loan-after"
+      ],
+      "timeout_seconds": 300,
+      "exit_code": 0,
+      "seconds": 0.009084091000005401,
+      "log_sha256": "692aa2f1c7e6a9daeb483ef6986600a151f7c33889b05073f88c959f8d1da247"
+    },
+    {
+      "label": "experiment-after",
+      "argv": [
+        "python3",
+        "/opt/run.py",
+        "--binary",
+        "/diagnosis/result/loan-after",
+        "--library-dir",
+        "/diagnosis/install/lib",
+        "--manifest",
+        "/diagnosis/prepared/manifest.json",
+        "--mode",
+        "after",
+        "--output",
+        "/diagnosis/result/after"
+      ],
+      "timeout_seconds": 90,
+      "exit_code": 0,
+      "seconds": 2.3518621919999987,
+      "log_sha256": "e250675e725c1fc87565dd58eec905dd55500d7a293066bfc0d459565dcc66b5"
+    }
+  ],
+  "passed": true,
+  "started_utc": "2026-11-01T09:46:07.610676+00:00",
+  "shm_before": [],
+  "source_commit": "0bbeaed256840465489a965187ca50df1336ed65",
+  "prepared_manifest_sha256": "481e977027e667c4ca375fe2107158ddc9c6a00f5557de6bba2c4603fc0d54c4",
+  "source_sha256": {
+    "test/unit_payloadpool/test_loan.cpp": "058a908fc324318067b74a4753ca4730b5476b082769d8eeedac3b001e463939",
+    "src/common/memory/sharedpayloadpool.cpp": "2cea31561dbd6dcdf99a8c07dbec7ff9b4f84d461ffb75d42d23329f51c54571",
+    "src/common/memory/sharedpayloadpool_layout.h": "6b01b60d85bf5f268aec6014a2a2955f8be95aaf804e6a918dfc58cb67ded33d"
+  },
+  "compile_flags": "-O0 -g1 -fno-omit-frame-pointer -fno-optimize-sibling-calls -DNDEBUG --param=ggc-min-expand=15 --param=ggc-min-heapsize=16384",
+  "library_sha256": "e9018dafca6c22e6fa4570276ef4d0e92c38e995a4c555466e2f209f7477617c",
+  "test_flags": {
+    "CXX_DEFINES": [],
+    "CXX_INCLUDES": [
+      "-I/diagnosis/src/test/unit_payloadpool/../../src",
+      "-I/diagnosis/src/test/unit_payloadpool/../../example/cpp/hello_world",
+      "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty",
+      "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/tao",
+      "-I/diagnosis/src/test/unit_payloadpool/../../thirdparty/asio-1.13.0/include",
+      "-isystem",
+      "/diagnosis/install/include/travodds",
+      "-isystem",
+      "/diagnosis/tests/_deps/googletest-src/googletest/include",
+      "-isystem",
+      "/diagnosis/tests/_deps/googletest-src/googletest"
+    ],
+    "CXX_FLAGS": [
+      "-O0",
+      "-g1",
+      "-fno-omit-frame-pointer",
+      "-fno-optimize-sibling-calls",
+      "-DNDEBUG",
+      "--param=ggc-min-expand=15",
+      "--param=ggc-min-heapsize=16384",
+      "-std=gnu++17"
+    ]
+  },
+  "binaries": {
+    "before": {
+      "sha256": "e42b7096e5a7a44877286691b5f68ff64d086187a14bb98fddad01c97aa4c5bc",
+      "generated_source_sha256": "bcf3a902e8c5a3bbc9f39d3f0a5310bbc59c924519240ae5c8e982620b63aee7"
+    },
+    "after": {
+      "sha256": "e39be1cd1061287f92f7a30a784156f9fb7610edac0b62adc3dfcd9c16af0a98",
+      "generated_source_sha256": "8a2fd1b239abfac0478085cb433e2943a3324b47c6c477ea709847ec1d3152ad"
+    }
+  },
+  "elapsed_seconds": 129.772961946,
+  "completed_utc": "2026-11-01T09:48:17.383635+00:00",
+  "shm_after": [],
+  "shm_added": []
+}

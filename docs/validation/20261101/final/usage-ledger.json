@@ -1,0 +1,80 @@
+{
+  "entries": [
+    {
+      "label": "statistics",
+      "reserved_seconds": 600.0,
+      "settled": true,
+      "observed_seconds": 2.524984336,
+      "downloaded_bytes": 160422
+    },
+    {
+      "label": "statistics-v2",
+      "reserved_seconds": 600.0,
+      "settled": true,
+      "observed_seconds": 129.772961946,
+      "downloaded_bytes": 11174786
+    },
+    {
+      "label": "plain",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 230.949594,
+      "downloaded_bytes": 21409744
+    },
+    {
+      "label": "coverage",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 273.913991,
+      "downloaded_bytes": 43637742
+    },
+    {
+      "label": "asan",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 280.445776,
+      "downloaded_bytes": 48157853
+    },
+    {
+      "label": "tsan",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 159.364746,
+      "downloaded_bytes": 19738587
+    },
+    {
+      "label": "round2-tsan",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 224.738424,
+      "downloaded_bytes": 19811608
+    },
+    {
+      "label": "round2-plain",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 245.46656,
+      "downloaded_bytes": 21453883
+    },
+    {
+      "label": "round2-coverage",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 288.520155,
+      "downloaded_bytes": 43791528
+    },
+    {
+      "label": "round2-asan",
+      "reserved_seconds": 900.0,
+      "settled": true,
+      "observed_seconds": 340.873607,
+      "downloaded_bytes": 48265837
+    }
+  ],
+  "not_invoice": true,
+  "updated_utc": "2026-11-01T10:42:05.072493+00:00",
+  "total_observed_or_reserved_seconds": 2176.570799282,
+  "requested_allocation_plus_egress_usd": 0.086696,
+  "conservative_including_reserve_usd": 0.488881,
+  "budget_usd": 1
+}

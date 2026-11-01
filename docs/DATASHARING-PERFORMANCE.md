@@ -1,12 +1,12 @@
 # DataSharing 性能（f32da83，2026-11-01，布局 v7 / discovery v5）
 
-本次在本机真实内核连续执行 **`0bbeaed → f32da83 → 0bbeaed`**，每组 27 次，合计 **81/81 自然退出成功**，没有失败重试或环境作废重跑。所有载荷字段/CDR 计数、独立进程身份、配置、吞吐算术和 81 份原始日志由原比较器及独立审计核验通过。受测实现为 `f32da8390b0af07500f67eb1d0a1279a9c968f4f`；两基线生产字节与 `0caef22` 一致，`0bbeaed` 是后续文档提交。新证据全部在 `artifacts/datasharing-perf-f32da83/attempt2/`：[原始计量](../../../artifacts/datasharing-perf-f32da83/attempt2/measurement.json)、[三组数值与噪声判定](../../../artifacts/datasharing-perf-f32da83/attempt2/comparison-three-groups.json)、[独立复核](../../../artifacts/datasharing-perf-f32da83/attempt2/result-independent-review.json)。
+本次在本机真实内核连续执行 **`0bbeaed → f32da83 → 0bbeaed`**，每组 27 次，合计 **81/81 自然退出成功**，没有失败重试或环境作废重跑。所有载荷字段/CDR 计数、独立进程身份、配置、吞吐算术和 81 份原始日志由原比较器及独立审计核验通过。受测实现为 `f32da8390b0af07500f67eb1d0a1279a9c968f4f`；两基线生产字节与 `0caef22` 一致，`0bbeaed` 是后续文档提交。新证据全部在 `artifacts/datasharing-perf-f32da83/attempt2/`：原始计量：`artifacts/datasharing-perf-f32da83/attempt2/measurement.json`（本机证据，不随仓库分发）、[三组数值与噪声判定](validation/20261101/performance/attempt2/comparison-three-groups.json)、独立复核：`artifacts/datasharing-perf-f32da83/attempt2/result-independent-review.json`（本机证据，不随仓库分发）。
 
 方法保持上一轮原样：`tools/ospp/benchmark.py --rounds 3`，64/4096/65536 B × rtps/ordinary/loan，三轮轮换；RELIABLE、KEEP_LAST16、64 槽、每 8 条确认，预热 32 条，正式计量 256/256/128 条。吞吐包含填充、完整校验、控制与调度；延迟从 write 前单调时钟到 take 后/完整校验前，nearest-rank 分位数取三轮中位，RSS 取每角色三轮最大。旧中止的 9 项数据不参与本轮比较或噪声计算。
 
-本机 Ubuntu、2 vCPU/约 1.9 GiB RAM、g++ 13.3，jobs=1、nice=19、CPU 亲和 `[0,1]`。本轮不编译，按 SHA 复用前次 `-O3 -g0 -DNDEBUG` 产物：同一 driver SHA `9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d`，基准私库 SHA `fdf017da754b7be7db5440f2dfc87f6aaea6cd2c6a679f630676c1551118df88`，目标私库 SHA `7ed3c24c732b236a4a89ec0aa44dfae0778487f3a5795e1dfbab1f57fc44dda6`。前次本机 512 MiB 编译限额下只重编 ReaderProxy 并重新链接，基准复现原库字节；本轮两私库 ELF/SONAME、5444 个导出符号名称/类型及 LD_LIBRARY_PATH/ldd 解析重核一致。公共头文件与 ABI 未改；旧构建缺失的 thirdparty/系统历史 SHA 没有补证，[复用依据](../../../artifacts/datasharing-perf-f32da83/attempt2/runtime-provenance.json)保留该限制。
+本机 Ubuntu、2 vCPU/约 1.9 GiB RAM、g++ 13.3，jobs=1、nice=19、CPU 亲和 `[0,1]`。本轮不编译，按 SHA 复用前次 `-O3 -g0 -DNDEBUG` 产物：同一 driver SHA `9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d`，基准私库 SHA `fdf017da754b7be7db5440f2dfc87f6aaea6cd2c6a679f630676c1551118df88`，目标私库 SHA `7ed3c24c732b236a4a89ec0aa44dfae0778487f3a5795e1dfbab1f57fc44dda6`。前次本机 512 MiB 编译限额下只重编 ReaderProxy 并重新链接，基准复现原库字节；本轮两私库 ELF/SONAME、5444 个导出符号名称/类型及 LD_LIBRARY_PATH/ldd 解析重核一致。公共头文件与 ABI 未改；旧构建缺失的 thirdparty/系统历史 SHA 没有补证，复用依据：`artifacts/datasharing-perf-f32da83/attempt2/runtime-provenance.json`（本机证据，不随仓库分发）保留该限制。
 
-计量北京时间 **19:43:12–19:43:51**，三组用时 11.001/13.984/14.158 s，组间仅约 41/51 ms 的前后快照与记录。新监控仅在整组前后读取 `/proc`，排除 zombie 与本任务进程树，计量期间没有采样线程或额外监控进程，也没有终止计量的调用；原 runner 的 60 s 单项超时机制保持原样。运行前 2.1 s 预检负载 0.73、外部 CPU 合计 18.91% 单核、iowait 1.19%，未发现编译/其他 DDS 测试；前后快照不能排除整组内部短命外部干扰，不声称专机隔离。[新监控审计](../../../artifacts/datasharing-perf-f32da83/attempt2/monitor-review.json)保存 AST/合成进程树验证。
+计量北京时间 **19:43:12–19:43:51**，三组用时 11.001/13.984/14.158 s，组间仅约 41/51 ms 的前后快照与记录。新监控仅在整组前后读取 `/proc`，排除 zombie 与本任务进程树，计量期间没有采样线程或额外监控进程，也没有终止计量的调用；原 runner 的 60 s 单项超时机制保持原样。运行前 2.1 s 预检负载 0.73、外部 CPU 合计 18.91% 单核、iowait 1.19%，未发现编译/其他 DDS 测试；前后快照不能排除整组内部短命外部干扰，不声称专机隔离。新监控审计：`artifacts/datasharing-perf-f32da83/attempt2/monitor-review.json`（本机证据，不随仓库分发）保存 AST/合成进程树验证。
 
 噪声规则在计量前固定：逐项取 `N=abs(基线2−基线1)`，目标须位于两基线中位数区间之外、同方向偏离两侧，且相对两侧绝对差值都**严格大于 N**，才记为“超出本次观察噪声”。百分比变化为 `100×(目标/对应基线−1)`；表中基线差幅为 `100×N/基线1`。这不是置信区间或显著性检验。
 
@@ -54,9 +54,9 @@
 
 本次只更新三份文档，不改生产代码、测试、原 benchmark driver/runner，不改写前次 `553ac93`。旧中止现场与原有报告全部保留；TASK2 已明确它是编排误杀而非 benchmark 失败，并授权本次重跑。原轮没有因此改写成成功。
 
-[上次波动诊断](../../../artifacts/datasharing-perf-f32da83/attempt2/prior-noise-review.md)、[10/28参照差值](../../../artifacts/datasharing-perf-f32da83/attempt2/comparison-20261028/comparison.md)、[三组RSS与完整报告](../../../artifacts/datasharing-perf-f32da83/attempt2/REPORT.md)。
+上次波动诊断：`artifacts/datasharing-perf-f32da83/attempt2/prior-noise-review.md`（本机证据，不随仓库分发）、10/28参照差值：`artifacts/datasharing-perf-f32da83/attempt2/comparison-20261028/comparison.md`（本机证据，不随仓库分发）、[三组RSS与完整报告](validation/20261101/performance/attempt2/REPORT.md)。
 
-保护与资源核对通过：原轮 69 项证据的路径/lstat/文件 SHA 均保持；三个大保护目录共 9685 项路径及 lstat 元数据未变；5609 项受测输入 SHA 不变。`/dev/shm` 相对本次初始 71 项无新增，两个原有 PostgreSQL 条目由外部任务消失，本任务没有删除共享内存。本次未新增 swap、未连接 ECS、未调用 Modal，费用 **$0**，无本任务 Modal app。详见 [清理与身份审计](../../../artifacts/datasharing-perf-f32da83/attempt2/cleanup-source-audit.json)。本结果仍是两核共享 VM 三轮短测，不是 SLA、最大可持续吞吐或锁的独立因果测量。
+保护与资源核对通过：原轮 69 项证据的路径/lstat/文件 SHA 均保持；三个大保护目录共 9685 项路径及 lstat 元数据未变；5609 项受测输入 SHA 不变。`/dev/shm` 相对本次初始 71 项无新增，两个原有 PostgreSQL 条目由外部任务消失，本任务没有删除共享内存。本次未新增 swap、未连接 ECS、未调用 Modal，费用 **$0**，无本任务 Modal app。详见 清理与身份审计：`artifacts/datasharing-perf-f32da83/attempt2/cleanup-source-audit.json`（本机证据，不随仓库分发）。本结果仍是两核共享 VM 三轮短测，不是 SLA、最大可持续吞吐或锁的独立因果测量。
 
 ## 上一轮已完成测量（2026-11-01，布局 v7 / discovery v5）
 

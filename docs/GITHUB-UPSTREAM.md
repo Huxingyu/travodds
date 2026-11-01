@@ -9,7 +9,8 @@ GitHub 仓库：<https://github.com/Huxingyu/travodds>，迁移时设为私有�
 
 迁移前先将本地浅克隆补齐为完整仓库。迁移时的上游共有 496 个不同提交、7 个分支、11 个标签；上游 `master` 的历史包含 367 个提交，尖端为 `489067108405b27afbd369245542f5e88d457f18`。
 
-- `main`：GitHub 开发主分支，包含本轮 DataSharing 成果与迁移整理。
+- `main`：截至本次文档整理前，本地及 `origin/main` 均为 `3da8e07`，包含 10/28 的 `145648b` DataSharing 快照及迁移整理；尚未合入当前 `f32da83` 及后续 11/1 成果。
+- `work/datasharing-progress`：当前 DataSharing 开发分支，包含最终受测实现 `f32da83`、11/1 验收与性能证据、跨主机回退文档。远端 `origin/work/datasharing-progress` 已到 `efe78ca`；本次文档整理另作本地提交，不自动更新 `main`。
 - `work/ospp-datasharing-bootstrap`：本轮原始实现提交。
 - `datasharing-accepted-20261028`：验收代码快照标签，指向 `145648bd547412e47f64218a0a00723623364dbd`。
 - `master`、`develop`、`feature`、`hotfix`、`master-agiros`、`pixiu`、`release`：保留迁移时同名上游分支。

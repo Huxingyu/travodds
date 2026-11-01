@@ -1,0 +1,2777 @@
+{
+  "schema": 1,
+  "passed": true,
+  "utc": "2026-11-01T11:45:56.318347+00:00",
+  "groups": [
+    "baseline1-0bbeaed",
+    "current-f32da83",
+    "baseline2-0bbeaed"
+  ],
+  "measurement_sha256": "fb9ff63b23cbd4b49e8f41970837250235ae336cf851362edd3e23a302da4716",
+  "plan_sha256": "53745be3406f1258f9d3813f8bdfecb53dca07010becbae15818d120e525fe2e",
+  "identity": {
+    "baseline1-0bbeaed": {
+      "utc": "2026-11-01T11:43:12.478587+00:00",
+      "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+      "libc": [
+        "glibc",
+        "2.39"
+      ],
+      "cpu_count": 2,
+      "binary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/runtime/datasharing_benchmark",
+      "binary_sha256": "9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d",
+      "method": "Same-host independent Writer/Reader processes, RELIABLE KEEP_LAST16, 64 native slots, batches of8 with receiver acknowledgements; 32 warmup samples excluded from timing, every payload word validated. Throughput includes fill/validation/control/scheduling. Latency from monotonic timestamp immediately before write to take before integrity scan; nearest-rank quantiles. Shared VM with swap, no dedicated-host SLA or maximum sustainable-throughput claim.",
+      "nice": null,
+      "summary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/summary.json",
+      "summary_sha256": "29b5907cedcbb179d8c488f3571168d6ed8858afc944050ec1ea215b67968113"
+    },
+    "current-f32da83": {
+      "utc": "2026-11-01T11:43:23.541862+00:00",
+      "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+      "libc": [
+        "glibc",
+        "2.39"
+      ],
+      "cpu_count": 2,
+      "binary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/runtime/datasharing_benchmark",
+      "binary_sha256": "9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d",
+      "method": "Same-host independent Writer/Reader processes, RELIABLE KEEP_LAST16, 64 native slots, batches of8 with receiver acknowledgements; 32 warmup samples excluded from timing, every payload word validated. Throughput includes fill/validation/control/scheduling. Latency from monotonic timestamp immediately before write to take before integrity scan; nearest-rank quantiles. Shared VM with swap, no dedicated-host SLA or maximum sustainable-throughput claim.",
+      "nice": null,
+      "summary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/summary.json",
+      "summary_sha256": "162847bd0bf9eef8fa2741ea17ee4b98bc17201c18042b1d1c86d5265ce2fc80"
+    },
+    "baseline2-0bbeaed": {
+      "utc": "2026-11-01T11:43:37.574738+00:00",
+      "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+      "libc": [
+        "glibc",
+        "2.39"
+      ],
+      "cpu_count": 2,
+      "binary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/runtime/datasharing_benchmark",
+      "binary_sha256": "9ec972c7ee39250d5b23297287ac9dc7cae388cc1038c1a7b16e076e3b33693d",
+      "method": "Same-host independent Writer/Reader processes, RELIABLE KEEP_LAST16, 64 native slots, batches of8 with receiver acknowledgements; 32 warmup samples excluded from timing, every payload word validated. Throughput includes fill/validation/control/scheduling. Latency from monotonic timestamp immediately before write to take before integrity scan; nearest-rank quantiles. Shared VM with swap, no dedicated-host SLA or maximum sustainable-throughput claim.",
+      "nice": null,
+      "summary": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/summary.json",
+      "summary_sha256": "6d8d429ffdcd189480ef862ec84e7e63c9b27a68a164e0d099d019fd89a3cedb"
+    }
+  },
+  "validation": {
+    "baseline1-0bbeaed": {
+      "passed": true,
+      "runs_checked": 27,
+      "cdr_runs_checked": 27,
+      "raw_logs_checked": 27,
+      "raw_log_inputs": [
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-64-rtps.log",
+          "sha256": "ae4d17f36ee37c25e47b60573f95e97aafba4e8af68363e6c65aa6b7bcb8a1d8"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-64-ordinary.log",
+          "sha256": "ddca4c8eb8ecb6203b2120a53443ab819e478d0e34712678f8f9af9986867932"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-64-loan.log",
+          "sha256": "2a8f8ad9fdd99173367c774ae00a6ec2a4b6f8f9df87bdbcc16b06b96804e19a"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-4096-rtps.log",
+          "sha256": "1171a1a291fb2ddd868ec850d9bf67c58ebe993a122892dc1bcd05e6e8ff4135"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-4096-ordinary.log",
+          "sha256": "f2e44db6ebf677fcbbb00d199d180a175bd8803934f16428cbe8a505b44adf12"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-4096-loan.log",
+          "sha256": "bcfced7f235bed5dfb41f42357f7c5de9c3a3bac45ba20a4ada3e84b51e80b56"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-65536-rtps.log",
+          "sha256": "f943b2e918d6cb093033a9b70c27a7cb06bc0a8909dd0239653cf16dbb438c20"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-65536-ordinary.log",
+          "sha256": "06988b855020859a56769f7d00a87b4ac97bde15571cb6cad1c6b9a05b4e1d87"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-01-65536-loan.log",
+          "sha256": "e572b1bb5d82d61a8aa23a5857b2c58f8a40fcf2584e92d0499dcde8364101cd"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-64-ordinary.log",
+          "sha256": "690eba7b42f5aa9bc2fa64213a618e0ac82c7c16ade9a48c2e5b5bd073d75168"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-64-loan.log",
+          "sha256": "5e857941a0a2540ac358d43cc3fa823c8b2e11fbdb8512ceb9befbed3ad4c2dc"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-64-rtps.log",
+          "sha256": "4e0141241caa6e6354ba25f5b5b097889eaa70da6a8d7e07ed032133155967fe"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-4096-ordinary.log",
+          "sha256": "608e41e872962e78935d24c01b43e64e26c2caf01fca67bd18bd05efb90d29a6"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-4096-loan.log",
+          "sha256": "8068f8c72b85eb1a1bf45d9fb6c5c5eb779999910979c8fc156b25349a62ae76"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-4096-rtps.log",
+          "sha256": "25e2a0f3f29135d20b8230b2fbb8c17c1900adcca684827959d6105c345b8106"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-65536-ordinary.log",
+          "sha256": "2e869a21b6e6a478c61174f5d4e3ff31943f7f5cda1316c05da9ad4bfe53c8ff"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-65536-loan.log",
+          "sha256": "17c6c8bdc4b5ba79e8b1c6a146d8f2482aa6ee798ecadcb58987c735dee7e5d4"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-02-65536-rtps.log",
+          "sha256": "36cfe1e1fbbb68b924fc9d4de506989e1cb60fefc349db68470d772958d6af71"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-64-loan.log",
+          "sha256": "0fa0d3afd473d95fe2e8d392da3b0b9cb440fc5aaf8ea5d88fe4aa6bdf9a0daf"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-64-rtps.log",
+          "sha256": "5dea706da7034285169bc6b305344cdbba9e6203ac4614b4e5754fedc8ece6e4"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-64-ordinary.log",
+          "sha256": "e0f18d09dbcafaf7e34d3555804a09726f74cbe9f30f46c139940076d3893807"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-4096-loan.log",
+          "sha256": "abbfea5d0273e12baedbfef2719816db051e8c78ee8a3653288d3cd1c1ac724c"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-4096-rtps.log",
+          "sha256": "6677fd11f6eea4c835b318db2991f6ebe81d4f2c0f72f718f5643c2a12fb5a74"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-4096-ordinary.log",
+          "sha256": "abe82b0677daa73231aff8ea8a243591f84eae8336f4ed03c156ce0a1365e131"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-65536-loan.log",
+          "sha256": "037bf30f6b26400bd302f0159899f70033f4d466cfbe3b09984857b895e325d8"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-65536-rtps.log",
+          "sha256": "8ed236bf3faf620bb86a6dbb056ae9889956a512534eed61f76ad7d9136df983"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline1-0bbeaed/round-03-65536-ordinary.log",
+          "sha256": "2b7e758b8fcdf1cd7c217b10f15e456419d7f83197fdc2ebdac12382c91554d0"
+        }
+      ],
+      "cdr_checks": [
+        {
+          "label": "round-01-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-01-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        }
+      ]
+    },
+    "current-f32da83": {
+      "passed": true,
+      "runs_checked": 27,
+      "cdr_runs_checked": 27,
+      "raw_logs_checked": 27,
+      "raw_log_inputs": [
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-64-rtps.log",
+          "sha256": "55074b7751d1d2927a0941b9399255545c3b7ba7fb1f6368cb9b09369e0b1458"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-64-ordinary.log",
+          "sha256": "327ce24d30e823448e549ead67dd161a8551ce46e91f8a512c5d0a19f70edc35"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-64-loan.log",
+          "sha256": "e6aca12dca43acfe931713b6490e97b40eb9324e92f1e2a325d1958e713daaf7"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-4096-rtps.log",
+          "sha256": "ca7f9484eb4a67f48d628864e865278cf15ab9fa4859ec3f765d87face8b7f79"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-4096-ordinary.log",
+          "sha256": "c102196bb9dd5a9c06b39a28082009874605ef1bac0543747491dbc66b527ef0"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-4096-loan.log",
+          "sha256": "44d3cc080ae994fa62ce090feac56b96f2ce34e18bdc05d4beffb4894cd231e4"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-65536-rtps.log",
+          "sha256": "ccd2f98e7b233c8e4daf5345a0287353b2d7e602fe8062fc7bf6081a79c679b2"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-65536-ordinary.log",
+          "sha256": "85d5f121b55dc56f05dffe870736fcf181ede29cd3671de8174b123ec64f5192"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-01-65536-loan.log",
+          "sha256": "8dad71d70f32e1d4edf0e085e5a1309f09ea702b3aa0f1916e2fee2b3eb862b6"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-64-ordinary.log",
+          "sha256": "1f1a82103770a7aa4f057e0d09517960db712b24048e3a39a521184f4b6d054a"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-64-loan.log",
+          "sha256": "fd4918927cee02422f20baffdf8aa7d8a7f26520828a7f642c3c8e7c0b61ede0"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-64-rtps.log",
+          "sha256": "1bb37dac5fbfe8aad201b870575cf10ad9cd94dffa296de341b85977b6820aef"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-4096-ordinary.log",
+          "sha256": "679a78c5c8b2ff6578c7271d509fd10b76c2ca4cc9cadbdff551cdf7c89a7351"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-4096-loan.log",
+          "sha256": "875ae3f8278362a1d53b795337b56faf38f735a811acf182ce25947baa265d91"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-4096-rtps.log",
+          "sha256": "affa1192d08bdb6f5ca16d634e65e7f6700e31dbc503426a3c1fbe16c075bf08"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-65536-ordinary.log",
+          "sha256": "b778c854c34563dd3444bcca457054217a06c70ff8d9b86cb68c60cefc4a59bc"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-65536-loan.log",
+          "sha256": "7d45e17438a8b2aa4900ff144e0766262dd0a6dfed88ff3cda30e8b754972f4c"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-02-65536-rtps.log",
+          "sha256": "ded864607406d597eb86b39c3077f5d187ade9048edbd8f0c4f6e3408e5261f6"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-64-loan.log",
+          "sha256": "17b53918f07e88d468523a53d9f08111e10e19b4cfcda72926db0c09ebd4b9b0"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-64-rtps.log",
+          "sha256": "a11368c0aff2d89155996611d615a0864521daab2be30d4caa026911117ee7f2"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-64-ordinary.log",
+          "sha256": "294af168847fe9b3827f4bb0489a40d9af7f4f567bcb79c5e4f8f29cde993762"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-4096-loan.log",
+          "sha256": "13753c0eb67450d66551d225d4eae4c47d59e42b43ef98edd12113dbe36841d4"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-4096-rtps.log",
+          "sha256": "a1f60f71a00989c26925ec8e073a8a8fdda3d951ed4dcea54d7d1d5ce4085148"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-4096-ordinary.log",
+          "sha256": "a845412a8da44382eca976f50ea023bbc3b46f610322c0f6aee42e46d8cdaa0a"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-65536-loan.log",
+          "sha256": "9918c202e81af73757afb9719ece0907e3f5d35c1b4e618a677d6935e875ecfe"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-65536-rtps.log",
+          "sha256": "ad0fb4032af7a5f9e89af6f5d9d4332fe72ba1e9c78f669cabf5c304de4c4cd8"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/current-f32da83/round-03-65536-ordinary.log",
+          "sha256": "1c774ee91f49d56efe4f4bc168663d75a4a68cb28f3295bf9bab3dd071acc3e6"
+        }
+      ],
+      "cdr_checks": [
+        {
+          "label": "round-01-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-01-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        }
+      ]
+    },
+    "baseline2-0bbeaed": {
+      "passed": true,
+      "runs_checked": 27,
+      "cdr_runs_checked": 27,
+      "raw_logs_checked": 27,
+      "raw_log_inputs": [
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-64-rtps.log",
+          "sha256": "6b2e0d24220f29e43ee44d042b40ee3555f2e849afd6090ecc3b6dd4ba0a7133"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-64-ordinary.log",
+          "sha256": "233027687e07f03b609973fa48f6b5c4e45975dfabe927e89db764f92e236a18"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-64-loan.log",
+          "sha256": "6e49214b9363d4fc9ea8108c68a611151618e023db89455801fb84ce91af3a88"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-4096-rtps.log",
+          "sha256": "f139393f687ec1798ce172b4074ad9e31cb4ca1d8c66a6f7ec29878b88445b85"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-4096-ordinary.log",
+          "sha256": "200af8dd57f72f9afa2b0571e0d20ce2579c056a23630985acf89b6aeffab80f"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-4096-loan.log",
+          "sha256": "825d2cc7dcd56b46b06d94b94673baba0826023f487f84f2746ac2dd099c4733"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-65536-rtps.log",
+          "sha256": "6fa4d71811d03acc8e7f76451aa0b7f76182e68a3fcb71298ea274a4ee7d2fd5"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-65536-ordinary.log",
+          "sha256": "d71ac38c0b0b5f161defc38d614d2f14e865810bca59a6afad890f02d24a67fb"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-01-65536-loan.log",
+          "sha256": "f4dbedfbc1b543fd262964a732905fcfba259364f5db3343fc44a25bf4cad52a"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-64-ordinary.log",
+          "sha256": "43b1e134416d7f83c27468e092838f5b1e340af43cc5d6a39d6014c06715672a"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-64-loan.log",
+          "sha256": "f3f3692cdfc1a9c8be8c71841970ddb4dc267df2a11f7239eedc33f01a6294df"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-64-rtps.log",
+          "sha256": "8bb81e3720f5016ebc18628e628a59d9f935827285332d8b3de27705811b7072"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-4096-ordinary.log",
+          "sha256": "0717acd9210aeaf6c8b95c9434636fcfb58276e4cf3a47b9ee86a795465e82fd"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-4096-loan.log",
+          "sha256": "7a996ba78c09ede8ae3493549c9302fe0f55bb95fbcbbc3cb134280d7cfe9a34"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-4096-rtps.log",
+          "sha256": "f06bebe3b562aa347f8df0454918d7fe8341f99679ac67bf213c852a2d837c5f"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-65536-ordinary.log",
+          "sha256": "71af1ba2ed5e68e6476084de9dadedb9bcaa386b6df34046a08407ca6fe43783"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-65536-loan.log",
+          "sha256": "7fbc201d0c03ed0315f6d01027c72cc8744acacd0631f8e7a9504bddfd48c9cf"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-02-65536-rtps.log",
+          "sha256": "4f869a6578ec867681c9c44480939b79751c2536b79882ea0a57baf5f499931e"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-64-loan.log",
+          "sha256": "4a9390290581d6af0610a707f12784ae289bba93efd24fcbe4599373122b03cb"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-64-rtps.log",
+          "sha256": "b6b96fb77ce1e7c3a2dd553e451f3cf700d593cdb37886763cb030a681874e6c"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-64-ordinary.log",
+          "sha256": "b75300b552aa25bf39fb070757ae3603f514af465f9a606612630356f72ef96b"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-4096-loan.log",
+          "sha256": "ccc9ba266d98104d7cdfa716d72d9ebfeb5293c38a066eb89b5d245610acd282"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-4096-rtps.log",
+          "sha256": "4aaab698b7f9acfc92b7abc34dc766430813b2989ec35d1251020e572a6aa062"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-4096-ordinary.log",
+          "sha256": "819cfa571d49af528232d7212124e9dbd0ac11fd7ce9c58be2b2284857915b83"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-65536-loan.log",
+          "sha256": "5038f2491adb140bc1a020deafd0fadb7d1866814ef81c4499923a4ab24fe467"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-65536-rtps.log",
+          "sha256": "03833ec10d006c77788adf4759acd86a55abc0a5dc164027823410fcf46bdd14"
+        },
+        {
+          "path": "/home/ubuntu/project/travodds/artifacts/datasharing-perf-f32da83/attempt2/baseline2-0bbeaed/round-03-65536-ordinary.log",
+          "sha256": "7b80b2817ece6a79ab1878ea87d51471191b9b75abd156a7be555fb99b444327"
+        }
+      ],
+      "cdr_checks": [
+        {
+          "label": "round-01-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-01-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-01-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-01-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-02-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-02-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-64-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-64-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-64-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-4096-rtps",
+          "expected": 288,
+          "writer_serializations": 288,
+          "reader_deserializations": 288
+        },
+        {
+          "label": "round-03-4096-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-loan",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        },
+        {
+          "label": "round-03-65536-rtps",
+          "expected": 160,
+          "writer_serializations": 160,
+          "reader_deserializations": 160
+        },
+        {
+          "label": "round-03-65536-ordinary",
+          "expected": 0,
+          "writer_serializations": 0,
+          "reader_deserializations": 0
+        }
+      ]
+    }
+  },
+  "aggregation": "Median of the three per-run metrics; nearest-rank quantiles within each run. Per-role RSS maximum.",
+  "noise_rule": "N=abs(B2-B1); T outside [min(B1,B2),max(B1,B2)] and both abs(T-Bi)>N, strictly and same direction.",
+  "rows": [
+    {
+      "bytes": 64,
+      "mode": "rtps",
+      "throughput": {
+        "baseline1": 29009.8,
+        "target": 28292.3,
+        "baseline2": 27992.4,
+        "baseline_interval": [
+          27992.4,
+          29009.8
+        ],
+        "baseline_drift_absolute": 1017.3999999999978,
+        "baseline_drift_percent_of_baseline1": 3.5070907072782225,
+        "target_change_percent_vs_baseline1": -2.47330212548863,
+        "target_change_percent_vs_baseline2": 1.071362226890149,
+        "target_outside_interval": false,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 107.032,
+          "target": 104.504,
+          "baseline2": 108.05,
+          "baseline_interval": [
+            107.032,
+            108.05
+          ],
+          "baseline_drift_absolute": 1.0180000000000007,
+          "baseline_drift_percent_of_baseline1": 0.9511174228268188,
+          "target_change_percent_vs_baseline1": -2.361910456685845,
+          "target_change_percent_vs_baseline2": -3.2818139750115605,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "lower",
+          "interpretation": "improvement"
+        },
+        "p95": {
+          "baseline1": 199.106,
+          "target": 154.461,
+          "baseline2": 219.188,
+          "baseline_interval": [
+            199.106,
+            219.188
+          ],
+          "baseline_drift_absolute": 20.081999999999994,
+          "baseline_drift_percent_of_baseline1": 10.086084799051758,
+          "target_change_percent_vs_baseline1": -22.422729601317883,
+          "target_change_percent_vs_baseline2": -29.530357501323056,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "lower",
+          "interpretation": "improvement"
+        },
+        "p99": {
+          "baseline1": 233.448,
+          "target": 271.738,
+          "baseline2": 316.197,
+          "baseline_interval": [
+            233.448,
+            316.197
+          ],
+          "baseline_drift_absolute": 82.749,
+          "baseline_drift_percent_of_baseline1": 35.44643775059114,
+          "target_change_percent_vs_baseline1": 16.401939618244743,
+          "target_change_percent_vs_baseline2": -14.060538208774908,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00843824,
+            "throughput": 30338.1,
+            "latency_us": {
+              "p50": 103.975,
+              "p95": 155.273,
+              "p99": 201.357
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00882459,
+            "throughput": 29009.8,
+            "latency_us": {
+              "p50": 107.032,
+              "p95": 199.106,
+              "p99": 233.448
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0119595,
+            "throughput": 21405.6,
+            "latency_us": {
+              "p50": 166.875,
+              "p95": 388.567,
+              "p99": 670.323
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.00890098,
+            "throughput": 28760.9,
+            "latency_us": {
+              "p50": 102.147,
+              "p95": 154.461,
+              "p99": 270.995
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0120038,
+            "throughput": 21326.6,
+            "latency_us": {
+              "p50": 117.146,
+              "p95": 410.683,
+              "p99": 1275.64
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00904841,
+            "throughput": 28292.3,
+            "latency_us": {
+              "p50": 104.504,
+              "p95": 150.706,
+              "p99": 271.738
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00855229,
+            "throughput": 29933.5,
+            "latency_us": {
+              "p50": 104.215,
+              "p95": 151.658,
+              "p99": 190.651
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00991893,
+            "throughput": 25809.2,
+            "latency_us": {
+              "p50": 114.294,
+              "p95": 242.076,
+              "p99": 797.464
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00914535,
+            "throughput": 27992.4,
+            "latency_us": {
+              "p50": 108.05,
+              "p95": 219.188,
+              "p99": 316.197
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8320
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8320
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8448
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          21405.6,
+          30338.1
+        ],
+        "current-f32da83": [
+          21326.6,
+          28760.9
+        ],
+        "baseline2-0bbeaed": [
+          25809.2,
+          29933.5
+        ]
+      }
+    },
+    {
+      "bytes": 64,
+      "mode": "ordinary",
+      "throughput": {
+        "baseline1": 40196.9,
+        "target": 49966.1,
+        "baseline2": 48276.1,
+        "baseline_interval": [
+          40196.9,
+          48276.1
+        ],
+        "baseline_drift_absolute": 8079.199999999997,
+        "baseline_drift_percent_of_baseline1": 20.09906236550579,
+        "target_change_percent_vs_baseline1": 24.30336667752986,
+        "target_change_percent_vs_baseline2": 3.50069703227891,
+        "target_outside_interval": true,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 97.079,
+          "target": 95.939,
+          "baseline2": 96.733,
+          "baseline_interval": [
+            96.733,
+            97.079
+          ],
+          "baseline_drift_absolute": 0.3459999999999894,
+          "baseline_drift_percent_of_baseline1": 0.356410758248426,
+          "target_change_percent_vs_baseline1": -1.1743013422058302,
+          "target_change_percent_vs_baseline2": -0.8208160607031889,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "lower",
+          "interpretation": "improvement"
+        },
+        "p95": {
+          "baseline1": 114.212,
+          "target": 108.551,
+          "baseline2": 117.906,
+          "baseline_interval": [
+            114.212,
+            117.906
+          ],
+          "baseline_drift_absolute": 3.6940000000000026,
+          "baseline_drift_percent_of_baseline1": 3.2343361468146976,
+          "target_change_percent_vs_baseline1": -4.956571988932867,
+          "target_change_percent_vs_baseline2": -7.934286635116116,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "lower",
+          "interpretation": "improvement"
+        },
+        "p99": {
+          "baseline1": 134.25,
+          "target": 112.758,
+          "baseline2": 222.398,
+          "baseline_interval": [
+            134.25,
+            222.398
+          ],
+          "baseline_drift_absolute": 88.148,
+          "baseline_drift_percent_of_baseline1": 65.65959031657356,
+          "target_change_percent_vs_baseline1": -16.00893854748604,
+          "target_change_percent_vs_baseline2": -49.299004487450425,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00636865,
+            "throughput": 40196.9,
+            "latency_us": {
+              "p50": 97.079,
+              "p95": 114.212,
+              "p99": 134.25
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0052338,
+            "throughput": 48912.8,
+            "latency_us": {
+              "p50": 96.934,
+              "p95": 108.52,
+              "p99": 113.495
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00706307,
+            "throughput": 36244.9,
+            "latency_us": {
+              "p50": 110.267,
+              "p95": 224.168,
+              "p99": 302.704
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.00512348,
+            "throughput": 49966.1,
+            "latency_us": {
+              "p50": 95.939,
+              "p95": 109.071,
+              "p99": 115.632
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00503623,
+            "throughput": 50831.7,
+            "latency_us": {
+              "p50": 95.974,
+              "p95": 108.551,
+              "p99": 112.758
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00521476,
+            "throughput": 49091.4,
+            "latency_us": {
+              "p50": 93.112,
+              "p95": 106.828,
+              "p99": 111.921
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00530658,
+            "throughput": 48242,
+            "latency_us": {
+              "p50": 98.687,
+              "p95": 117.906,
+              "p99": 177.263
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00530284,
+            "throughput": 48276.1,
+            "latency_us": {
+              "p50": 96.474,
+              "p95": 113.84,
+              "p99": 222.398
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00519376,
+            "throughput": 49289.9,
+            "latency_us": {
+              "p50": 96.733,
+              "p95": 143.982,
+              "p99": 233.306
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8448
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8320
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8320
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          36244.9,
+          48912.8
+        ],
+        "current-f32da83": [
+          49091.4,
+          50831.7
+        ],
+        "baseline2-0bbeaed": [
+          48242,
+          49289.9
+        ]
+      }
+    },
+    {
+      "bytes": 64,
+      "mode": "loan",
+      "throughput": {
+        "baseline1": 34401.3,
+        "target": 49284.7,
+        "baseline2": 49969.3,
+        "baseline_interval": [
+          34401.3,
+          49969.3
+        ],
+        "baseline_drift_absolute": 15568.0,
+        "baseline_drift_percent_of_baseline1": 45.25410376933429,
+        "target_change_percent_vs_baseline1": 43.26406269530509,
+        "target_change_percent_vs_baseline2": -1.3700412053000655,
+        "target_outside_interval": false,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 98.794,
+          "target": 94.008,
+          "baseline2": 90.732,
+          "baseline_interval": [
+            90.732,
+            98.794
+          ],
+          "baseline_drift_absolute": 8.061999999999998,
+          "baseline_drift_percent_of_baseline1": 8.160414600076926,
+          "target_change_percent_vs_baseline1": -4.8444237504301935,
+          "target_change_percent_vs_baseline2": 3.6106335140854373,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 646.86,
+          "target": 108.031,
+          "baseline2": 137.157,
+          "baseline_interval": [
+            137.157,
+            646.86
+          ],
+          "baseline_drift_absolute": 509.703,
+          "baseline_drift_percent_of_baseline1": 78.79649383174102,
+          "target_change_percent_vs_baseline1": -83.2991682898927,
+          "target_change_percent_vs_baseline2": -21.235518420496224,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 1324.33,
+          "target": 222.562,
+          "baseline2": 161.74,
+          "baseline_interval": [
+            161.74,
+            1324.33
+          ],
+          "baseline_drift_absolute": 1162.59,
+          "baseline_drift_percent_of_baseline1": 87.78703193312845,
+          "target_change_percent_vs_baseline1": -83.19436998331231,
+          "target_change_percent_vs_baseline2": 37.60479782366761,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0109346,
+            "throughput": 23412,
+            "latency_us": {
+              "p50": 111.411,
+              "p95": 719.951,
+              "p99": 1611.38
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00744159,
+            "throughput": 34401.3,
+            "latency_us": {
+              "p50": 95.045,
+              "p95": 646.86,
+              "p99": 1324.33
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00659131,
+            "throughput": 38839,
+            "latency_us": {
+              "p50": 98.794,
+              "p95": 233.734,
+              "p99": 266.899
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.00511077,
+            "throughput": 50090.3,
+            "latency_us": {
+              "p50": 94.654,
+              "p95": 106.185,
+              "p99": 150.467
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00519431,
+            "throughput": 49284.7,
+            "latency_us": {
+              "p50": 93.375,
+              "p95": 108.031,
+              "p99": 222.562
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00568065,
+            "throughput": 45065.3,
+            "latency_us": {
+              "p50": 94.008,
+              "p95": 226.742,
+              "p99": 247.503
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00512314,
+            "throughput": 49969.3,
+            "latency_us": {
+              "p50": 71.377,
+              "p95": 137.157,
+              "p99": 161.74
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.00510447,
+            "throughput": 50152.1,
+            "latency_us": {
+              "p50": 96.541,
+              "p95": 108.684,
+              "p99": 139.046
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00658949,
+            "throughput": 38849.7,
+            "latency_us": {
+              "p50": 90.732,
+              "p95": 157.942,
+              "p99": 173.06
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8448
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8448
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8320
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          23412,
+          38839
+        ],
+        "current-f32da83": [
+          45065.3,
+          50090.3
+        ],
+        "baseline2-0bbeaed": [
+          38849.7,
+          50152.1
+        ]
+      }
+    },
+    {
+      "bytes": 4096,
+      "mode": "rtps",
+      "throughput": {
+        "baseline1": 18963.8,
+        "target": 21871.1,
+        "baseline2": 20017,
+        "baseline_interval": [
+          18963.8,
+          20017
+        ],
+        "baseline_drift_absolute": 1053.2000000000007,
+        "baseline_drift_percent_of_baseline1": 5.553739229479328,
+        "target_change_percent_vs_baseline1": 15.33078813318005,
+        "target_change_percent_vs_baseline2": 9.262626767247827,
+        "target_outside_interval": true,
+        "beyond_observed_baseline_noise": true,
+        "observed_direction": "higher",
+        "interpretation": "improvement"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 179.843,
+          "target": 148.31,
+          "baseline2": 159.169,
+          "baseline_interval": [
+            159.169,
+            179.843
+          ],
+          "baseline_drift_absolute": 20.673999999999978,
+          "baseline_drift_percent_of_baseline1": 11.495582257858231,
+          "target_change_percent_vs_baseline1": -17.533626552048165,
+          "target_change_percent_vs_baseline2": -6.822308364065877,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 288.04,
+          "target": 225.118,
+          "baseline2": 221.831,
+          "baseline_interval": [
+            221.831,
+            288.04
+          ],
+          "baseline_drift_absolute": 66.20900000000003,
+          "baseline_drift_percent_of_baseline1": 22.986043605054864,
+          "target_change_percent_vs_baseline1": -21.84488265518678,
+          "target_change_percent_vs_baseline2": 1.4817586360788226,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 521.841,
+          "target": 290.174,
+          "baseline2": 427.016,
+          "baseline_interval": [
+            427.016,
+            521.841
+          ],
+          "baseline_drift_absolute": 94.82499999999999,
+          "baseline_drift_percent_of_baseline1": 18.171243731328122,
+          "target_change_percent_vs_baseline1": -44.39417370425092,
+          "target_change_percent_vs_baseline2": -32.04610600071193,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "lower",
+          "interpretation": "improvement"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0134994,
+            "throughput": 18963.8,
+            "latency_us": {
+              "p50": 179.843,
+              "p95": 288.04,
+              "p99": 315.277
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0117926,
+            "throughput": 21708.5,
+            "latency_us": {
+              "p50": 165.371,
+              "p95": 221.512,
+              "p99": 521.841
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0186982,
+            "throughput": 13691.2,
+            "latency_us": {
+              "p50": 208.592,
+              "p95": 658.031,
+              "p99": 1603.19
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.0124451,
+            "throughput": 20570.3,
+            "latency_us": {
+              "p50": 162.947,
+              "p95": 263.064,
+              "p99": 290.174
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.011705,
+            "throughput": 21871.1,
+            "latency_us": {
+              "p50": 148.31,
+              "p95": 225.118,
+              "p99": 371.153
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0113862,
+            "throughput": 22483.3,
+            "latency_us": {
+              "p50": 125.488,
+              "p95": 209.733,
+              "p99": 219.976
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0135938,
+            "throughput": 18832.1,
+            "latency_us": {
+              "p50": 162.99,
+              "p95": 227.711,
+              "p99": 427.016
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0115364,
+            "throughput": 22190.7,
+            "latency_us": {
+              "p50": 156.896,
+              "p95": 221.831,
+              "p99": 262.529
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0127892,
+            "throughput": 20017,
+            "latency_us": {
+              "p50": 159.169,
+              "p95": 214.992,
+              "p99": 1373.23
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8320
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8320
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8448
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          13691.2,
+          21708.5
+        ],
+        "current-f32da83": [
+          20570.3,
+          22483.3
+        ],
+        "baseline2-0bbeaed": [
+          18832.1,
+          22190.7
+        ]
+      }
+    },
+    {
+      "bytes": 4096,
+      "mode": "ordinary",
+      "throughput": {
+        "baseline1": 23488.4,
+        "target": 21813.5,
+        "baseline2": 24645.6,
+        "baseline_interval": [
+          23488.4,
+          24645.6
+        ],
+        "baseline_drift_absolute": 1157.199999999997,
+        "baseline_drift_percent_of_baseline1": 4.926687215817156,
+        "target_change_percent_vs_baseline1": -7.130753904054776,
+        "target_change_percent_vs_baseline2": -11.491300678417238,
+        "target_outside_interval": true,
+        "beyond_observed_baseline_noise": true,
+        "observed_direction": "lower",
+        "interpretation": "regression"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 158.621,
+          "target": 155.017,
+          "baseline2": 156.381,
+          "baseline_interval": [
+            156.381,
+            158.621
+          ],
+          "baseline_drift_absolute": 2.240000000000009,
+          "baseline_drift_percent_of_baseline1": 1.4121711500999294,
+          "target_change_percent_vs_baseline1": -2.2720825111429255,
+          "target_change_percent_vs_baseline2": -0.8722287234382731,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 232.733,
+          "target": 222.609,
+          "baseline2": 216.481,
+          "baseline_interval": [
+            216.481,
+            232.733
+          ],
+          "baseline_drift_absolute": 16.25200000000001,
+          "baseline_drift_percent_of_baseline1": 6.983109400042112,
+          "target_change_percent_vs_baseline1": -4.35004919800801,
+          "target_change_percent_vs_baseline2": 2.8307334130939887,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 543.501,
+          "target": 1309.97,
+          "baseline2": 430.816,
+          "baseline_interval": [
+            430.816,
+            543.501
+          ],
+          "baseline_drift_absolute": 112.685,
+          "baseline_drift_percent_of_baseline1": 20.733172524061594,
+          "target_change_percent_vs_baseline1": 141.02439553929065,
+          "target_change_percent_vs_baseline2": 204.06716556488155,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": true,
+          "observed_direction": "higher",
+          "interpretation": "regression"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0104364,
+            "throughput": 24529.5,
+            "latency_us": {
+              "p50": 150.859,
+              "p95": 217.621,
+              "p99": 737.403
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.010899,
+            "throughput": 23488.4,
+            "latency_us": {
+              "p50": 158.621,
+              "p95": 232.733,
+              "p99": 270.2
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0167766,
+            "throughput": 15259.4,
+            "latency_us": {
+              "p50": 184.809,
+              "p95": 432.105,
+              "p99": 543.501
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.00995495,
+            "throughput": 25715.8,
+            "latency_us": {
+              "p50": 147.599,
+              "p95": 209.988,
+              "p99": 224.494
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0117358,
+            "throughput": 21813.5,
+            "latency_us": {
+              "p50": 159.54,
+              "p95": 501.253,
+              "p99": 1309.97
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0120627,
+            "throughput": 21222.5,
+            "latency_us": {
+              "p50": 155.017,
+              "p95": 222.609,
+              "p99": 1353.98
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0100664,
+            "throughput": 25431.1,
+            "latency_us": {
+              "p50": 150.746,
+              "p95": 216.087,
+              "p99": 379.613
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0103873,
+            "throughput": 24645.6,
+            "latency_us": {
+              "p50": 157.241,
+              "p95": 319.55,
+              "p99": 430.816
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0114546,
+            "throughput": 22349.1,
+            "latency_us": {
+              "p50": 156.381,
+              "p95": 216.481,
+              "p99": 1833.74
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8576
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8704
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8704
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          15259.4,
+          24529.5
+        ],
+        "current-f32da83": [
+          21222.5,
+          25715.8
+        ],
+        "baseline2-0bbeaed": [
+          22349.1,
+          25431.1
+        ]
+      }
+    },
+    {
+      "bytes": 4096,
+      "mode": "loan",
+      "throughput": {
+        "baseline1": 19486.5,
+        "target": 23860.3,
+        "baseline2": 25131.8,
+        "baseline_interval": [
+          19486.5,
+          25131.8
+        ],
+        "baseline_drift_absolute": 5645.299999999999,
+        "baseline_drift_percent_of_baseline1": 28.970312780643003,
+        "target_change_percent_vs_baseline1": 22.445282631565444,
+        "target_change_percent_vs_baseline2": -5.05932722686,
+        "target_outside_interval": false,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 157.534,
+          "target": 158.751,
+          "baseline2": 150.94,
+          "baseline_interval": [
+            150.94,
+            157.534
+          ],
+          "baseline_drift_absolute": 6.593999999999994,
+          "baseline_drift_percent_of_baseline1": 4.185763073368285,
+          "target_change_percent_vs_baseline1": 0.7725316439625818,
+          "target_change_percent_vs_baseline2": 5.174903935338548,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 300.836,
+          "target": 223.253,
+          "baseline2": 220.699,
+          "baseline_interval": [
+            220.699,
+            300.836
+          ],
+          "baseline_drift_absolute": 80.137,
+          "baseline_drift_percent_of_baseline1": 26.638101822920127,
+          "target_change_percent_vs_baseline1": -25.789134279142132,
+          "target_change_percent_vs_baseline2": 1.157232248446971,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 2085.14,
+          "target": 315.111,
+          "baseline2": 339.258,
+          "baseline_interval": [
+            339.258,
+            2085.14
+          ],
+          "baseline_drift_absolute": 1745.8819999999998,
+          "baseline_drift_percent_of_baseline1": 83.7297255819753,
+          "target_change_percent_vs_baseline1": -84.88777731950852,
+          "target_change_percent_vs_baseline2": -7.117591921192723,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.011793,
+            "throughput": 21707.8,
+            "latency_us": {
+              "p50": 149.522,
+              "p95": 300.836,
+              "p99": 2085.14
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0131373,
+            "throughput": 19486.5,
+            "latency_us": {
+              "p50": 157.534,
+              "p95": 254.855,
+              "p99": 1615.03
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0414682,
+            "throughput": 6173.4,
+            "latency_us": {
+              "p50": 301.791,
+              "p95": 2095.3,
+              "p99": 2133.71
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.0107291,
+            "throughput": 23860.3,
+            "latency_us": {
+              "p50": 158.751,
+              "p95": 223.253,
+              "p99": 257.269
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0184741,
+            "throughput": 13857.2,
+            "latency_us": {
+              "p50": 193.876,
+              "p95": 1674.85,
+              "p99": 2075.05
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.00985741,
+            "throughput": 25970.3,
+            "latency_us": {
+              "p50": 146.641,
+              "p95": 215.389,
+              "p99": 315.111
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.00993016,
+            "throughput": 25780.1,
+            "latency_us": {
+              "p50": 147.249,
+              "p95": 211.321,
+              "p99": 218.087
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0101958,
+            "throughput": 25108.4,
+            "latency_us": {
+              "p50": 150.94,
+              "p95": 220.699,
+              "p99": 339.258
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0101863,
+            "throughput": 25131.8,
+            "latency_us": {
+              "p50": 155.692,
+              "p95": 222.838,
+              "p99": 413.19
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8576
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 8704
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18012,
+          "reader": 8704
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          6173.4,
+          21707.8
+        ],
+        "current-f32da83": [
+          13857.2,
+          25970.3
+        ],
+        "baseline2-0bbeaed": [
+          25108.4,
+          25780.1
+        ]
+      }
+    },
+    {
+      "bytes": 65536,
+      "mode": "rtps",
+      "throughput": {
+        "baseline1": 161.908,
+        "target": 70.9728,
+        "baseline2": 64.1821,
+        "baseline_interval": [
+          64.1821,
+          161.908
+        ],
+        "baseline_drift_absolute": 97.72589999999998,
+        "baseline_drift_percent_of_baseline1": 60.358907527731795,
+        "target_change_percent_vs_baseline1": -56.164735528818824,
+        "target_change_percent_vs_baseline2": 10.580364307182212,
+        "target_outside_interval": false,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 960.388,
+          "target": 828.285,
+          "baseline2": 794.925,
+          "baseline_interval": [
+            794.925,
+            960.388
+          ],
+          "baseline_drift_absolute": 165.46300000000008,
+          "baseline_drift_percent_of_baseline1": 17.228765873792682,
+          "target_change_percent_vs_baseline1": -13.755169785545018,
+          "target_change_percent_vs_baseline2": 4.196622322860644,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 1988.92,
+          "target": 198080,
+          "baseline2": 199421,
+          "baseline_interval": [
+            1988.92,
+            199421
+          ],
+          "baseline_drift_absolute": 197432.08,
+          "baseline_drift_percent_of_baseline1": 9926.597349315205,
+          "target_change_percent_vs_baseline1": 9859.173822979305,
+          "target_change_percent_vs_baseline2": -0.6724467332928863,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 199393,
+          "target": 199698,
+          "baseline2": 199817,
+          "baseline_interval": [
+            199393,
+            199817
+          ],
+          "baseline_drift_absolute": 424,
+          "baseline_drift_percent_of_baseline1": 0.21264537872442865,
+          "target_change_percent_vs_baseline1": 0.15296424648809648,
+          "target_change_percent_vs_baseline2": -0.05955449236051402,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 2.0035,
+            "throughput": 63.8881,
+            "latency_us": {
+              "p50": 896.583,
+              "p95": 199435,
+              "p99": 200261
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0533754,
+            "throughput": 2398.11,
+            "latency_us": {
+              "p50": 976.107,
+              "p95": 1988.92,
+              "p99": 2152.86
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.79057,
+            "throughput": 161.908,
+            "latency_us": {
+              "p50": 960.388,
+              "p95": 1917.04,
+              "p99": 199393
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 1.80131,
+            "throughput": 71.0593,
+            "latency_us": {
+              "p50": 964.285,
+              "p95": 194965,
+              "p99": 199297
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 1.80351,
+            "throughput": 70.9728,
+            "latency_us": {
+              "p50": 828.285,
+              "p95": 198919,
+              "p99": 200193
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 2.19549,
+            "throughput": 58.3013,
+            "latency_us": {
+              "p50": 793.686,
+              "p95": 198080,
+              "p99": 199698
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 1.99432,
+            "throughput": 64.1821,
+            "latency_us": {
+              "p50": 793.647,
+              "p95": 199429,
+              "p99": 199964
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 2.00273,
+            "throughput": 63.9128,
+            "latency_us": {
+              "p50": 819.671,
+              "p95": 199421,
+              "p99": 199772
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 1.60458,
+            "throughput": 79.7717,
+            "latency_us": {
+              "p50": 794.925,
+              "p95": 198374,
+              "p99": 199817
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 8960
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 9088
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18140,
+          "reader": 9216
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          63.8881,
+          2398.11
+        ],
+        "current-f32da83": [
+          58.3013,
+          71.0593
+        ],
+        "baseline2-0bbeaed": [
+          63.9128,
+          79.7717
+        ]
+      }
+    },
+    {
+      "bytes": 65536,
+      "mode": "ordinary",
+      "throughput": {
+        "baseline1": 4796.55,
+        "target": 5028.42,
+        "baseline2": 4917.44,
+        "baseline_interval": [
+          4796.55,
+          4917.44
+        ],
+        "baseline_drift_absolute": 120.88999999999942,
+        "baseline_drift_percent_of_baseline1": 2.520353170507957,
+        "target_change_percent_vs_baseline1": 4.834099509022116,
+        "target_change_percent_vs_baseline2": 2.2568653608381783,
+        "target_outside_interval": true,
+        "beyond_observed_baseline_noise": false,
+        "observed_direction": "within_observed_noise",
+        "interpretation": "no_beyond_noise_difference"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 572.824,
+          "target": 521.64,
+          "baseline2": 529.807,
+          "baseline_interval": [
+            529.807,
+            572.824
+          ],
+          "baseline_drift_absolute": 43.01699999999994,
+          "baseline_drift_percent_of_baseline1": 7.509636467745754,
+          "target_change_percent_vs_baseline1": -8.935379802522236,
+          "target_change_percent_vs_baseline2": -1.5415047366305168,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 1963.2,
+          "target": 1136.74,
+          "baseline2": 1171.78,
+          "baseline_interval": [
+            1171.78,
+            1963.2
+          ],
+          "baseline_drift_absolute": 791.4200000000001,
+          "baseline_drift_percent_of_baseline1": 40.31275468622657,
+          "target_change_percent_vs_baseline1": -42.097595762021186,
+          "target_change_percent_vs_baseline2": -2.990322415470481,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 2295.79,
+          "target": 1743.46,
+          "baseline2": 1580.31,
+          "baseline_interval": [
+            1580.31,
+            2295.79
+          ],
+          "baseline_drift_absolute": 715.48,
+          "baseline_drift_percent_of_baseline1": 31.164871351473785,
+          "target_change_percent_vs_baseline1": -24.05838513104421,
+          "target_change_percent_vs_baseline2": 10.323923787105072,
+          "target_outside_interval": false,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0371417,
+            "throughput": 3446.26,
+            "latency_us": {
+              "p50": 677.491,
+              "p95": 2305.05,
+              "p99": 4650.2
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0249881,
+            "throughput": 5122.44,
+            "latency_us": {
+              "p50": 572.824,
+              "p95": 1160.36,
+              "p99": 1401.96
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0266859,
+            "throughput": 4796.55,
+            "latency_us": {
+              "p50": 531.204,
+              "p95": 1963.2,
+              "p99": 2295.79
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.0260553,
+            "throughput": 4912.62,
+            "latency_us": {
+              "p50": 521.64,
+              "p95": 1136.74,
+              "p99": 1382.57
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0254553,
+            "throughput": 5028.42,
+            "latency_us": {
+              "p50": 493.439,
+              "p95": 1069.12,
+              "p99": 2153.7
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0253918,
+            "throughput": 5041,
+            "latency_us": {
+              "p50": 536.682,
+              "p95": 1152.1,
+              "p99": 1743.46
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0260298,
+            "throughput": 4917.44,
+            "latency_us": {
+              "p50": 529.807,
+              "p95": 1623.4,
+              "p99": 1884.52
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.023909,
+            "throughput": 5353.63,
+            "latency_us": {
+              "p50": 484.161,
+              "p95": 1074.85,
+              "p99": 1196.56
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0260774,
+            "throughput": 4908.46,
+            "latency_us": {
+              "p50": 600.133,
+              "p95": 1171.78,
+              "p99": 1580.31
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 12544
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 12416
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18140,
+          "reader": 12544
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          3446.26,
+          5122.44
+        ],
+        "current-f32da83": [
+          4912.62,
+          5041
+        ],
+        "baseline2-0bbeaed": [
+          4908.46,
+          5353.63
+        ]
+      }
+    },
+    {
+      "bytes": 65536,
+      "mode": "loan",
+      "throughput": {
+        "baseline1": 4906.77,
+        "target": 5140.13,
+        "baseline2": 5007.42,
+        "baseline_interval": [
+          4906.77,
+          5007.42
+        ],
+        "baseline_drift_absolute": 100.64999999999964,
+        "baseline_drift_percent_of_baseline1": 2.0512475620418242,
+        "target_change_percent_vs_baseline1": 4.7558781031106,
+        "target_change_percent_vs_baseline2": 2.6502670037664045,
+        "target_outside_interval": true,
+        "beyond_observed_baseline_noise": true,
+        "observed_direction": "higher",
+        "interpretation": "improvement"
+      },
+      "latency_us": {
+        "p50": {
+          "baseline1": 529.935,
+          "target": 526.001,
+          "baseline2": 552.147,
+          "baseline_interval": [
+            529.935,
+            552.147
+          ],
+          "baseline_drift_absolute": 22.212000000000103,
+          "baseline_drift_percent_of_baseline1": 4.1914574428939595,
+          "target_change_percent_vs_baseline1": -0.7423551945049844,
+          "target_change_percent_vs_baseline2": -4.7353331630888285,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p95": {
+          "baseline1": 1130.21,
+          "target": 1078.77,
+          "baseline2": 1082.12,
+          "baseline_interval": [
+            1082.12,
+            1130.21
+          ],
+          "baseline_drift_absolute": 48.090000000000146,
+          "baseline_drift_percent_of_baseline1": 4.2549614673379414,
+          "target_change_percent_vs_baseline1": -4.551366560196779,
+          "target_change_percent_vs_baseline2": -0.30957749602631424,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        },
+        "p99": {
+          "baseline1": 1592.51,
+          "target": 1372.58,
+          "baseline2": 2190.64,
+          "baseline_interval": [
+            1592.51,
+            2190.64
+          ],
+          "baseline_drift_absolute": 598.1299999999999,
+          "baseline_drift_percent_of_baseline1": 37.55894782450345,
+          "target_change_percent_vs_baseline1": -13.8102743467859,
+          "target_change_percent_vs_baseline2": -37.34342475258372,
+          "target_outside_interval": true,
+          "beyond_observed_baseline_noise": false,
+          "observed_direction": "within_observed_noise",
+          "interpretation": "no_beyond_noise_difference"
+        }
+      },
+      "three_round_values": {
+        "baseline1-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0260864,
+            "throughput": 4906.77,
+            "latency_us": {
+              "p50": 521.252,
+              "p95": 1130.21,
+              "p99": 1592.51
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0251565,
+            "throughput": 5088.15,
+            "latency_us": {
+              "p50": 529.935,
+              "p95": 1099.2,
+              "p99": 1129.61
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0347886,
+            "throughput": 3679.37,
+            "latency_us": {
+              "p50": 791.844,
+              "p95": 1522.15,
+              "p99": 1792.42
+            }
+          }
+        ],
+        "current-f32da83": [
+          {
+            "round": 1,
+            "seconds": 0.0249021,
+            "throughput": 5140.13,
+            "latency_us": {
+              "p50": 490.093,
+              "p95": 1044.23,
+              "p99": 1294.93
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0241826,
+            "throughput": 5293.06,
+            "latency_us": {
+              "p50": 526.001,
+              "p95": 1078.77,
+              "p99": 1372.58
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0254308,
+            "throughput": 5033.26,
+            "latency_us": {
+              "p50": 571.929,
+              "p95": 1334.95,
+              "p99": 1974.73
+            }
+          }
+        ],
+        "baseline2-0bbeaed": [
+          {
+            "round": 1,
+            "seconds": 0.0255621,
+            "throughput": 5007.42,
+            "latency_us": {
+              "p50": 552.147,
+              "p95": 1082.12,
+              "p99": 3022.36
+            }
+          },
+          {
+            "round": 2,
+            "seconds": 0.0253935,
+            "throughput": 5040.65,
+            "latency_us": {
+              "p50": 498.282,
+              "p95": 1067.98,
+              "p99": 1189.69
+            }
+          },
+          {
+            "round": 3,
+            "seconds": 0.0268972,
+            "throughput": 4758.87,
+            "latency_us": {
+              "p50": 575.934,
+              "p95": 1592.07,
+              "p99": 2190.64
+            }
+          }
+        ]
+      },
+      "rss_max_kib": {
+        "baseline1-0bbeaed": {
+          "writer": 17920,
+          "reader": 12544
+        },
+        "current-f32da83": {
+          "writer": 18016,
+          "reader": 12544
+        },
+        "baseline2-0bbeaed": {
+          "writer": 18140,
+          "reader": 12544
+        }
+      },
+      "throughput_three_round_ranges": {
+        "baseline1-0bbeaed": [
+          3679.37,
+          5088.15
+        ],
+        "current-f32da83": [
+          5033.26,
+          5293.06
+        ],
+        "baseline2-0bbeaed": [
+          4758.87,
+          5040.65
+        ]
+      }
+    }
+  ],
+  "metrics_beyond_observed_noise": [
+    {
+      "bytes": 64,
+      "mode": "rtps",
+      "metric": "p50",
+      "interpretation": "improvement",
+      "direction": "lower"
+    },
+    {
+      "bytes": 64,
+      "mode": "rtps",
+      "metric": "p95",
+      "interpretation": "improvement",
+      "direction": "lower"
+    },
+    {
+      "bytes": 64,
+      "mode": "ordinary",
+      "metric": "p50",
+      "interpretation": "improvement",
+      "direction": "lower"
+    },
+    {
+      "bytes": 64,
+      "mode": "ordinary",
+      "metric": "p95",
+      "interpretation": "improvement",
+      "direction": "lower"
+    },
+    {
+      "bytes": 4096,
+      "mode": "rtps",
+      "metric": "throughput",
+      "interpretation": "improvement",
+      "direction": "higher"
+    },
+    {
+      "bytes": 4096,
+      "mode": "rtps",
+      "metric": "p99",
+      "interpretation": "improvement",
+      "direction": "lower"
+    },
+    {
+      "bytes": 4096,
+      "mode": "ordinary",
+      "metric": "throughput",
+      "interpretation": "regression",
+      "direction": "lower"
+    },
+    {
+      "bytes": 4096,
+      "mode": "ordinary",
+      "metric": "p99",
+      "interpretation": "regression",
+      "direction": "higher"
+    },
+    {
+      "bytes": 65536,
+      "mode": "loan",
+      "metric": "throughput",
+      "interpretation": "improvement",
+      "direction": "higher"
+    }
+  ],
+  "metrics_examined": 36,
+  "historical_policy": "10/28 only is reference. The first interrupted attempt nine cases are not read or used.",
+  "limitations": [
+    "Two baseline medians define observed drift, not a confidence interval or statistical significance.",
+    "Shared two-core VM, three short runs per cell, 256/256/128 samples; no causal isolation of the lock.",
+    "Bookend checks cannot rule out short-lived external work entirely inside each group."
+  ]
+}

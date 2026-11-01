@@ -5,7 +5,7 @@
 
 本仓库在 [AGIROS / TravoDDS（Gitee 上游）](https://gitee.com/agiros/travodds) 基础上继续开发，保留上游提交历史、分支与标签。GitHub 开发主分支为 `main`，`master` 保留迁移时的上游版本。
 
-本分支已加入 DataSharing、PayloadPool 与 Loan API。参见 [实现与验收报告](docs/DATASHARING-COMPLETION-20261028.md)、[示例](example/cpp/data_sharing/README.md) 和 [GitHub 迁移及同步上游](docs/GITHUB-UPSTREAM.md)。报告记录的是发布前验收状态，后续提交记录见同步说明。
+本分支已加入 DataSharing、PayloadPool 与 Loan API。参见 [当前验收矩阵](docs/DATASHARING-ACCEPTANCE.md)、[示例](example/cpp/data_sharing/README.md)、[测试指南](docs/DATASHARING-TESTING.md) 和 [GitHub 迁移及同步上游](docs/GITHUB-UPSTREAM.md)。
 
 ## 目录
 
@@ -91,8 +91,10 @@ cd test/unit_inside
 mkdir -p build && cd build
 cmake ..
 make
-unit_test
+./unit_test
 ```
+
+DataSharing/Loan 的测试程序、串行运行、检查器及当前验收范围见 [测试指南](docs/DATASHARING-TESTING.md)。
 
 ## API 参考（简要）
 

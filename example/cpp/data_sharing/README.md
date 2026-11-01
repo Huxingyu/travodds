@@ -40,7 +40,7 @@ python3 tools/ospp/datasharing_examples.py \
 
 `sample.h/.cpp` 提供 64 字节、64 字节对齐、无指针的固定布局样本，显式声明版本化布局 ID。布局、大小、对齐和字段含义在所有进程中必须一致；不能把含指针、string、vector 的普通对象直接放进共享段。带键类型单独实现键哈希，并显式实现 get_native_key_info/capture_native_key/restore_native_key：只保存 8 字节键，不复制 64 字节样本。键查询只修改输出的键，非键字段保持原值。示例 Writer 和 Reader 的 TypeSupport 均实现这些强制钩子。这些声明是手写实现，仓库没有任意 IDL 自动 native 适配生成器；HelloWorld 无界 string 正常使用 CDR/RTPS。无初始化资格需要显式满足，借出的字段不保证为零；应用须在 write 前填写全部将被读取的字段。两端分别校验有效 NativeKeyInfo，当前只有 discovery v5/布局 v7 兼容端点才能进入 DS；键表示仍是本地元数据，具体快照字节无需通过发现传输。缺失/非法元数据时 ON enable 返回 UNSUPPORTED，AUTO 不广告 DS 且保留普通 CDR/RTPS，loan_sample 返回 UNSUPPORTED。捕获/还原失败直接报错，不会复制完整样本兜底。键和 RTPS 控制元数据仍有复制，零调用计数仅针对完整载荷 CDR，不代表没有任何字节复制。
 
-Writer 直接填写可写 Loan 后发布；Reader 用 const 引用访问借出的生产只读载荷，不能修改该地址。真实历史环按 publish 顺序链接，借出顺序可不同，环元数据变化不搬运样本。示例仍需本轮重跑；独立保护测试另外使用整页样本、PROT_NONE 与 seccomp 检查框架载荷访问，不把其保护窗口当作应用 API。
+Writer 直接填写可写 Loan 后发布；Reader 用 const 引用访问借出的生产只读载荷，不能修改该地址。真实历史环按 publish 顺序链接，借出顺序可不同，环元数据变化不搬运样本。9 次有限示例已在受测代码 `f32da83` 上通过（Loan/keyed/mixed 各 3 次）；独立保护测试另外使用整页样本、PROT_NONE 与 seccomp 检查框架载荷访问，不把其保护窗口当作应用 API。
 
 `demo.cpp` 创建 Domain 146、包含启动 PID 的唯一 Topic，并通过 QoS 向两个进程传入同一个私有 `/dev/shm/travodds-demo-*` 目录。Writer 使用 ON、16 槽、4 Reader 上限、1 MiB 段预算、可靠传输和 history depth 4；Reader 也限制 1 MiB 映射预算。实际共享段小于该预算。示例禁用旧 SHM transport，发现和普通载荷回退使用 UDP。
 
