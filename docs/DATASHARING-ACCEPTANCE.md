@@ -10,7 +10,7 @@
 | 2. 实现 DataSharing 共享段管理 | Writer GUID/session 命名、Boost 映射、真实闭合发布历史环；按 retained 回放候选加 lease/pin，空闲节点不被无关回放占用；保活/关闭/代次与坏环拒绝 | 49 项共享池身份；通过（限本页所述范围） |
 | 3. 实现跨进程通知 | 原子通知代次/futex、先采样再检查谓词、关闭后重扫；真实内核验证管理 mutex 暂停时共享进展 | 通过（限本页所述范围） |
 | 4. 实现 DDS 层 Loan API | Writer loan/write/discard、Reader read/take/return、错误码和删除后的 Loan 映射保活；statistics 测试握手前提经确定性验证修复 | 通过（限本页所述范围） |
-| 5. 零拷贝分支与 RTPS 回退 | no-init、native Loan、key-only、v5 协商与普通/混合回退；四项实际共享 backing/访问保护 proof，Modal 与本机分别留证 | 通过（限本页所述范围） |
+| 5. 零拷贝分支与 RTPS 回退 | no-init、native Loan、key-only、v5 协商与普通/混合回退；四项实际共享 backing/访问保护 proof，Modal 与本机分别留证；另有双主机 AUTO/ON × 两写法 × 三大小 × 两方向共 24 组 RTPS 回退通过 | 通过（限本页所述范围） |
 | 6. DataSharingQosPolicy | AUTO/ON/OFF、目录/容量/预算、API/XML、类型与协议准入、不可变性和降级 | 通过（限本页所述范围） |
 | 7. 单元测试 ≥70% 与 Loan/QoS 示例 | plain/coverage 各 555，ASan/UBSan 与 TSan 各 308，有限例 9；官方新增行覆盖率 95.556%（3096/3240，144 个翻译单元） | 通过（限本页所述范围） |
 | 8. 设计与 API/QoS/调试手册 | [设计](DATASHARING-DESIGN.md)、[环](DATASHARING-RING.md)、[API](DATASHARING-API.md)、[QoS](DATASHARING-QOS.md)、[调试](DATASHARING-DEBUG.md)、[本次报告](DATASHARING-PROGRESS-20261101.md)及当前完整身份/交付绑定 | 通过（限本页所述范围） |
@@ -23,7 +23,15 @@
 
 旧首次 get_matched_publication_data 返回 3（BAD_PARAMETER）时没有记录所选 peer GUID，根因未证实。现测试采用独立 exec 对的 Topic，并断言精确父 Writer GUID/handle，lookup 原断言保留；后续通过和一次带 GUID 诊断均不能证明最初失败来自旧端点。原失败仍在 [tsan-final 原始日志](../../../artifacts/datasharing-followups-20261101/tsan-final/logs/test-loan_part_1.log)。
 
-最终代码 `f32da8390b0af07500f67eb1d0a1279a9c968f4f` 已按原方法在本机完成连续 `0bbeaed → f32da83 → 0bbeaed` 性能重测：三组各 27/27，共 81 次自然退出，载荷/CDR 与原始日志核验通过，无失败或环境重跑。64 B RTPS 吞吐 28292.30 samples/s（相对基线1/2 -2.47% / +1.07%）及 p99 271.738 μs 均位于双基线中位区间内，未超出本次噪声；p50/p95 有改善观测。4 KiB ordinary 吞吐 -7.13% / -11.49%、p99 +141.02% / +204.07%，超出双基线差幅，必须保留退化观测，具体原因尚未查实。36 个指标有 7 个改善、2 个退化观测超出预设噪声规则，但组内范围交叠且宿主 CPU/I/O/换页不同，不能将差异归因新增 ReaderProxy 锁或声称统计显著、整体没有影响。64 KiB RTPS 目标约 70.97 samples/s、p95/p99 约 198/200 ms，与既有行为相符；两基线吞吐本身差幅 60.36%。[完整性能报告](DATASHARING-PERFORMANCE.md)和[本次三组证据](../../../artifacts/datasharing-perf-f32da83/attempt2/REPORT.md)包含逐组数据、噪声规则、RSS及宿主条件。前次监控误杀的 9/27 部分结果仅作旧现象诊断，未用于本轮比较，原证据和 `553ac93` 保留。旧轮 64 B RTPS 吞吐 -5.61%/p99 0.94 ms 仍是历史未归因观测，不改写为当前成绩；本次不做性能优化。软件层“只写一次”不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”限于通知及共享数据面，不证明整个 DDS write 形式化 lock-free/wait-free。OFF/mixed/UDP 回退没有真实跨主机验证；ASan 关闭 LSan，未做泄漏扫描。性能为两核共享 VM 短测，不是 SLA。
+最终代码 `f32da8390b0af07500f67eb1d0a1279a9c968f4f` 已按原方法在本机完成连续 `0bbeaed → f32da83 → 0bbeaed` 性能重测：三组各 27/27，共 81 次自然退出，载荷/CDR 与原始日志核验通过，无失败或环境重跑。64 B RTPS 吞吐 28292.30 samples/s（相对基线1/2 -2.47% / +1.07%）及 p99 271.738 μs 均位于双基线中位区间内，未超出本次噪声；p50/p95 有改善观测。4 KiB ordinary 吞吐 -7.13% / -11.49%、p99 +141.02% / +204.07%，超出双基线差幅，必须保留退化观测，具体原因尚未查实。36 个指标有 7 个改善、2 个退化观测超出预设噪声规则，但组内范围交叠且宿主 CPU/I/O/换页不同，不能将差异归因新增 ReaderProxy 锁或声称统计显著、整体没有影响。64 KiB RTPS 目标约 70.97 samples/s、p95/p99 约 198/200 ms，与既有行为相符；两基线吞吐本身差幅 60.36%。[完整性能报告](DATASHARING-PERFORMANCE.md)和[本次三组证据](../../../artifacts/datasharing-perf-f32da83/attempt2/REPORT.md)包含逐组数据、噪声规则、RSS及宿主条件。前次监控误杀的 9/27 部分结果仅作旧现象诊断，未用于本轮比较，原证据和 `553ac93` 保留。旧轮 64 B RTPS 吞吐 -5.61%/p99 0.94 ms 仍是历史未归因观测，不改写为当前成绩；本次不做性能优化。软件层“只写一次”不证明 DRAM 写入次数；键和控制元数据仍可复制。“无锁”限于通知及共享数据面，不证明整个 DDS write 形式化 lock-free/wait-free。AUTO/ON 同 kind 的真实跨主机 RTPS/UDP 回退已完成下述 24 组验证；跨主机 OFF/mixed 组合仍未实测；ASan 关闭 LSan，未做泄漏扫描。性能为两核共享 VM 短测，不是 SLA。
+
+## 跨主机 RTPS 回退补充（2026-11-01）
+
+在同一受测实现 `f32da8390b0af07500f67eb1d0a1279a9c968f4f` 上，VM（Linux 6.8）与 `openlet-eval4090` 的 Kubernetes 容器（另一主机的 Linux 5.15）完成双向实测，双方 boot_id 不同、均为 x86_64。两端使用同字节独立收发程序和私有库，库 SHA-256 为 `7ed3c24c732b236a4a89ec0aa44dfae0778487f3a5795e1dfbab1f57fc44dda6`。VM 的 TAP 独立网络命名空间与远端 `unshare -Urn` 内 veth/AF_PACKET 经 SSH stdin/stdout 传送以太网帧；这是 **SSH 承载的虚拟二层，不是物理局域网**。RTPS 仍使用 UDP，SPDP 仍通过 `239.255.0.1` 发现，未修改产品代码或添加静态对端；收发器显式移除传统 SHM transport，以隔离 RTPS/UDP 路径，DataSharing 仍设 AUTO/ON。先行单播及组播双向 echo 均通过；程序 peer IP 仅用于应用控制握手。
+
+同机 AUTO/native 控制组为 64 条：Writer 序列化 0、Reader 反序列化 0、Reader Loan 64、完整验证 64。跨主机矩阵为两端同设 AUTO/ON × ordinary/Writer Loan × 64/4096/65536 B × 两种 Writer 方向，**24/24 组通过**，每组正式 64 条：序列化 64、反序列化 64、Reader Loan 0、完整载荷验证 64；共 1536 条跨主机样本。控制组及跨主机共 50 个进程均自然退出 0，没有组重跑或失败后重写。每组另有一条不计入正式计数的握手样本；所有 loan/write 均单次检查返回码，native 控制先只读观察精确 Reader GUID 注册就绪。独立审核逐一解析 50 份原始日志并重核矩阵、计数、boot_id、SHA 和退出码。
+
+远端只用 nice 19、1 核，未安装软件或访问 GPU，未改 OpenLET 文件/配置、未向其 PID 发送信号。已记录 OpenLET 前后 PID：后测仍观察到原控制器，随后记录到新评测控制器/worker，不能声称所有旧 PID 全程不变，也不以进程记录证明评测成绩相同。SSH/bridge、VM 命名空间和 TAP、远端临时目录均已清理，两端 `/dev/shm` 无新增残留。完整证据见 [跨主机报告](../../../artifacts/crosshost-20261101/eval4090/REPORT.md)、[逐组结果](../../../artifacts/crosshost-20261101/eval4090/results.json)、[独立日志审核](../../../artifacts/crosshost-20261101/eval4090/results-independent-review.json)和[清理](../../../artifacts/crosshost-20261101/eval4090/cleanup.json)。本轮不作性能结论；未覆盖物理局域网、跨主机 OFF/mixed 组合、其他发行版或所有故障场景。生产代码、测试和性能文档未改，本次文档只在本地单独提交、不推送。
 
 ## 新证据的执行分工与绑定
 
