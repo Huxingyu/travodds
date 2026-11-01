@@ -1,6 +1,9 @@
 // Copyright(c)[2025][AGIROS][TravoDDS] is licensed under Mulan PSL v2.
 #include <gtest/gtest.h>
+#include "rtps/endpoint/readerproxy.h"
 #include "rtps/endpoint/writerproxy.h"
+#include <future>
+#include <thread>
 using namespace TRAVODDS;
 namespace {
 std::shared_ptr<CacheChange> change(unsigned sequence) {
@@ -88,4 +91,94 @@ TEST(WriterProxyGap, TransientTruncationKeepsEarlierReceivedDataAndSkipsMissingD
     ASSERT_EQ(writer.RecvHeartbeat(heartbeat, lost, missing), RETCODE_OK);
     EXPECT_EQ(writer.GetSubmitCache(), first);
     EXPECT_EQ(writer.GetSubmitCache(), third);
+}
+
+TEST(ReaderProxyRequests, SnapshotsOwnTheirSequencesAcrossReplacementAndEmptyRequests) {
+    ReaderProxy reader(GUID_UNKNOWN, GUID_UNKNOWN, {}, {}, true);
+    EXPECT_TRUE(reader.RequestedChanges().empty());
+    EXPECT_EQ(reader.NextRequestedChange(), SEQUENCENUMBER_UNKNOWN);
+
+    const SeqNumberVec first{seq(11), seq(12)}, second{seq(21), seq(22)};
+    reader.RequestedChangesSet(first);
+    auto snapshot = reader.RequestedChanges();
+    EXPECT_EQ(snapshot, first);
+    EXPECT_EQ(reader.NextRequestedChange(), first.front());
+    snapshot.front() = seq(99);
+    EXPECT_EQ(reader.RequestedChanges(), first);
+
+    reader.RequestedChangesSet(second);
+    EXPECT_EQ(snapshot.front(), seq(99));
+    EXPECT_EQ(snapshot.back(), first.back());
+    EXPECT_EQ(reader.RequestedChanges(), second);
+    EXPECT_EQ(reader.NextRequestedChange(), second.front());
+
+    reader.RequestedChangesSet({});
+    EXPECT_TRUE(reader.RequestedChanges().empty());
+    EXPECT_EQ(reader.NextRequestedChange(), SEQUENCENUMBER_UNKNOWN);
+    EXPECT_EQ(snapshot.back(), first.back());
+}
+
+TEST(ReaderProxyRequests, ConcurrentReplacementAndSnapshotsKeepCompleteRequestSets) {
+    ReaderProxy reader(GUID_UNKNOWN, GUID_UNKNOWN, {}, {}, true);
+    SeqNumberVec first, second;
+    for (unsigned index = 0; index < 32; ++index) {
+        first.push_back(seq(101 + index));
+        second.push_back(seq(201 + index));
+    }
+    reader.RequestedChangesSet(first);
+    std::promise<void> release;
+    auto start = release.get_future().share();
+    bool complete = true;
+    // This reproduces ACKNACK replacement versus the flow worker's copy.
+    // A common start gives both branches the initialized request set but no
+    // happens-before edge between their accesses. TSan therefore checks the
+    // old unguarded copy even if the scheduler runs the branches in order.
+    // Equal sizes preserve capacity, keeping the probe focused on the real
+    // element/metadata race rather than relying on a reallocating vector.
+    std::thread replacing([&, start] {
+        start.wait();
+        for (unsigned iteration = 0; iteration < 256; ++iteration)
+            reader.RequestedChangesSet(iteration & 1 ? first : second);
+    });
+    std::thread copying([&, start] {
+        start.wait();
+        for (unsigned iteration = 0; iteration < 256; ++iteration) {
+            const auto snapshot = reader.RequestedChanges();
+            if (snapshot != first && snapshot != second) complete = false;
+        }
+    });
+    release.set_value();
+    replacing.join();
+    copying.join();
+    EXPECT_TRUE(complete);
+    EXPECT_EQ(reader.RequestedChanges(), first);
+}
+
+TEST(ReaderProxyRequests, ConcurrentReplacementAndNextRequestShareSynchronization) {
+    ReaderProxy reader(GUID_UNKNOWN, GUID_UNKNOWN, {}, {}, true);
+    const SeqNumberVec first{seq(31)}, second{seq(41)};
+    reader.RequestedChangesSet(first);
+    std::promise<void> release;
+    auto start = release.get_future().share();
+    bool valid = true;
+    // Exercise NextRequestedChange independently: a locked snapshot call in
+    // this branch could otherwise supply synchronization that hides an
+    // unguarded next-element read from the race detector.
+    std::thread replacing([&, start] {
+        start.wait();
+        for (unsigned iteration = 0; iteration < 256; ++iteration)
+            reader.RequestedChangesSet(iteration & 1 ? first : second);
+    });
+    std::thread inspecting([&, start] {
+        start.wait();
+        for (unsigned iteration = 0; iteration < 256; ++iteration) {
+            const auto next = reader.NextRequestedChange();
+            if (next != first.front() && next != second.front()) valid = false;
+        }
+    });
+    release.set_value();
+    replacing.join();
+    inspecting.join();
+    EXPECT_TRUE(valid);
+    EXPECT_EQ(reader.NextRequestedChange(), first.front());
 }

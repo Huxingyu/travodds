@@ -210,6 +210,8 @@ private:
 	SequenceNumber_t highestSentChangeSN_;
 	SeqNumberVec requestedChanges_;
 	SeqNumberVec acknowledgeChanges_;
+	// Leaf mutex for requested snapshots/replacement and acknowledged lists;
+	// release it before history, Writer or transport operations.
 	std::mutex ackmtex_;
 	bool expectsInlineQos_;
 

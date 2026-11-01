@@ -52,6 +52,7 @@ void ReaderProxy::AckedChangesSet(SequenceNumber_t committedSeqNum)
 
 SequenceNumber_t ReaderProxy::NextRequestedChange()
 {
+	std::lock_guard<std::mutex> lock(ackmtex_);
 	if (requestedChanges_.size() > 0) {
 		return *requestedChanges_.begin();
 	}
@@ -91,11 +92,13 @@ bool ReaderProxy::UnsentChanges()
 
 SeqNumberVec ReaderProxy::RequestedChanges()
 {
+	std::lock_guard<std::mutex> lock(ackmtex_);
 	return requestedChanges_;
 }
 
 void ReaderProxy::RequestedChangesSet(SeqNumberVec requested_changes_set)
 {
+	std::lock_guard<std::mutex> lock(ackmtex_);
 	requestedChanges_ = requested_changes_set;
 }
 
